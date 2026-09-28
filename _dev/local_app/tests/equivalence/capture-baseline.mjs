@@ -1,12 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { findFunctionDefinitions, findVariableDeclaration, normalizeFunctionBody, sha256 } from "./source-tools.mjs";
+import { findFunctionDefinitions, findVariableDeclaration, normalizeFunctionBody, sha256, sha256TextEol } from "./source-tools.mjs";
 
 const root = resolve(import.meta.dirname, "../../..");
 const sourcePath = resolve(root, "BDO_물교_v1.0.html");
 const expected = JSON.parse(await readFile(resolve(root, "specs/000-baseline/baseline-manifest.json"), "utf8"));
+const previousManifest = JSON.parse(await readFile(resolve(import.meta.dirname, "baseline-manifest.json"), "utf8"));
 const source = await readFile(sourcePath, "utf8");
-const sourceHash = sha256(source);
+const sourceHash = sha256TextEol(source);
 const normalizedExpected = expected.referenceImplementation.sha256.toLowerCase();
 if (sourceHash !== normalizedExpected) {
   throw new Error(`Current HTML does not match SPEC-000 baseline: ${sourceHash} != ${normalizedExpected}`);
@@ -58,29 +59,37 @@ const regions = expected.protectedRegions.map((region) => {
   const start = source.indexOf(region.start);
   const end = source.indexOf(region.endExclusive, start);
   if (start < 0 || end <= start) throw new Error(`Protected region markers missing: ${region.id}`);
-  const actual = sha256(source.slice(start, end));
+  const actual = sha256TextEol(source.slice(start, end));
   if (actual !== region.sha256) throw new Error(`Protected region changed: ${region.id} ${actual} != ${region.sha256}`);
-  return { id: region.id, start: region.start, endExclusive: region.endExclusive, sha256: actual, matchesSpec000: true };
+  return { id: region.id, start: region.start, endExclusive: region.endExclusive, sha256: actual, hashBasis: "sha256-utf8-crlf-to-lf-only", matchesSpec000: true };
 });
 
 const constants = ["APP_CONFIG", "masterData", "rawData", "islandCoordinates", "defaultRouteCalibrations", "REGION_MAP"].map((name) => {
   const declaration = findVariableDeclaration(source, name);
-  return { name, source: "BDO_물교_v1.0.html", line: declaration.line, sourceSha256: sha256(declaration.source) };
+  return { name, source: "BDO_물교_v1.0.html", line: declaration.line, sourceSha256: sha256TextEol(declaration.source) };
 });
-const timerTickStart = source.indexOf("// ⏱️ 전역 타이머 틱 (1초마다 무한 루프)");
-const timerTickEnd = source.indexOf("// 🔔 알람 소리 함수", timerTickStart);
+const timerTickStart = source.indexOf(previousManifest.timerTick.sourceStart);
+const timerTickEndToken = "}, 1000);";
+const timerTickEnd = source.indexOf(timerTickEndToken, timerTickStart);
 if (timerTickStart < 0 || timerTickEnd <= timerTickStart) throw new Error("Timer tick source markers missing.");
-const timerTick = source.slice(timerTickStart, timerTickEnd).trim();
+const timerTick = source.slice(timerTickStart, timerTickEnd + timerTickEndToken.length);
 
 const output = {
   spec: "SPEC-005",
   source: "BDO_물교_v1.0.html",
   sourceSha256: sourceHash,
   baselineSourceSha256: normalizedExpected,
-  normalization: "Function body: CRLF/CR to LF, trim trailing horizontal whitespace per line, trim outer whitespace; SHA-256 UTF-8.",
+  normalization: "Text hashes replace CRLF pairs with LF only before SHA-256 UTF-8; no trim, whitespace, code, or data normalization.",
+  hashBasis: {
+    source: "sha256-utf8-crlf-to-lf-only",
+    functionBodies: "sha256-utf8-crlf-to-lf-only",
+    constantDeclarations: "sha256-utf8-crlf-to-lf-only",
+    timerTick: "sha256-utf8-crlf-to-lf-only",
+    protectedRegions: "sha256-utf8-crlf-to-lf-only",
+  },
   definitions: functions,
   constants,
-  timerTick: { sourceStart: "// ⏱️ 전역 타이머 틱 (1초마다 무한 루프)", sourceEndExclusive: "// 🔔 알람 소리 함수", sha256: sha256(timerTick) },
+  timerTick: { sourceStart: previousManifest.timerTick.sourceStart, sourceEndInclusive: timerTickEndToken, sha256: sha256TextEol(timerTick) },
   protectedRegions: regions,
 };
 const outputPath = resolve(import.meta.dirname, "baseline-manifest.json");

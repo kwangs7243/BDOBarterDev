@@ -4,50 +4,182 @@
   "workspaceRoot": ".",
   "referenceImplementation": {
     "path": "BDO_물교_v1.0.html",
-    "sha256": "7133AE0140D84DC284A53B7CAEEDAF5479270161038CA36DF4E094983AAF7B76"
+    "sha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+    "previousRawByteSha256": "7133AE0140D84DC284A53B7CAEEDAF5479270161038CA36DF4E094983AAF7B76",
+    "hashBasis": "sha256-utf8-crlf-to-lf-only"
   },
   "warehouseScanner": {
     "path": "tools/warehouse_patch/warehouse_patch.py",
-    "sha256": "AA72ED5763C76A030AB4C8FFBC00FB23BF8ED4C391F9D1DE8659395D76579FE8"
+    "sha256": "aa72ed5763c76a030ab4c8ffbc00fb23bf8ed4c391f9d1de8659395d76579fe8",
+    "previousRawByteSha256": "AA72ED5763C76A030AB4C8FFBC00FB23BF8ED4C391F9D1DE8659395D76579FE8",
+    "hashBasis": "sha256-utf8-crlf-to-lf-only"
   },
   "referenceData": {
     "itemsPath": "reference/barter_items.json",
-    "itemsSha256": "e6e9786b1a8f671650dca9feb33b6137029620f5e17ccb2dcdf0957722028d9c",
+    "itemsSha256": "de4fa667367bb70095a38d1ebfbffef4b8881cec9b6f4bdc24aa11a721ac6e57",
     "checksumsPath": "reference/SHA256SUMS.txt",
-    "checksumsSha256": "4131f16abdff13889e98702e7a9c00325671349fddaf7ac282e70b7e88aa2ae4",
+    "checksumsSha256": "30e5ce79ee1cc4f9d41d490de6ef486365a287530ec00956510d39cecd037998",
     "itemCount": 70,
-    "tierCounts": {"1": 14, "2": 14, "3": 14, "4": 14, "5": 14},
+    "tierCounts": {
+      "1": 14,
+      "2": 14,
+      "3": 14,
+      "4": 14,
+      "5": 14
+    },
     "inventoryTargetCount": 56,
     "identificationOnlyCount": 14,
     "iconCount": 70,
     "iconUniqueSha256Count": 70,
     "missingIcons": 0,
     "declaredIconHashMismatches": 0,
-    "iconSetAggregateSha256": "eb4fcc3c47736c9b1f3f25debb576a69d879e426ef7bab27da1b0cbebd590018"
+    "iconSetAggregateSha256": "eb4fcc3c47736c9b1f3f25debb576a69d879e426ef7bab27da1b0cbebd590018",
+    "itemsHashBasis": "sha256-utf8-crlf-to-lf-only",
+    "previousRawByteSha256": {
+      "itemsSha256": "e6e9786b1a8f671650dca9feb33b6137029620f5e17ccb2dcdf0957722028d9c",
+      "checksumsSha256": "4131f16abdff13889e98702e7a9c00325671349fddaf7ac282e70b7e88aa2ae4"
+    },
+    "checksumsHashBasis": "sha256-utf8-crlf-to-lf-only"
   },
   "protectedRegions": [
-    {"id": "processParsedTrades", "start": "function processParsedTrades", "endExclusive": "function openCaptureModal", "sha256": "683f5b883645208b16712c4f463800ea98367f2e4317f24bad86f1d18e6d8273"},
-    {"id": "scheduler/completion", "start": "function runAlgorithmAllModes", "endExclusive": "window.completeTradeAndTimer =", "sha256": "0c64f7a542a028045a91b4b67b6721103ccfd76a646d74af0a894a9ee4f7be31"}
+    {
+      "id": "processParsedTrades",
+      "start": "function processParsedTrades",
+      "endExclusive": "function openCaptureModal",
+      "sha256": "c1f7048dea98d3079842d7020ba65f2df2552c6d32f60641dbb72bdf03d55561",
+      "previousRawByteSha256": "683f5b883645208b16712c4f463800ea98367f2e4317f24bad86f1d18e6d8273",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "id": "scheduler/completion",
+      "start": "function runAlgorithmAllModes",
+      "endExclusive": "window.completeTradeAndTimer =",
+      "sha256": "fc69d0a14934c8559a46e8bf6b149fcd4cf05de43d1252d461dcf03d4bf58210",
+      "previousRawByteSha256": "0c64f7a542a028045a91b4b67b6721103ccfd76a646d74af0a894a9ee4f7be31",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    }
   ],
-  "protectedAlgorithms": ["processParsedTrades", "runAlgorithmAllModes", "buildSorties", "buildTier7Sorties", "crow coin generation", "routing and region constraints", "load calculations", "schedule edits", "completion", "waypoint completion"],
+  "protectedAlgorithms": [
+    "processParsedTrades",
+    "runAlgorithmAllModes",
+    "buildSorties",
+    "buildTier7Sorties",
+    "crow coin generation",
+    "routing and region constraints",
+    "load calculations",
+    "schedule edits",
+    "completion",
+    "waypoint completion"
+  ],
   "regressionFixtures": [
-    {"path":"fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json","sha256":"d9dd5dafcfca60f9b068ecdefc1817e58125d04b1e2a97ff2405bcff7ebfd602"},
-    {"path":"fixtures/KNOWN_YIELD_MISMATCHES_8.json","sha256":"f65c33fbacde2199f9d1313bffeffaa5af3c5ce124bea845f86b18aab662d5f8"},
-    {"path":"fixtures/TEST_ONLY_corrected_low_stock.json","sha256":"0e40a7d65696548600dac52683ebad48fbec47bdebd6848aa4980393d1173ce3"},
-    {"path":"fixtures/TEST_ONLY_synthetic_T1T4_full_T5_original.json","sha256":"9141262a04c18f29182565574b9ecd8fd72763ecf4346895611a8c2d7459813d"},
-    {"path":"fixtures/TEST_ONLY_synthetic_T4_25_each.json","sha256":"f02d4adf11e6b5148078b7d51b3d90750d8c47160e4b72986c887a4a3e44cdb3"},
-    {"path":"fixtures/TEST_ONLY_synthetic_target_full_stock.json","sha256":"d2091533738edff7d87240ae231146b72d0a83c5da54b0849eace11ac0fa6124"},
-    {"path":"fixtures/USER_CAPTURE_20260923_74_ROWS.json","sha256":"fd94edb1412d8c978910c256905d7346091ba52f63905f456cdad4fd519b262c"},
-    {"path":"fixtures/warehouse_patch/barter_only.png","sha256":"cc1745d5e3f57315f7344ca26eb428c0e81b8d3251a2be049d75e29ba7da506d"},
-    {"path":"fixtures/warehouse_patch/calibration.png","sha256":"4a42ec5934ccb1e30137163b52835928fd74d649b4bac7379b9f5031e89b045f"},
-    {"path":"fixtures/warehouse_patch/calibration_manifest.json","sha256":"6b5697e8ba46f2f377553903c7b9894c5ef41c9f8ae0cbae1aba865820b0a90a"},
-    {"path":"fixtures/warehouse_patch/mixed.png","sha256":"49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742"},
-    {"path":"inputs/ORIGINAL_user_backup_20260923.json","sha256":"0d5af736e9544eea32ba8d2d51f65ff46cbf5f0c2ceee4beaba611109bd868f9","contentCopied":false}
+    {
+      "path": "fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json",
+      "sha256": "d9dd5dafcfca60f9b068ecdefc1817e58125d04b1e2a97ff2405bcff7ebfd602",
+      "previousRawByteSha256": "d9dd5dafcfca60f9b068ecdefc1817e58125d04b1e2a97ff2405bcff7ebfd602",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/KNOWN_YIELD_MISMATCHES_8.json",
+      "sha256": "f65c33fbacde2199f9d1313bffeffaa5af3c5ce124bea845f86b18aab662d5f8",
+      "previousRawByteSha256": "f65c33fbacde2199f9d1313bffeffaa5af3c5ce124bea845f86b18aab662d5f8",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/TEST_ONLY_corrected_low_stock.json",
+      "sha256": "0e40a7d65696548600dac52683ebad48fbec47bdebd6848aa4980393d1173ce3",
+      "previousRawByteSha256": "0e40a7d65696548600dac52683ebad48fbec47bdebd6848aa4980393d1173ce3",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/TEST_ONLY_synthetic_T1T4_full_T5_original.json",
+      "sha256": "9141262a04c18f29182565574b9ecd8fd72763ecf4346895611a8c2d7459813d",
+      "previousRawByteSha256": "9141262a04c18f29182565574b9ecd8fd72763ecf4346895611a8c2d7459813d",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/TEST_ONLY_synthetic_T4_25_each.json",
+      "sha256": "f02d4adf11e6b5148078b7d51b3d90750d8c47160e4b72986c887a4a3e44cdb3",
+      "previousRawByteSha256": "f02d4adf11e6b5148078b7d51b3d90750d8c47160e4b72986c887a4a3e44cdb3",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/TEST_ONLY_synthetic_target_full_stock.json",
+      "sha256": "d2091533738edff7d87240ae231146b72d0a83c5da54b0849eace11ac0fa6124",
+      "previousRawByteSha256": "d2091533738edff7d87240ae231146b72d0a83c5da54b0849eace11ac0fa6124",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/USER_CAPTURE_20260923_74_ROWS.json",
+      "sha256": "0ff35aeee81c0e06e8e5dcc559aa91a77ddb3814902db90978c919bb65f48361",
+      "previousRawByteSha256": "fd94edb1412d8c978910c256905d7346091ba52f63905f456cdad4fd519b262c",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/warehouse_patch/barter_only.png",
+      "sha256": "cc1745d5e3f57315f7344ca26eb428c0e81b8d3251a2be049d75e29ba7da506d",
+      "previousRawByteSha256": "cc1745d5e3f57315f7344ca26eb428c0e81b8d3251a2be049d75e29ba7da506d",
+      "hashBasis": "sha256-raw-bytes"
+    },
+    {
+      "path": "fixtures/warehouse_patch/calibration.png",
+      "sha256": "4a42ec5934ccb1e30137163b52835928fd74d649b4bac7379b9f5031e89b045f",
+      "previousRawByteSha256": "4a42ec5934ccb1e30137163b52835928fd74d649b4bac7379b9f5031e89b045f",
+      "hashBasis": "sha256-raw-bytes"
+    },
+    {
+      "path": "fixtures/warehouse_patch/calibration_manifest.json",
+      "sha256": "6b5697e8ba46f2f377553903c7b9894c5ef41c9f8ae0cbae1aba865820b0a90a",
+      "previousRawByteSha256": "6b5697e8ba46f2f377553903c7b9894c5ef41c9f8ae0cbae1aba865820b0a90a",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
+    },
+    {
+      "path": "fixtures/warehouse_patch/mixed.png",
+      "sha256": "49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742",
+      "previousRawByteSha256": "49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742",
+      "hashBasis": "sha256-raw-bytes"
+    }
   ],
-  "allowedChanges": ["new-app-only UI and storage adapters in later approved specs", "baseline and comparison documentation", "additive tests that do not alter baseline expectations"],
-  "forbiddenChanges": ["reference HTML behavior or algorithms", "warehouse scanner conversion behavior", "reference JSON/icons/fixtures", "existing regression expected values", "routing/region/scheduler/completion semantics", "SPEC-001+ implementation in SPEC-000"],
+  "allowedChanges": [
+    "new-app-only UI and storage adapters in later approved specs",
+    "baseline and comparison documentation",
+    "additive tests that do not alter baseline expectations"
+  ],
+  "forbiddenChanges": [
+    "reference HTML behavior or algorithms",
+    "warehouse scanner conversion behavior",
+    "reference JSON/icons/fixtures",
+    "existing regression expected values",
+    "routing/region/scheduler/completion semantics",
+    "SPEC-001+ implementation in SPEC-000"
+  ],
   "comparisonProtocol": "Use identical input files and settings for reference and candidate. Compare observable parsed items, inventory patch values, schedule/route outputs, and completion inventory effects exactly; do not apply tolerance. Normalize only explicitly nondeterministic timestamps or generated IDs, preserving all semantic fields. Preserve input fixture hashes and record environment and test command.",
   "knownIssues": [
-    {"id":"warehouse_patch_regression_stale_html_hash","path":"tests/warehouse_patch_regression.py","expectedHtmlSha256":"b5f29bfec3c3ebbd4257a42c1e311c28ce8e38d78dfb7a55279bd455a59e6598","currentHtmlSha256":"7133AE0140D84DC284A53B7CAEEDAF5479270161038CA36DF4E094983AAF7B76","status":"recorded_only_not_modified","note":"The test pins an earlier HTML baseline and fails its hash guard before scanner assertions; updating test code/expectation is out of SPEC-000 scope."}
-  ]
+    {
+      "id": "warehouse_patch_regression_stale_html_hash",
+      "path": "tests/warehouse_patch_regression.py",
+      "expectedHtmlSha256": "b5f29bfec3c3ebbd4257a42c1e311c28ce8e38d78dfb7a55279bd455a59e6598",
+      "currentHtmlSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+      "status": "recorded_only_not_modified",
+      "note": "The test pins an earlier HTML baseline and fails its hash guard before scanner assertions; updating test code/expectation is out of SPEC-000 scope.",
+      "currentHtmlPreviousRawByteSha256": "7133AE0140D84DC284A53B7CAEEDAF5479270161038CA36DF4E094983AAF7B76",
+      "currentHtmlHashBasis": "sha256-utf8-crlf-to-lf-only",
+      "expectedHtmlHashBasis": "historical-raw-bytes"
+    }
+  ],
+  "localExcluded": [
+    {
+      "path": "inputs/ORIGINAL_user_backup_20260923.json",
+      "sha256": "0d5af736e9544eea32ba8d2d51f65ff46cbf5f0c2ceee4beaba611109bd868f9",
+      "hashBasis": "sha256-raw-bytes-local-only",
+      "requiredInFreshClone": false,
+      "contentCopied": false,
+      "reason": "User backup remains local and is excluded from Git/fresh-clone requirements."
+    }
+  ],
+  "hashBasis": {
+    "text": "sha256-utf8-crlf-to-lf-only",
+    "binary": "sha256-raw-bytes",
+    "textRule": "UTF-8 SHA-256 after replacing CRLF pairs with LF only; no trimming, whitespace, code, or data normalization.",
+    "binaryRule": "SHA-256 of raw bytes; no EOL normalization."
+  }
 }

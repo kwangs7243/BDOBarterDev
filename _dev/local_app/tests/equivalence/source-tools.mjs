@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 
-export const normalizeFunctionBody = (body) => body
-  .replace(/\r\n?/g, "\n")
-  .split("\n")
-  .map((line) => line.replace(/[ \t]+$/g, ""))
-  .join("\n")
-  .trim();
+export const normalizeTextEol = (text) => text.replace(/\r\n/g, "\n");
+
+export const normalizeFunctionBody = normalizeTextEol;
 
 export const sha256 = (value) => createHash("sha256").update(value, "utf8").digest("hex");
+
+export const sha256TextEol = (text) => sha256(normalizeTextEol(text));
+
+export const sha256Bytes = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 function skipQuoted(source, start, quote) {
   for (let i = start + 1; i < source.length; i += 1) {

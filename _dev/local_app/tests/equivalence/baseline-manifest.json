@@ -1,9 +1,9 @@
 {
   "spec": "SPEC-005",
   "source": "BDO_물교_v1.0.html",
-  "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
-  "baselineSourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
-  "normalization": "Function body: CRLF/CR to LF, trim trailing horizontal whitespace per line, trim outer whitespace; SHA-256 UTF-8.",
+  "sourceSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+  "baselineSourceSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+  "normalization": "Replace CRLF pairs with LF only before text SHA-256. Do not normalize lone CR, trailing whitespace, outer whitespace, code, constants, or data.",
   "definitions": [
     {
       "name": "calculateTravelTime",
@@ -20,7 +20,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "27762a0a98744033f8210cd7d5cbcd9be330243ec924553a7632b4b48d76c3a1"
+      "bodyNormalizedSha256": "f2f5c10af7e60ea6b054ec91441f118b136b2a6fc82895174da81344d4e2d899",
+      "previousWhitespaceNormalizedSha256": "27762a0a98744033f8210cd7d5cbcd9be330243ec924553a7632b4b48d76c3a1"
     },
     {
       "name": "getItemTier",
@@ -37,7 +38,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "f4b7a6aa5a3c83271cd082b042a80caa93c07e64e3639cb08ff4f25f14432202"
+      "bodyNormalizedSha256": "9fb573c1648273a58d6f46600825ab43a6e89aa1a3ebd8ef884cc159cf2510df",
+      "previousWhitespaceNormalizedSha256": "f4b7a6aa5a3c83271cd082b042a80caa93c07e64e3639cb08ff4f25f14432202"
     },
     {
       "name": "getItemWeight",
@@ -54,7 +56,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "d73e6c65eb61abc5712c320289b7a95defd847826ce6cab65db408aa61fa3695"
+      "bodyNormalizedSha256": "11b4d51fa37f91dfa281bcdfd287e27c041388be3f96a2b4a79be5170227628e",
+      "previousWhitespaceNormalizedSha256": "d73e6c65eb61abc5712c320289b7a95defd847826ce6cab65db408aa61fa3695"
     },
     {
       "name": "getIslandCoords",
@@ -71,7 +74,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "1df08a5132dfb3273718b50f12c5ab3f4e9d78f94e08ac97445b2bebf546f276"
+      "bodyNormalizedSha256": "0582d5e88022075e8ba2e0a0fb5e143e6fc058ede25b1f2f645e0e9ada2420fe",
+      "previousWhitespaceNormalizedSha256": "1df08a5132dfb3273718b50f12c5ab3f4e9d78f94e08ac97445b2bebf546f276"
     },
     {
       "name": "getPermutations",
@@ -88,7 +92,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "c4a76c91d075d07fa24172419593611dd45e220500440c0fc24252ea8369a169"
+      "bodyNormalizedSha256": "22761790cf77e2aa151557ff1c27538e0bb6dc2496d9c90dc95e3675d507a356",
+      "previousWhitespaceNormalizedSha256": "c4a76c91d075d07fa24172419593611dd45e220500440c0fc24252ea8369a169"
     },
     {
       "name": "getOptimalRoute",
@@ -107,7 +112,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "2cf104fbfd9d7580a27f7b30181dc1bc3b7d300e266282c6d045736419ad5088"
+      "bodyNormalizedSha256": "581bba32c8f5ee2d7701759d0f125a806921b1da109d5b0a724e3024036bc165",
+      "previousWhitespaceNormalizedSha256": "2cf104fbfd9d7580a27f7b30181dc1bc3b7d300e266282c6d045736419ad5088"
     },
     {
       "name": "optimizeRouteTSP",
@@ -124,7 +130,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "45d15d8aafaee768ff417417851197320ee441a96ff3cf2a9affd95bb7c395af"
+      "bodyNormalizedSha256": "d2190b6a961206c008c7c4daa97bf4ce1f2fd0bf415ba44be742933031cae56d",
+      "previousWhitespaceNormalizedSha256": "45d15d8aafaee768ff417417851197320ee441a96ff3cf2a9affd95bb7c395af"
     },
     {
       "name": "runAlgorithmAllModes",
@@ -161,7 +168,8 @@
         "__lastGen",
         "mergeAdjacentDupTrades"
       ],
-      "bodyNormalizedSha256": "6afdc3baa884413255239d818850daed134433486d95fb437fda3a80bcb5aa5f"
+      "bodyNormalizedSha256": "c99cf394ec60389d43673b370e52a1d60d4bd4cfd70e8730e72af62e3e650b96",
+      "previousWhitespaceNormalizedSha256": "6afdc3baa884413255239d818850daed134433486d95fb437fda3a80bcb5aa5f"
     },
     {
       "name": "sortFixedOcean",
@@ -180,7 +188,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "ccfdb571b7a29a9a48d2d50c1bb08672c4c2e54a7b84bc9921849b0c17f70ec6"
+      "bodyNormalizedSha256": "810a367b4165428bdf394ed26d8649a7cc17a958aa697b14b0e5372f9291b9f8",
+      "previousWhitespaceNormalizedSha256": "ccfdb571b7a29a9a48d2d50c1bb08672c4c2e54a7b84bc9921849b0c17f70ec6"
     },
     {
       "name": "getIslandRegion",
@@ -197,7 +206,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "69dea3b4bd40dc07139d81a050ec652eaaf3aeef8fc4b9d63372ec9578f67daf"
+      "bodyNormalizedSha256": "9d8d2a2979554ddcf1f76833e416a9d47e593f25ad6a00e1ab81f2dee7506494",
+      "previousWhitespaceNormalizedSha256": "69dea3b4bd40dc07139d81a050ec652eaaf3aeef8fc4b9d63372ec9578f67daf"
     },
     {
       "name": "getAllowedRegions",
@@ -212,7 +222,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "90561fad533315dcf6d42c9b2946d352f86a501f07c0818ea34b9f9db247cfc4"
+      "bodyNormalizedSha256": "b4a427cbb8b50705c000fb20745fd8345032e0faf9c855e992e098809e133185",
+      "previousWhitespaceNormalizedSha256": "90561fad533315dcf6d42c9b2946d352f86a501f07c0818ea34b9f9db247cfc4"
     },
     {
       "name": "buildSorties",
@@ -244,7 +255,8 @@
       "windowReferences": [
         "ENGINE_DEBUG"
       ],
-      "bodyNormalizedSha256": "27099ca18c62cf33a47365f8963d4503b8786d8fd0e455accbf02ae151b8ffdf"
+      "bodyNormalizedSha256": "8d1b3e2bd778560fc41d48ff7186b749b24e8f9edf7df9620ba1f849aeca5b95",
+      "previousWhitespaceNormalizedSha256": "27099ca18c62cf33a47365f8963d4503b8786d8fd0e455accbf02ae151b8ffdf"
     },
     {
       "name": "buildTier7Sorties",
@@ -271,7 +283,8 @@
       ],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "d0b960ebc6986afd6b08865ea928c78cd69ba59cf1063d13aa7ef55019481f23"
+      "bodyNormalizedSha256": "d36db3a2466dfb8097db03c95fa0f913a6e46cfe588785abe1b64e517c1d6a40",
+      "previousWhitespaceNormalizedSha256": "d0b960ebc6986afd6b08865ea928c78cd69ba59cf1063d13aa7ef55019481f23"
     },
     {
       "name": "applyOceanCurrent",
@@ -290,7 +303,8 @@
       "windowReferences": [
         "routeCalibrations"
       ],
-      "bodyNormalizedSha256": "f96c27c731e6a17b389a42c9fcec72fd70531088129d5adcb80c479406cdb62c"
+      "bodyNormalizedSha256": "e6ce5e428e07cd26a89ad00e9b2b1a7b041e2de6cad65dc240f3ab23ef6993b0",
+      "previousWhitespaceNormalizedSha256": "f96c27c731e6a17b389a42c9fcec72fd70531088129d5adcb80c479406cdb62c"
     },
     {
       "name": "legDistance",
@@ -309,7 +323,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "1e9a98d7664ec49928b3096ad108fd9a1f0ceb87d1aadd8aef94adfa62e9bbb8"
+      "bodyNormalizedSha256": "d02c2cfb4762afc1b436716a6b05c73b61309b50c92699f91162d57cd220120e",
+      "previousWhitespaceNormalizedSha256": "1e9a98d7664ec49928b3096ad108fd9a1f0ceb87d1aadd8aef94adfa62e9bbb8"
     },
     {
       "name": "simulateWeightsTemp",
@@ -330,7 +345,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "70f68b7a73119cbea8834cca0ddb82a61f38da204e2c9e967d49ac631cb738c8"
+      "bodyNormalizedSha256": "bc9ffb8312bd05564443896fc52350d3a4dba64f25b9f7d76404d800297a4e51",
+      "previousWhitespaceNormalizedSha256": "70f68b7a73119cbea8834cca0ddb82a61f38da204e2c9e967d49ac631cb738c8"
     },
     {
       "name": "getDistToSegment",
@@ -345,7 +361,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "705db8df521dd7722c06add3bce70b8be682ba08edacfaca2bf598191463376a"
+      "bodyNormalizedSha256": "284c8d345ff9ead497e2e16028eba2aa8fb75b956f7d42d6eb8a797152d32b2a",
+      "previousWhitespaceNormalizedSha256": "705db8df521dd7722c06add3bce70b8be682ba08edacfaca2bf598191463376a"
     },
     {
       "name": "formatTimeExact",
@@ -360,7 +377,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "31c1bb3ab8d560ec0d99b8476de2f947701077bd48f1e60d0f4d872b3ff23137"
+      "bodyNormalizedSha256": "fe96e68c7460bfa745bf4a0723f7a4f43ecd61456d65f2f216c4d2b8edd4bab5",
+      "previousWhitespaceNormalizedSha256": "31c1bb3ab8d560ec0d99b8476de2f947701077bd48f1e60d0f4d872b3ff23137"
     },
     {
       "name": "routeDragStart",
@@ -377,7 +395,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "4aac03e7b638f21e1af64a2221765f67239f793bbd0f61312cb1d0f697f0fbf0"
+      "bodyNormalizedSha256": "a79e8036768f6eee2f6ec50232fb26c9ab9998350df5b1934f2f5c3416978335",
+      "previousWhitespaceNormalizedSha256": "4aac03e7b638f21e1af64a2221765f67239f793bbd0f61312cb1d0f697f0fbf0"
     },
     {
       "name": "routeDragEnd",
@@ -394,7 +413,8 @@
       ],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "1f11e9c140cde8ef298d3ab3fdc8c0f107edd4cf825a3da4b20ec528944b6d96"
+      "bodyNormalizedSha256": "5c1f80ed384d31501419e6e7a5cef04e702c9842d75fd37e684b8c130d581218",
+      "previousWhitespaceNormalizedSha256": "1f11e9c140cde8ef298d3ab3fdc8c0f107edd4cf825a3da4b20ec528944b6d96"
     },
     {
       "name": "routeDragOver",
@@ -411,7 +431,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "5a5892e838ebc63b9446c0e0db9810c850a67f68322b314f7a1ced442ffde687"
+      "bodyNormalizedSha256": "9f3d64945c756bbb7b1d3d46d7df7b65df428d41eb420ee9e8e734f94744c41f",
+      "previousWhitespaceNormalizedSha256": "5a5892e838ebc63b9446c0e0db9810c850a67f68322b314f7a1ced442ffde687"
     },
     {
       "name": "routeDrop",
@@ -434,7 +455,8 @@
       ],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "d25415e28fa441c1c0c62b4b1afe263bbf2126e0b186019d598443282026a715"
+      "bodyNormalizedSha256": "c5fceb7d224c9b3bf2b1b48762dab2d2c5e7a1d4242a888df6a78051519db62a",
+      "previousWhitespaceNormalizedSha256": "d25415e28fa441c1c0c62b4b1afe263bbf2126e0b186019d598443282026a715"
     },
     {
       "name": "adjustTradeCount",
@@ -456,7 +478,8 @@
       "windowReferences": [
         "applySortieRecompute"
       ],
-      "bodyNormalizedSha256": "e21be46221f0eb24f1fed0da6fd9304bd74af2b31b51d3747ed7030e75652e6b"
+      "bodyNormalizedSha256": "ad678cd132584519e4344531f6f6593262c4f4b828ecf3980b106eeb30b2ee1e",
+      "previousWhitespaceNormalizedSha256": "e21be46221f0eb24f1fed0da6fd9304bd74af2b31b51d3747ed7030e75652e6b"
     },
     {
       "name": "completeTradeAndTimer",
@@ -479,7 +502,8 @@
       "windowReferences": [
         "ACTIVE_TIMERS"
       ],
-      "bodyNormalizedSha256": "4add14e4cfa9e29e93a7a538f6a98d9d7fbbeff9e63d2a72fee19dd5ae1806ac"
+      "bodyNormalizedSha256": "a13bc3c7acc14062785c72ed7a3a78826e77d080625b30b82bca5aad6dcd357c",
+      "previousWhitespaceNormalizedSha256": "4add14e4cfa9e29e93a7a538f6a98d9d7fbbeff9e63d2a72fee19dd5ae1806ac"
     },
     {
       "name": "rebuildSortieReq",
@@ -494,7 +518,8 @@
       "referencedGlobals": [],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "ba3648a6cea9a3efd72e0e1a885e0c0b30a305e850e452143cc8c1fecb9bb213"
+      "bodyNormalizedSha256": "f61255b3dc096346e450b78129b6e4ef69e5bc835b5092177483ddb11f4de17e",
+      "previousWhitespaceNormalizedSha256": "ba3648a6cea9a3efd72e0e1a885e0c0b30a305e850e452143cc8c1fecb9bb213"
     },
     {
       "name": "applySortieRecompute",
@@ -518,7 +543,8 @@
       "windowReferences": [
         "rebuildSortieReq"
       ],
-      "bodyNormalizedSha256": "a64db2bc029770b470ef49683b392cf13b135d4e936ebb5186a0086b6b2e1bac"
+      "bodyNormalizedSha256": "eddd4af12eec0394f3298861e75437d068b5a9746aab076b9858a5a3016e4d57",
+      "previousWhitespaceNormalizedSha256": "a64db2bc029770b470ef49683b392cf13b135d4e936ebb5186a0086b6b2e1bac"
     },
     {
       "name": "mergeAdjacentDupTrades",
@@ -538,7 +564,8 @@
       "windowReferences": [
         "rebuildSortieReq"
       ],
-      "bodyNormalizedSha256": "0f0a6df024872a8afda1d4acb94176376867513c340e62b95ede80eca8d5ded9"
+      "bodyNormalizedSha256": "f483e40960276fbfc1db999cd4d87dc9c036d94dca1cd9397792cb9e027ebb5e",
+      "previousWhitespaceNormalizedSha256": "0f0a6df024872a8afda1d4acb94176376867513c340e62b95ede80eca8d5ded9"
     },
     {
       "name": "toggleTimer",
@@ -561,7 +588,8 @@
       "windowReferences": [
         "ACTIVE_TIMERS"
       ],
-      "bodyNormalizedSha256": "09552cd4d5802b21e09eb284efc7bf8b9ce5706c0cc05e5eb9f56404dce4e523"
+      "bodyNormalizedSha256": "3d7e1b62e943bfcb6c3348c19fbd10059dafd04f100a6890911a38e27b535a50",
+      "previousWhitespaceNormalizedSha256": "09552cd4d5802b21e09eb284efc7bf8b9ce5706c0cc05e5eb9f56404dce4e523"
     },
     {
       "name": "renderWaypointCard",
@@ -592,7 +620,8 @@
         "ACTIVE_TIMERS",
         "formatTimeExact"
       ],
-      "bodyNormalizedSha256": "f32f391a3bd7b25d89adf3ed3d16d399e064b14230affbd21f422c1a1a28609e"
+      "bodyNormalizedSha256": "cf68b461059da359ce370605af22486b889eaf0b3f175a9f01998b2571b3fd61",
+      "previousWhitespaceNormalizedSha256": "f32f391a3bd7b25d89adf3ed3d16d399e064b14230affbd21f422c1a1a28609e"
     },
     {
       "name": "openWaypointModal",
@@ -612,7 +641,8 @@
       ],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "bdaeb80cceb6b3b49beea417aac98cadf8968f2a39c1c32922e30d4172e74924"
+      "bodyNormalizedSha256": "23b8748f0af33b3cc05247aec084503d4f134f348cf27a6dd8e32486b136017d",
+      "previousWhitespaceNormalizedSha256": "bdaeb80cceb6b3b49beea417aac98cadf8968f2a39c1c32922e30d4172e74924"
     },
     {
       "name": "closeWaypointModal",
@@ -627,7 +657,8 @@
       "referencedGlobals": [],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "3db2f1a638f6beec7b952dbfd791eb22c5a0256d1dbf13124b641836cd60a41c"
+      "bodyNormalizedSha256": "559245c79d9ffc7a1ff8aa71645bace7b362174536294249b3c100218b740e15",
+      "previousWhitespaceNormalizedSha256": "3db2f1a638f6beec7b952dbfd791eb22c5a0256d1dbf13124b641836cd60a41c"
     },
     {
       "name": "toggleWaypointMaterial",
@@ -642,7 +673,8 @@
       "referencedGlobals": [],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "8f3ecfd62a0e96446bf8da992073cfcd9b1bb830628f252b838cae16e5378b07"
+      "bodyNormalizedSha256": "4d6c179ac40f07753aa9dac1ab1fc8b6c94a3d17ebfc2b1bd69001f1d3b03a3d",
+      "previousWhitespaceNormalizedSha256": "8f3ecfd62a0e96446bf8da992073cfcd9b1bb830628f252b838cae16e5378b07"
     },
     {
       "name": "confirmWaypoint",
@@ -668,7 +700,8 @@
       "windowReferences": [
         "applySortieRecompute"
       ],
-      "bodyNormalizedSha256": "10a47c947a9a5320568dd12f8b7cbef14af13412611651160b2444b1cc163de0"
+      "bodyNormalizedSha256": "f1dd171a879be231e70694eea30633ca5bec8d7b4eb836c65c43eb7005f4882d",
+      "previousWhitespaceNormalizedSha256": "10a47c947a9a5320568dd12f8b7cbef14af13412611651160b2444b1cc163de0"
     },
     {
       "name": "removeWaypoint",
@@ -693,7 +726,8 @@
         "ACTIVE_TIMERS",
         "applySortieRecompute"
       ],
-      "bodyNormalizedSha256": "8ddd43ae6d9c2bbf34577d0be61c2920f53c757fdd7540bc9ded76a79f51b433"
+      "bodyNormalizedSha256": "8faa2206ac2905fbb5d14fc8b9b705d7527846bf6a301746e0655cce8c3ed6aa",
+      "previousWhitespaceNormalizedSha256": "8ddd43ae6d9c2bbf34577d0be61c2920f53c757fdd7540bc9ded76a79f51b433"
     },
     {
       "name": "completeWaypoint",
@@ -718,7 +752,8 @@
       "windowReferences": [
         "ACTIVE_TIMERS"
       ],
-      "bodyNormalizedSha256": "76755fa62e5f770e474f15cc755a12aa74a68e3d8e68f61500da6bd686459674"
+      "bodyNormalizedSha256": "7a7734c9ea92d86dbab9864b5083272523668ae5e95a584fedc69b446e0b3a5a",
+      "previousWhitespaceNormalizedSha256": "76755fa62e5f770e474f15cc755a12aa74a68e3d8e68f61500da6bd686459674"
     },
     {
       "name": "toggleReturnTimer",
@@ -739,7 +774,8 @@
       "windowReferences": [
         "ACTIVE_TIMERS"
       ],
-      "bodyNormalizedSha256": "ee7cb22ea15d9ab4209cd0328db471dd3193d42746b52deed4e521b6c85c0535"
+      "bodyNormalizedSha256": "d8da43de7a182b846626d7123c77ac57d1000665a1f1213d829f7a84fda701fb",
+      "previousWhitespaceNormalizedSha256": "ee7cb22ea15d9ab4209cd0328db471dd3193d42746b52deed4e521b6c85c0535"
     },
     {
       "name": "playAlarmSound",
@@ -757,7 +793,8 @@
         "AudioContext",
         "webkitAudioContext"
       ],
-      "bodyNormalizedSha256": "8a9256a93c021c13b02a89802ff6de081eaa500447b42a99c854b0c319ff8db5"
+      "bodyNormalizedSha256": "17c3aa10102a80fc07d5a40fbaed4305021dc67051b843cf19d1a27bc1a89613",
+      "previousWhitespaceNormalizedSha256": "8a9256a93c021c13b02a89802ff6de081eaa500447b42a99c854b0c319ff8db5"
     },
     {
       "name": "completeTrade",
@@ -783,7 +820,8 @@
       ],
       "usesDocument": true,
       "windowReferences": [],
-      "bodyNormalizedSha256": "545ad7e7629faac887251a2ac7a82f851146d9f047a6b8ada0b281c3d28d898e"
+      "bodyNormalizedSha256": "cd2c0dae45a989dc92573d4d2b3f2b80ed4620181801ec29195e44cdfd96da0b",
+      "previousWhitespaceNormalizedSha256": "545ad7e7629faac887251a2ac7a82f851146d9f047a6b8ada0b281c3d28d898e"
     },
     {
       "name": "sortieDragStart",
@@ -800,7 +838,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "29648fa450e80196c63c96b171bd82ec25968083dfbd77b806a6e671382adc95"
+      "bodyNormalizedSha256": "3a1c6623bd024dc9bd4700b50dea5f000751efdae741df1aba744c156130f624",
+      "previousWhitespaceNormalizedSha256": "29648fa450e80196c63c96b171bd82ec25968083dfbd77b806a6e671382adc95"
     },
     {
       "name": "sortieDragEnd",
@@ -817,7 +856,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "4beac81deff23afcf69403219561d38e43939dd197b986d997f0e91f30a4e52f"
+      "bodyNormalizedSha256": "1381ccc28a48d83a59f5e3c21198a6beac21adf8d1ca51c6bbc0e234d9a51e7e",
+      "previousWhitespaceNormalizedSha256": "4beac81deff23afcf69403219561d38e43939dd197b986d997f0e91f30a4e52f"
     },
     {
       "name": "sortieDragOver",
@@ -832,7 +872,8 @@
       "referencedGlobals": [],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "894c24bbd2dd531cc2cdc13ea85683503bc7a4a2629ceb09c859591e621a3804"
+      "bodyNormalizedSha256": "332b4f5f1af7ec5bc96964ec38fc5e85cfc12124a353136cca877599aa05632c",
+      "previousWhitespaceNormalizedSha256": "894c24bbd2dd531cc2cdc13ea85683503bc7a4a2629ceb09c859591e621a3804"
     },
     {
       "name": "sortieDrop",
@@ -854,7 +895,8 @@
       ],
       "usesDocument": false,
       "windowReferences": [],
-      "bodyNormalizedSha256": "a10bca00cba05c7772e0d9eff9d2453893052b49dc4a6a72b52fd7e6029f42d5"
+      "bodyNormalizedSha256": "67819706720a9d9bd485fbe8c51eb5f00e5e2cf9c39f0a55463806b353939c2a",
+      "previousWhitespaceNormalizedSha256": "a10bca00cba05c7772e0d9eff9d2453893052b49dc4a6a72b52fd7e6029f42d5"
     }
   ],
   "constants": [
@@ -862,58 +904,79 @@
       "name": "APP_CONFIG",
       "source": "BDO_물교_v1.0.html",
       "line": 915,
-      "sourceSha256": "a054c7f6f053eba21fe0fb5e0db42e8f40166286099c432891150b33bfb5fe73"
+      "sourceSha256": "5569214ca9686f381de5253650e6a1b15c8c3df235a403d73661e7c044fe97bd",
+      "previousRawByteSha256": "a054c7f6f053eba21fe0fb5e0db42e8f40166286099c432891150b33bfb5fe73"
     },
     {
       "name": "masterData",
       "source": "BDO_물교_v1.0.html",
       "line": 1227,
-      "sourceSha256": "52cad803a5d730089cd3a4e8f0c98de57c5578ad04ed1ad0d34da527971cdeab"
+      "sourceSha256": "bcc6b0ff551e8a81e723fa74ab6ef1a5a1c2e9e1b6de1ce4123d98012173fa1f",
+      "previousRawByteSha256": "52cad803a5d730089cd3a4e8f0c98de57c5578ad04ed1ad0d34da527971cdeab"
     },
     {
       "name": "rawData",
       "source": "BDO_물교_v1.0.html",
       "line": 1251,
-      "sourceSha256": "7137246bde548d5cb9f7e9c137b3bbe6f50ed52a1160900c3abcabd10aaa98e2"
+      "sourceSha256": "e984c583c687f50e87d49bd0274dea040198581ef1c8b4e6dc234337cbe5a28a",
+      "previousRawByteSha256": "7137246bde548d5cb9f7e9c137b3bbe6f50ed52a1160900c3abcabd10aaa98e2"
     },
     {
       "name": "islandCoordinates",
       "source": "BDO_물교_v1.0.html",
       "line": 1316,
-      "sourceSha256": "1b3038f4e13644ffe8c93385da224065236b7d40a30f2348ea1d0ea5bb17055f"
+      "sourceSha256": "1b3038f4e13644ffe8c93385da224065236b7d40a30f2348ea1d0ea5bb17055f",
+      "previousRawByteSha256": "1b3038f4e13644ffe8c93385da224065236b7d40a30f2348ea1d0ea5bb17055f"
     },
     {
       "name": "defaultRouteCalibrations",
       "source": "BDO_물교_v1.0.html",
       "line": 1320,
-      "sourceSha256": "b49147cf36e5801495290d96730aef6d31d758c552e2e66db66b35609a3217af"
+      "sourceSha256": "57f6ae9ded218701213f63a3847b378cb77c952586fb9e49772b0b8928f694bf",
+      "previousRawByteSha256": "b49147cf36e5801495290d96730aef6d31d758c552e2e66db66b35609a3217af"
     },
     {
       "name": "REGION_MAP",
       "source": "BDO_물교_v1.0.html",
       "line": 3078,
-      "sourceSha256": "037fab3cab530e01180e86b149790d2de8a8d72b505037f5c46c714e706202fb"
+      "sourceSha256": "bbd3c66978841b907c8909ba0a2d652d00bcabebae5513d695a885ebb48fcc6c",
+      "previousRawByteSha256": "037fab3cab530e01180e86b149790d2de8a8d72b505037f5c46c714e706202fb"
     }
   ],
   "timerTick": {
     "sourceStart": "// ⏱️ 전역 타이머 틱 (1초마다 무한 루프)",
-    "sourceEndExclusive": "// 🔔 알람 소리 함수",
-    "sha256": "d18c9c0864609463399361602fceef86c420e4eb794e48d85db7f1ad0d7efde7"
+    "sha256": "95ddf19dc10119163b30bd3a6fb2a37edce8b42c72bd10e87c10bff8d0820f2f",
+    "previousTrimmedRawByteSha256": "d18c9c0864609463399361602fceef86c420e4eb794e48d85db7f1ad0d7efde7",
+    "previousSourceEndExclusive": "// 🔔 알람 소리 함수",
+    "sourceEndInclusive": "}, 1000);"
   },
   "protectedRegions": [
     {
       "id": "processParsedTrades",
       "start": "function processParsedTrades",
       "endExclusive": "function openCaptureModal",
-      "sha256": "683f5b883645208b16712c4f463800ea98367f2e4317f24bad86f1d18e6d8273",
-      "matchesSpec000": true
+      "sha256": "c1f7048dea98d3079842d7020ba65f2df2552c6d32f60641dbb72bdf03d55561",
+      "matchesSpec000": true,
+      "previousRawByteSha256": "683f5b883645208b16712c4f463800ea98367f2e4317f24bad86f1d18e6d8273",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
     },
     {
       "id": "scheduler/completion",
       "start": "function runAlgorithmAllModes",
       "endExclusive": "window.completeTradeAndTimer =",
-      "sha256": "0c64f7a542a028045a91b4b67b6721103ccfd76a646d74af0a894a9ee4f7be31",
-      "matchesSpec000": true
+      "sha256": "fc69d0a14934c8559a46e8bf6b149fcd4cf05de43d1252d461dcf03d4bf58210",
+      "matchesSpec000": true,
+      "previousRawByteSha256": "0c64f7a542a028045a91b4b67b6721103ccfd76a646d74af0a894a9ee4f7be31",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only"
     }
-  ]
+  ],
+  "legacyRawSourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+  "legacyRawBaselineSourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+  "hashBasis": {
+    "source": "sha256-utf8-crlf-to-lf-only",
+    "functionBodies": "sha256-utf8-crlf-to-lf-only",
+    "constantDeclarations": "sha256-utf8-crlf-to-lf-only",
+    "timerTick": "sha256-utf8-crlf-to-lf-only",
+    "protectedRegions": "sha256-utf8-crlf-to-lf-only"
+  }
 }
