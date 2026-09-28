@@ -6,7 +6,7 @@
   "sourceHashes": {
     "warehouseOracleScript": {
       "path": "../../../tests/warehouse_patch_regression.py",
-      "sha256": "c147acdb336ac41976f8480d5fbb4ca0fda95e861a597269a9d31873bfa8c0fb"
+      "sha256": "721b70312f1484d789bba849119258c132129d2e41fcf8a0c0e687414a02f73b"
     },
     "warehouseReference": {
       "path": "../../../reference/barter_items.json",
@@ -36,7 +36,7 @@
   "baselineFiles": {
     "warehouseOracleScript": {
       "path": "../../../tests/warehouse_patch_regression.py",
-      "sha256": "c147acdb336ac41976f8480d5fbb4ca0fda95e861a597269a9d31873bfa8c0fb",
+      "sha256": "721b70312f1484d789bba849119258c132129d2e41fcf8a0c0e687414a02f73b",
       "hashBasis": "raw-bytes-sha256"
     },
     "warehouseReference": {
@@ -157,7 +157,7 @@
       "labelProvenance": {
         "type": "curated_fixture",
         "sourcePath": "tests/warehouse_patch_regression.py",
-        "sourceSha256": "c147acdb336ac41976f8480d5fbb4ca0fda95e861a597269a9d31873bfa8c0fb",
+        "sourceSha256": "721b70312f1484d789bba849119258c132129d2e41fcf8a0c0e687414a02f73b",
         "symbols": "DEDICATED_IDS/DEDICATED_QTY",
         "existingOracleModified": false
       },
@@ -185,7 +185,7 @@
       "labelProvenance": {
         "type": "curated_fixture",
         "sourcePath": "tests/warehouse_patch_regression.py",
-        "sourceSha256": "c147acdb336ac41976f8480d5fbb4ca0fda95e861a597269a9d31873bfa8c0fb",
+        "sourceSha256": "721b70312f1484d789bba849119258c132129d2e41fcf8a0c0e687414a02f73b",
         "symbols": "MIXED_IDS/MIXED_QTY",
         "existingOracleModified": false
       },

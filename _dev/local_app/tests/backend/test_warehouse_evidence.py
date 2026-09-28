@@ -19,7 +19,7 @@ class WarehouseEvidenceTests(unittest.TestCase):
         self.database = Path(self.temp.name) / "data.sqlite3"
         self.app = create_app(self.database, testing=True)
         self.client = self.app.test_client()
-        self.image = (ROOT / "마스터창고.png").read_bytes()
+        self.image = (ROOT / "_dev" / "fixtures" / "warehouse_patch" / "barter_only.png").read_bytes()
         # Persistence tests need stable review cases regardless of improvements to OCR.
         real_convert = warehouse_scan.convert
         def review_cases(*args, **kwargs):

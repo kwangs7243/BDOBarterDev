@@ -21,7 +21,8 @@ from warehouse_patch import GridDetectionError, convert, detect_grid  # noqa: E4
 PYTHON_RESULT = ROOT / "test_results" / "warehouse_patch" / "regression_result.json"
 REFERENCE = ROOT / "reference" / "barter_items.json"
 TEMPLATES = TOOL_DIR / "quantity_templates.npz"
-EXPECTED_HTML_SHA256 = "b5f29bfec3c3ebbd4257a42c1e311c28ce8e38d78dfb7a55279bd455a59e6598"
+EXPECTED_HTML_NORMALIZED_SHA256 = "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6"
+HTML_HASH_BASIS = "sha256-utf8-crlf-to-lf-only"
 SEED_IDS = {800012, 800011, 800009}
 GENERAL = "GENERAL"
 
@@ -70,6 +71,12 @@ MIXED_QTY = [
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def normalized_text_sha256(path: Path) -> str:
+    text = path.read_bytes().decode("utf-8")
+    normalized = text.replace("\r\n", "\n").encode("utf-8")
+    return hashlib.sha256(normalized).hexdigest()
 
 
 def load_items() -> dict[int, dict]:
@@ -174,8 +181,8 @@ def canonical_patch_bytes(patch: dict) -> bytes:
 
 def main() -> int:
     items = load_items()
-    html_hash = hashlib.sha256((ROOT / "BDO_물교_v1.0.html").read_bytes()).hexdigest()
-    require(html_hash == EXPECTED_HTML_SHA256, "Protected HTML changed")
+    html_hash = normalized_text_sha256(ROOT / "BDO_물교_v1.0.html")
+    require(html_hash == EXPECTED_HTML_NORMALIZED_SHA256, "Protected HTML changed")
     dedicated_patch, dedicated = evaluate_fixture("barter_only", DEDICATED_IDS, DEDICATED_QTY, items)
     mixed_patch, mixed = evaluate_fixture("mixed", MIXED_IDS, MIXED_QTY, items)
 
@@ -233,7 +240,7 @@ def main() -> int:
 
     result = {
         "status": "PASS",
-        "protectedHtml": {"sha256": html_hash, "unchanged": True},
+        "protectedHtml": {"sha256": html_hash, "hashBasis": HTML_HASH_BASIS, "unchanged": True},
         "referenceItems": len(items),
         "barterOnly": dedicated,
         "mixed": mixed,
