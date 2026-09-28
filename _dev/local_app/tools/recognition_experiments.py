@@ -80,6 +80,8 @@ def _slot_detail(expected: dict[str, Any], prediction: dict[str, Any],
             item_causes.append("ITEM_TOP1_WRONG")
     else:
         item_causes.append("ITEM_TRUTH_UNVERIFIED")
+    if best is None or gap is None or prediction.get("bestCandidate") is None:
+        item_causes.append("ITEM_EVIDENCE_INSUFFICIENT")
     if best is not None and best > 0.35:
         item_causes.append("ITEM_SCORE_ABOVE_R0_LIMIT")
     if gap is not None and gap < 0.045:
@@ -221,6 +223,9 @@ def build_artifact(runs: int = 10, feedback_jsonl: Path | None = None) -> dict[s
     model_manifest = json.loads(MODEL_MANIFEST_PATH.read_text(encoding="utf-8"))
     feedback_summary = benchmark["legacyFeedbackReplay"]
     stored_legacy_wrong = _stored_legacy_wrong_accepted(feedback)
+    feedback_manifest_path = feedback.parent / "manifest.json" if feedback else None
+    feedback_manifest = (json.loads(feedback_manifest_path.read_text(encoding="utf-8"))
+                         if feedback_manifest_path and feedback_manifest_path.is_file() else None)
     measurement_code_hash = sha256_file(Path(__file__))
     implementation_code_hashes = {
         "warehouseRecognitionSha256": sha256_file(ROOT / "local_app" / "backend" / "services" / "warehouse_recognition.py"),
@@ -246,6 +251,19 @@ def build_artifact(runs: int = 10, feedback_jsonl: Path | None = None) -> dict[s
         "fixtureReplaySummary": benchmark,
         "fixtureReplays": detailed_fixtures,
         "legacyFeedback": feedback_summary,
+        "legacyFeedbackDataset": ({
+            "status": "PRESENT",
+            "manifestSha256": feedback_summary.get("datasetManifestSha256"),
+            "sourceSnapshotHash": feedback_manifest.get("sourceSnapshotHash"),
+            "sampleCount": feedback_manifest.get("sampleCount"),
+            "captureCount": feedback_manifest.get("captureCount"),
+            "labelCounts": feedback_manifest.get("labelCounts"),
+            "verifiedFieldCounts": feedback_manifest.get("verifiedFieldCounts"),
+            "disputedFieldCounts": feedback_manifest.get("disputedFieldCounts"),
+            "sourceAccessMode": feedback_manifest.get("sourceAccessMode"),
+            "mainDatabaseWriteCount": feedback_manifest.get("mainDatabaseWriteCount"),
+            "trainingPerformed": feedback_manifest.get("trainingPerformed"),
+        } if feedback_manifest else {"status": "NOT_PROVIDED"}),
         "legacyDecisionClassifications": normalized_legacy_decisions,
         "decisionClassifications": dict(classifications),
         "correctReviewEvidence": correct_review,

@@ -180,6 +180,11 @@ class WarehouseRecognitionV2Tests(unittest.TestCase):
                             for row in result["storedLegacyWrongAccepted"]["samples"]))
         self.assertIn("UNMAPPED", result["storedLegacyWrongAccepted"]["historicalSevenMappingStatus"])
         self.assertEqual(result["missingEvidence"]["legacyWrongAcceptedDigitDetails"], 7)
+        self.assertEqual(result["legacyFeedbackDataset"]["sampleCount"], 306)
+        self.assertEqual(result["legacyFeedbackDataset"]["labelCounts"],
+                         {"DISPUTED": 0, "HUMAN_VERIFIED": 175, "UNVERIFIED": 131})
+        self.assertEqual(result["legacyFeedbackDataset"]["disputedFieldCounts"], {"item": 0, "quantity": 0})
+        self.assertEqual(result["legacyFeedbackDataset"]["verifiedFieldCounts"], {"item": 175, "quantity": 163})
         self.assertEqual(result["tier5"]["excludedCount"], 10)
         self.assertFalse(result["tier5"]["metricEligible"])
         self.assertEqual(result["mainDatabaseWriteCount"], 0)
