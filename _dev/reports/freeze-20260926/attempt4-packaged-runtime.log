@@ -1,0 +1,8 @@
+PACKAGED PASS: browser_smoke
+PACKAGED PASS: browser_warehouse_scan
+Traceback (most recent call last):
+  File "D:\BDOBarterDev\_dev\scripts\verify-frozen-package.py", line 139, in <module>
+    fresh_case(suite, suite, use_cmd=(i == 0))
+  File "D:\BDOBarterDev\_dev\scripts\verify-frozen-package.py", line 126, in fresh_case
+    raise RuntimeError(suite + " failed; inspect its log")
+RuntimeError: browser_trade_session failed; inspect its log

@@ -1,0 +1,86 @@
+[
+  {
+    "from": "D:\\BDOBarterDev\\.specify",
+    "to": "D:\\BDOBarterDev\\_dev\\.specify"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\docs",
+    "to": "D:\\BDOBarterDev\\_dev\\docs"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\fixtures",
+    "to": "D:\\BDOBarterDev\\_dev\\fixtures"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\inputs",
+    "to": "D:\\BDOBarterDev\\_dev\\inputs"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\local_app",
+    "to": "D:\\BDOBarterDev\\_dev\\local_app"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\reference",
+    "to": "D:\\BDOBarterDev\\_dev\\reference"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\reports",
+    "to": "D:\\BDOBarterDev\\_dev\\reports"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\specs",
+    "to": "D:\\BDOBarterDev\\_dev\\specs"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\test_results",
+    "to": "D:\\BDOBarterDev\\_dev\\test_results"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\tests",
+    "to": "D:\\BDOBarterDev\\_dev\\tests"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\tools",
+    "to": "D:\\BDOBarterDev\\_dev\\tools"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\.gitattributes",
+    "to": "D:\\BDOBarterDev\\_dev\\.gitattributes"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\.gitignore",
+    "to": "D:\\BDOBarterDev\\_dev\\.gitignore"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\화면 캡처 2026-09-25 084240.png",
+    "to": "D:\\BDOBarterDev\\_dev\\화면 캡처 2026-09-25 084240.png"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\AGENTS.md",
+    "to": "D:\\BDOBarterDev\\_dev\\AGENTS.md"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\BDO_물교_v1.0_GPT검토팩.zip",
+    "to": "D:\\BDOBarterDev\\_dev\\BDO_물교_v1.0_GPT검토팩.zip"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\BDO_물교_v1.0.html",
+    "to": "D:\\BDOBarterDev\\_dev\\BDO_물교_v1.0.html"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\BDO_localhost_SpecKit_review_20260925_corrected.zip",
+    "to": "D:\\BDOBarterDev\\_dev\\BDO_localhost_SpecKit_review_20260925_corrected.zip"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\BDO_localhost_SpecKit_review_20260925.zip",
+    "to": "D:\\BDOBarterDev\\_dev\\BDO_localhost_SpecKit_review_20260925.zip"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\README.md",
+    "to": "D:\\BDOBarterDev\\_dev\\README.md"
+  },
+  {
+    "from": "D:\\BDOBarterDev\\VERSION",
+    "to": "D:\\BDOBarterDev\\_dev\\VERSION"
+  }
+]

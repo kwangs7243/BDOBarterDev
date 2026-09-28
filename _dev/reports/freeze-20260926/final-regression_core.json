@@ -1,0 +1,408 @@
+{
+  "generatedAt": "2026-09-26T03:54:57.256Z",
+  "immutableInputs": {
+    "originalHtml": {
+      "path": "inputs\\ORIGINAL_v14_1.html",
+      "sha256": "155ee19c515a72627effb4884f540bbd7fcea487967c47fe6ccb3a608bceae9f"
+    },
+    "originalBackup": {
+      "path": "inputs/ORIGINAL_user_backup_20260923.json",
+      "sha256": "0d5af736e9544eea32ba8d2d51f65ff46cbf5f0c2ceee4beaba611109bd868f9"
+    }
+  },
+  "observations": {
+    "specialImportBefore": [
+      {
+        "island": "베이루와 섬",
+        "fromItem": "37년된 약주",
+        "toItem": "유실된 무역품 상자",
+        "reqAmount": 1,
+        "count": 4,
+        "yield": 1
+      },
+      {
+        "island": "인버넨 섬",
+        "fromItem": "청동 촛대",
+        "toItem": "파도의 블랙스톤",
+        "reqAmount": 1,
+        "count": 4,
+        "yield": 1
+      },
+      {
+        "island": "바라테르 섬",
+        "fromItem": "자수정 파편",
+        "toItem": "유실된 무역품 상자",
+        "reqAmount": 1,
+        "count": 4,
+        "yield": 1
+      },
+      {
+        "island": "에버딘 섬",
+        "fromItem": "굳어진 용암 액",
+        "toItem": "파도의 블랙스톤",
+        "reqAmount": 1,
+        "count": 3,
+        "yield": 2
+      }
+    ],
+    "specialImportAfter": [
+      {
+        "island": "베이루와 섬",
+        "fromItem": "갈퀴 꽃 씨앗 주머니",
+        "toItem": "유실된 무역품 상자",
+        "reqAmount": 1,
+        "count": 4,
+        "yield": 1
+      },
+      {
+        "island": "인버넨 섬",
+        "fromItem": "비옥한 흙",
+        "toItem": "파도의 블랙스톤",
+        "reqAmount": 1,
+        "count": 4,
+        "yield": 1
+      },
+      {
+        "island": "바라테르 섬",
+        "fromItem": "고대 항아리 파편",
+        "toItem": "유실된 무역품 상자",
+        "reqAmount": 1,
+        "count": 4,
+        "yield": 1
+      },
+      {
+        "island": "에버딘 섬",
+        "fromItem": "반달 조리용 칼",
+        "toItem": "파도의 블랙스톤",
+        "reqAmount": 1,
+        "count": 3,
+        "yield": 2
+      }
+    ],
+    "yieldBefore": [
+      {
+        "island": "소코타 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "타슈 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "칸베라 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "아라킬 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "타라무라 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "마를레느 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "알브레서 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      },
+      {
+        "island": "진버레이 섬",
+        "requestedYield": 2,
+        "mult": 3,
+        "gain": 30
+      }
+    ],
+    "yieldAfter": [
+      {
+        "island": "소코타 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "타슈 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "칸베라 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "아라킬 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "타라무라 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "마를레느 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "알브레서 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      },
+      {
+        "island": "진버레이 섬",
+        "requestedYield": 2,
+        "mult": 2,
+        "gain": 20
+      }
+    ]
+  },
+  "tests": [
+    {
+      "name": "A1 known special 4 preserve exact item names and row values",
+      "status": "PASS",
+      "details": [
+        {
+          "island": "베이루와 섬",
+          "fromItem": "갈퀴 꽃 씨앗 주머니",
+          "toItem": "유실된 무역품 상자",
+          "reqAmount": 1,
+          "count": 4,
+          "yield": 1
+        },
+        {
+          "island": "인버넨 섬",
+          "fromItem": "비옥한 흙",
+          "toItem": "파도의 블랙스톤",
+          "reqAmount": 1,
+          "count": 4,
+          "yield": 1
+        },
+        {
+          "island": "바라테르 섬",
+          "fromItem": "고대 항아리 파편",
+          "toItem": "유실된 무역품 상자",
+          "reqAmount": 1,
+          "count": 4,
+          "yield": 1
+        },
+        {
+          "island": "에버딘 섬",
+          "fromItem": "반달 조리용 칼",
+          "toItem": "파도의 블랙스톤",
+          "reqAmount": 1,
+          "count": 3,
+          "yield": 2
+        }
+      ]
+    },
+    {
+      "name": "A2 repeated import is idempotent",
+      "status": "PASS",
+      "details": {
+        "count": 4
+      }
+    },
+    {
+      "name": "A3 normal, coin, tier 6, and tier 7 valid rows remain unchanged",
+      "status": "PASS",
+      "details": [
+        {
+          "island": "파라타마 섬",
+          "fromItem": "붉은 나무혹",
+          "toItem": "앵두나무 씨앗 주머니",
+          "reqAmount": 200,
+          "count": 10,
+          "yield": 1
+        },
+        {
+          "island": "바레미 섬",
+          "fromItem": "해적의 열쇠",
+          "toItem": "까마귀 주화",
+          "reqAmount": 1,
+          "count": 4,
+          "yield": 52
+        },
+        {
+          "island": "깊은 밤의 항구",
+          "fromItem": "고급 문양의 옷감",
+          "toItem": "그림자 장식 거울",
+          "reqAmount": 1,
+          "count": 5,
+          "yield": 1
+        },
+        {
+          "island": "일리야 섬",
+          "fromItem": "그림자 장식 거울",
+          "toItem": "발레노스 항해사의 망원경",
+          "reqAmount": 1,
+          "count": 5,
+          "yield": 1
+        }
+      ]
+    },
+    {
+      "name": "A4 invalid or unverifiable items are held instead of silently remapped",
+      "status": "PASS",
+      "details": [
+        "⚠️ 품목 후보 사용자 확인 1건 보류 (0건 추가)"
+      ]
+    },
+    {
+      "name": "A5 unique high-confidence OCR item typos are corrected from the master list",
+      "status": "PASS",
+      "details": [
+        {
+          "island": "타슈 섬",
+          "fromItem": "뗏목 조각품",
+          "toItem": "해양 구조품",
+          "reqAmount": 1,
+          "count": 10,
+          "yield": 2
+        },
+        {
+          "island": "베이루와 섬",
+          "fromItem": "갈퀴 꽃 씨앗 주머니",
+          "toItem": "유실된 무역품 상자",
+          "reqAmount": 1,
+          "count": 4,
+          "yield": 1
+        }
+      ]
+    },
+    {
+      "name": "A6 ambiguous OCR item candidates are held for user confirmation",
+      "status": "PASS",
+      "details": [
+        "⚠️ 품목 후보 사용자 확인 1건 보류 (0건 추가)"
+      ]
+    },
+    {
+      "name": "B1 yield boundaries 1, 2, and 3 pass unchanged",
+      "status": "PASS",
+      "details": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "name": "B2 missing, zero, negative, and string yields are held",
+      "status": "PASS",
+      "details": [
+        {
+          "value": "<missing>",
+          "accepted": 0
+        },
+        {
+          "value": 0,
+          "accepted": 0
+        },
+        {
+          "value": -1,
+          "accepted": 0
+        },
+        {
+          "value": "2",
+          "accepted": 0
+        }
+      ]
+    },
+    {
+      "name": "B3 all 8 known rows use their own yield in scheduling",
+      "status": "PASS",
+      "details": [
+        {
+          "island": "소코타 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "타슈 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "칸베라 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "아라킬 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "타라무라 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "마를레느 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "알브레서 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        },
+        {
+          "island": "진버레이 섬",
+          "requestedYield": 2,
+          "mult": 2,
+          "gain": 20
+        }
+      ]
+    },
+    {
+      "name": "B4 card text and completion use the same per-row yield",
+      "status": "PASS",
+      "details": {
+        "before": 0,
+        "after": 20,
+        "expectedAfter": 20,
+        "secondClickAfter": 20
+      }
+    },
+    {
+      "name": "B5 save, refresh, schedule load, export, and backup restore preserve completed inventory",
+      "status": "PASS",
+      "details": {
+        "expectedStock": 20,
+        "exportedVersion": "1.0",
+        "completedStatusRestored": true
+      }
+    }
+  ]
+}

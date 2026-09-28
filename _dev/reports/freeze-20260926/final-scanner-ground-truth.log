@@ -1,0 +1,62 @@
+{
+  "barter_only": {
+    "grid": {
+      "origin": {
+        "x": 4,
+        "y": 8
+      },
+      "period": 51,
+      "slotWidth": 45,
+      "gap": 6,
+      "columns": 9,
+      "rows": 7,
+      "xPeakScore": 0.25892606377601624,
+      "yPeakScore": 0.2627367079257965,
+      "validatedCellRatio": 0.9841269841269841,
+      "meanBorderContrast": 0.213320221219744,
+      "meanGapBrightness": 0.15629803448442428
+    },
+    "targetSlots": 53,
+    "top1ItemIdentityCorrect": 53,
+    "quantityCorrect": 53,
+    "patchItems": 50,
+    "tier5Excluded": 5,
+    "generalExcluded": 0,
+    "generalQuantityCorrect": 0,
+    "iconUnknown": 3,
+    "empty": 5,
+    "wrongItemNames": [],
+    "quantityErrors": [],
+    "phantomItems": []
+  },
+  "mixed": {
+    "grid": {
+      "origin": {
+        "x": 2,
+        "y": 4
+      },
+      "period": 51,
+      "slotWidth": 45,
+      "gap": 6,
+      "columns": 9,
+      "rows": 7,
+      "xPeakScore": 0.27707916498184204,
+      "yPeakScore": 0.28000274300575256,
+      "validatedCellRatio": 0.9841269841269841,
+      "meanBorderContrast": 0.21437286431827243,
+      "meanGapBrightness": 0.15653714963368007
+    },
+    "targetSlots": 52,
+    "top1ItemIdentityCorrect": 52,
+    "quantityCorrect": 52,
+    "patchItems": 49,
+    "tier5Excluded": 5,
+    "generalExcluded": 5,
+    "generalQuantityCorrect": 5,
+    "iconUnknown": 3,
+    "empty": 1,
+    "wrongItemNames": [],
+    "quantityErrors": [],
+    "phantomItems": []
+  }
+}

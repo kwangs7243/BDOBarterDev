@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "schemaBefore": 1,
+  "schemaAfter": 2,
+  "revision": 51,
+  "inventoryRows": 70,
+  "inventoryOrderSettingsPreserved": true,
+  "initialWorkingSession": null,
+  "initialSlotsEmpty": true,
+  "health": {
+    "ok": true,
+    "revision": 51,
+    "schemaVersion": 2,
+    "service": "bdo-barter-local"
+  }
+}

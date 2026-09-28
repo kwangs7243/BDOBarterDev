@@ -1,0 +1,10 @@
+{
+  "currentSpeedTier7": 17,
+  "currentBalanceTier7": 17,
+  "fiveDirectSpeedTier7": 30,
+  "fiveDirectBalanceTier7": 30,
+  "speedWeight20000Tier7": 30,
+  "producerOnlyBalanceTier7": 20,
+  "mixedThresholdBalanceTier7": 30,
+  "reserveTargetUnchanged": true
+}

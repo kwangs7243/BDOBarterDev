@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "revision": 51,
+  "durableHashes": {
+    "inventory": "b14975d4560b6a9755d4a4d4d0842df19db6facdff6bc29153ca4eaba5d36342",
+    "order": "2930a2f2c2ee33d7ac924f5c01856c723331b0c532fa1d38c3fd03c3de4704b0",
+    "settings": "3f35c6a4dd91bac6d96a7190795648daecc27a165434c1cc1dcab059efd19651"
+  },
+  "inventoryRows": 70
+}

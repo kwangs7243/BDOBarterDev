@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "task": "SPEC-008 T000A Case B proposal",
+  "status": "DRAFT_AWAITING_USER_DIRECTION",
+  "caseAResult": "REJECTED_AS_AUTHORITATIVE_BASELINE",
+  "caseBResult": "REQUIRED",
+  "recommendedGitRoot": "D:/BDOBarterDev",
+  "recommendedGitRootReason": "The current 190-entry manifest uses _dev/... paths relative to the workspace root. A different checkout layout needs an explicit path/layout decision.",
+  "selectedDestination": null,
+  "selectedBranch": null,
+  "gitActionsPerformed": [],
+  "proposalOnly": true,
+  "proposedIncludeRules": [
+    "Explicitly reviewed source, backend, frontend, scripts, reference, protected source files, curated fixtures, project instructions and SPEC documents.",
+    "Keep candidate file bytes and recheck SHA-256 immediately before any approved baseline commit.",
+    "Include the SPEC-008 documents and T000 evidence reports only after reviewing their contents."
+  ],
+  "manifestCoverage": {
+    "listedHashes": 190,
+    "currentDifferences": 0,
+    "entriesRequiringUserDisposition": {
+      "localVirtualEnvironmentFiles": 4,
+      "userScreenCaptureInputFiles": 1
+    },
+    "decisionNeeded": "The unchanged manifest records hashes for these five local artifacts. Excluding them from Git preserves privacy/reproducibility but means a fresh checkout cannot verify every manifest entry; including them commits a screen capture and interpreter artifacts. Choose treatment before editing the manifest or staging. No entry has been removed or altered."
+  },
+  "proposedExclusionsForReview": [
+    "D:/BDOBarterDev/app/** and root app backup/review-package directories",
+    "_dev/build/**",
+    "_dev/local_app/.venv/**",
+    "_dev/**/*.sqlite3 and other user databases",
+    "screen captures and raw daily capture/feedback artifacts",
+    "logs, caches, __pycache__, temporary environments, archives and generated experiment outputs",
+    "credentials and environment secret files"
+  ],
+  "userDataDisposition": "_dev/inputs contains a personal screen-capture input and a protected user backup JSON. Neither was opened or copied during T000A. The T000B allowlist must say whether their source bytes remain Git-tracked, stay local/untracked, or are excluded with an approved manifest-scope correction.",
+  "proposedSequence": [
+    "User confirms Git root/destination and disposition of manifest-listed local artifacts/user inputs.",
+    "Create a complete path allowlist and denylist from selected scope; inspect staged diff and scan candidate text/config files for secrets.",
+    "In the approved destination only, copy selected current tree bytes and recheck source/protected hashes.",
+    "Initialize fresh history without importing mismatched v1.0 metadata; explicitly stage approved allowlist.",
+    "Review staged paths, binaries, private data and diff; create initial baseline commit only within approved scope.",
+    "Compare committed tree and recorded manifest; set repository-access.ready=true only after all gates pass."
+  ],
+  "requiredUserDirections": [
+    "Choose the Git root/destination. Suggested existing root: D:/BDOBarterDev; select a different exact path if preferred.",
+    "Choose handling of the five manifest-listed local artifacts (four virtual-environment files and one personal capture) in Git and whether manifest scope may be corrected.",
+    "Confirm whether protected user-input files remain tracked in the new local baseline."
+  ],
+  "notAuthorizedByThisProposal": [
+    "git init, moving/copying old .git metadata, staging, commit, branch creation, remote configuration or push",
+    "source or baseline-manifest edits",
+    "copying, deleting or opening private/user-data image inputs"
+  ]
+}

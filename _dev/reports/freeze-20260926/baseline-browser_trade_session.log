@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "browser": "Chrome headless",
+  "newSession": true,
+  "defaultParley": true,
+  "malformedJsonPreservedSession": true,
+  "duplicateAndConflictHeld": true,
+  "normalAppendInvalidatedSchedule": true,
+  "editInvalidatedSchedule": true,
+  "countYieldDisabledDeleted": true,
+  "currentParleyStayedSessionOnly": true,
+  "reloadDroppedSession": true,
+  "durableSettingsRestored": true,
+  "noCurrentTradesApi": true,
+  "sqliteTables": [
+    "app_meta",
+    "inventory",
+    "settings"
+  ],
+  "temporaryDatabase": true
+}

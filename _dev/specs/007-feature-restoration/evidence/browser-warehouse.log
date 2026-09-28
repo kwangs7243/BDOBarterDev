@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "browser": "Chrome headless",
+  "upload": "raw PNG via file input and drop event",
+  "customTier4Order": [
+    "금주화가 담긴 낡은 상자",
+    "굳어진 용암 액",
+    "만병통치약",
+    "목 잘린 용 조각상",
+    "뱃사공의 수련서",
+    "오색빛 실타래",
+    "조개 껍질 장식",
+    "청동 촛대",
+    "청록빛 소금덩어리",
+    "해상 기사단의 창",
+    "해상 기사단의 투구",
+    "해적의 열쇠"
+  ],
+  "reviewRows": 50,
+  "applyCancelledWithoutWrite": true,
+  "staleRevisionRequiredReconfirmation": true,
+  "failedSaveKeptReviewAndDatabaseUnchanged": true,
+  "committedWriteRecoveredAfterRefreshError": true,
+  "applyChangedPatchStocksOnly": true,
+  "targetsOrderSettingsPreserved": true,
+  "temporaryDatabase": true
+}

@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "renderedItems": 70,
+  "inventoryOrderRoundTrip": [
+    "거대한 물고기 뼈",
+    "갈퀴 꽃 씨앗 주머니",
+    "고대 항아리 파편"
+  ],
+  "stockRoundTrip": "37",
+  "settingsRoundTrip": true,
+  "viewerPanelRoundTrip": "17",
+  "snapshotExplicitLoad": true,
+  "staleRevisionShownAsFailure": true,
+  "invalidSaveShownAsFailure": true,
+  "database": "isolated temporary SQLite"
+}

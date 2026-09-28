@@ -1,0 +1,39 @@
+# GPT review and release archives
+*.zip
+*.7z
+*.rar
+archive/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Dependencies, caches, and generated coverage
+node_modules/
+coverage/
+.cache/
+.pytest_cache/
+__pycache__/
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.log
+*~
+tmp/
+temp/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.lnk
+.DS_Store
+Thumbs.db
+desktop.ini

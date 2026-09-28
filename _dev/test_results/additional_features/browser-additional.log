@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "browser": "Chrome headless",
+  "rejectedOnlyRepair": true,
+  "defaultExclude": true,
+  "cancelPreservedSession": true,
+  "invalidCorrectionBlocked": true,
+  "selectedRepairInserted": true,
+  "conflictCannotBeForced": true,
+  "durationCarryAnd24HourPlus": true,
+  "modeHeaders": true,
+  "guessMatchAndDifference": true,
+  "warehouseSingleApply": true,
+  "dataset": {
+    "count": 54,
+    "verified": [
+      [
+        "R5C8",
+        "match",
+        23
+      ],
+      [
+        "R6C4",
+        "different",
+        53
+      ]
+    ],
+    "autoLabeled": false
+  }
+}

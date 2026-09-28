@@ -1,0 +1,10 @@
+{
+  "zoom130": "PASS",
+  "modalHitTest": "PASS",
+  "zoomPan": "PASS",
+  "ok": false,
+  "failure": "Error: TypeError: n.click is not a function\n    at <anonymous>:1:144\n    at <anonymous>:1:207\n    at evaluate (file:///D:/BDOBarterDev/_dev/local_app/tests/browser_map_restoration.mjs:47:40)\n    at async file:///D:/BDOBarterDev/_dev/local_app/tests/browser_map_restoration.mjs:75:21",
+  "pageErrors": [],
+  "port": 18772,
+  "temporaryDatabase": true
+}

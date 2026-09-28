@@ -1,0 +1,5 @@
+PASS F1 manual non-coin row starts without a silent valid yield
+PASS F2 manual non-coin yield is editable and drives schedule and persisted row
+PASS F3 restored polluted backup holds same-island same-output conflicts
+PASS F4 exact repeated JSON import remains idempotent
+SUMMARY 4/4 PASS

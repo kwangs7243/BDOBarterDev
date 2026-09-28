@@ -1,0 +1,2474 @@
+[
+  {
+    "path": ".gitattributes",
+    "bytes": 104
+  },
+  {
+    "path": ".gitignore",
+    "bytes": 429
+  },
+  {
+    "path": "화면 캡처 2026-09-25 084240.png",
+    "bytes": 253959
+  },
+  {
+    "path": "AGENTS.md",
+    "bytes": 4060
+  },
+  {
+    "path": "BDO_물교_v1.0_GPT검토팩.zip",
+    "bytes": 336928
+  },
+  {
+    "path": "BDO_물교_v1.0.html",
+    "bytes": 520416
+  },
+  {
+    "path": "BDO_localhost_SpecKit_review_20260925_corrected.zip",
+    "bytes": 51547
+  },
+  {
+    "path": "BDO_localhost_SpecKit_review_20260925.zip",
+    "bytes": 49852
+  },
+  {
+    "path": "README.md",
+    "bytes": 1716
+  },
+  {
+    "path": "VERSION",
+    "bytes": 4
+  },
+  {
+    "path": ".specify\\memory\\constitution.md",
+    "bytes": 2570
+  },
+  {
+    "path": "docs\\ARCHITECTURE.md",
+    "bytes": 59406
+  },
+  {
+    "path": "docs\\REPOSITORY_WORKFLOW.md",
+    "bytes": 3597
+  },
+  {
+    "path": "docs\\V1.0_BASELINE.md",
+    "bytes": 1873
+  },
+  {
+    "path": "fixtures\\KNOWN_CORRECT_SPECIAL_IMPORT_4.json",
+    "bytes": 704
+  },
+  {
+    "path": "fixtures\\KNOWN_YIELD_MISMATCHES_8.json",
+    "bytes": 1366
+  },
+  {
+    "path": "fixtures\\TEST_ONLY_corrected_low_stock.json",
+    "bytes": 25160
+  },
+  {
+    "path": "fixtures\\TEST_ONLY_synthetic_T1T4_full_T5_original.json",
+    "bytes": 25241
+  },
+  {
+    "path": "fixtures\\TEST_ONLY_synthetic_T4_25_each.json",
+    "bytes": 25172
+  },
+  {
+    "path": "fixtures\\TEST_ONLY_synthetic_target_full_stock.json",
+    "bytes": 25254
+  },
+  {
+    "path": "fixtures\\USER_CAPTURE_20260923_74_ROWS.json",
+    "bytes": 9931
+  },
+  {
+    "path": "fixtures\\warehouse_patch\\barter_only.png",
+    "bytes": 213658
+  },
+  {
+    "path": "fixtures\\warehouse_patch\\calibration_manifest.json",
+    "bytes": 2980
+  },
+  {
+    "path": "fixtures\\warehouse_patch\\calibration.png",
+    "bytes": 237290
+  },
+  {
+    "path": "fixtures\\warehouse_patch\\mixed.png",
+    "bytes": 229560
+  },
+  {
+    "path": "inputs\\BEFORE_master_inventory_patch_v1.0_20260924.html",
+    "bytes": 513468
+  },
+  {
+    "path": "inputs\\ORIGINAL_user_backup_20260923.json",
+    "bytes": 152013
+  },
+  {
+    "path": "inputs\\ORIGINAL_v14_1.html",
+    "bytes": 508642
+  },
+  {
+    "path": "local_app\\__init__.py",
+    "bytes": 36
+  },
+  {
+    "path": "local_app\\launcher.py",
+    "bytes": 12084
+  },
+  {
+    "path": "local_app\\pyproject.toml",
+    "bytes": 491
+  },
+  {
+    "path": "local_app\\backend\\app.py",
+    "bytes": 5830
+  },
+  {
+    "path": "local_app\\backend\\contracts.py",
+    "bytes": 12870
+  },
+  {
+    "path": "local_app\\backend\\storage.py",
+    "bytes": 12286
+  },
+  {
+    "path": "local_app\\backend\\api\\__init__.py",
+    "bytes": 24
+  },
+  {
+    "path": "local_app\\backend\\api\\maintenance.py",
+    "bytes": 943
+  },
+  {
+    "path": "local_app\\backend\\api\\scan.py",
+    "bytes": 1526
+  },
+  {
+    "path": "local_app\\backend\\api\\state.py",
+    "bytes": 3033
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\__init__.cpython-312.pyc",
+    "bytes": 162
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\__init__.cpython-314.pyc",
+    "bytes": 164
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\maintenance.cpython-312.pyc",
+    "bytes": 1629
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\scan.cpython-312.pyc",
+    "bytes": 2588
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\scan.cpython-314.pyc",
+    "bytes": 2706
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\state.cpython-312.pyc",
+    "bytes": 5473
+  },
+  {
+    "path": "local_app\\backend\\api\\__pycache__\\state.cpython-314.pyc",
+    "bytes": 5629
+  },
+  {
+    "path": "local_app\\backend\\services\\__init__.py",
+    "bytes": 75
+  },
+  {
+    "path": "local_app\\backend\\services\\warehouse_scan.py",
+    "bytes": 6610
+  },
+  {
+    "path": "local_app\\backend\\services\\__pycache__\\__init__.cpython-312.pyc",
+    "bytes": 218
+  },
+  {
+    "path": "local_app\\backend\\services\\__pycache__\\__init__.cpython-314.pyc",
+    "bytes": 236
+  },
+  {
+    "path": "local_app\\backend\\services\\__pycache__\\warehouse_scan.cpython-312.pyc",
+    "bytes": 9297
+  },
+  {
+    "path": "local_app\\backend\\services\\__pycache__\\warehouse_scan.cpython-314.pyc",
+    "bytes": 10769
+  },
+  {
+    "path": "local_app\\backend\\__pycache__\\app.cpython-312.pyc",
+    "bytes": 9405
+  },
+  {
+    "path": "local_app\\backend\\__pycache__\\app.cpython-314.pyc",
+    "bytes": 8330
+  },
+  {
+    "path": "local_app\\backend\\__pycache__\\contracts.cpython-312.pyc",
+    "bytes": 17665
+  },
+  {
+    "path": "local_app\\backend\\__pycache__\\contracts.cpython-314.pyc",
+    "bytes": 21149
+  },
+  {
+    "path": "local_app\\backend\\__pycache__\\storage.cpython-312.pyc",
+    "bytes": 17518
+  },
+  {
+    "path": "local_app\\backend\\__pycache__\\storage.cpython-314.pyc",
+    "bytes": 21572
+  },
+  {
+    "path": "local_app\\bdo_barter_local_app.egg-info\\dependency_links.txt",
+    "bytes": 1
+  },
+  {
+    "path": "local_app\\bdo_barter_local_app.egg-info\\PKG-INFO",
+    "bytes": 373
+  },
+  {
+    "path": "local_app\\bdo_barter_local_app.egg-info\\requires.txt",
+    "bytes": 89
+  },
+  {
+    "path": "local_app\\bdo_barter_local_app.egg-info\\SOURCES.txt",
+    "bytes": 467
+  },
+  {
+    "path": "local_app\\bdo_barter_local_app.egg-info\\top_level.txt",
+    "bytes": 8
+  },
+  {
+    "path": "local_app\\frontend\\index.html",
+    "bytes": 6611
+  },
+  {
+    "path": "local_app\\frontend\\css\\app.css",
+    "bytes": 2797
+  },
+  {
+    "path": "local_app\\frontend\\css\\schedule.css",
+    "bytes": 1995
+  },
+  {
+    "path": "local_app\\frontend\\css\\trade-session.css",
+    "bytes": 422
+  },
+  {
+    "path": "local_app\\frontend\\css\\warehouse-scan.css",
+    "bytes": 2448
+  },
+  {
+    "path": "local_app\\frontend\\data\\trade-catalog.json",
+    "bytes": 7385
+  },
+  {
+    "path": "local_app\\frontend\\js\\api.js",
+    "bytes": 1689
+  },
+  {
+    "path": "local_app\\frontend\\js\\app.js",
+    "bytes": 2259
+  },
+  {
+    "path": "local_app\\frontend\\js\\diagnostics-ui.js",
+    "bytes": 949
+  },
+  {
+    "path": "local_app\\frontend\\js\\inventory-ui.js",
+    "bytes": 6268
+  },
+  {
+    "path": "local_app\\frontend\\js\\map-ui.js",
+    "bytes": 8222
+  },
+  {
+    "path": "local_app\\frontend\\js\\patch-review.js",
+    "bytes": 6378
+  },
+  {
+    "path": "local_app\\frontend\\js\\persistence.js",
+    "bytes": 2964
+  },
+  {
+    "path": "local_app\\frontend\\js\\schedule-ui.js",
+    "bytes": 11573
+  },
+  {
+    "path": "local_app\\frontend\\js\\settings-ui.js",
+    "bytes": 7982
+  },
+  {
+    "path": "local_app\\frontend\\js\\state.js",
+    "bytes": 566
+  },
+  {
+    "path": "local_app\\frontend\\js\\trade-ui.js",
+    "bytes": 8571
+  },
+  {
+    "path": "local_app\\frontend\\js\\warehouse-scan-ui.js",
+    "bytes": 5176
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\completion.js",
+    "bytes": 13663
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\constants.js",
+    "bytes": 19723
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\routing.js",
+    "bytes": 11212
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\schedule-edit.js",
+    "bytes": 8009
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\scheduler-runtime.js",
+    "bytes": 8360
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\scheduler.js",
+    "bytes": 87300
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\tier7.js",
+    "bytes": 33592
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\timer-ui.js",
+    "bytes": 5680
+  },
+  {
+    "path": "local_app\\frontend\\js\\domain\\trade-import.js",
+    "bytes": 7944
+  },
+  {
+    "path": "local_app\\packaging\\bdo-barter.spec",
+    "bytes": 1574
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\BDO 물교 실행.exe",
+    "bytes": 7423399
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_asyncio.pyd",
+    "bytes": 75056
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_bz2.pyd",
+    "bytes": 88880
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_ctypes.pyd",
+    "bytes": 131888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_decimal.pyd",
+    "bytes": 263984
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_elementtree.pyd",
+    "bytes": 137520
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_hashlib.pyd",
+    "bytes": 70448
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_lzma.pyd",
+    "bytes": 168240
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_multiprocessing.pyd",
+    "bytes": 39728
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_overlapped.pyd",
+    "bytes": 59696
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_queue.pyd",
+    "bytes": 36144
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_socket.pyd",
+    "bytes": 87344
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_sqlite3.pyd",
+    "bytes": 127792
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_ssl.pyd",
+    "bytes": 180528
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_uuid.pyd",
+    "bytes": 29488
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\_wmi.pyd",
+    "bytes": 41264
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-console-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-datetime-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-debug-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-errorhandling-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-fibers-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-fibers-l1-1-1.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-file-l1-1-0.dll",
+    "bytes": 27008
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-file-l1-2-0.dll",
+    "bytes": 22888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-file-l2-1-0.dll",
+    "bytes": 22912
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-handle-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-heap-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-interlocked-l1-1-0.dll",
+    "bytes": 22888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-kernel32-legacy-l1-1-1.dll",
+    "bytes": 22888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-libraryloader-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-localization-l1-2-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-memory-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-namedpipe-l1-1-0.dll",
+    "bytes": 22888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-processenvironment-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-processthreads-l1-1-0.dll",
+    "bytes": 22912
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-processthreads-l1-1-1.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-profile-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-rtlsupport-l1-1-0.dll",
+    "bytes": 22888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-string-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-synch-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-synch-l1-2-0.dll",
+    "bytes": 22888
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-sysinfo-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-sysinfo-l1-2-0.dll",
+    "bytes": 22912
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-timezone-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-core-util-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-conio-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-convert-l1-1-0.dll",
+    "bytes": 26992
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-environment-l1-1-0.dll",
+    "bytes": 22912
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-filesystem-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-heap-l1-1-0.dll",
+    "bytes": 22872
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-locale-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-math-l1-1-0.dll",
+    "bytes": 31064
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-private-l1-1-0.dll",
+    "bytes": 76120
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-process-l1-1-0.dll",
+    "bytes": 22896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-runtime-l1-1-0.dll",
+    "bytes": 26968
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-stdio-l1-1-0.dll",
+    "bytes": 26968
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-string-l1-1-0.dll",
+    "bytes": 26968
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-time-l1-1-0.dll",
+    "bytes": 22912
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\api-ms-win-crt-utility-l1-1-0.dll",
+    "bytes": 22912
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\base_library.zip",
+    "bytes": 1333490
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\libcrypto-3-x64.dll",
+    "bytes": 8003376
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\libffi-8.dll",
+    "bytes": 43824
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\libssl-3-x64.dll",
+    "bytes": 1599280
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\pyexpat.pyd",
+    "bytes": 226096
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\python312.dll",
+    "bytes": 6985520
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\select.pyd",
+    "bytes": 34608
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\sqlite3.dll",
+    "bytes": 1623344
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\ucrtbase.dll",
+    "bytes": 1362264
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\unicodedata.pyd",
+    "bytes": 1143600
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\VCRUNTIME140_1.dll",
+    "bytes": 49792
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\VCRUNTIME140.dll",
+    "bytes": 124544
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\click-8.5.0.dist-info\\INSTALLER",
+    "bytes": 4
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\click-8.5.0.dist-info\\METADATA",
+    "bytes": 2567
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\click-8.5.0.dist-info\\RECORD",
+    "bytes": 2533
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\click-8.5.0.dist-info\\WHEEL",
+    "bytes": 82
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\click-8.5.0.dist-info\\licenses\\LICENSE.txt",
+    "bytes": 1475
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\entry_points.txt",
+    "bytes": 40
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\INSTALLER",
+    "bytes": 4
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\METADATA",
+    "bytes": 3167
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\RECORD",
+    "bytes": 3729
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\REQUESTED",
+    "bytes": 0
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\WHEEL",
+    "bytes": 82
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\flask-3.1.3.dist-info\\licenses\\LICENSE.txt",
+    "bytes": 1475
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\itsdangerous-2.2.0.dist-info\\INSTALLER",
+    "bytes": 4
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\itsdangerous-2.2.0.dist-info\\LICENSE.txt",
+    "bytes": 1475
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\itsdangerous-2.2.0.dist-info\\METADATA",
+    "bytes": 1924
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\itsdangerous-2.2.0.dist-info\\RECORD",
+    "bytes": 1549
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\itsdangerous-2.2.0.dist-info\\WHEEL",
+    "bytes": 81
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\index.html",
+    "bytes": 6611
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\css\\app.css",
+    "bytes": 2797
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\css\\schedule.css",
+    "bytes": 1995
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\css\\trade-session.css",
+    "bytes": 422
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\css\\warehouse-scan.css",
+    "bytes": 2448
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\data\\trade-catalog.json",
+    "bytes": 7385
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\api.js",
+    "bytes": 1689
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\app.js",
+    "bytes": 2259
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\diagnostics-ui.js",
+    "bytes": 949
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\inventory-ui.js",
+    "bytes": 6268
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\map-ui.js",
+    "bytes": 8222
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\patch-review.js",
+    "bytes": 6378
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\persistence.js",
+    "bytes": 2964
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\schedule-ui.js",
+    "bytes": 11573
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\settings-ui.js",
+    "bytes": 7982
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\state.js",
+    "bytes": 566
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\trade-ui.js",
+    "bytes": 8571
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\warehouse-scan-ui.js",
+    "bytes": 5176
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\completion.js",
+    "bytes": 13663
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\constants.js",
+    "bytes": 19723
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\routing.js",
+    "bytes": 11212
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\schedule-edit.js",
+    "bytes": 8009
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\scheduler-runtime.js",
+    "bytes": 8360
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\scheduler.js",
+    "bytes": 87300
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\tier7.js",
+    "bytes": 33592
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\timer-ui.js",
+    "bytes": 5680
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\local_app\\frontend\\js\\domain\\trade-import.js",
+    "bytes": 7944
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe\\_speedups.cp312-win_amd64.pyd",
+    "bytes": 13312
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe-3.0.3.dist-info\\INSTALLER",
+    "bytes": 4
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe-3.0.3.dist-info\\METADATA",
+    "bytes": 2764
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe-3.0.3.dist-info\\RECORD",
+    "bytes": 1104
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe-3.0.3.dist-info\\top_level.txt",
+    "bytes": 11
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe-3.0.3.dist-info\\WHEEL",
+    "bytes": 101
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\markupsafe-3.0.3.dist-info\\licenses\\LICENSE.txt",
+    "bytes": 1503
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\fft\\_pocketfft_umath.cp312-win_amd64.pyd",
+    "bytes": 276480
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\linalg\\_umath_linalg.cp312-win_amd64.pyd",
+    "bytes": 112128
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_bounded_integers.cp312-win_amd64.pyd",
+    "bytes": 208896
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_common.cp312-win_amd64.pyd",
+    "bytes": 174080
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_generator.cp312-win_amd64.pyd",
+    "bytes": 624640
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_mt19937.cp312-win_amd64.pyd",
+    "bytes": 92672
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_pcg64.cp312-win_amd64.pyd",
+    "bytes": 105984
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_philox.cp312-win_amd64.pyd",
+    "bytes": 89088
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\_sfc64.cp312-win_amd64.pyd",
+    "bytes": 64000
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\bit_generator.cp312-win_amd64.pyd",
+    "bytes": 173056
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\random\\mtrand.cp312-win_amd64.pyd",
+    "bytes": 522752
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\_core\\_multiarray_tests.cp312-win_amd64.pyd",
+    "bytes": 65536
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy\\_core\\_multiarray_umath.cp312-win_amd64.pyd",
+    "bytes": 3854848
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\DELVEWHEEL",
+    "bytes": 462
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\entry_points.txt",
+    "bytes": 220
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\INSTALLER",
+    "bytes": 4
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\METADATA",
+    "bytes": 6635
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\RECORD",
+    "bytes": 113358
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\REQUESTED",
+    "bytes": 0
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\WHEEL",
+    "bytes": 85
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\LICENSE.txt",
+    "bytes": 45831
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\fft\\pocketfft\\LICENSE.md",
+    "bytes": 1523
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\linalg\\lapack_lite\\LICENSE.txt",
+    "bytes": 2314
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\ma\\LICENSE",
+    "bytes": 1616
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\LICENSE.md",
+    "bytes": 3582
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\src\\distributions\\LICENSE.md",
+    "bytes": 2805
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\src\\mt19937\\LICENSE.md",
+    "bytes": 2986
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\src\\pcg64\\LICENSE.md",
+    "bytes": 1176
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\src\\philox\\LICENSE.md",
+    "bytes": 1540
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\src\\sfc64\\LICENSE.md",
+    "bytes": 1253
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\random\\src\\splitmix64\\LICENSE.md",
+    "bytes": 340
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\_core\\include\\numpy\\libdivide\\LICENSE.txt",
+    "bytes": 1039
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\_core\\src\\common\\pythoncapi-compat\\COPYING",
+    "bytes": 704
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\_core\\src\\highway\\LICENSE",
+    "bytes": 21155
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\_core\\src\\multiarray\\dragon4_LICENSE.txt",
+    "bytes": 1441
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\_core\\src\\npysort\\x86-simd-sort\\LICENSE.md",
+    "bytes": 1542
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy-2.5.3.dist-info\\licenses\\numpy\\_core\\src\\umath\\svml\\LICENSE",
+    "bytes": 1573
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy.libs\\libscipy_openblas64_-ed4f167a5330424524f45258e7ca2c8d.dll",
+    "bytes": 20589056
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\numpy.libs\\msvcp140-a4c2229bdc2a2a630acdc095b4d86008.dll",
+    "bytes": 575056
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\PIL\\_avif.cp312-win_amd64.pyd",
+    "bytes": 7893504
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\PIL\\_imaging.cp312-win_amd64.pyd",
+    "bytes": 2632704
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\PIL\\_imagingcms.cp312-win_amd64.pyd",
+    "bytes": 272384
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\PIL\\_imagingmath.cp312-win_amd64.pyd",
+    "bytes": 21504
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\PIL\\_imagingtk.cp312-win_amd64.pyd",
+    "bytes": 14848
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\PIL\\_webp.cp312-win_amd64.pyd",
+    "bytes": 416256
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\barter_items.json",
+    "bytes": 52282
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800001.webp",
+    "bytes": 1552
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800002.webp",
+    "bytes": 2080
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800003.webp",
+    "bytes": 1126
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800004.webp",
+    "bytes": 1166
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800005.webp",
+    "bytes": 1182
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800006.webp",
+    "bytes": 1676
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800007.webp",
+    "bytes": 1074
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800008.webp",
+    "bytes": 1210
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800009.webp",
+    "bytes": 1358
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800010.webp",
+    "bytes": 1680
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800011.webp",
+    "bytes": 1398
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800012.webp",
+    "bytes": 1464
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800013.webp",
+    "bytes": 1476
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800014.webp",
+    "bytes": 1012
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800015.webp",
+    "bytes": 1296
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800016.webp",
+    "bytes": 1636
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800017.webp",
+    "bytes": 1948
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800018.webp",
+    "bytes": 1036
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800019.webp",
+    "bytes": 2062
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800020.webp",
+    "bytes": 1528
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800021.webp",
+    "bytes": 1460
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800022.webp",
+    "bytes": 1036
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800023.webp",
+    "bytes": 1618
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800024.webp",
+    "bytes": 1084
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800025.webp",
+    "bytes": 1084
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800026.webp",
+    "bytes": 1178
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800027.webp",
+    "bytes": 1930
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800028.webp",
+    "bytes": 1574
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800029.webp",
+    "bytes": 1266
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800030.webp",
+    "bytes": 1158
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800031.webp",
+    "bytes": 1248
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800032.webp",
+    "bytes": 1194
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800033.webp",
+    "bytes": 1454
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800034.webp",
+    "bytes": 1206
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800035.webp",
+    "bytes": 1078
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800036.webp",
+    "bytes": 1032
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800037.webp",
+    "bytes": 984
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800038.webp",
+    "bytes": 1122
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800039.webp",
+    "bytes": 2160
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800040.webp",
+    "bytes": 1270
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800041.webp",
+    "bytes": 1208
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800042.webp",
+    "bytes": 1004
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800043.webp",
+    "bytes": 1936
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800044.webp",
+    "bytes": 904
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800045.webp",
+    "bytes": 1704
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800046.webp",
+    "bytes": 1254
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800047.webp",
+    "bytes": 1304
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800048.webp",
+    "bytes": 920
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800049.webp",
+    "bytes": 1168
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800050.webp",
+    "bytes": 1318
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800051.webp",
+    "bytes": 1732
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800052.webp",
+    "bytes": 1272
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800053.webp",
+    "bytes": 1554
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800054.webp",
+    "bytes": 1228
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800055.webp",
+    "bytes": 936
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800056.webp",
+    "bytes": 730
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800057.webp",
+    "bytes": 1368
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800058.webp",
+    "bytes": 1396
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800059.webp",
+    "bytes": 1778
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800060.webp",
+    "bytes": 1576
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800061.webp",
+    "bytes": 1342
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800062.webp",
+    "bytes": 1834
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800063.webp",
+    "bytes": 1426
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800064.webp",
+    "bytes": 1186
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800065.webp",
+    "bytes": 1678
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800066.webp",
+    "bytes": 2076
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800067.webp",
+    "bytes": 858
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800068.webp",
+    "bytes": 1046
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800069.webp",
+    "bytes": 1004
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\reference\\icons\\800070.webp",
+    "bytes": 1630
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\INSTALLER",
+    "bytes": 2
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\METADATA",
+    "bytes": 4670
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\RECORD",
+    "bytes": 1868
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\REQUESTED",
+    "bytes": 0
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\top_level.txt",
+    "bytes": 19
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\WHEEL",
+    "bytes": 91
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\importlib_metadata-8.7.1.dist-info\\licenses\\LICENSE",
+    "bytes": 10278
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\setuptools\\_vendor\\jaraco\\text\\Lorem ipsum.txt",
+    "bytes": 1335
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\tools\\warehouse_patch\\quantity_templates.npz",
+    "bytes": 4366
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\tools\\warehouse_patch\\warehouse_patch.py",
+    "bytes": 16498
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\werkzeug-3.1.8.dist-info\\INSTALLER",
+    "bytes": 4
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\werkzeug-3.1.8.dist-info\\METADATA",
+    "bytes": 4029
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\werkzeug-3.1.8.dist-info\\RECORD",
+    "bytes": 8407
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\werkzeug-3.1.8.dist-info\\REQUESTED",
+    "bytes": 0
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\werkzeug-3.1.8.dist-info\\WHEEL",
+    "bytes": 82
+  },
+  {
+    "path": "local_app\\packaging\\dist\\BDO 물교 실행\\_internal\\werkzeug-3.1.8.dist-info\\licenses\\LICENSE.txt",
+    "bytes": 1475
+  },
+  {
+    "path": "local_app\\tests\\__init__.py",
+    "bytes": 0
+  },
+  {
+    "path": "local_app\\tests\\browser_scheduler.mjs",
+    "bytes": 24399
+  },
+  {
+    "path": "local_app\\tests\\browser_smoke.mjs",
+    "bytes": 14647
+  },
+  {
+    "path": "local_app\\tests\\browser_trade_session.mjs",
+    "bytes": 12755
+  },
+  {
+    "path": "local_app\\tests\\browser_warehouse_scan.mjs",
+    "bytes": 14802
+  },
+  {
+    "path": "local_app\\tests\\test_launcher.py",
+    "bytes": 4818
+  },
+  {
+    "path": "local_app\\tests\\trade_import_regression.mjs",
+    "bytes": 6558
+  },
+  {
+    "path": "local_app\\tests\\backend\\__init__.py",
+    "bytes": 0
+  },
+  {
+    "path": "local_app\\tests\\backend\\test_durable_state_ui.py",
+    "bytes": 9250
+  },
+  {
+    "path": "local_app\\tests\\backend\\test_storage_api.py",
+    "bytes": 10991
+  },
+  {
+    "path": "local_app\\tests\\backend\\test_warehouse_scan.py",
+    "bytes": 10889
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\__init__.cpython-312.pyc",
+    "bytes": 132
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\__init__.cpython-314.pyc",
+    "bytes": 210
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\test_durable_state_ui.cpython-312.pyc",
+    "bytes": 14907
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\test_durable_state_ui.cpython-314.pyc",
+    "bytes": 15733
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\test_storage_api.cpython-312.pyc",
+    "bytes": 20410
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\test_storage_api.cpython-314.pyc",
+    "bytes": 21493
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\test_warehouse_scan.cpython-312.pyc",
+    "bytes": 20383
+  },
+  {
+    "path": "local_app\\tests\\backend\\__pycache__\\test_warehouse_scan.cpython-314.pyc",
+    "bytes": 21549
+  },
+  {
+    "path": "local_app\\tests\\equivalence\\baseline-manifest.json",
+    "bytes": 25708
+  },
+  {
+    "path": "local_app\\tests\\equivalence\\capture-baseline.mjs",
+    "bytes": 5452
+  },
+  {
+    "path": "local_app\\tests\\equivalence\\migrate-constants.mjs",
+    "bytes": 6587
+  },
+  {
+    "path": "local_app\\tests\\equivalence\\migrate-functions.mjs",
+    "bytes": 5205
+  },
+  {
+    "path": "local_app\\tests\\equivalence\\source-tools.mjs",
+    "bytes": 4269
+  },
+  {
+    "path": "local_app\\tests\\equivalence\\verify-migration.mjs",
+    "bytes": 3231
+  },
+  {
+    "path": "local_app\\tests\\__pycache__\\__init__.cpython-312.pyc",
+    "bytes": 124
+  },
+  {
+    "path": "local_app\\tests\\__pycache__\\__init__.cpython-314.pyc",
+    "bytes": 126
+  },
+  {
+    "path": "local_app\\tests\\__pycache__\\test_launcher.cpython-312.pyc",
+    "bytes": 10020
+  },
+  {
+    "path": "local_app\\__pycache__\\__init__.cpython-312.pyc",
+    "bytes": 162
+  },
+  {
+    "path": "local_app\\__pycache__\\__init__.cpython-314.pyc",
+    "bytes": 164
+  },
+  {
+    "path": "local_app\\__pycache__\\launcher.cpython-312.pyc",
+    "bytes": 19645
+  },
+  {
+    "path": "reference\\barter_items.json",
+    "bytes": 52282
+  },
+  {
+    "path": "reference\\barter_tier1_reference.png",
+    "bytes": 98831
+  },
+  {
+    "path": "reference\\barter_tier2_reference.png",
+    "bytes": 98312
+  },
+  {
+    "path": "reference\\barter_tier3_reference.png",
+    "bytes": 89926
+  },
+  {
+    "path": "reference\\barter_tier4_reference.png",
+    "bytes": 91928
+  },
+  {
+    "path": "reference\\barter_tier5_reference.png",
+    "bytes": 101686
+  },
+  {
+    "path": "reference\\icon_similarity_report.json",
+    "bytes": 6714
+  },
+  {
+    "path": "reference\\SHA256SUMS.txt",
+    "bytes": 6688
+  },
+  {
+    "path": "reference\\STAGE3_VALIDATION.md",
+    "bytes": 3401
+  },
+  {
+    "path": "reference\\icons\\800001.webp",
+    "bytes": 1552
+  },
+  {
+    "path": "reference\\icons\\800002.webp",
+    "bytes": 2080
+  },
+  {
+    "path": "reference\\icons\\800003.webp",
+    "bytes": 1126
+  },
+  {
+    "path": "reference\\icons\\800004.webp",
+    "bytes": 1166
+  },
+  {
+    "path": "reference\\icons\\800005.webp",
+    "bytes": 1182
+  },
+  {
+    "path": "reference\\icons\\800006.webp",
+    "bytes": 1676
+  },
+  {
+    "path": "reference\\icons\\800007.webp",
+    "bytes": 1074
+  },
+  {
+    "path": "reference\\icons\\800008.webp",
+    "bytes": 1210
+  },
+  {
+    "path": "reference\\icons\\800009.webp",
+    "bytes": 1358
+  },
+  {
+    "path": "reference\\icons\\800010.webp",
+    "bytes": 1680
+  },
+  {
+    "path": "reference\\icons\\800011.webp",
+    "bytes": 1398
+  },
+  {
+    "path": "reference\\icons\\800012.webp",
+    "bytes": 1464
+  },
+  {
+    "path": "reference\\icons\\800013.webp",
+    "bytes": 1476
+  },
+  {
+    "path": "reference\\icons\\800014.webp",
+    "bytes": 1012
+  },
+  {
+    "path": "reference\\icons\\800015.webp",
+    "bytes": 1296
+  },
+  {
+    "path": "reference\\icons\\800016.webp",
+    "bytes": 1636
+  },
+  {
+    "path": "reference\\icons\\800017.webp",
+    "bytes": 1948
+  },
+  {
+    "path": "reference\\icons\\800018.webp",
+    "bytes": 1036
+  },
+  {
+    "path": "reference\\icons\\800019.webp",
+    "bytes": 2062
+  },
+  {
+    "path": "reference\\icons\\800020.webp",
+    "bytes": 1528
+  },
+  {
+    "path": "reference\\icons\\800021.webp",
+    "bytes": 1460
+  },
+  {
+    "path": "reference\\icons\\800022.webp",
+    "bytes": 1036
+  },
+  {
+    "path": "reference\\icons\\800023.webp",
+    "bytes": 1618
+  },
+  {
+    "path": "reference\\icons\\800024.webp",
+    "bytes": 1084
+  },
+  {
+    "path": "reference\\icons\\800025.webp",
+    "bytes": 1084
+  },
+  {
+    "path": "reference\\icons\\800026.webp",
+    "bytes": 1178
+  },
+  {
+    "path": "reference\\icons\\800027.webp",
+    "bytes": 1930
+  },
+  {
+    "path": "reference\\icons\\800028.webp",
+    "bytes": 1574
+  },
+  {
+    "path": "reference\\icons\\800029.webp",
+    "bytes": 1266
+  },
+  {
+    "path": "reference\\icons\\800030.webp",
+    "bytes": 1158
+  },
+  {
+    "path": "reference\\icons\\800031.webp",
+    "bytes": 1248
+  },
+  {
+    "path": "reference\\icons\\800032.webp",
+    "bytes": 1194
+  },
+  {
+    "path": "reference\\icons\\800033.webp",
+    "bytes": 1454
+  },
+  {
+    "path": "reference\\icons\\800034.webp",
+    "bytes": 1206
+  },
+  {
+    "path": "reference\\icons\\800035.webp",
+    "bytes": 1078
+  },
+  {
+    "path": "reference\\icons\\800036.webp",
+    "bytes": 1032
+  },
+  {
+    "path": "reference\\icons\\800037.webp",
+    "bytes": 984
+  },
+  {
+    "path": "reference\\icons\\800038.webp",
+    "bytes": 1122
+  },
+  {
+    "path": "reference\\icons\\800039.webp",
+    "bytes": 2160
+  },
+  {
+    "path": "reference\\icons\\800040.webp",
+    "bytes": 1270
+  },
+  {
+    "path": "reference\\icons\\800041.webp",
+    "bytes": 1208
+  },
+  {
+    "path": "reference\\icons\\800042.webp",
+    "bytes": 1004
+  },
+  {
+    "path": "reference\\icons\\800043.webp",
+    "bytes": 1936
+  },
+  {
+    "path": "reference\\icons\\800044.webp",
+    "bytes": 904
+  },
+  {
+    "path": "reference\\icons\\800045.webp",
+    "bytes": 1704
+  },
+  {
+    "path": "reference\\icons\\800046.webp",
+    "bytes": 1254
+  },
+  {
+    "path": "reference\\icons\\800047.webp",
+    "bytes": 1304
+  },
+  {
+    "path": "reference\\icons\\800048.webp",
+    "bytes": 920
+  },
+  {
+    "path": "reference\\icons\\800049.webp",
+    "bytes": 1168
+  },
+  {
+    "path": "reference\\icons\\800050.webp",
+    "bytes": 1318
+  },
+  {
+    "path": "reference\\icons\\800051.webp",
+    "bytes": 1732
+  },
+  {
+    "path": "reference\\icons\\800052.webp",
+    "bytes": 1272
+  },
+  {
+    "path": "reference\\icons\\800053.webp",
+    "bytes": 1554
+  },
+  {
+    "path": "reference\\icons\\800054.webp",
+    "bytes": 1228
+  },
+  {
+    "path": "reference\\icons\\800055.webp",
+    "bytes": 936
+  },
+  {
+    "path": "reference\\icons\\800056.webp",
+    "bytes": 730
+  },
+  {
+    "path": "reference\\icons\\800057.webp",
+    "bytes": 1368
+  },
+  {
+    "path": "reference\\icons\\800058.webp",
+    "bytes": 1396
+  },
+  {
+    "path": "reference\\icons\\800059.webp",
+    "bytes": 1778
+  },
+  {
+    "path": "reference\\icons\\800060.webp",
+    "bytes": 1576
+  },
+  {
+    "path": "reference\\icons\\800061.webp",
+    "bytes": 1342
+  },
+  {
+    "path": "reference\\icons\\800062.webp",
+    "bytes": 1834
+  },
+  {
+    "path": "reference\\icons\\800063.webp",
+    "bytes": 1426
+  },
+  {
+    "path": "reference\\icons\\800064.webp",
+    "bytes": 1186
+  },
+  {
+    "path": "reference\\icons\\800065.webp",
+    "bytes": 1678
+  },
+  {
+    "path": "reference\\icons\\800066.webp",
+    "bytes": 2076
+  },
+  {
+    "path": "reference\\icons\\800067.webp",
+    "bytes": 858
+  },
+  {
+    "path": "reference\\icons\\800068.webp",
+    "bytes": 1046
+  },
+  {
+    "path": "reference\\icons\\800069.webp",
+    "bytes": 1004
+  },
+  {
+    "path": "reference\\icons\\800070.webp",
+    "bytes": 1630
+  },
+  {
+    "path": "reports\\v1.0\\COMPLETION_NO_HOLD.md",
+    "bytes": 2805
+  },
+  {
+    "path": "reports\\v1.0\\MASTER_INVENTORY_PATCH_INPUT.md",
+    "bytes": 3908
+  },
+  {
+    "path": "reports\\v1.0\\PROJECT_CLEANUP.md",
+    "bytes": 2542
+  },
+  {
+    "path": "reports\\v1.0\\REVIEW_PACKAGE.md",
+    "bytes": 1621
+  },
+  {
+    "path": "reports\\v1.0\\VERIFICATION.md",
+    "bytes": 11847
+  },
+  {
+    "path": "reports\\v1.0\\WAREHOUSE_PATCH_PROTOTYPE.md",
+    "bytes": 6973
+  },
+  {
+    "path": "specs\\000-baseline\\baseline-manifest.json",
+    "bytes": 4798
+  },
+  {
+    "path": "specs\\000-baseline\\comparison-procedure.md",
+    "bytes": 1516
+  },
+  {
+    "path": "specs\\000-baseline\\plan.md",
+    "bytes": 1543
+  },
+  {
+    "path": "specs\\000-baseline\\spec.md",
+    "bytes": 2399
+  },
+  {
+    "path": "specs\\000-baseline\\tasks.md",
+    "bytes": 588
+  },
+  {
+    "path": "specs\\000-baseline\\validation-report.md",
+    "bytes": 1826
+  },
+  {
+    "path": "specs\\001-local-runtime-storage\\plan.md",
+    "bytes": 1613
+  },
+  {
+    "path": "specs\\001-local-runtime-storage\\spec.md",
+    "bytes": 3203
+  },
+  {
+    "path": "specs\\001-local-runtime-storage\\tasks.md",
+    "bytes": 790
+  },
+  {
+    "path": "specs\\002-durable-state-ui\\plan.md",
+    "bytes": 1894
+  },
+  {
+    "path": "specs\\002-durable-state-ui\\spec.md",
+    "bytes": 2972
+  },
+  {
+    "path": "specs\\002-durable-state-ui\\state-mapping.md",
+    "bytes": 4562
+  },
+  {
+    "path": "specs\\002-durable-state-ui\\tasks.md",
+    "bytes": 786
+  },
+  {
+    "path": "specs\\002-durable-state-ui\\validation-report.md",
+    "bytes": 3160
+  },
+  {
+    "path": "specs\\003-warehouse-scan\\plan.md",
+    "bytes": 1955
+  },
+  {
+    "path": "specs\\003-warehouse-scan\\spec.md",
+    "bytes": 3444
+  },
+  {
+    "path": "specs\\003-warehouse-scan\\tasks.md",
+    "bytes": 777
+  },
+  {
+    "path": "specs\\003-warehouse-scan\\validation-report.md",
+    "bytes": 6794
+  },
+  {
+    "path": "specs\\004-trade-session\\plan.md",
+    "bytes": 1697
+  },
+  {
+    "path": "specs\\004-trade-session\\spec.md",
+    "bytes": 2963
+  },
+  {
+    "path": "specs\\004-trade-session\\tasks.md",
+    "bytes": 708
+  },
+  {
+    "path": "specs\\004-trade-session\\validation-report.md",
+    "bytes": 4318
+  },
+  {
+    "path": "specs\\005-scheduler-migration\\audit-report.md",
+    "bytes": 21969
+  },
+  {
+    "path": "specs\\005-scheduler-migration\\plan.md",
+    "bytes": 2235
+  },
+  {
+    "path": "specs\\005-scheduler-migration\\spec.md",
+    "bytes": 3344
+  },
+  {
+    "path": "specs\\005-scheduler-migration\\tasks.md",
+    "bytes": 1065
+  },
+  {
+    "path": "specs\\005-scheduler-migration\\validation-report.md",
+    "bytes": 4240
+  },
+  {
+    "path": "specs\\006-release-integration\\audit-report.md",
+    "bytes": 9971
+  },
+  {
+    "path": "specs\\006-release-integration\\plan.md",
+    "bytes": 2118
+  },
+  {
+    "path": "specs\\006-release-integration\\spec.md",
+    "bytes": 3764
+  },
+  {
+    "path": "specs\\006-release-integration\\tasks.md",
+    "bytes": 1693
+  },
+  {
+    "path": "specs\\006-release-integration\\validation-report.md",
+    "bytes": 10750
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\feasibility-report.md",
+    "bytes": 29085
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase2-evaluation.json",
+    "bytes": 396387
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase3-evaluation.json",
+    "bytes": 201160
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase4-design-review.md",
+    "bytes": 41718
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase4-digit-templates.npz",
+    "bytes": 1100
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase4-evaluation.json",
+    "bytes": 1156355
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase4-icon-parameters.json",
+    "bytes": 100821
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase4-split-manifest.json",
+    "bytes": 4576
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase4-validation-report.md",
+    "bytes": 3107
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase5-digit-review.md",
+    "bytes": 40700
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase5-evaluation.json",
+    "bytes": 3206128
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase5-numeric-model.json",
+    "bytes": 170127
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase5-numeric-parameters.json",
+    "bytes": 1743
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\phase5-validation-report.md",
+    "bytes": 5184
+  },
+  {
+    "path": "specs\\100-barter-screenshot\\README.md",
+    "bytes": 850
+  },
+  {
+    "path": "tests\\completion_no_hold_regression.js",
+    "bytes": 7639
+  },
+  {
+    "path": "tests\\engine_harness.js",
+    "bytes": 7226
+  },
+  {
+    "path": "tests\\followup_regression.js",
+    "bytes": 5504
+  },
+  {
+    "path": "tests\\inventory_completion_diagnostics.js",
+    "bytes": 7514
+  },
+  {
+    "path": "tests\\master_inventory_patch_regression.js",
+    "bytes": 11903
+  },
+  {
+    "path": "tests\\regression_core.js",
+    "bytes": 13125
+  },
+  {
+    "path": "tests\\regression_modes.js",
+    "bytes": 10418
+  },
+  {
+    "path": "tests\\scenario_matrix.js",
+    "bytes": 5936
+  },
+  {
+    "path": "tests\\scheduler_preservation_regression.js",
+    "bytes": 3422
+  },
+  {
+    "path": "tests\\tier7_completion_regression.js",
+    "bytes": 13838
+  },
+  {
+    "path": "tests\\tier7_threshold_diagnostics.js",
+    "bytes": 9085
+  },
+  {
+    "path": "tests\\warehouse_patch_regression.py",
+    "bytes": 11999
+  },
+  {
+    "path": "test_results\\completion_no_hold_regression_master_inventory_patch.json",
+    "bytes": 1743
+  },
+  {
+    "path": "test_results\\completion_no_hold_regression.json",
+    "bytes": 1743
+  },
+  {
+    "path": "test_results\\followup_regression_master_inventory_patch.json",
+    "bytes": 2728
+  },
+  {
+    "path": "test_results\\followup_regression.json",
+    "bytes": 2728
+  },
+  {
+    "path": "test_results\\inventory_completion_diagnostics.json",
+    "bytes": 56013
+  },
+  {
+    "path": "test_results\\master_inventory_patch_regression.json",
+    "bytes": 2755
+  },
+  {
+    "path": "test_results\\regression_core.json",
+    "bytes": 9661
+  },
+  {
+    "path": "test_results\\regression_modes_master_inventory_patch.json",
+    "bytes": 1918
+  },
+  {
+    "path": "test_results\\regression_modes.json",
+    "bytes": 1918
+  },
+  {
+    "path": "test_results\\regression_report_master_inventory_patch.json",
+    "bytes": 9661
+  },
+  {
+    "path": "test_results\\scenario_matrix.json",
+    "bytes": 28028
+  },
+  {
+    "path": "test_results\\scheduler_preservation_master_inventory_patch.json",
+    "bytes": 1013
+  },
+  {
+    "path": "test_results\\scheduler_preservation_regression.json",
+    "bytes": 1013
+  },
+  {
+    "path": "test_results\\tier7_completion_before_fix.json",
+    "bytes": 2221
+  },
+  {
+    "path": "test_results\\tier7_completion_regression_master_inventory_patch.json",
+    "bytes": 3272
+  },
+  {
+    "path": "test_results\\tier7_completion_regression.json",
+    "bytes": 3272
+  },
+  {
+    "path": "test_results\\tier7_threshold_diagnostics.json",
+    "bytes": 56763
+  },
+  {
+    "path": "test_results\\warehouse_patch\\barter_only_patch.json",
+    "bytes": 1711
+  },
+  {
+    "path": "test_results\\warehouse_patch\\barter_only_report.json",
+    "bytes": 105726
+  },
+  {
+    "path": "test_results\\warehouse_patch\\duplicate_case.png",
+    "bytes": 181760
+  },
+  {
+    "path": "test_results\\warehouse_patch\\live_patch.json",
+    "bytes": 1711
+  },
+  {
+    "path": "test_results\\warehouse_patch\\live_report.json",
+    "bytes": 105925
+  },
+  {
+    "path": "test_results\\warehouse_patch\\mixed_patch.json",
+    "bytes": 1685
+  },
+  {
+    "path": "test_results\\warehouse_patch\\mixed_report.json",
+    "bytes": 112641
+  },
+  {
+    "path": "test_results\\warehouse_patch\\no_grid.png",
+    "bytes": 781
+  },
+  {
+    "path": "test_results\\warehouse_patch\\origin_zero.png",
+    "bytes": 175092
+  },
+  {
+    "path": "test_results\\warehouse_patch\\padded_origin.png",
+    "bytes": 179979
+  },
+  {
+    "path": "test_results\\warehouse_patch\\regression_result.json",
+    "bytes": 2662
+  },
+  {
+    "path": "tools\\barter_scan\\barter_scan.py",
+    "bytes": 19190
+  },
+  {
+    "path": "tools\\barter_scan\\digit_reader.py",
+    "bytes": 2518
+  },
+  {
+    "path": "tools\\barter_scan\\icon_match.py",
+    "bytes": 2921
+  },
+  {
+    "path": "tools\\barter_scan\\phase3_evaluate.py",
+    "bytes": 8929
+  },
+  {
+    "path": "tools\\barter_scan\\phase4_digits.py",
+    "bytes": 8988
+  },
+  {
+    "path": "tools\\barter_scan\\phase4_evaluate.py",
+    "bytes": 23573
+  },
+  {
+    "path": "tools\\barter_scan\\phase4_icons.py",
+    "bytes": 12018
+  },
+  {
+    "path": "tools\\barter_scan\\phase4_layout.py",
+    "bytes": 3959
+  },
+  {
+    "path": "tools\\barter_scan\\phase4_pipeline.py",
+    "bytes": 13332
+  },
+  {
+    "path": "tools\\barter_scan\\phase4_text.py",
+    "bytes": 6359
+  },
+  {
+    "path": "tools\\barter_scan\\phase5_evaluate.py",
+    "bytes": 18616
+  },
+  {
+    "path": "tools\\barter_scan\\phase5_numeric_geometry.py",
+    "bytes": 1832
+  },
+  {
+    "path": "tools\\barter_scan\\phase5_numeric.py",
+    "bytes": 8553
+  },
+  {
+    "path": "tools\\barter_scan\\test_barter_scan.py",
+    "bytes": 2718
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase3.py",
+    "bytes": 1635
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase4_digits.py",
+    "bytes": 1636
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase4_evaluate.py",
+    "bytes": 1888
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase4_icons.py",
+    "bytes": 1646
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase4_layout_tier.py",
+    "bytes": 1037
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase4_paths.py",
+    "bytes": 7187
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase4_pipeline.py",
+    "bytes": 2549
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase5_evaluate.py",
+    "bytes": 1902
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase5_numeric_geometry.py",
+    "bytes": 1264
+  },
+  {
+    "path": "tools\\barter_scan\\test_phase5_numeric.py",
+    "bytes": 3469
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\barter_scan.cpython-312.pyc",
+    "bytes": 29552
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\digit_reader.cpython-312.pyc",
+    "bytes": 3462
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\icon_match.cpython-312.pyc",
+    "bytes": 5257
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase3_evaluate.cpython-312.pyc",
+    "bytes": 11389
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase4_digits.cpython-312.pyc",
+    "bytes": 13544
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase4_evaluate.cpython-312.pyc",
+    "bytes": 32242
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase4_icons.cpython-312.pyc",
+    "bytes": 19730
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase4_layout.cpython-312.pyc",
+    "bytes": 6030
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase4_pipeline.cpython-312.pyc",
+    "bytes": 15984
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase4_text.cpython-312.pyc",
+    "bytes": 6965
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase5_evaluate.cpython-312.pyc",
+    "bytes": 24480
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase5_numeric_geometry.cpython-312.pyc",
+    "bytes": 3085
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\phase5_numeric.cpython-312.pyc",
+    "bytes": 13267
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_barter_scan.cpython-312.pyc",
+    "bytes": 5577
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase3.cpython-312.pyc",
+    "bytes": 3126
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase4_digits.cpython-312.pyc",
+    "bytes": 3343
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase4_evaluate.cpython-312.pyc",
+    "bytes": 3583
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase4_icons.cpython-312.pyc",
+    "bytes": 3549
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase4_layout_tier.cpython-312.pyc",
+    "bytes": 2254
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase4_paths.cpython-312.pyc",
+    "bytes": 11594
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase4_pipeline.cpython-312.pyc",
+    "bytes": 5664
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase5_evaluate.cpython-312.pyc",
+    "bytes": 3270
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase5_numeric_geometry.cpython-312.pyc",
+    "bytes": 2798
+  },
+  {
+    "path": "tools\\barter_scan\\__pycache__\\test_phase5_numeric.cpython-312.pyc",
+    "bytes": 5437
+  },
+  {
+    "path": "tools\\warehouse_patch\\build_quantity_templates.py",
+    "bytes": 2895
+  },
+  {
+    "path": "tools\\warehouse_patch\\quantity_templates.npz",
+    "bytes": 4366
+  },
+  {
+    "path": "tools\\warehouse_patch\\README.md",
+    "bytes": 1763
+  },
+  {
+    "path": "tools\\warehouse_patch\\warehouse_patch.py",
+    "bytes": 16498
+  },
+  {
+    "path": "tools\\warehouse_patch\\__pycache__\\warehouse_patch.cpython-312.pyc",
+    "bytes": 24604
+  },
+  {
+    "path": "tools\\warehouse_patch\\__pycache__\\warehouse_patch.cpython-314.pyc",
+    "bytes": 28717
+  },
+  {
+    "path": "물교리스트스샷\\정답.json",
+    "bytes": 14626
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_43_53.png",
+    "bytes": 234769
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_44_44.png",
+    "bytes": 148195
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_44_48.png",
+    "bytes": 229375
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_44_52.png",
+    "bytes": 144320
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_44_56.png",
+    "bytes": 220529
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_44_59.png",
+    "bytes": 223828
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_03.png",
+    "bytes": 214979
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_09.png",
+    "bytes": 228243
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_13.png",
+    "bytes": 223359
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_16.png",
+    "bytes": 77970
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_20.png",
+    "bytes": 247724
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_25.png",
+    "bytes": 284024
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_28.png",
+    "bytes": 231754
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_33.png",
+    "bytes": 42025
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_37.png",
+    "bytes": 207320
+  },
+  {
+    "path": "물교리스트스샷\\Codex 이미지 2026년 9월 25일 오후 08_45_41.png",
+    "bytes": 188428
+  }
+]

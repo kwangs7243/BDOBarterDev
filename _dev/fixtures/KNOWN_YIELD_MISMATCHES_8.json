@@ -1,0 +1,66 @@
+[
+  {
+    "island": "소코타 섬",
+    "fromItem": "고대 항아리 파편",
+    "toItem": "정제된 식수",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "타슈 섬",
+    "fromItem": "뗏목 조각품",
+    "toItem": "해양 구조품",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "칸베라 섬",
+    "fromItem": "소라게 껍질 장식",
+    "toItem": "걸쭉한 괴생물 혈액",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "아라킬 섬",
+    "fromItem": "널찍한 돌판",
+    "toItem": "족제비 가죽 외투",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "타라무라 섬",
+    "fromItem": "섬마을 도시락",
+    "toItem": "반달 조리용 칼",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "마를레느 섬",
+    "fromItem": "해적선 돛대",
+    "toItem": "낡은 지령서",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "알브레서 섬",
+    "fromItem": "해양 구조품",
+    "toItem": "찢어진 해적 보물지도",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  },
+  {
+    "island": "진버레이 섬",
+    "fromItem": "정제된 식수",
+    "toItem": "희귀 약초 무더기",
+    "reqAmount": 1,
+    "count": 10,
+    "yield": 2
+  }
+]

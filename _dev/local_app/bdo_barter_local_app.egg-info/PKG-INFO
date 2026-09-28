@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: bdo-barter-local-app
+Version: 0.1.0
+Summary: SPEC-001 localhost and persistent storage foundation for BDO Barter
+Requires-Python: >=3.11
+Requires-Dist: Flask<4,>=3.0
+Requires-Dist: waitress<4,>=3.0
+Requires-Dist: numpy<3,>=1.24
+Requires-Dist: Pillow>=10
+Provides-Extra: package
+Requires-Dist: pyinstaller<7,>=6.10; extra == "package"

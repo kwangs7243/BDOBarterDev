@@ -1,0 +1,80 @@
+{
+  "temporaryRoot": "C:\\Users\\kwang\\AppData\\Local\\Temp\\BDO-Frozen-Release-fuvucgw7",
+  "browserSuites": {
+    "browser_smoke": {
+      "exitCode": 0,
+      "target": "http://127.0.0.1:18765/",
+      "automaticBrowser": {
+        "id": 1,
+        "result": {
+          "result": {
+            "type": "object",
+            "value": {
+              "url": "http://127.0.0.1:18765/",
+              "rows": 70,
+              "title": "BDO 물교 — 영구 상태"
+            }
+          }
+        }
+      }
+    },
+    "browser_warehouse_scan": {
+      "exitCode": 0,
+      "target": "http://127.0.0.1:18765/",
+      "automaticBrowser": {
+        "id": 1,
+        "error": {
+          "code": -32000,
+          "message": "Execution context was destroyed."
+        }
+      }
+    },
+    "browser_trade_session": {
+      "exitCode": 0,
+      "target": "http://127.0.0.1:18765/",
+      "automaticBrowser": {
+        "id": 1,
+        "result": {
+          "result": {
+            "type": "object",
+            "value": {
+              "url": "http://127.0.0.1:18765/",
+              "rows": 70,
+              "title": "BDO 물교 — 영구 상태"
+            }
+          }
+        }
+      }
+    },
+    "browser_scheduler": {
+      "exitCode": 0,
+      "target": "http://127.0.0.1:18765/",
+      "automaticBrowser": {
+        "id": 1,
+        "error": {
+          "code": -32000,
+          "message": "Execution context was destroyed."
+        }
+      }
+    }
+  },
+  "actualUserDatabaseTouched": false,
+  "rootCmdDifferentWorkingDirectory": true,
+  "relocatedAutomaticBrowser": {
+    "id": 1,
+    "result": {
+      "result": {
+        "type": "object",
+        "value": {
+          "url": "http://127.0.0.1:18765/",
+          "rows": 70,
+          "title": "BDO 물교 — 영구 상태"
+        }
+      }
+    }
+  },
+  "secondInstance": {
+    "exitCode": 0,
+    "originalHealthy": true
+  }
+}

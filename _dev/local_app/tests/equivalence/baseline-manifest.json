@@ -1,0 +1,919 @@
+{
+  "spec": "SPEC-005",
+  "source": "BDO_물교_v1.0.html",
+  "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+  "baselineSourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+  "normalization": "Function body: CRLF/CR to LF, trim trailing horizontal whitespace per line, trim outer whitespace; SHA-256 UTF-8.",
+  "definitions": [
+    {
+      "name": "calculateTravelTime",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        1202
+      ],
+      "selectedLine": 1202,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "APP_CONFIG"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "27762a0a98744033f8210cd7d5cbcd9be330243ec924553a7632b4b48d76c3a1"
+    },
+    {
+      "name": "getItemTier",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2641
+      ],
+      "selectedLine": 2641,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "masterData"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "f4b7a6aa5a3c83271cd082b042a80caa93c07e64e3639cb08ff4f25f14432202"
+    },
+    {
+      "name": "getItemWeight",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2653
+      ],
+      "selectedLine": 2653,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "APP_CONFIG"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "d73e6c65eb61abc5712c320289b7a95defd847826ce6cab65db408aa61fa3695"
+    },
+    {
+      "name": "getIslandCoords",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2665
+      ],
+      "selectedLine": 2665,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "islandCoordinates"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "1df08a5132dfb3273718b50f12c5ab3f4e9d78f94e08ac97445b2bebf546f276"
+    },
+    {
+      "name": "getPermutations",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2671
+      ],
+      "selectedLine": 2671,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "getPermutations"
+      ],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "c4a76c91d075d07fa24172419593611dd45e220500440c0fc24252ea8369a169"
+    },
+    {
+      "name": "getOptimalRoute",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2682
+      ],
+      "selectedLine": 2682,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "getPermutations",
+        "optimizeRouteTSP",
+        "simulateWeightsTemp"
+      ],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "2cf104fbfd9d7580a27f7b30181dc1bc3b7d300e266282c6d045736419ad5088"
+    },
+    {
+      "name": "optimizeRouteTSP",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2720
+      ],
+      "selectedLine": 2720,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "getIslandCoords"
+      ],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "45d15d8aafaee768ff417417851197320ee441a96ff3cf2a9affd95bb7c395af"
+    },
+    {
+      "name": "runAlgorithmAllModes",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        2746
+      ],
+      "selectedLine": 2746,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "buildSorties",
+        "buildTier7Sorties",
+        "getIslandCoords",
+        "getItemTier",
+        "getItemWeight",
+        "mergeAdjacentDupTrades",
+        "openModal",
+        "renderModeColumn",
+        "updateGridAndCircles"
+      ],
+      "referencedGlobals": [
+        "APP_CONFIG",
+        "inventory",
+        "scannedTrades",
+        "tierRules",
+        "sortiesSpeed",
+        "sortiesBalance",
+        "maxParley",
+        "__lastGen"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "__lastGen",
+        "mergeAdjacentDupTrades"
+      ],
+      "bodyNormalizedSha256": "6afdc3baa884413255239d818850daed134433486d95fb437fda3a80bcb5aa5f"
+    },
+    {
+      "name": "sortFixedOcean",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        3041
+      ],
+      "selectedLine": 3041,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "optimizeRouteTSP"
+      ],
+      "referencedGlobals": [
+        "APP_CONFIG"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "ccfdb571b7a29a9a48d2d50c1bb08672c4c2e54a7b84bc9921849b0c17f70ec6"
+    },
+    {
+      "name": "getIslandRegion",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        3086
+      ],
+      "selectedLine": 3086,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "REGION_MAP"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "69dea3b4bd40dc07139d81a050ec652eaaf3aeef8fc4b9d63372ec9578f67daf"
+    },
+    {
+      "name": "getAllowedRegions",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        3092
+      ],
+      "selectedLine": 3092,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "90561fad533315dcf6d42c9b2946d352f86a501f07c0818ea34b9f9db247cfc4"
+    },
+    {
+      "name": "buildSorties",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        3102
+      ],
+      "selectedLine": 3102,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "getAllowedRegions",
+        "getDistToSegment",
+        "getIslandCoords",
+        "getIslandRegion",
+        "getOptimalRoute",
+        "optimizeRouteTSP",
+        "simulateWeightsTemp",
+        "sortFixedOcean"
+      ],
+      "referencedGlobals": [
+        "APP_CONFIG",
+        "inventory",
+        "tierRules",
+        "maxParley",
+        "ENGINE_DEBUG"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "ENGINE_DEBUG"
+      ],
+      "bodyNormalizedSha256": "27099ca18c62cf33a47365f8963d4503b8786d8fd0e455accbf02ae151b8ffdf"
+    },
+    {
+      "name": "buildTier7Sorties",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        4266
+      ],
+      "selectedLine": 4266,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "buildSorties",
+        "getDistToSegment",
+        "getIslandCoords",
+        "getItemWeight",
+        "optimizeRouteTSP",
+        "simulateWeightsTemp"
+      ],
+      "referencedGlobals": [
+        "APP_CONFIG",
+        "inventory",
+        "tierRules",
+        "maxParley"
+      ],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "d0b960ebc6986afd6b08865ea928c78cd69ba59cf1063d13aa7ef55019481f23"
+    },
+    {
+      "name": "applyOceanCurrent",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        4909
+      ],
+      "selectedLine": 4909,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "routeCalibrations"
+      ],
+      "usesDocument": false,
+      "windowReferences": [
+        "routeCalibrations"
+      ],
+      "bodyNormalizedSha256": "f96c27c731e6a17b389a42c9fcec72fd70531088129d5adcb80c479406cdb62c"
+    },
+    {
+      "name": "legDistance",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        4932
+      ],
+      "selectedLine": 4932,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "applyOceanCurrent",
+        "getIslandCoords",
+        "rawDist"
+      ],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "1e9a98d7664ec49928b3096ad108fd9a1f0ceb87d1aadd8aef94adfa62e9bbb8"
+    },
+    {
+      "name": "simulateWeightsTemp",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        4949
+      ],
+      "selectedLine": 4949,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "getIslandCoords",
+        "getItemWeight",
+        "legDistance"
+      ],
+      "referencedGlobals": [
+        "APP_CONFIG"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "70f68b7a73119cbea8834cca0ddb82a61f38da204e2c9e967d49ac631cb738c8"
+    },
+    {
+      "name": "getDistToSegment",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        6201
+      ],
+      "selectedLine": 6201,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "705db8df521dd7722c06add3bce70b8be682ba08edacfaca2bf598191463376a"
+    },
+    {
+      "name": "formatTimeExact",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        4891
+      ],
+      "selectedLine": 4891,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "31c1bb3ab8d560ec0d99b8476de2f947701077bd48f1e60d0f4d872b3ff23137"
+    },
+    {
+      "name": "routeDragStart",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5001
+      ],
+      "selectedLine": 5001,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "draggedRoute"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "4aac03e7b638f21e1af64a2221765f67239f793bbd0f61312cb1d0f697f0fbf0"
+    },
+    {
+      "name": "routeDragEnd",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5002
+      ],
+      "selectedLine": 5002,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "draggedRoute"
+      ],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "1f11e9c140cde8ef298d3ab3fdc8c0f107edd4cf825a3da4b20ec528944b6d96"
+    },
+    {
+      "name": "routeDragOver",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5003
+      ],
+      "selectedLine": 5003,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "draggedRoute"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "5a5892e838ebc63b9446c0e0db9810c850a67f68322b314f7a1ced442ffde687"
+    },
+    {
+      "name": "routeDrop",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5006
+      ],
+      "selectedLine": 5006,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "renderModeColumn",
+        "showToast",
+        "simulateWeightsTemp"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance",
+        "draggedRoute"
+      ],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "d25415e28fa441c1c0c62b4b1afe263bbf2126e0b186019d598443282026a715"
+    },
+    {
+      "name": "adjustTradeCount",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5026
+      ],
+      "selectedLine": 5026,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "applySortieRecompute"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance"
+      ],
+      "usesDocument": false,
+      "windowReferences": [
+        "applySortieRecompute"
+      ],
+      "bodyNormalizedSha256": "e21be46221f0eb24f1fed0da6fd9304bd74af2b31b51d3747ed7030e75652e6b"
+    },
+    {
+      "name": "completeTradeAndTimer",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5087
+      ],
+      "selectedLine": 5087,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "completeTrade"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance",
+        "ACTIVE_TIMERS"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "ACTIVE_TIMERS"
+      ],
+      "bodyNormalizedSha256": "4add14e4cfa9e29e93a7a538f6a98d9d7fbbeff9e63d2a72fee19dd5ae1806ac"
+    },
+    {
+      "name": "rebuildSortieReq",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5111
+      ],
+      "selectedLine": 5111,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "ba3648a6cea9a3efd72e0e1a885e0c0b30a305e850e452143cc8c1fecb9bb213"
+    },
+    {
+      "name": "applySortieRecompute",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5151
+      ],
+      "selectedLine": 5151,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "rebuildSortieReq",
+        "renderModeColumn",
+        "simulateWeightsTemp"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "rebuildSortieReq"
+      ],
+      "bodyNormalizedSha256": "a64db2bc029770b470ef49683b392cf13b135d4e936ebb5186a0086b6b2e1bac"
+    },
+    {
+      "name": "mergeAdjacentDupTrades",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5168
+      ],
+      "selectedLine": 5168,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "rebuildSortieReq",
+        "simulateWeightsTemp"
+      ],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [
+        "rebuildSortieReq"
+      ],
+      "bodyNormalizedSha256": "0f0a6df024872a8afda1d4acb94176376867513c340e62b95ede80eca8d5ded9"
+    },
+    {
+      "name": "toggleTimer",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5049
+      ],
+      "selectedLine": 5049,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance",
+        "ACTIVE_TIMERS"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "ACTIVE_TIMERS"
+      ],
+      "bodyNormalizedSha256": "09552cd4d5802b21e09eb284efc7bf8b9ce5706c0cc05e5eb9f56404dce4e523"
+    },
+    {
+      "name": "renderWaypointCard",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5203
+      ],
+      "selectedLine": 5203,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "completeWaypoint",
+        "formatTimeExact",
+        "getIslandCoords",
+        "removeWaypoint",
+        "routeDragEnd",
+        "routeDragLeave",
+        "routeDragOver",
+        "routeDragStart",
+        "routeDrop",
+        "toggleTimer"
+      ],
+      "referencedGlobals": [
+        "ACTIVE_TIMERS"
+      ],
+      "usesDocument": false,
+      "windowReferences": [
+        "ACTIVE_TIMERS",
+        "formatTimeExact"
+      ],
+      "bodyNormalizedSha256": "f32f391a3bd7b25d89adf3ed3d16d399e064b14230affbd21f422c1a1a28609e"
+    },
+    {
+      "name": "openWaypointModal",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5241
+      ],
+      "selectedLine": 5241,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance"
+      ],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "bdaeb80cceb6b3b49beea417aac98cadf8968f2a39c1c32922e30d4172e74924"
+    },
+    {
+      "name": "closeWaypointModal",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5261
+      ],
+      "selectedLine": 5261,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "3db2f1a638f6beec7b952dbfd791eb22c5a0256d1dbf13124b641836cd60a41c"
+    },
+    {
+      "name": "toggleWaypointMaterial",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5265
+      ],
+      "selectedLine": 5265,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "8f3ecfd62a0e96446bf8da992073cfcd9b1bb830628f252b838cae16e5378b07"
+    },
+    {
+      "name": "confirmWaypoint",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5272
+      ],
+      "selectedLine": 5272,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "applySortieRecompute",
+        "closeWaypointModal",
+        "getItemTier",
+        "isValidIsland",
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "applySortieRecompute"
+      ],
+      "bodyNormalizedSha256": "10a47c947a9a5320568dd12f8b7cbef14af13412611651160b2444b1cc163de0"
+    },
+    {
+      "name": "removeWaypoint",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5299
+      ],
+      "selectedLine": 5299,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "applySortieRecompute",
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance",
+        "ACTIVE_TIMERS"
+      ],
+      "usesDocument": false,
+      "windowReferences": [
+        "ACTIVE_TIMERS",
+        "applySortieRecompute"
+      ],
+      "bodyNormalizedSha256": "8ddd43ae6d9c2bbf34577d0be61c2920f53c757fdd7540bc9ded76a79f51b433"
+    },
+    {
+      "name": "completeWaypoint",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5312
+      ],
+      "selectedLine": 5312,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "saveInventoryState",
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "inventory",
+        "sortiesSpeed",
+        "sortiesBalance",
+        "ACTIVE_TIMERS"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "ACTIVE_TIMERS"
+      ],
+      "bodyNormalizedSha256": "76755fa62e5f770e474f15cc755a12aa74a68e3d8e68f61500da6bd686459674"
+    },
+    {
+      "name": "toggleReturnTimer",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5341
+      ],
+      "selectedLine": 5341,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "ACTIVE_TIMERS"
+      ],
+      "usesDocument": true,
+      "windowReferences": [
+        "ACTIVE_TIMERS"
+      ],
+      "bodyNormalizedSha256": "ee7cb22ea15d9ab4209cd0328db471dd3193d42746b52deed4e521b6c85c0535"
+    },
+    {
+      "name": "playAlarmSound",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5428
+      ],
+      "selectedLine": 5428,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [
+        "AudioContext",
+        "webkitAudioContext"
+      ],
+      "bodyNormalizedSha256": "8a9256a93c021c13b02a89802ff6de081eaa500447b42a99c854b0c319ff8db5"
+    },
+    {
+      "name": "completeTrade",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        5450
+      ],
+      "selectedLine": 5450,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "renderTrades",
+        "saveInventoryState",
+        "saveScannedTradesSilent",
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "inventory",
+        "scannedTrades",
+        "sortiesSpeed",
+        "sortiesBalance",
+        "maxParley"
+      ],
+      "usesDocument": true,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "545ad7e7629faac887251a2ac7a82f851146d9f047a6b8ada0b281c3d28d898e"
+    },
+    {
+      "name": "sortieDragStart",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        6235
+      ],
+      "selectedLine": 6235,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "draggedSortie"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "29648fa450e80196c63c96b171bd82ec25968083dfbd77b806a6e671382adc95"
+    },
+    {
+      "name": "sortieDragEnd",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        6240
+      ],
+      "selectedLine": 6240,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [
+        "draggedSortie"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "4beac81deff23afcf69403219561d38e43939dd197b986d997f0e91f30a4e52f"
+    },
+    {
+      "name": "sortieDragOver",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        6244
+      ],
+      "selectedLine": 6244,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [],
+      "referencedGlobals": [],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "894c24bbd2dd531cc2cdc13ea85683503bc7a4a2629ceb09c859591e621a3804"
+    },
+    {
+      "name": "sortieDrop",
+      "source": "BDO_물교_v1.0.html",
+      "definitionLines": [
+        6247
+      ],
+      "selectedLine": 6247,
+      "selectedIsFinalDefinition": true,
+      "definitionCount": 1,
+      "directFunctionCalls": [
+        "renderModeColumn",
+        "showToast"
+      ],
+      "referencedGlobals": [
+        "sortiesSpeed",
+        "sortiesBalance",
+        "draggedSortie"
+      ],
+      "usesDocument": false,
+      "windowReferences": [],
+      "bodyNormalizedSha256": "a10bca00cba05c7772e0d9eff9d2453893052b49dc4a6a72b52fd7e6029f42d5"
+    }
+  ],
+  "constants": [
+    {
+      "name": "APP_CONFIG",
+      "source": "BDO_물교_v1.0.html",
+      "line": 915,
+      "sourceSha256": "a054c7f6f053eba21fe0fb5e0db42e8f40166286099c432891150b33bfb5fe73"
+    },
+    {
+      "name": "masterData",
+      "source": "BDO_물교_v1.0.html",
+      "line": 1227,
+      "sourceSha256": "52cad803a5d730089cd3a4e8f0c98de57c5578ad04ed1ad0d34da527971cdeab"
+    },
+    {
+      "name": "rawData",
+      "source": "BDO_물교_v1.0.html",
+      "line": 1251,
+      "sourceSha256": "7137246bde548d5cb9f7e9c137b3bbe6f50ed52a1160900c3abcabd10aaa98e2"
+    },
+    {
+      "name": "islandCoordinates",
+      "source": "BDO_물교_v1.0.html",
+      "line": 1316,
+      "sourceSha256": "1b3038f4e13644ffe8c93385da224065236b7d40a30f2348ea1d0ea5bb17055f"
+    },
+    {
+      "name": "defaultRouteCalibrations",
+      "source": "BDO_물교_v1.0.html",
+      "line": 1320,
+      "sourceSha256": "b49147cf36e5801495290d96730aef6d31d758c552e2e66db66b35609a3217af"
+    },
+    {
+      "name": "REGION_MAP",
+      "source": "BDO_물교_v1.0.html",
+      "line": 3078,
+      "sourceSha256": "037fab3cab530e01180e86b149790d2de8a8d72b505037f5c46c714e706202fb"
+    }
+  ],
+  "timerTick": {
+    "sourceStart": "// ⏱️ 전역 타이머 틱 (1초마다 무한 루프)",
+    "sourceEndExclusive": "// 🔔 알람 소리 함수",
+    "sha256": "d18c9c0864609463399361602fceef86c420e4eb794e48d85db7f1ad0d7efde7"
+  },
+  "protectedRegions": [
+    {
+      "id": "processParsedTrades",
+      "start": "function processParsedTrades",
+      "endExclusive": "function openCaptureModal",
+      "sha256": "683f5b883645208b16712c4f463800ea98367f2e4317f24bad86f1d18e6d8273",
+      "matchesSpec000": true
+    },
+    {
+      "id": "scheduler/completion",
+      "start": "function runAlgorithmAllModes",
+      "endExclusive": "window.completeTradeAndTimer =",
+      "sha256": "0c64f7a542a028045a91b4b67b6721103ccfd76a646d74af0a894a9ee4f7be31",
+      "matchesSpec000": true
+    }
+  ]
+}

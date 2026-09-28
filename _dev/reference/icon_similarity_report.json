@@ -1,0 +1,215 @@
+{
+  "method": {
+    "note": "Exploratory ranking only; not a final recognition threshold.",
+    "referenceSize": [
+      43,
+      43
+    ],
+    "mask": "outer 1px and rows y>=26 excluded",
+    "combinedScore": "0.65*colorRmse + 0.35*normalizedStructureRmse; lower is more similar",
+    "pHash": "64-bit DCT pHash; lower Hamming distance is more similar"
+  },
+  "pairCountEvaluated": 2415,
+  "topSimilarPairs": [
+    {
+      "leftProgramName": "로아 꽃 씨앗 주머니",
+      "leftItemId": 800011,
+      "rightProgramName": "앵두나무 씨앗 주머니",
+      "rightItemId": 800009,
+      "combinedScore": 0.18581,
+      "colorRmse": 0.095721,
+      "normalizedStructureRmse": 0.353119,
+      "pHashHamming64": 8
+    },
+    {
+      "leftProgramName": "갈퀴 꽃 씨앗 주머니",
+      "leftItemId": 800012,
+      "rightProgramName": "로아 꽃 씨앗 주머니",
+      "rightItemId": 800011,
+      "combinedScore": 0.225256,
+      "colorRmse": 0.108654,
+      "normalizedStructureRmse": 0.441803,
+      "pHashHamming64": 10
+    },
+    {
+      "leftProgramName": "갈퀴 꽃 씨앗 주머니",
+      "leftItemId": 800012,
+      "rightProgramName": "앵두나무 씨앗 주머니",
+      "rightItemId": 800009,
+      "combinedScore": 0.288751,
+      "colorRmse": 0.137979,
+      "normalizedStructureRmse": 0.568758,
+      "pHashHamming64": 16
+    },
+    {
+      "leftProgramName": "황금빛 모래",
+      "leftItemId": 800010,
+      "rightProgramName": "만병통치약",
+      "rightItemId": 800053,
+      "combinedScore": 0.326541,
+      "colorRmse": 0.167796,
+      "normalizedStructureRmse": 0.621355,
+      "pHashHamming64": 22
+    },
+    {
+      "leftProgramName": "고대 항아리 파편",
+      "leftItemId": 800007,
+      "rightProgramName": "황금빛 모래",
+      "rightItemId": 800010,
+      "combinedScore": 0.365352,
+      "colorRmse": 0.168774,
+      "normalizedStructureRmse": 0.730425,
+      "pHashHamming64": 24
+    },
+    {
+      "leftProgramName": "황금빛 모래",
+      "leftItemId": 800010,
+      "rightProgramName": "찢어진 해적 보물지도",
+      "rightItemId": 800030,
+      "combinedScore": 0.376488,
+      "colorRmse": 0.156617,
+      "normalizedStructureRmse": 0.78482,
+      "pHashHamming64": 30
+    },
+    {
+      "leftProgramName": "해상 기사단의 창",
+      "leftItemId": 800047,
+      "rightProgramName": "훔친 해적단 단도",
+      "rightItemId": 800044,
+      "combinedScore": 0.386981,
+      "colorRmse": 0.182471,
+      "normalizedStructureRmse": 0.766785,
+      "pHashHamming64": 12
+    },
+    {
+      "leftProgramName": "널찍한 돌판",
+      "leftItemId": 800022,
+      "rightProgramName": "오색 구슬",
+      "rightItemId": 800018,
+      "combinedScore": 0.394072,
+      "colorRmse": 0.226008,
+      "normalizedStructureRmse": 0.70619,
+      "pHashHamming64": 22
+    },
+    {
+      "leftProgramName": "종유석 파편",
+      "leftItemId": 800033,
+      "rightProgramName": "찢어진 해적 보물지도",
+      "rightItemId": 800030,
+      "combinedScore": 0.405829,
+      "colorRmse": 0.175888,
+      "normalizedStructureRmse": 0.832863,
+      "pHashHamming64": 30
+    },
+    {
+      "leftProgramName": "찢어진 해적 보물지도",
+      "leftItemId": 800030,
+      "rightProgramName": "조각상의 눈물",
+      "rightItemId": 800061,
+      "combinedScore": 0.414142,
+      "colorRmse": 0.287533,
+      "normalizedStructureRmse": 0.649272,
+      "pHashHamming64": 26
+    },
+    {
+      "leftProgramName": "찢어진 해적 보물지도",
+      "leftItemId": 800030,
+      "rightProgramName": "만병통치약",
+      "rightItemId": 800053,
+      "combinedScore": 0.417746,
+      "colorRmse": 0.219303,
+      "normalizedStructureRmse": 0.786282,
+      "pHashHamming64": 30
+    },
+    {
+      "leftProgramName": "알 수 없는 고대 벽화",
+      "leftItemId": 800008,
+      "rightProgramName": "널찍한 돌판",
+      "rightItemId": 800022,
+      "combinedScore": 0.424546,
+      "colorRmse": 0.201537,
+      "normalizedStructureRmse": 0.838706,
+      "pHashHamming64": 20
+    },
+    {
+      "leftProgramName": "찢어진 해적 보물지도",
+      "leftItemId": 800030,
+      "rightProgramName": "청록빛 소금덩어리",
+      "rightItemId": 800049,
+      "combinedScore": 0.428871,
+      "colorRmse": 0.205479,
+      "normalizedStructureRmse": 0.843742,
+      "pHashHamming64": 24
+    },
+    {
+      "leftProgramName": "만병통치약",
+      "leftItemId": 800053,
+      "rightProgramName": "조각상의 눈물",
+      "rightItemId": 800061,
+      "combinedScore": 0.429222,
+      "colorRmse": 0.266598,
+      "normalizedStructureRmse": 0.731238,
+      "pHashHamming64": 28
+    },
+    {
+      "leftProgramName": "크론성 금주화",
+      "leftItemId": 800016,
+      "rightProgramName": "황금빛 물고기 비늘",
+      "rightItemId": 800065,
+      "combinedScore": 0.429656,
+      "colorRmse": 0.174502,
+      "normalizedStructureRmse": 0.903514,
+      "pHashHamming64": 24
+    },
+    {
+      "leftProgramName": "오색 구슬",
+      "leftItemId": 800018,
+      "rightProgramName": "황금빛 물고기 비늘",
+      "rightItemId": 800065,
+      "combinedScore": 0.431462,
+      "colorRmse": 0.274239,
+      "normalizedStructureRmse": 0.723448,
+      "pHashHamming64": 24
+    },
+    {
+      "leftProgramName": "고대 항아리 파편",
+      "leftItemId": 800007,
+      "rightProgramName": "굳어진 용암 액",
+      "rightItemId": 800048,
+      "combinedScore": 0.431885,
+      "colorRmse": 0.1296,
+      "normalizedStructureRmse": 0.993271,
+      "pHashHamming64": 24
+    },
+    {
+      "leftProgramName": "황금빛 모래",
+      "leftItemId": 800010,
+      "rightProgramName": "종유석 파편",
+      "rightItemId": 800033,
+      "combinedScore": 0.432878,
+      "colorRmse": 0.184955,
+      "normalizedStructureRmse": 0.893307,
+      "pHashHamming64": 28
+    },
+    {
+      "leftProgramName": "오색 구슬",
+      "leftItemId": 800018,
+      "rightProgramName": "크론성 금주화",
+      "rightItemId": 800016,
+      "combinedScore": 0.43295,
+      "colorRmse": 0.267462,
+      "normalizedStructureRmse": 0.740284,
+      "pHashHamming64": 20
+    },
+    {
+      "leftProgramName": "고대 항아리 파편",
+      "leftItemId": 800007,
+      "rightProgramName": "찢어진 해적 보물지도",
+      "rightItemId": 800030,
+      "combinedScore": 0.434741,
+      "colorRmse": 0.162187,
+      "normalizedStructureRmse": 0.940913,
+      "pHashHamming64": 26
+    }
+  ]
+}

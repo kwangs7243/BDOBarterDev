@@ -1,0 +1,34 @@
+[
+  {
+    "island": "베이루와 섬",
+    "fromItem": "갈퀴 꽃 씨앗 주머니",
+    "toItem": "유실된 무역품 상자",
+    "reqAmount": 1,
+    "count": 4,
+    "yield": 1
+  },
+  {
+    "island": "인버넨 섬",
+    "fromItem": "비옥한 흙",
+    "toItem": "파도의 블랙스톤",
+    "reqAmount": 1,
+    "count": 4,
+    "yield": 1
+  },
+  {
+    "island": "바라테르 섬",
+    "fromItem": "고대 항아리 파편",
+    "toItem": "유실된 무역품 상자",
+    "reqAmount": 1,
+    "count": 4,
+    "yield": 1
+  },
+  {
+    "island": "에버딘 섬",
+    "fromItem": "반달 조리용 칼",
+    "toItem": "파도의 블랙스톤",
+    "reqAmount": 1,
+    "count": 3,
+    "yield": 2
+  }
+]

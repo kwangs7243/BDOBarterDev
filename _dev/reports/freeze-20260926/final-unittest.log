@@ -1,0 +1,35 @@
+test_all_settings_groups_map_snapshots_and_viewer_survive_restart (backend.test_durable_state_ui.DurableStateUiTests.test_all_settings_groups_map_snapshots_and_viewer_survive_restart) ... ok
+test_invalid_order_and_stale_revision_do_not_change_persisted_state (backend.test_durable_state_ui.DurableStateUiTests.test_invalid_order_and_stale_revision_do_not_change_persisted_state) ... ok
+test_inventory_order_null_zero_and_targets_survive_restart (backend.test_durable_state_ui.DurableStateUiTests.test_inventory_order_null_zero_and_targets_survive_restart) ... ok
+test_session_and_temporary_states_have_no_storage_surface (backend.test_durable_state_ui.DurableStateUiTests.test_session_and_temporary_states_have_no_storage_surface) ... ok
+test_actual_loopback_http_and_foreign_host_rejection (backend.test_storage_api.StorageApiTests.test_actual_loopback_http_and_foreign_host_rejection) ... 127.0.0.1 - - [26/Sep/2026 12:54:52] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 12:54:52] "GET /api/health HTTP/1.1" 400 -
+127.0.0.1 - - [26/Sep/2026 12:54:52] "GET /api/health HTTP/1.1" 403 -
+ok
+test_default_database_path_uses_localappdata_and_creates_directories (backend.test_storage_api.StorageApiTests.test_default_database_path_uses_localappdata_and_creates_directories) ... ok
+test_health_static_bootstrap_and_exact_three_table_schema (backend.test_storage_api.StorageApiTests.test_health_static_bootstrap_and_exact_three_table_schema) ... ok
+test_invalid_inventory_values_names_and_tier_are_atomic (backend.test_storage_api.StorageApiTests.test_invalid_inventory_values_names_and_tier_are_atomic) ... ok
+test_inventory_partial_patch_and_restart_persistence (backend.test_storage_api.StorageApiTests.test_inventory_partial_patch_and_restart_persistence) ... ok
+test_manual_inventory_patch_and_order_api (backend.test_storage_api.StorageApiTests.test_manual_inventory_patch_and_order_api) ... ok
+test_mutation_idempotency_and_reuse_conflict (backend.test_storage_api.StorageApiTests.test_mutation_idempotency_and_reuse_conflict) ... ok
+test_settings_patch_is_partial_and_unknown_section_is_rejected (backend.test_storage_api.StorageApiTests.test_settings_patch_is_partial_and_unknown_section_is_rejected) ... ok
+test_stale_revision_is_rejected (backend.test_storage_api.StorageApiTests.test_stale_revision_is_rejected) ... ok
+test_transaction_rolls_back_all_rows_and_revision_on_database_failure (backend.test_storage_api.StorageApiTests.test_transaction_rolls_back_all_rows_and_revision_on_database_failure) ... ok
+test_waitress_entry_uses_fixed_loopback_and_port (backend.test_storage_api.StorageApiTests.test_waitress_entry_uses_fixed_loopback_and_port) ... ok
+test_concurrent_scan_is_rejected_without_creating_a_second_temp_file (backend.test_warehouse_scan.WarehouseScanApiTests.test_concurrent_scan_is_rejected_without_creating_a_second_temp_file) ... ok
+test_file_size_pixel_grid_and_scanner_failures_clean_temporary_uploads (backend.test_warehouse_scan.WarehouseScanApiTests.test_file_size_pixel_grid_and_scanner_failures_clean_temporary_uploads) ... ok
+test_missing_multiple_unsupported_and_corrupt_uploads_are_rejected (backend.test_warehouse_scan.WarehouseScanApiTests.test_missing_multiple_unsupported_and_corrupt_uploads_are_rejected) ... <frozen importlib._bootstrap_external>:757: ResourceWarning: unclosed file <_io.BufferedRandom name='C:\\Users\\kwang\\AppData\\Local\\Temp\\tmpse5dioqq'>
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_only_scanner_confirmed_match_rows_are_accepted (backend.test_warehouse_scan.WarehouseScanApiTests.test_only_scanner_confirmed_match_rows_are_accepted) ... ok
+test_real_fixture_api_matches_direct_convert_and_keeps_only_safe_patch (backend.test_warehouse_scan.WarehouseScanApiTests.test_real_fixture_api_matches_direct_convert_and_keeps_only_safe_patch) ... ok
+test_health_probe_accepts_only_this_application (test_launcher.LauncherResourceTests.test_health_probe_accepts_only_this_application) ... ok
+test_packaged_resource_root_uses_extraction_root_not_working_directory (test_launcher.LauncherResourceTests.test_packaged_resource_root_uses_extraction_root_not_working_directory) ... ok
+test_source_resource_root_contains_all_runtime_assets (test_launcher.LauncherResourceTests.test_source_resource_root_contains_all_runtime_assets) ... ok
+test_second_launcher_cannot_claim_the_running_instance (test_launcher.LauncherSingleInstanceTests.test_second_launcher_cannot_claim_the_running_instance) ... ok
+test_shutdown_waits_for_mutation_and_rejects_new_writes (test_launcher.ShutdownDrainTests.test_shutdown_waits_for_mutation_and_rejects_new_writes) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 3.594s
+
+OK

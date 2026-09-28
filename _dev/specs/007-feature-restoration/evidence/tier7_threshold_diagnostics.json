@@ -1,0 +1,2207 @@
+{
+  "generatedAt": "2026-09-26T07:28:32.667Z",
+  "html": "BDO_물교_v1.0.html",
+  "currentSettings": {
+    "normalWeight": 21490,
+    "maxWeight": 38220,
+    "maxParley": 1250000,
+    "parleyPerTrade": 10973,
+    "crowParley": 15810,
+    "tier5Reserve": 5
+  },
+  "thresholds": [
+    {
+      "region": "east",
+      "tier56Island": "아레하자 마을",
+      "tier5Item": "흰색 애벌레 박제품",
+      "requiredForFive": 5,
+      "currentTier5Stock": 1,
+      "tier5Target": 10,
+      "producerIsland": "파딕스 섬",
+      "producerInput": "목 잘린 용 조각상",
+      "producerRemainingExchanges": 5,
+      "producerInputRequiredForFullRow": 5,
+      "currentProducerInputStock": 3,
+      "producerAllowedInRegion": false
+    },
+    {
+      "region": "south",
+      "tier56Island": "그란디하",
+      "tier5Item": "젊음을 담은 비약",
+      "requiredForFive": 5,
+      "currentTier5Stock": 5,
+      "tier5Target": 10,
+      "producerIsland": "나르보 섬",
+      "producerInput": "금주화가 담긴 낡은 상자",
+      "producerRemainingExchanges": 5,
+      "producerInputRequiredForFullRow": 5,
+      "currentProducerInputStock": 3,
+      "producerAllowedInRegion": true
+    },
+    {
+      "region": "east",
+      "tier56Island": "하코번 섬",
+      "tier5Item": "팔랑나비 박제품",
+      "requiredForFive": 5,
+      "currentTier5Stock": 1,
+      "tier5Target": 10,
+      "producerIsland": "오벤 섬",
+      "producerInput": "굳어진 용암 액",
+      "producerRemainingExchanges": 5,
+      "producerInputRequiredForFullRow": 5,
+      "currentProducerInputStock": 4,
+      "producerAllowedInRegion": false
+    },
+    {
+      "region": "south",
+      "tier56Island": "깊은 밤의 항구",
+      "tier5Item": "빛바랜 황금용 조각상",
+      "requiredForFive": 5,
+      "currentTier5Stock": 6,
+      "tier5Target": 10,
+      "producerIsland": "발베쥬 섬",
+      "producerInput": "해상 기사단의 투구",
+      "producerRemainingExchanges": 5,
+      "producerInputRequiredForFullRow": 5,
+      "currentProducerInputStock": 0,
+      "producerAllowedInRegion": true
+    },
+    {
+      "region": "west",
+      "tier56Island": "달래나루",
+      "tier5Item": "102년 묵은 황금초",
+      "requiredForFive": 5,
+      "currentTier5Stock": 0,
+      "tier5Target": 10,
+      "producerIsland": "아지르 섬",
+      "producerInput": "자수정 파편",
+      "producerRemainingExchanges": 5,
+      "producerInputRequiredForFullRow": 5,
+      "currentProducerInputStock": 1,
+      "producerAllowedInRegion": true
+    },
+    {
+      "region": "west",
+      "tier56Island": "해모 섬",
+      "tier5Item": "정체불명의 암석",
+      "requiredForFive": 5,
+      "currentTier5Stock": 7,
+      "tier5Target": 10,
+      "producerIsland": "바레미 섬",
+      "producerInput": "뱃사공의 수련서",
+      "producerRemainingExchanges": 5,
+      "producerInputRequiredForFullRow": 5,
+      "currentProducerInputStock": 10,
+      "producerAllowedInRegion": true
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "current_inventory",
+      "speed": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 2,
+            "tier67": 2
+          },
+          "west": {
+            "tier56": 5,
+            "tier67": 5
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 17,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 2,
+            "tier67": 2
+          },
+          "west": {
+            "tier56": 5,
+            "tier67": 5
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 17,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    },
+    {
+      "name": "all_required_t5_at_least_5",
+      "speed": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 30,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 30,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    },
+    {
+      "name": "all_required_t5_at_least_5_and_normal_weight_20000",
+      "speed": {
+        "normalWeight": 20000,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 30,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 20000,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 30,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    },
+    {
+      "name": "zero_t5_all_producer_inputs_5_weight_20000",
+      "speed": {
+        "normalWeight": 20000,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "아지르 섬",
+            "from": "자수정 파편",
+            "to": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "island": "발베쥬 섬",
+            "from": "해상 기사단의 투구",
+            "to": "빛바랜 황금용 조각상",
+            "execC": 5
+          },
+          {
+            "island": "나르보 섬",
+            "from": "금주화가 담긴 낡은 상자",
+            "to": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "island": "오벤 섬",
+            "from": "굳어진 용암 액",
+            "to": "팔랑나비 박제품",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 0,
+            "tier67": 0
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 20,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 20000,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "아지르 섬",
+            "from": "자수정 파편",
+            "to": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "island": "발베쥬 섬",
+            "from": "해상 기사단의 투구",
+            "to": "빛바랜 황금용 조각상",
+            "execC": 5
+          },
+          {
+            "island": "나르보 섬",
+            "from": "금주화가 담긴 낡은 상자",
+            "to": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "island": "오벤 섬",
+            "from": "굳어진 용암 액",
+            "to": "팔랑나비 박제품",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 0,
+            "tier67": 0
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 20,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    },
+    {
+      "name": "east_t5_5_west_south_producer_inputs_5_weight_20000",
+      "speed": {
+        "normalWeight": 20000,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "아지르 섬",
+            "from": "자수정 파편",
+            "to": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "island": "발베쥬 섬",
+            "from": "해상 기사단의 투구",
+            "to": "빛바랜 황금용 조각상",
+            "execC": 5
+          },
+          {
+            "island": "나르보 섬",
+            "from": "금주화가 담긴 낡은 상자",
+            "to": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "island": "오벤 섬",
+            "from": "굳어진 용암 액",
+            "to": "팔랑나비 박제품",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 30,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 20000,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "아지르 섬",
+            "from": "자수정 파편",
+            "to": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "island": "발베쥬 섬",
+            "from": "해상 기사단의 투구",
+            "to": "빛바랜 황금용 조각상",
+            "execC": 5
+          },
+          {
+            "island": "나르보 섬",
+            "from": "금주화가 담긴 낡은 상자",
+            "to": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "island": "오벤 섬",
+            "from": "굳어진 용암 액",
+            "to": "팔랑나비 박제품",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "달래나루",
+            "from": "102년 묵은 황금초",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 5
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "west",
+            "island": "일리야 섬",
+            "from": "최고급 감투 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "west": {
+            "tier56": 10,
+            "tier67": 10
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 30,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    }
+  ],
+  "reserveTargetControl": {
+    "low": {
+      "name": "control_low_targets_and_reserve",
+      "speed": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 2,
+            "tier67": 2
+          },
+          "west": {
+            "tier56": 5,
+            "tier67": 5
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 17,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 2,
+            "tier67": 2
+          },
+          "west": {
+            "tier56": 5,
+            "tier67": 5
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 17,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    },
+    "high": {
+      "name": "control_high_targets_and_reserve",
+      "speed": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 2,
+            "tier67": 2
+          },
+          "west": {
+            "tier56": 5,
+            "tier67": 5
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 17,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      },
+      "balance": {
+        "normalWeight": 21490,
+        "maxWeight": 38220,
+        "tier45": [
+          {
+            "island": "바레미 섬",
+            "from": "뱃사공의 수련서",
+            "to": "정체불명의 암석",
+            "execC": 5
+          }
+        ],
+        "tier56": [
+          {
+            "region": "east",
+            "island": "하코번 섬",
+            "from": "팔랑나비 박제품",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "아레하자 마을",
+            "from": "흰색 애벌레 박제품",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "해모 섬",
+            "from": "정체불명의 암석",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "그란디하",
+            "from": "젊음을 담은 비약",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "깊은 밤의 항구",
+            "from": "빛바랜 황금용 조각상",
+            "execC": 5
+          }
+        ],
+        "tier67": [
+          {
+            "region": "east",
+            "island": "성전 해안 정찰지",
+            "from": "아레하자 전통 차",
+            "execC": 1
+          },
+          {
+            "region": "east",
+            "island": "소산 주둔지 선착장",
+            "from": "발렌시아 사막 보검",
+            "execC": 1
+          },
+          {
+            "region": "west",
+            "island": "레마 섬",
+            "from": "남포 특산품 감 상자",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "에페리아 초소",
+            "from": "월광 수정 조각",
+            "execC": 5
+          },
+          {
+            "region": "south",
+            "island": "올비아 해안",
+            "from": "카마실비아 조각상",
+            "execC": 5
+          }
+        ],
+        "regions": {
+          "east": {
+            "tier56": 2,
+            "tier67": 2
+          },
+          "west": {
+            "tier56": 5,
+            "tier67": 5
+          },
+          "south": {
+            "tier56": 10,
+            "tier67": 10
+          }
+        },
+        "totalTier7": 17,
+        "crow": [
+          {
+            "island": "할마드 섬",
+            "execC": 1,
+            "yield": 131
+          },
+          {
+            "island": "카슈마 섬",
+            "execC": 1,
+            "yield": 162
+          },
+          {
+            "island": "더코 섬",
+            "execC": 1,
+            "yield": 166
+          },
+          {
+            "island": "까마귀의 둥지",
+            "execC": 1,
+            "yield": 373
+          },
+          {
+            "island": "파키오의 전투 뗏목",
+            "execC": 1,
+            "yield": 192
+          },
+          {
+            "island": "떠내려온 미완성 선박",
+            "execC": 1,
+            "yield": 245
+          },
+          {
+            "island": "그믐달 길드의 중범선",
+            "execC": 1,
+            "yield": 185
+          },
+          {
+            "island": "난파된 하란의 수송선",
+            "execC": 1,
+            "yield": 257
+          },
+          {
+            "island": "까마귀 상단 소유의 선박",
+            "execC": 1,
+            "yield": 132
+          }
+        ]
+      }
+    },
+    "tier67ScheduleUnchanged": true
+  },
+  "conclusions": {
+    "directTier5RequiredPerRow": 5,
+    "producerInputRequiredPerCurrentFullRow": 5,
+    "weightRequiredPerRegionForTenTier7": 20000,
+    "baseParleyForThirtyWithoutRefillOrCrow": 658380,
+    "tier5ReserveAndTargetControlTier7MainChain": false
+  }
+}

@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "D:\BDOBarterDev\_dev\scripts\verify-frozen-package.py", line 241, in <module>
+    code = conflict.wait(timeout=15)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kwang\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\subprocess.py", line 1264, in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kwang\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\subprocess.py", line 1593, in _wait
+    raise TimeoutExpired(self.args, timeout)
+subprocess.TimeoutExpired: Command '['D:\\BDOBarterDev\\app\\BDO 물교 실행.exe']' timed out after 15 seconds

@@ -1,0 +1,1 @@
+"""Local BDO Barter application."""

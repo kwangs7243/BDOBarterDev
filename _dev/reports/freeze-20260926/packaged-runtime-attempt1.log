@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "D:\BDOBarterDev\_dev\scripts\verify-frozen-package.py", line 139, in <module>
+    fresh_case(suite, suite, use_cmd=(i == 0))
+  File "D:\BDOBarterDev\_dev\scripts\verify-frozen-package.py", line 117, in fresh_case
+    opened = start(env, profile, use_cmd=use_cmd)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BDOBarterDev\_dev\scripts\verify-frozen-package.py", line 96, in start
+    p = subprocess.run([os.environ["COMSPEC"], "/d", "/c", str(ROOT / "�����ϱ�.cmd")],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kwang\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kwang\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kwang\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\Lib\subprocess.py", line 1630, in _communicate
+    raise TimeoutExpired(self.args, orig_timeout)
+subprocess.TimeoutExpired: Command '['C:\\WINDOWS\\system32\\cmd.exe', '/d', '/c', 'D:\\BDOBarterDev\\�����ϱ�.cmd']' timed out after 15 seconds

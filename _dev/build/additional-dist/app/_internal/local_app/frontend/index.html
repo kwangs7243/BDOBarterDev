@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BDO 물교</title>
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/warehouse-scan.css">
+  <link rel="stylesheet" href="/assets/css/patch-review.css">
+  <link rel="stylesheet" href="/assets/css/trade-session.css">
+  <link rel="stylesheet" href="/assets/css/schedule.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><h1>물물교환</h1><span id="runtime-status" role="status">저장 상태를 불러오는 중입니다.</span></div>
+    <div class="compact-settings">
+      <div id="ship-root" class="compact-setting"></div>
+      <div id="parley-root" class="compact-setting"></div>
+      <div id="presets-root" class="compact-presets"></div>
+      <button id="open-tuning" type="button">계산 튜닝</button>
+      <button id="open-map-tools" type="button">지도·항로</button>
+      <button id="reload-state" type="button" title="영구 설정 다시 읽기">↻</button>
+    </div>
+  </header>
+  <main id="app-content" aria-busy="true" class="workspace">
+    <section class="panel inventory-panel" id="mainPanel">
+      <div class="panel-heading"><div><h2>창고</h2><span class="hint">1~5단 · 빈칸은 미입력, 0은 확인된 0개</span></div><button id="open-warehouse-scan" class="primary" type="button">창고 스캔</button></div>
+      <div id="inventory-root"></div>
+      <details class="tier-rule-details"><summary>단계 규칙</summary><div id="tier-rules-root"></div></details>
+    </section>
+    <section class="panel session-panel" id="trade-session-panel">
+      <div class="panel-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="actions compact-actions"><button id="open-json-import" class="primary" type="button">JSON 입력</button><button id="add-manual-trade" type="button">행 추가</button><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></div>
+      <div class="session-toolbar"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button><span id="trade-import-status" class="status-note" role="status"></span></div>
+      <div id="trade-list-root" class="trade-list-scroll"></div>
+    </section>
+  </main>
+
+  <dialog id="json-import-dialog" class="app-dialog small-dialog" aria-labelledby="json-dialog-title">
+    <div class="dialog-titlebar"><h2 id="json-dialog-title">물교 JSON 입력</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
+    <div class="dialog-body"><label class="field" for="trade-json-input">물교 JSON<textarea id="trade-json-input" class="json-editor" spellcheck="false" placeholder='[{"island":"...","fromItem":"...","toItem":"...","reqAmount":1,"count":1,"yield":1}]'></textarea></label><div class="actions"><button id="apply-new-session" class="primary" type="button">새 회차로 적용</button><button id="append-current-trades" type="button">현재 회차에 추가</button><button type="button" data-close-dialog>취소</button></div><p class="hint">붙여넣은 입력은 적용 후 비웁니다. 오류가 있으면 고친 뒤 다시 시도할 수 있습니다.</p></div>
+  </dialog>
+
+  <dialog id="schedule-dialog" class="app-dialog briefing-dialog" aria-labelledby="briefing-title">
+    <div class="dialog-titlebar"><h2 id="briefing-title">출항 브리핑</h2><div class="dialog-actions"><button id="generate-schedule" class="primary" type="button">스케줄 생성 / 다시 계산</button><button type="button" data-close-dialog aria-label="닫기">×</button></div></div>
+    <div class="dialog-body briefing-body">
+      <div class="briefing-toolbar"><label class="brief-config-mode" for="brief-session-mode">현재 회차 교역 모드<select id="brief-session-mode"></select></label><div class="brief-mode-tabs" role="tablist" aria-label="브리핑 보기"><button type="button" data-brief-mode="speed">⚡ 쾌속</button><button type="button" data-brief-mode="balance">⚖️ 균형</button><button type="button" data-brief-mode="both">둘 다</button></div><p id="schedule-status" class="status-note" role="status"></p><div id="schedule-slot-controls" class="schedule-slot-controls" aria-label="스케줄 저장 슬롯"></div><button id="retry-completion-save" type="button" hidden>완료 저장 재시도</button><button id="brief-open-tuning" type="button">계산 튜닝</button><button id="brief-map-speed" type="button">쾌속 지도</button><button id="brief-map-balance" type="button">균형 지도</button><button id="open-engine-diagnostics" type="button">결정 과정 보기</button></div>
+      <div class="briefing-secondary-tools"><div id="free-route-root"></div></div>
+      <div id="schedule-columns" class="schedule-columns" data-mode="both"><section><h3 id="header-speed">⚡ 쾌속 모드</h3><div id="col-speed" class="schedule-column"></div></section><section><h3 id="header-balance">⚖️ 균형 모드</h3><div id="col-balance" class="schedule-column"></div></section></div>
+      <details class="schedule-diagnostics"><summary>계산 진단 데이터</summary><pre id="schedule-diagnostics">아직 계산하지 않았습니다.</pre><button id="copy-engine-diagnostics" type="button">진단 복사</button></details>
+      <div class="compat-inputs" aria-hidden="true"><input id="maxParley" type="number"><input id="normalWeight" type="number"><input id="maxWeight" type="number"><input id="parleyPerTrade" type="number"><input id="parleyCrow" type="number"></div>
+      <div id="waypointModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="waypoint-title">
+        <div class="modal-card"><h3 id="waypoint-title">경유지 추가</h3><input id="wpMode" type="hidden"><input id="wpSortieIdx" type="hidden"><label class="field">섬 이름<input id="wpIsland" type="text"></label><label class="field">기준 교환<select id="wpAnchorSelect"></select></label><fieldset><legend>삽입 위치</legend><label><input type="radio" name="wpPos" value="before" checked> 앞</label><label><input type="radio" name="wpPos" value="after"> 뒤</label></fieldset><label class="inline-field"><input id="wpUseMat" type="checkbox"> 재료 사용</label><div id="wpMatBox" class="hidden"><label class="field">재료명<input id="wpMatName" type="text"></label><label class="field">수량<input id="wpMatCount" type="number" min="1" value="1"></label></div><div class="actions"><button id="confirm-waypoint" class="primary" type="button">추가</button><button id="close-waypoint" type="button">취소</button></div></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="tuning-dialog" class="app-dialog tuning-dialog" aria-labelledby="tuning-title">
+    <div class="dialog-titlebar"><h2 id="tuning-title">계산 튜닝</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
+    <div class="dialog-body"><div class="tuning-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-tuning-tab="temporary">이번 회차 임시 적용</button><button type="button" role="tab" aria-selected="false" data-tuning-tab="durable">영구 기본값 저장</button></div><p class="hint">임시 적용은 현재 회차 설정에만 저장하고 스케줄을 다시 계산합니다. 영구 저장은 다음 새 회차의 기본값을 바꿉니다.</p><div id="tuning-root"></div></div>
+  </dialog>
+
+  <dialog id="map-tools-dialog" class="app-dialog map-tools-dialog" aria-labelledby="map-tools-title">
+    <div class="dialog-titlebar"><h2 id="map-tools-title">지도와 좌표 설정</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
+    <div class="dialog-body"><p class="hint">현재 회차 경로와 적용 좌표·보정·메모를 확인합니다.</p><div class="map-tools-grid"><section><h3>경로·좌표 설정</h3><div id="navigation-root"></div></section><section><h3>지도 뷰어</h3><div id="map-root"></div><div id="viewer-root"></div></section></div></div>
+  </dialog>
+
+  <dialog id="engine-diagnostics-dialog" class="app-dialog small-dialog" aria-labelledby="engine-diagnostics-title"><div class="dialog-titlebar"><h2 id="engine-diagnostics-title">ENGINE_DEBUG · 항로 결정 과정</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div><div class="dialog-body"><p>계산기에 기록된 서류 점수와 후보별 선택 근거를 보여줍니다. 저장된 근거가 없는 제외 사유는 추정하지 않고 표시하지 않습니다. 타이머는 새로고침 후 초기화됩니다.</p><div id="engine-debug-content"></div><details><summary>원본 ENGINE_DEBUG JSON</summary><pre id="engine-debug-raw"></pre></details><button id="copy-engine-diagnostics-dialog" type="button">진단 정보 복사</button><p id="diagnostics-copy-status" role="status"></p></div></dialog>
+
+
+  <script src="/assets/js/domain/constants.js"></script>
+  <script src="/assets/js/domain/routing.js"></script>
+  <script src="/assets/js/domain/scheduler.js"></script>
+  <script src="/assets/js/domain/tier7.js"></script>
+  <script src="/assets/js/domain/schedule-edit.js"></script>
+  <script src="/assets/js/domain/timer-ui.js"></script>
+  <script src="/assets/js/domain/completion.js"></script>
+  <script src="/assets/js/domain/scheduler-runtime.js"></script>
+  <script type="module" src="/assets/js/state.js"></script>
+  <script type="module" src="/assets/js/modal-ui.js"></script>
+  <script type="module" src="/assets/js/app.js"></script>
+</body>
+</html>

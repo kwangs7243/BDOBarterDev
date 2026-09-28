@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+  "protectedFunctions": 42,
+  "constants": 6,
+  "timerTick": true,
+  "protectedRegions": 2,
+  "protectedFiles": 15
+}

@@ -1,0 +1,53 @@
+{
+  "spec": "SPEC-000",
+  "baselineDate": "2026-09-25",
+  "workspaceRoot": ".",
+  "referenceImplementation": {
+    "path": "BDO_물교_v1.0.html",
+    "sha256": "7133AE0140D84DC284A53B7CAEEDAF5479270161038CA36DF4E094983AAF7B76"
+  },
+  "warehouseScanner": {
+    "path": "tools/warehouse_patch/warehouse_patch.py",
+    "sha256": "AA72ED5763C76A030AB4C8FFBC00FB23BF8ED4C391F9D1DE8659395D76579FE8"
+  },
+  "referenceData": {
+    "itemsPath": "reference/barter_items.json",
+    "itemsSha256": "e6e9786b1a8f671650dca9feb33b6137029620f5e17ccb2dcdf0957722028d9c",
+    "checksumsPath": "reference/SHA256SUMS.txt",
+    "checksumsSha256": "4131f16abdff13889e98702e7a9c00325671349fddaf7ac282e70b7e88aa2ae4",
+    "itemCount": 70,
+    "tierCounts": {"1": 14, "2": 14, "3": 14, "4": 14, "5": 14},
+    "inventoryTargetCount": 56,
+    "identificationOnlyCount": 14,
+    "iconCount": 70,
+    "iconUniqueSha256Count": 70,
+    "missingIcons": 0,
+    "declaredIconHashMismatches": 0,
+    "iconSetAggregateSha256": "eb4fcc3c47736c9b1f3f25debb576a69d879e426ef7bab27da1b0cbebd590018"
+  },
+  "protectedRegions": [
+    {"id": "processParsedTrades", "start": "function processParsedTrades", "endExclusive": "function openCaptureModal", "sha256": "683f5b883645208b16712c4f463800ea98367f2e4317f24bad86f1d18e6d8273"},
+    {"id": "scheduler/completion", "start": "function runAlgorithmAllModes", "endExclusive": "window.completeTradeAndTimer =", "sha256": "0c64f7a542a028045a91b4b67b6721103ccfd76a646d74af0a894a9ee4f7be31"}
+  ],
+  "protectedAlgorithms": ["processParsedTrades", "runAlgorithmAllModes", "buildSorties", "buildTier7Sorties", "crow coin generation", "routing and region constraints", "load calculations", "schedule edits", "completion", "waypoint completion"],
+  "regressionFixtures": [
+    {"path":"fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json","sha256":"d9dd5dafcfca60f9b068ecdefc1817e58125d04b1e2a97ff2405bcff7ebfd602"},
+    {"path":"fixtures/KNOWN_YIELD_MISMATCHES_8.json","sha256":"f65c33fbacde2199f9d1313bffeffaa5af3c5ce124bea845f86b18aab662d5f8"},
+    {"path":"fixtures/TEST_ONLY_corrected_low_stock.json","sha256":"0e40a7d65696548600dac52683ebad48fbec47bdebd6848aa4980393d1173ce3"},
+    {"path":"fixtures/TEST_ONLY_synthetic_T1T4_full_T5_original.json","sha256":"9141262a04c18f29182565574b9ecd8fd72763ecf4346895611a8c2d7459813d"},
+    {"path":"fixtures/TEST_ONLY_synthetic_T4_25_each.json","sha256":"f02d4adf11e6b5148078b7d51b3d90750d8c47160e4b72986c887a4a3e44cdb3"},
+    {"path":"fixtures/TEST_ONLY_synthetic_target_full_stock.json","sha256":"d2091533738edff7d87240ae231146b72d0a83c5da54b0849eace11ac0fa6124"},
+    {"path":"fixtures/USER_CAPTURE_20260923_74_ROWS.json","sha256":"fd94edb1412d8c978910c256905d7346091ba52f63905f456cdad4fd519b262c"},
+    {"path":"fixtures/warehouse_patch/barter_only.png","sha256":"cc1745d5e3f57315f7344ca26eb428c0e81b8d3251a2be049d75e29ba7da506d"},
+    {"path":"fixtures/warehouse_patch/calibration.png","sha256":"4a42ec5934ccb1e30137163b52835928fd74d649b4bac7379b9f5031e89b045f"},
+    {"path":"fixtures/warehouse_patch/calibration_manifest.json","sha256":"6b5697e8ba46f2f377553903c7b9894c5ef41c9f8ae0cbae1aba865820b0a90a"},
+    {"path":"fixtures/warehouse_patch/mixed.png","sha256":"49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742"},
+    {"path":"inputs/ORIGINAL_user_backup_20260923.json","sha256":"0d5af736e9544eea32ba8d2d51f65ff46cbf5f0c2ceee4beaba611109bd868f9","contentCopied":false}
+  ],
+  "allowedChanges": ["new-app-only UI and storage adapters in later approved specs", "baseline and comparison documentation", "additive tests that do not alter baseline expectations"],
+  "forbiddenChanges": ["reference HTML behavior or algorithms", "warehouse scanner conversion behavior", "reference JSON/icons/fixtures", "existing regression expected values", "routing/region/scheduler/completion semantics", "SPEC-001+ implementation in SPEC-000"],
+  "comparisonProtocol": "Use identical input files and settings for reference and candidate. Compare observable parsed items, inventory patch values, schedule/route outputs, and completion inventory effects exactly; do not apply tolerance. Normalize only explicitly nondeterministic timestamps or generated IDs, preserving all semantic fields. Preserve input fixture hashes and record environment and test command.",
+  "knownIssues": [
+    {"id":"warehouse_patch_regression_stale_html_hash","path":"tests/warehouse_patch_regression.py","expectedHtmlSha256":"b5f29bfec3c3ebbd4257a42c1e311c28ce8e38d78dfb7a55279bd455a59e6598","currentHtmlSha256":"7133AE0140D84DC284A53B7CAEEDAF5479270161038CA36DF4E094983AAF7B76","status":"recorded_only_not_modified","note":"The test pins an earlier HTML baseline and fails its hash guard before scanner assertions; updating test code/expectation is out of SPEC-000 scope."}
+  ]
+}

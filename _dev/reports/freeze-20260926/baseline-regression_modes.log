@@ -1,0 +1,8 @@
+PASS R1 general and inner modes still generate speed and balance schedules
+PASS R2 tier 7 mode still generates tier 6 or tier 7 cards
+PASS R3 tier 4 to 5 exchanges remain five-exchange bundles
+PASS R4 special and coin completion consume input and list count without fake inventory output
+PASS R5 corrected low-stock batch and replan schedules have no unintended reserve violation
+PASS R6 generated stale card completes and applies all state updates without a hold
+PASS R7 saved tuning, weight, speed, and route settings restore unchanged
+SUMMARY 7/7 PASS

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "schemaVersion": 3,
+  "revision": 67,
+  "inventoryRows": 70,
+  "workingSessionPreserved": true,
+  "allPreexistingSqliteRowsAndRevisionPreserved": true,
+  "fileComparisons": 257,
+  "installedBackup": "D:\\BDOBarterDev\\app_추가기능전_20260926_f018eeae",
+  "databaseBackup": "D:\\BDOBarterDev\\_dev\\test_results\\additional_features\\user-data-before-schema3-2a40bb84.sqlite3",
+  "installedExeSha256": "46a45b8f02d2be4f097caf0dd207d6b5f6dd54539192b17614859eca5f65f3d7",
+  "processId": 25236,
+  "entrypoint": "D:\\BDOBarterDev\\실행하기.cmd"
+}

@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "entrypoint": "D:\\BDOBarterDev\\업데이트_검증판\\app\\BDO 물교 실행.exe",
+  "files": 257,
+  "bytes": 72194566,
+  "resourceComparisons": 106,
+  "icons": 70,
+  "moduleCount": 788,
+  "newSessionModulesIncluded": true,
+  "userDatabaseBundled": false,
+  "runtimeExecuted": true
+}

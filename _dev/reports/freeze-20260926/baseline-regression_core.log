@@ -1,0 +1,12 @@
+PASS A1 known special 4 preserve exact item names and row values
+PASS A2 repeated import is idempotent
+PASS A3 normal, coin, tier 6, and tier 7 valid rows remain unchanged
+PASS A4 invalid or unverifiable items are held instead of silently remapped
+PASS A5 unique high-confidence OCR item typos are corrected from the master list
+PASS A6 ambiguous OCR item candidates are held for user confirmation
+PASS B1 yield boundaries 1, 2, and 3 pass unchanged
+PASS B2 missing, zero, negative, and string yields are held
+PASS B3 all 8 known rows use their own yield in scheduling
+PASS B4 card text and completion use the same per-row yield
+PASS B5 save, refresh, schedule load, export, and backup restore preserve completed inventory
+SUMMARY 11/11 PASS

@@ -1,0 +1,18 @@
+{
+  "_dev\\local_app\\frontend\\js\\autocomplete.js": "fc4fa9b7dc807b91966db3f86039602633ccbc120c89adb48ce40ac76547a7fb",
+  "_dev\\local_app\\frontend\\js\\trade-import-review.js": "718eb0bc86431cd474eff4fd30a1cd834f516cfa29c1d00274c9a6ddde9c8947",
+  "_dev\\local_app\\frontend\\js\\patch-review.js": "4edb73a058963758640b274290c24111a65d5df324d0889380d910552a918877",
+  "_dev\\local_app\\frontend\\css\\patch-review.css": "77bde430094bc2b819a265706d6b8285add7aa968340adcadc141f22bd32d4a7",
+  "app/_internal/local_app/frontend": {
+    "js/autocomplete.js": "fc4fa9b7dc807b91966db3f86039602633ccbc120c89adb48ce40ac76547a7fb",
+    "js/trade-import-review.js": "718eb0bc86431cd474eff4fd30a1cd834f516cfa29c1d00274c9a6ddde9c8947",
+    "js/patch-review.js": "4edb73a058963758640b274290c24111a65d5df324d0889380d910552a918877",
+    "css/patch-review.css": "77bde430094bc2b819a265706d6b8285add7aa968340adcadc141f22bd32d4a7"
+  },
+  "업데이트_검증판/app/_internal/local_app/frontend": {
+    "js/autocomplete.js": "fc4fa9b7dc807b91966db3f86039602633ccbc120c89adb48ce40ac76547a7fb",
+    "js/trade-import-review.js": "718eb0bc86431cd474eff4fd30a1cd834f516cfa29c1d00274c9a6ddde9c8947",
+    "js/patch-review.js": "4edb73a058963758640b274290c24111a65d5df324d0889380d910552a918877",
+    "css/patch-review.css": "77bde430094bc2b819a265706d6b8285add7aa968340adcadc141f22bd32d4a7"
+  }
+}

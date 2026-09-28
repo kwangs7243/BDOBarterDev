@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "task": "SPEC-008 T000A",
+  "createdAtLocal": "2026-09-28 Asia/Seoul",
+  "status": "T000A_READ_ONLY_COMPLETE_T000B_AWAITING_USER_DIRECTION",
+  "sourceRoot": "D:/BDOBarterDev/_dev",
+  "workspaceRoot": "D:/BDOBarterDev",
+  "activeRepository": {
+    "workspaceGitDirectory": false,
+    "devGitDirectory": false,
+    "status": "NO_ACTIVE_WORKTREE",
+    "cleanStatus": null,
+    "existingChanges": "Cannot classify via git status because neither workspace nor _dev is an active Git checkout."
+  },
+  "detachedHistoricalMetadata": {
+    "path": "D:/BDOBarterDev_git_backup_20260926",
+    "head": "dea73fa6aeb0ec3a9c9c0911be3f33287c39ef6c",
+    "tree": "213352e019bb10fba1ada62be37965230778aadd",
+    "branch": "main",
+    "remoteTrackingRef": "origin/main",
+    "tag": "v1.0",
+    "treeFileCount": 41,
+    "byteExactCurrentMatches": 30,
+    "existingFilesDifferentFromTree": 11,
+    "historicalPathsNotFound": 0,
+    "comparison": "Compared each historical blob against both workspace-root and _dev-relative current candidates. Differences span the original HTML, README, oracle input, report, prior test results, and a test harness.",
+    "caseA": "FAIL: the full current source/protected tree is not an exact commit/tree in available history; historical HTML v1.0 metadata is not authoritative for the current localhost application.",
+    "historyModified": false
+  },
+  "currentSource": {
+    "baselineManifest": "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
+    "manifestSha256": "418AD7E0E7FA3AEFEEACA981B1E3D3C6D5EF524F4263FF7FE8F7EF906465B3C6",
+    "listedFileHashesChecked": 190,
+    "listedFileHashDifferences": 0,
+    "protectedEquivalence": {
+      "command": "node local_app/tests/equivalence/verify-migration.mjs",
+      "result": "PASS",
+      "protectedFunctions": 42,
+      "constants": 6,
+      "regions": 2,
+      "files": 15,
+      "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76"
+    }
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "executable": "C:/Users/kwang/AppData/Local/Temp/BDOBarterSpec006Venv/Scripts/python.exe",
+    "dependencyImports": "PASS",
+    "versions": {
+      "Pillow": "12.3.0",
+      "NumPy": "2.5.3",
+      "Flask": "3.1.3",
+      "Waitress": "3.0.2"
+    },
+    "note": "Versions read with importlib.metadata. An initial probe failed because waitress.__version__ is not exposed; the corrected metadata probe passed. No packages were installed."
+  },
+  "fixtureAccess": {
+    "warehouseRegressionFixtures": {
+      "barter_only_png": "PRESENT",
+      "mixed_png": "PRESENT",
+      "calibration_png": "PRESENT"
+    },
+    "missingExpectedEvidence": "local_app/tests/backend/test_warehouse_evidence.py reads _dev/마스터창고.png; it is absent. Workspace-root 마스터.png exists but equivalence was not established and it was not substituted.",
+    "historicalTradeOracle": "_dev/archive/spec100-original-data exists; contents were not copied or changed."
+  },
+  "implementationPersistence": {
+    "schemaVersion": 3,
+    "workingSessionTable": true,
+    "updateSessionAndMutationReceipt": true,
+    "workingSessionPutApi": true,
+    "frontendWorkingSessionSaveQueue": true,
+    "frontendSnapshotAndRestore": true,
+    "evidenceFiles": [
+      "_dev/local_app/backend/storage.py",
+      "_dev/local_app/backend/api/session.py",
+      "_dev/local_app/frontend/js/api.js",
+      "_dev/local_app/frontend/js/persistence.js",
+      "_dev/local_app/frontend/js/domain/scheduler-runtime.js"
+    ],
+    "newHelper": "saveWorkingSessionSnapshot(candidate) does not exist and must be implemented by its later task.",
+    "sourceVsPackage": "Source implementation verified; compiled package module equivalence was not checked.",
+    "docMismatch": "_dev/README.md still describes schema 2, while current storage.py is schema 3. Source code is authoritative."
+  },
+  "repositoryShape": {
+    "devFilesRecursive": 1598,
+    "buildDirectoryFiles": 1066,
+    "buildDirectoryBytes": 338389248,
+    "installedAppBytes": 72246845,
+    "note": "Generated/package areas were inventoried read-only and are not proposed as source baseline content."
+  },
+  "gitDecision": {
+    "selectedCase": "B",
+    "resolutionStatus": "AWAITING_USER_DIRECTION",
+    "ready": false,
+    "reason": "No exact historical tree matches. A new authoritative baseline needs a user-selected Git root and an explicit decision on manifest-referenced local capture/virtual-environment artifacts before staging."
+  },
+  "sideEffects": {
+    "productionCodeChanged": false,
+    "protectedFilesChanged": false,
+    "userDatabaseChanged": false,
+    "gitMetadataChanged": false,
+    "packagesInstalled": false,
+    "applicationRestarted": false
+  }
+}

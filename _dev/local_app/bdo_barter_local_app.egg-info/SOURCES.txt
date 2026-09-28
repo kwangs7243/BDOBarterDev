@@ -1,0 +1,16 @@
+pyproject.toml
+backend/app.py
+backend/contracts.py
+backend/storage.py
+backend/api/__init__.py
+backend/api/maintenance.py
+backend/api/scan.py
+backend/api/state.py
+backend/services/__init__.py
+backend/services/warehouse_scan.py
+bdo_barter_local_app.egg-info/PKG-INFO
+bdo_barter_local_app.egg-info/SOURCES.txt
+bdo_barter_local_app.egg-info/dependency_links.txt
+bdo_barter_local_app.egg-info/requires.txt
+bdo_barter_local_app.egg-info/top_level.txt
+tests/test_launcher.py

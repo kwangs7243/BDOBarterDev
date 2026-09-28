@@ -1,0 +1,82 @@
+{
+  "generatedAt": "2026-09-24T15:08:09.194Z",
+  "tests": [
+    {
+      "name": "R1 general and inner modes still generate speed and balance schedules",
+      "status": "PASS",
+      "details": {
+        "none": {
+          "speed": 1,
+          "balance": 1
+        },
+        "inner": {
+          "speed": 1,
+          "balance": 1
+        }
+      }
+    },
+    {
+      "name": "R2 tier 7 mode still generates tier 6 or tier 7 cards",
+      "status": "PASS",
+      "details": {
+        "sorties": 5,
+        "tier67Cards": 12
+      }
+    },
+    {
+      "name": "R3 tier 4 to 5 exchanges remain five-exchange bundles",
+      "status": "PASS",
+      "details": {
+        "cards": 7,
+        "exchanges": 35
+      }
+    },
+    {
+      "name": "R4 special and coin completion consume input and list count without fake inventory output",
+      "status": "PASS",
+      "details": {
+        "specialExec": 4,
+        "coinExec": 1
+      }
+    },
+    {
+      "name": "R5 corrected low-stock batch and replan schedules have no unintended reserve violation",
+      "status": "PASS",
+      "details": {
+        "initialSpeed": 3,
+        "replanFailures": []
+      }
+    },
+    {
+      "name": "R6 generated stale card completes and applies all state updates without a hold",
+      "status": "PASS",
+      "details": {
+        "completed": true,
+        "inputStock": 0,
+        "outputGain": 20
+      }
+    },
+    {
+      "name": "R7 saved tuning, weight, speed, and route settings restore unchanged",
+      "status": "PASS",
+      "details": {
+        "shipSpeed": 150,
+        "oceanRoute": "auto",
+        "weight": {
+          "T1": 100,
+          "T2": 400,
+          "T3": 900,
+          "T4": 1000,
+          "T5": 1000,
+          "T6": 2000,
+          "T7": 2000,
+          "MAT": 0,
+          "COIN": 0,
+          "BASE": 10
+        },
+        "normalWeight": "21490",
+        "maxWeight": "38220"
+      }
+    }
+  ]
+}
