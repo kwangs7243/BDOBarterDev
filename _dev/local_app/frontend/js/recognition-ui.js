@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { CaptureError, CaptureQueue, PreviewRegistry, captureFromFile, captureFromPaste, captureLimits, isEditableTarget } from "./capture.js";
+import { CaptureError, CaptureQueue, PreviewRegistry, ScreenCaptureSession, captureFromFile, captureFromPaste, captureLimits, isEditableTarget } from "./capture.js";
 
 function captureContext(taskType) {
   const sessionId = state.session?.id;
@@ -25,6 +25,19 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const tradePasteTarget = tradeDialog.querySelector("[data-capture-paste-target]");
   const tradeList = tradeDialog.querySelector("[data-role='capture-list']");
   const tradeStatus = tradeDialog.querySelector("[data-role='capture-status']");
+  const tradeScreenCaptureButton = tradeDialog.querySelector("[data-screen-capture='trade']");
+  const warehouseScreenCaptureButton = document.createElement("button");
+  warehouseScreenCaptureButton.type = "button";
+  warehouseScreenCaptureButton.className = "warehouse-screen-capture";
+  warehouseScreenCaptureButton.dataset.screenCapture = "warehouse";
+  warehouseScreenCaptureButton.textContent = "연결된 화면에서 캡처";
+  warehouseScreenCaptureButton.disabled = true;
+  warehouseCaptureUI.dialog.querySelector("[data-capture-paste-target]").after(warehouseScreenCaptureButton);
+  const screenSessionBar = document.querySelector("#screen-capture-session");
+  const screenStatus = document.querySelector("#screen-capture-status");
+  const connectScreenButton = document.querySelector("#connect-screen-capture");
+  const disconnectScreenButton = document.querySelector("#disconnect-screen-capture");
+  const screenSession = new ScreenCaptureSession();
   const tradeQueue = new CaptureQueue();
   const tradePreviews = new PreviewRegistry();
 
@@ -44,7 +57,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       const heading = document.createElement("strong");
       heading.textContent = `이미지 초안 · ${capture.metadata.frame.width}×${capture.metadata.frame.height}`;
       const meta = document.createElement("span");
-      meta.textContent = `${capture.metadata.sourceType === "clipboard" ? "클립보드" : "파일"} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`;
+      const sourceLabel = capture.metadata.sourceType === "clipboard" ? "클립보드" : capture.metadata.sourceType === "browser-stream" ? "화면" : "파일";
+      meta.textContent = `${sourceLabel} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`;
       const status = document.createElement("span");
       status.className = "capture-draft-state";
       status.textContent = "초안 · OCR 미실행";
@@ -70,6 +84,51 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     renderTradeQueue();
     tradeStatus.textContent = `${captures.length}개 이미지를 초안으로 보관했습니다. 인식이나 물교 목록 생성은 수행하지 않았습니다.`;
   };
+
+  const renderScreenState = ({ state: screenState = screenSession.state, reason = screenSession.reason } = {}) => {
+    const labels = {
+      IDLE: "화면 연결 안 됨",
+      CONNECTING: "화면 연결 중…",
+      CONNECTED: "화면 연결됨",
+      CAPTURING: "화면 캡처 중…",
+      DISCONNECTED: reason === "track-ended" ? "화면 공유 종료됨" : reason === "permission-denied" ? "화면 공유가 취소되었거나 허용되지 않았습니다" : reason === "unsupported" ? "이 브라우저는 화면 공유를 지원하지 않습니다" : reason === "connect-error" ? "화면 연결 오류" : "화면 연결 안 됨",
+    };
+    screenStatus.textContent = labels[screenState] ?? "화면 연결 오류";
+    screenSessionBar.dataset.state = screenState;
+    const active = screenState === "CONNECTED" || screenState === "CAPTURING";
+    connectScreenButton.disabled = screenState === "CONNECTING" || active;
+    disconnectScreenButton.disabled = screenState === "IDLE" || screenState === "DISCONNECTED";
+    warehouseScreenCaptureButton.disabled = screenState !== "CONNECTED";
+    tradeScreenCaptureButton.disabled = screenState !== "CONNECTED";
+  };
+
+  screenSession.subscribe(renderScreenState);
+  renderScreenState();
+  connectScreenButton.addEventListener("click", () => {
+    // Keep connectScreen invocation directly in the click handler for browser user activation.
+    const connection = screenSession.connectScreen();
+    void connection.catch(() => {});
+  });
+  disconnectScreenButton.addEventListener("click", () => screenSession.disconnectScreen("user"));
+
+  const captureScreenInto = (taskType, button, accept, reportError) => {
+    button.addEventListener("click", async () => {
+      if (screenSession.state !== "CONNECTED") return;
+      try {
+        const capture = await screenSession.captureFrame(captureContext(taskType));
+        accept([capture]);
+        if (taskType === "warehouse") {
+          warehouseCaptureUI.dialog.querySelector(".warehouse-scan-message").textContent = `연결된 화면 ${capture.metadata.frame.width}×${capture.metadata.frame.height} 프레임을 대기열에 추가했습니다. 판독은 ‘선택 이미지 판독’을 눌렀을 때만 실행됩니다.`;
+        }
+      } catch (error) {
+        reportError(error);
+      } finally {
+        renderScreenState();
+      }
+    });
+  };
+  captureScreenInto("warehouse", warehouseScreenCaptureButton, warehouseCaptureUI.acceptCaptures, warehouseCaptureUI.reportCaptureError);
+  captureScreenInto("trade", tradeScreenCaptureButton, appendTradeCaptures, (error) => { tradeStatus.textContent = explain(error); });
 
   openTradeButton.addEventListener("click", () => {
     tradeStatus.textContent = "파일을 선택하거나 붙여넣기 버튼을 누른 뒤 Ctrl+V를 사용하세요.";
@@ -126,6 +185,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   document.addEventListener("paste", onPaste);
 
   window.addEventListener("beforeunload", () => {
+    screenSession.disconnectScreen("beforeunload");
     tradePreviews.clear();
     tradeQueue.clear();
   });
@@ -134,6 +194,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     getTradeDraftCount: () => tradeQueue.length,
     cleanup: () => {
       document.removeEventListener("paste", onPaste);
+      screenSession.disconnectScreen("beforeunload");
       tradePreviews.clear();
       tradeQueue.clear();
     },

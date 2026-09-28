@@ -258,6 +258,299 @@ export async function captureFromPaste(event, context, adapters = {}) {
   return { handled: true, inputs };
 }
 
+const SCREEN_DISCONNECT_REASONS = new Set(["user", "track-ended", "pagehide", "beforeunload", "connect-error", "capture-error"]);
+
+export class ScreenCaptureSession {
+  #mediaDevices;
+  #document;
+  #lifecycleTarget;
+  #createVideo;
+  #createCanvas;
+  #now;
+  #uuid;
+  #frameTimeoutMs;
+  #stream = null;
+  #track = null;
+  #video = null;
+  #state = "IDLE";
+  #reason = null;
+  #generation = 0;
+  #connectPromise = null;
+  #capturing = false;
+  #listeners = new Set();
+  #onTrackEnded = () => this.disconnectScreen("track-ended");
+  #onPageHide = () => this.disconnectScreen("pagehide");
+  #onBeforeUnload = () => this.disconnectScreen("beforeunload");
+
+  constructor(adapters = {}) {
+    this.#mediaDevices = adapters.mediaDevices ?? globalThis.navigator?.mediaDevices;
+    this.#document = adapters.document ?? globalThis.document;
+    this.#lifecycleTarget = adapters.lifecycleTarget ?? globalThis.window;
+    this.#createVideo = adapters.createVideo ?? (() => this.#document.createElement("video"));
+    this.#createCanvas = adapters.createCanvas ?? (() => this.#document.createElement("canvas"));
+    this.#now = adapters.now ?? (() => new Date());
+    this.#uuid = adapters.uuid ?? defaultUuid;
+    this.#frameTimeoutMs = adapters.frameTimeoutMs ?? 3000;
+    this.#lifecycleTarget?.addEventListener?.("pagehide", this.#onPageHide);
+    this.#lifecycleTarget?.addEventListener?.("beforeunload", this.#onBeforeUnload);
+  }
+
+  get state() { return this.#state; }
+  get reason() { return this.#reason; }
+  get connected() { return this.#state === "CONNECTED" || this.#state === "CAPTURING"; }
+
+  subscribe(listener) {
+    if (typeof listener !== "function") throw new TypeError("listener must be a function");
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  #setState(state, reason = null) {
+    this.#state = state;
+    this.#reason = reason;
+    const snapshot = { state, reason };
+    for (const listener of this.#listeners) listener(snapshot);
+  }
+
+  connectScreen() {
+    if (this.#state === "CONNECTED") return Promise.resolve(this.#stream);
+    if (this.#state === "CAPTURING") return Promise.reject(new CaptureError("capture_in_progress", "화면 캡처가 끝난 뒤 다시 연결해 주세요."));
+    if (this.#connectPromise) return this.#connectPromise;
+    if (typeof this.#mediaDevices?.getDisplayMedia !== "function") {
+      this.#setState("DISCONNECTED", "unsupported");
+      return Promise.reject(new CaptureError("screen_unsupported", "이 브라우저는 화면 공유를 지원하지 않습니다."));
+    }
+
+    this.#setState("CONNECTING");
+    const generation = this.#generation;
+    let request;
+    try {
+      // This call stays synchronous in connectScreen so its caller can invoke it directly from a user click.
+      request = this.#mediaDevices.getDisplayMedia({ video: { displaySurface: "window" }, audio: false });
+    } catch (error) {
+      this.#setState("DISCONNECTED", error?.name === "NotAllowedError" ? "permission-denied" : "connect-error");
+      return Promise.reject(error);
+    }
+
+    this.#connectPromise = Promise.resolve(request).then(async (stream) => {
+      if (generation !== this.#generation) {
+        for (const track of stream?.getTracks?.() ?? []) track.stop?.();
+        throw new CaptureError("screen_disconnected", "화면 연결 요청이 종료되었습니다. 다시 연결해 주세요.");
+      }
+      const tracks = stream?.getTracks?.() ?? [];
+      const videoTracks = tracks.filter((track) => track.kind === "video");
+      const audioTracks = tracks.filter((track) => track.kind === "audio");
+      if (audioTracks.length) {
+        for (const track of tracks) track.stop?.();
+        throw new CaptureError("audio_track_unexpected", "화면 연결에서 오디오 트랙이 감지되어 연결을 종료했습니다.");
+      }
+      const track = videoTracks[0];
+      if (!track || track.readyState !== "live") {
+        for (const item of tracks) item.stop?.();
+        throw new CaptureError("screen_unavailable", "사용 가능한 화면 트랙을 얻지 못했습니다. 화면 연결을 다시 시작해 주세요.");
+      }
+
+      this.#stream = stream;
+      this.#track = track;
+      const video = this.#createVideo();
+      this.#video = video;
+      video.muted = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.setAttribute?.("aria-hidden", "true");
+      if (video.style) {
+        video.style.position = "fixed";
+        video.style.width = "1px";
+        video.style.height = "1px";
+        video.style.opacity = "0";
+        video.style.pointerEvents = "none";
+      }
+      video.srcObject = stream;
+      this.#document?.body?.append?.(video);
+      track.addEventListener?.("ended", this.#onTrackEnded);
+      await video.play?.();
+      if (generation !== this.#generation || track.readyState !== "live") {
+        throw new CaptureError("screen_disconnected", "화면 연결이 종료되었습니다. 다시 연결해 주세요.");
+      }
+      this.#setState("CONNECTED");
+      return stream;
+    }).catch((error) => {
+      if (generation === this.#generation) {
+        this.#clearStream();
+        this.#setState("DISCONNECTED", error?.name === "NotAllowedError" ? "permission-denied" : "connect-error");
+      }
+      throw error;
+    }).finally(() => { this.#connectPromise = null; });
+    return this.#connectPromise;
+  }
+
+  async captureFrame(context) {
+    if (this.#state !== "CONNECTED" || !this.#stream || !this.#track || !this.#video) {
+      throw new CaptureError("screen_not_connected", "먼저 화면 연결을 시작해 주세요.");
+    }
+    if (this.#capturing) throw new CaptureError("capture_in_progress", "화면 캡처가 진행 중입니다.");
+    const normalizedContext = normalizeContext(context);
+    this.#capturing = true;
+    this.#setState("CAPTURING");
+    const startedAt = performance.now();
+    let canvas;
+    try {
+      const video = this.#video;
+      const track = this.#track;
+      if (track.readyState !== "live") throw new CaptureError("screen_unavailable", "화면 공유가 종료되었습니다. 다시 연결해 주세요.");
+      const readiness = await this.#waitForFrame(video, track);
+      if (this.#state !== "CAPTURING" || track.readyState !== "live") throw new CaptureError("screen_unavailable", "화면 공유가 종료되었습니다. 다시 연결해 주세요.");
+      const width = Number(video.videoWidth);
+      const height = Number(video.videoHeight);
+      if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width < 1 || height < 1) {
+        throw new CaptureError("screen_frame_unavailable", "화면 크기를 확인할 수 없습니다. 공유 상태를 확인해 주세요.");
+      }
+      if (width * height > MAX_IMAGE_PIXELS) throw new CaptureError("image_too_large", "화면 프레임이 32메가픽셀 제한을 초과합니다.");
+
+      canvas = this.#createCanvas();
+      canvas.width = width;
+      canvas.height = height;
+      const context2d = canvas.getContext("2d", { alpha: true });
+      if (!context2d) throw new CaptureError("canvas_unavailable", "화면 프레임을 준비할 수 없습니다.");
+      context2d.drawImage(video, 0, 0, width, height);
+      if (Number(video.videoWidth) !== width || Number(video.videoHeight) !== height) {
+        throw new CaptureError("STREAM_RESIZING", "공유 화면 크기가 바뀌는 중입니다. 잠시 후 다시 캡처해 주세요.");
+      }
+      const blob = await new Promise((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new CaptureError("encode_failed", "화면 프레임을 PNG로 만들지 못했습니다.")), "image/png"));
+      if (Number(video.videoWidth) !== width || Number(video.videoHeight) !== height) {
+        throw new CaptureError("STREAM_RESIZING", "공유 화면 크기가 바뀌는 중입니다. 잠시 후 다시 캡처해 주세요.");
+      }
+      if (!(blob instanceof Blob) || blob.type.toLowerCase() !== "image/png" || blob.size < 1 || blob.size > MAX_IMAGE_BYTES) {
+        throw new CaptureError("screen_frame_invalid", "화면 프레임을 제한된 PNG로 준비하지 못했습니다.");
+      }
+
+      const settings = (() => { try { return track.getSettings?.() ?? {}; } catch { return {}; } })();
+      const sourceWidth = Number.isSafeInteger(settings.width) && settings.width > 0 ? settings.width : null;
+      const sourceHeight = Number.isSafeInteger(settings.height) && settings.height > 0 ? settings.height : null;
+      const hasTrackDimensions = sourceWidth !== null && sourceHeight !== null;
+      const fidelity = {
+        sourceWidth: hasTrackDimensions ? sourceWidth : null,
+        sourceHeight: hasTrackDimensions ? sourceHeight : null,
+        rescaled: null,
+        evidence: hasTrackDimensions ? "track-settings" : "unknown",
+      };
+      const capturedAt = this.#now();
+      const capturedAtIso = capturedAt instanceof Date ? capturedAt.toISOString() : new Date(capturedAt).toISOString();
+      const metadata = {
+        version: 1,
+        captureId: this.#uuid(),
+        batchId: null,
+        taskType: normalizedContext.taskType,
+        sourceType: "browser-stream",
+        capturedAt: capturedAtIso,
+        frame: { width, height },
+        fidelity,
+        profileId: normalizedContext.profileId,
+        profileVersion: normalizedContext.profileVersion,
+        context: {
+          baseRevision: normalizedContext.baseRevision,
+          sessionId: normalizedContext.sessionId,
+          sessionRevision: normalizedContext.sessionRevision,
+        },
+        observed: {
+          browserDpr: Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : null,
+          windowsDpi: null,
+          gameResolution: null,
+          gameUiScale: null,
+        },
+      };
+      return {
+        metadata,
+        blob,
+        sha256: await defaultHash(blob),
+        sourceSha256: null,
+        reencoded: false,
+        sourceBytes: null,
+        bytes: blob.size,
+        observation: {
+          freshnessEvidence: readiness.evidence,
+          mediaTime: readiness.mediaTime,
+          presentedFrames: readiness.presentedFrames,
+          elapsedMs: Math.max(0, performance.now() - startedAt),
+        },
+      };
+    } catch (error) {
+      if (this.#state === "CAPTURING" && this.#track?.readyState === "live") this.#setState("CONNECTED");
+      else if (this.#state === "CAPTURING") this.disconnectScreen("capture-error");
+      throw error;
+    } finally {
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      this.#capturing = false;
+      if (this.#state === "CAPTURING") this.#setState("CONNECTED");
+    }
+  }
+
+  #waitForFrame(video, track) {
+    const haveCurrentData = Number(globalThis.HTMLMediaElement?.HAVE_CURRENT_DATA ?? 2);
+    if (track.readyState !== "live" || video.readyState < haveCurrentData || video.paused || video.videoWidth < 1 || video.videoHeight < 1) {
+      return Promise.reject(new CaptureError("screen_frame_unavailable", "공유 화면 프레임이 준비되지 않았습니다. 화면 연결 상태를 확인해 주세요."));
+    }
+    if (typeof video.requestVideoFrameCallback !== "function") {
+      if (track.muted && video.readyState < haveCurrentData) return Promise.reject(new CaptureError("screen_frame_unavailable", "화면 트랙이 일시 중지되어 사용할 프레임이 없습니다."));
+      return Promise.resolve({ evidence: "video-state", mediaTime: null, presentedFrames: null });
+    }
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let callbackId;
+      const finish = (error, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        if (error && callbackId != null) video.cancelVideoFrameCallback?.(callbackId);
+        if (error) reject(error);
+        else resolve(value);
+      };
+      const timeout = setTimeout(() => finish(new CaptureError("screen_frame_stale", "새 화면 프레임을 확인하지 못했습니다. 다시 시도해 주세요.")), this.#frameTimeoutMs);
+      try {
+        callbackId = video.requestVideoFrameCallback((_now, metadata = {}) => {
+          if (track.readyState !== "live") return finish(new CaptureError("screen_unavailable", "화면 공유가 종료되었습니다."));
+          finish(null, {
+            evidence: "request-video-frame-callback",
+            mediaTime: Number.isFinite(metadata.mediaTime) ? metadata.mediaTime : null,
+            presentedFrames: Number.isSafeInteger(metadata.presentedFrames) ? metadata.presentedFrames : null,
+          });
+        });
+      } catch {
+        finish(new CaptureError("screen_frame_unavailable", "화면 프레임 확인을 시작하지 못했습니다."));
+      }
+      if (settled && callbackId != null) video.cancelVideoFrameCallback?.(callbackId);
+    });
+  }
+
+  #clearStream() {
+    const stream = this.#stream;
+    const video = this.#video;
+    this.#track?.removeEventListener?.("ended", this.#onTrackEnded);
+    this.#stream = null;
+    this.#track = null;
+    this.#video = null;
+    if (video) {
+      try { video.pause?.(); } catch {}
+      video.srcObject = null;
+      video.remove?.();
+    }
+    for (const track of stream?.getTracks?.() ?? []) {
+      try { track.stop?.(); } catch {}
+    }
+  }
+
+  disconnectScreen(reason = "user") {
+    const safeReason = SCREEN_DISCONNECT_REASONS.has(reason) ? reason : "user";
+    this.#generation += 1;
+    this.#clearStream();
+    this.#setState("DISCONNECTED", safeReason);
+    return true;
+  }
+}
+
 export function isEditableTarget(target) {
   if (!target || typeof target.closest !== "function") return false;
   return !!target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']");

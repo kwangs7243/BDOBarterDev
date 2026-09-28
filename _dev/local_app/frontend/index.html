@@ -23,6 +23,10 @@
       <button id="reload-state" type="button" title="영구 설정 다시 읽기">↻</button>
     </div>
   </header>
+  <section id="screen-capture-session" class="screen-capture-session" aria-label="화면 공유 연결">
+    <span id="screen-capture-status" role="status" aria-live="polite">화면 연결 안 됨</span>
+    <div class="screen-capture-actions"><button id="connect-screen-capture" type="button">화면 연결</button><button id="disconnect-screen-capture" type="button" disabled>연결 끊기</button></div>
+  </section>
   <main id="app-content" aria-busy="true" class="workspace">
     <section class="panel inventory-panel" id="mainPanel">
       <div class="panel-heading"><div><h2>창고</h2><span class="hint">1~5단 · 빈칸은 미입력, 0은 확인된 0개</span></div><button id="open-warehouse-scan" class="primary" type="button">창고 스캔</button></div>
@@ -47,6 +51,7 @@
       <p class="hint">이미지는 임시 초안으로만 보관합니다. OCR, 인식 완료, 물교 목록 생성은 수행하지 않습니다.</p>
       <label class="field" for="trade-capture-files">이미지 파일 선택<input id="trade-capture-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple></label>
       <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
+      <button type="button" data-screen-capture="trade" disabled>연결된 화면에서 캡처</button>
       <p class="capture-status" data-role="capture-status" role="status" aria-live="polite"></p>
       <ol class="capture-draft-list" data-role="capture-list"></ol>
       <div class="actions"><button type="button" data-close-trade-capture>닫기</button></div>
