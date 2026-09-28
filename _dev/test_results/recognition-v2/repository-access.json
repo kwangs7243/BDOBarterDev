@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "task": "SPEC-008 T000B",
   "createdAtLocal": "2026-09-28 Asia/Seoul",
-  "status": "T000B_BASELINE_RESOLVED_EVIDENCE_UPDATE_PENDING_COMMIT",
+  "status": "T000B_CANONICAL_HASH_FIX_PENDING_FRESH_CLONE_VALIDATION",
   "sourceRoot": "D:/BDOBarterDev/_dev",
   "workspaceRoot": "D:/BDOBarterDev",
   "activeRepository": {
@@ -33,7 +33,7 @@
   },
   "currentSource": {
     "baselineManifest": "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
-    "manifestSha256": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "manifestSha256": "2604C478D6E8BBBD6100451E06ABBFA7DFFE104279BBCDF3E511BF0C48E39D2D",
     "listedFileHashesChecked": 173,
     "listedFileHashDifferences": 0,
     "protectedEquivalence": {
@@ -63,7 +63,7 @@
       "ignoreRuleAudit": "17 of 190 paths matched active ignore rules: one local backup via .git/info/exclude and sixteen .venv files via its nested .gitignore; all 17 were removed from required fileHashes.",
       "virtualEnvironmentGitTrackedFiles": 17
     },
-    "freshCloneManifestState": "UPDATED_MANIFEST_NOT_YET_IN_REMOTE_COMMIT",
+    "freshCloneManifestState": "CORRECTED_BLOB_HASHES_PENDING_COMMIT_AND_REVALIDATION",
     "persistenceEvidenceLinesAndHashes": [
       {
         "file": "_dev/local_app/backend/storage.py",
@@ -135,7 +135,16 @@
           }
         ]
       }
-    ]
+    ],
+    "manifestHashBasis": "SHA-256 of UTF-8 manifest bytes; per-file fileHashes use SHA-256 of Git blob bytes to avoid checkout EOL variation.",
+    "hashBasisAudit": {
+      "requiredGitBlobHashes": 173,
+      "verifiedAgainstCurrentBaselineCommit": 173,
+      "initialFreshCloneRawWorktreeHashMismatches": 54,
+      "thoseMismatchesWithEqualCRLFToLFNormalizedContent": 54,
+      "missingFromInitialClone": 0,
+      "untrackedInInitialClone": 0
+    }
   },
   "runtime": {
     "python": "3.12.14",
@@ -188,12 +197,12 @@
     "selectedCase": "B",
     "resolutionStatus": "RESOLVED",
     "ready": false,
-    "reason": "The authoritative main/v2 starting commit and all 173 retained source/reference/test hashes are verified; protected equivalence and Python imports PASS. T000 ready remains false because the corrected manifest and evidence are uncommitted on v2, so a fresh clone of current remote SHA f13b8e1 still receives the old 190-entry manifest.",
+    "reason": "The original 173 raw-worktree SHA-256 values produced 54 differences in a fresh Windows clone because Git checkout EOL settings vary; all 54 contents matched after line-ending normalization. The manifest now records SHA-256 of canonical Git blob bytes. T000 ready remains false until this correction is committed, pushed, and verified from a fresh clone.",
     "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
     "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
     "sourceManifestHash": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
     "readinessBlockers": [
-      "The corrected manifest/evidence updates are still uncommitted on v2; current remote SHA f13b8e1 still contains the prior manifest. A fresh clone of the corrected state requires those exact documentation changes to be committed/published and then revalidated."
+      "Canonical Git-blob hash correction is not yet committed/pushed or verified from a fresh clone."
     ]
   },
   "sideEffects": {
@@ -218,23 +227,34 @@
     "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
     "remoteHeadsVerified": {
       "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
-      "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
+      "v2": "024d5e4998b6b8f57012aa8d6832ecd1e6d005ea"
     },
-    "manifestSha256": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "manifestSha256": "2604C478D6E8BBBD6100451E06ABBFA7DFFE104279BBCDF3E511BF0C48E39D2D",
     "requiredFileHashEntries": 173,
     "updatedEvidenceFiles": [
       "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
       "_dev/test_results/recognition-v2/repository-access.json",
       "_dev/test_results/recognition-v2/git-baseline-proposal.json"
     ],
-    "evidenceUpdatesCommitted": false
+    "evidenceUpdatesCommitted": false,
+    "hashBasis": "SHA-256 of Git blob bytes for each required tracked path."
   },
   "freshCloneVerification": {
-    "status": "PENDING_EVIDENCE_COMMIT",
+    "status": "PENDING_CANONICAL_HASH_FIX_COMMIT",
+    "firstAttempt": {
+      "commit": "024d5e4998b6b8f57012aa8d6832ecd1e6d005ea",
+      "requiredEntries": 173,
+      "rawWorktreeHashMismatches": 54,
+      "mismatchesMatchingAfterCRLFToLFNormalization": 54,
+      "missing": 0,
+      "untracked": 0,
+      "cause": "Git checkout EOL conversion made raw worktree bytes differ across environment/configuration."
+    },
     "currentRemoteMain": "f13b8e15af392f167d153c873448a4b2abec5a0c",
-    "currentRemoteV2": "f13b8e15af392f167d153c873448a4b2abec5a0c",
-    "currentRemoteManifestHash": "418AD7E0E7FA3AEFEEACA981B1E3D3C6D5EF524F4263FF7FE8F7EF906465B3C6",
-    "correctedWorkingManifestHash": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
-    "reason": "The remote starting commit predates the authorized manifest/evidence updates."
+    "currentRemoteV2": "024d5e4998b6b8f57012aa8d6832ecd1e6d005ea",
+    "currentRemoteMainManifestBlobSha256": "1C5FDDC7D67246ED70DFBC5951D66FE9C309D48B57336639B5FBD9E51A25442C",
+    "currentRemoteV2ManifestBlobSha256": "3621D3AF63FA355C4A8EB5408B1CDAE561E2231BDDE3ACC8764BAC3BC3A04939",
+    "correctedWorkingManifestSha256": "2604C478D6E8BBBD6100451E06ABBFA7DFFE104279BBCDF3E511BF0C48E39D2D",
+    "nextCheck": "Clone the corrected v2 commit and compare each required SHA-256 with the corresponding Git blob bytes."
   }
 }
