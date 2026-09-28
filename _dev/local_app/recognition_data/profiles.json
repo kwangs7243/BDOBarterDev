@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "warehouse-grid-crop-measurement-v1",
+      "version": 1,
+      "profileVersion": 1,
+      "taskType": "warehouse",
+      "scope": "warehouse-grid-crop",
+      "classification": {
+        "warehouseFullUiVerified": false,
+        "gridCropStructureMeasurable": true,
+        "fullPanelClippingValidated": false
+      },
+      "referenceFixtures": [
+        {
+          "path": "_dev/fixtures/warehouse_patch/barter_only.png",
+          "sha256": "cc1745d5e3f57315f7344ca26eb428c0e81b8d3251a2be049d75e29ba7da506d"
+        },
+        {
+          "path": "_dev/fixtures/warehouse_patch/mixed.png",
+          "sha256": "49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742"
+        }
+      ],
+      "referenceFrame": {
+        "width": 468,
+        "height": 369
+      },
+      "canonicalGeometry": {
+        "rows": 7,
+        "columns": 9,
+        "periodX": 51,
+        "periodY": 51,
+        "slotWidthX": 45,
+        "slotWidthY": 45,
+        "gapX": 6,
+        "gapY": 6,
+        "gridWidth": 453,
+        "gridHeight": 351
+      },
+      "anchorSetId": "warehouse-grid-structure-r0",
+      "anchorLogicalHash": "a250b93ec523dfce4be30053ec5f3d53e1292048d2808f799424e85332d62706",
+      "sourceProvenance": {
+        "method": "Repeated outer-cell edge pairs measured from the checked-in barter_only and mixed fixture structural borders; item icon and quantity pixels are not stored in the anchor arrays.",
+      "observedFixtureGeometry": {
+        "barter_only": {"gridBounds": {"x": 3, "y": 7, "right": 456, "bottom": 358}, "rows": 7, "columns": 9, "periodX": 51, "periodY": 51, "slotWidthX": 45, "slotWidthY": 45},
+        "mixed": {"gridBounds": {"x": 1, "y": 3, "right": 454, "bottom": 354}, "rows": 7, "columns": 9, "periodX": 51, "periodY": 51, "slotWidthX": 45, "slotWidthY": 45}
+      },
+      "structuralRegionDerivation": "Per fixture, grayscale adjacent-pixel differences are averaged over the perpendicular frame axis. Repeated cell-edge locations are fit as a 9-column by 7-row paired-edge lattice; each measured region covers only outer-cell boundaries and gaps. No icon or quantity values are sampled into anchors.",
+        "arrays": {
+          "column_edges": {
+            "dtype": "|u1",
+            "shape": [
+              10
+            ],
+            "meaning": "logical column-boundary indexes 0..9"
+          },
+          "row_edges": {
+            "dtype": "|u1",
+            "shape": [
+              8
+            ],
+            "meaning": "logical row-boundary indexes 0..7"
+          },
+          "slot_width_ratio": {
+            "dtype": "<f4",
+            "shape": [
+              2
+            ],
+            "meaning": "fixture-derived slot-width/period ratio for x,y"
+          }
+        }
+      },
+      "status": "experimental",
+      "releaseApproved": false,
+      "liveApproved": false,
+      "allowedStrata": [],
+      "approvedScaleRange": null,
+      "approvedResamplingKernel": null,
+      "experimentalValidityHeuristics": {
+        "minimumEdgeContrastRatio": 1.0,
+        "periodQuantization": "one observed pixel per axis",
+        "productionApproved": false
+      }
+    }
+  ],
+  "deferredValidity": [
+    "WRONG_TASK_UI",
+    "FULL_PANEL_REGION",
+    "PANEL_CLIPPED",
+    "LIVE_WINDOW_PROFILE",
+    "REAL_GAME_SCALE_SUPPORT"
+  ]
+}
