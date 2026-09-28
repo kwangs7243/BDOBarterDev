@@ -1,39 +1,52 @@
 {
   "schemaVersion": 1,
-  "task": "SPEC-008 T000A Case B proposal",
-  "status": "DRAFT_AWAITING_USER_DIRECTION",
+  "task": "SPEC-008 T000B Case B resolution record",
+  "status": "RESOLVED_LOCAL_EVIDENCE_UPDATE_PENDING_COMMIT",
   "caseAResult": "REJECTED_AS_AUTHORITATIVE_BASELINE",
   "caseBResult": "REQUIRED",
   "recommendedGitRoot": "D:/BDOBarterDev",
   "recommendedGitRootReason": "The current 190-entry manifest uses _dev/... paths relative to the workspace root. A different checkout layout needs an explicit path/layout decision.",
-  "selectedDestination": null,
-  "selectedBranch": null,
-  "gitActionsPerformed": [],
-  "proposalOnly": true,
+  "selectedDestination": "D:/BDOBarterDev",
+  "selectedBranch": "main",
+  "gitActionsPerformed": [
+    "Created a new repository at D:/BDOBarterDev without importing detached historical metadata.",
+    "Created and pushed the V1 baseline branch main to the user-provided GitHub repository.",
+    "Created and pushed v2 from the same baseline commit; both remote refs were verified at the same SHA.",
+    "Updated the unpublished baseline commit before push to exclude the user backup and the previously agreed duplicate app snapshots/update-validation tree.",
+    "Kept the local backup and excluded duplicate folders on disk; added local-only exclude rules for those exact paths.",
+    "Included requested image and ordinary Git-ignore artifacts in the V1 commit, excluding credentials/secrets and the user backup."
+  ],
+  "proposalOnly": false,
   "proposedIncludeRules": [
-    "Explicitly reviewed source, backend, frontend, scripts, reference, protected source files, curated fixtures, project instructions and SPEC documents.",
-    "Keep candidate file bytes and recheck SHA-256 immediately before any approved baseline commit.",
-    "Include the SPEC-008 documents and T000 evidence reports only after reviewing their contents."
+    "V1 commit contains current app/development source, references, tests, documents and requested image/ordinary ignore artifacts.",
+    "The baseline manifest requires hashes only for Git-tracked V1 source/reference/test files; local backups, virtual-environment entries, and generated package/build outputs are not required hash inputs.",
+    "The protected equivalence source hashes remain unchanged."
   ],
   "manifestCoverage": {
-    "listedHashes": 190,
-    "currentDifferences": 0,
-    "entriesRequiringUserDisposition": {
-      "localVirtualEnvironmentFiles": 4,
-      "userScreenCaptureInputFiles": 1
+    "originalListedHashes": 190,
+    "requiredListedHashesAfterUpdate": 173,
+    "retainedTrackedPresentHashMatches": 173,
+    "listedFileHashDifferences": 0,
+    "excludedFromRequiredHashes": {
+      "localUserBackup": 1,
+      "virtualEnvironment": 16
     },
-    "decisionNeeded": "The unchanged manifest records hashes for these five local artifacts. Excluding them from Git preserves privacy/reproducibility but means a fresh checkout cannot verify every manifest entry; including them commits a screen capture and interpreter artifacts. Choose treatment before editing the manifest or staging. No entry has been removed or altered."
+    "generatedBuildHashEntries": 0,
+    "generatedBuildTrackedFiles": 1066,
+    "packagedAppHashEntries": 0,
+    "packagedAppTrackedFiles": 259,
+    "updatedManifestSha256": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "currentRemoteFreshCloneCheck": "PENDING_EVIDENCE_COMMIT",
+    "virtualEnvironmentGitTrackedFiles": 17
   },
   "proposedExclusionsForReview": [
-    "D:/BDOBarterDev/app/** and root app backup/review-package directories",
-    "_dev/build/**",
-    "_dev/local_app/.venv/**",
-    "_dev/**/*.sqlite3 and other user databases",
-    "screen captures and raw daily capture/feedback artifacts",
-    "logs, caches, __pycache__, temporary environments, archives and generated experiment outputs",
-    "credentials and environment secret files"
+    "The local-only _dev/inputs/ORIGINAL_user_backup_20260923.json is excluded from Git and fileHashes; its local source file is retained unchanged.",
+    "The previous app_* copies and 업데이트_검증판 tree are excluded from the V1 commit and retained locally.",
+    "Credentials and environment secret files are excluded.",
+    "The sixteen _dev/local_app/.venv/ manifest entries are excluded from required fileHashes; they remain tracked in the current V1 commit due the earlier explicit ignore-artifact inclusion decision.",
+    "_dev/build/** and app/** have no required fileHashes; generated build/package files remain tracked in the current V1 commit."
   ],
-  "userDataDisposition": "_dev/inputs contains a personal screen-capture input and a protected user backup JSON. Neither was opened or copied during T000A. The T000B allowlist must say whether their source bytes remain Git-tracked, stay local/untracked, or are excluded with an approved manifest-scope correction.",
+  "userDataDisposition": "The user backup JSON remains unchanged on the local workspace and is excluded from Git and mandatory baseline hashes. The separately requested screenshot remains tracked and hash-verified. The protected equivalence files were unchanged.",
   "proposedSequence": [
     "User confirms Git root/destination and disposition of manifest-listed local artifacts/user inputs.",
     "Create a complete path allowlist and denylist from selected scope; inspect staged diff and scan candidate text/config files for secrets.",
@@ -42,14 +55,37 @@
     "Review staged paths, binaries, private data and diff; create initial baseline commit only within approved scope.",
     "Compare committed tree and recorded manifest; set repository-access.ready=true only after all gates pass."
   ],
-  "requiredUserDirections": [
-    "Choose the Git root/destination. Suggested existing root: D:/BDOBarterDev; select a different exact path if preferred.",
-    "Choose handling of the five manifest-listed local artifacts (four virtual-environment files and one personal capture) in Git and whether manifest scope may be corrected.",
-    "Confirm whether protected user-input files remain tracked in the new local baseline."
-  ],
+  "requiredUserDirections": [],
   "notAuthorizedByThisProposal": [
-    "git init, moving/copying old .git metadata, staging, commit, branch creation, remote configuration or push",
-    "source or baseline-manifest edits",
-    "copying, deleting or opening private/user-data image inputs"
+    "Production source implementation or user database changes.",
+    "Modification or deletion of the local user backup or the excluded duplicate application directories.",
+    "Commit/push of the three evidence-document updates; current request authorized document edits and readiness review only."
+  ],
+  "selectedGitRoot": "D:/BDOBarterDev",
+  "selectedRepository": "kwangs7243/BDOBarterDev",
+  "selectedBaselineBranch": "main",
+  "selectedWorkingBranch": "v2",
+  "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+  "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
+  "branchStartSha": {
+    "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
+  },
+  "pendingUserDirection": "If the corrected manifest must be verifiable from a fresh remote clone, explicitly authorize committing and pushing these three evidence-only changes on v2; until then repository-access.ready remains false.",
+  "sideEffects": {
+    "productionCodeChanged": false,
+    "protectedFilesChanged": false,
+    "localBackupChanged": false,
+    "GitBaselineCreated": true,
+    "evidenceChangesCommitted": false
+  },
+  "resolutionStepsPerformed": [
+    "User selected D:/BDOBarterDev as the single repository root and authorized the supplied GitHub repository for V1/V2.",
+    "Created main as the V1 baseline and v2 as the working branch; the branch start refs were verified at the same commit/tree SHA.",
+    "Excluded the user backup and agreed duplicate app/update-validation directories while retaining their local source files.",
+    "Included the user-requested current app, images and ordinary ignore artifacts, while keeping credential/environment secret files excluded.",
+    "Audited all 190 old manifest paths against ignore rules, Git tracking, presence and SHA-256; removed one user backup plus sixteen venv entries from mandatory hashes.",
+    "Verified all 173 retained source/reference/test hash entries are tracked, present and SHA-256 matching; build and packaged app have zero mandatory hash entries.",
+    "Re-ran protected equivalence and Python imports; both PASS. Evidence document changes remain uncommitted and fresh-clone verification is pending."
   ]
 }

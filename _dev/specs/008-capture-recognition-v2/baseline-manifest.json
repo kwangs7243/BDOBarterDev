@@ -13,25 +13,8 @@
     "_dev/fixtures/warehouse_patch/calibration_manifest.json": "6b5697e8ba46f2f377553903c7b9894c5ef41c9f8ae0cbae1aba865820b0a90a",
     "_dev/fixtures/warehouse_patch/mixed.png": "49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742",
     "_dev/inputs/BEFORE_master_inventory_patch_v1.0_20260924.html": "b5f29bfec3c3ebbd4257a42c1e311c28ce8e38d78dfb7a55279bd455a59e6598",
-    "_dev/inputs/ORIGINAL_user_backup_20260923.json": "0d5af736e9544eea32ba8d2d51f65ff46cbf5f0c2ceee4beaba611109bd868f9",
     "_dev/inputs/ORIGINAL_v14_1.html": "155ee19c515a72627effb4884f540bbd7fcea487967c47fe6ccb3a608bceae9f",
     "_dev/inputs/화면 캡처 2026-09-25 084240.png": "5df15869f78def61f2e9f159262348aab6bf25ce73ef0523dc29c4228625de97",
-    "_dev/local_app/.venv/.gitignore": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1",
-    "_dev/local_app/.venv/CACHEDIR.TAG": "5953156d7e0c564a427251316eaf26f8870e6483ae2197f916b630e4f93e31ae",
-    "_dev/local_app/.venv/Lib/site-packages/_virtualenv.pth": "69ac3d8f27e679c81b94ab30b3b56e9cd138219b1ba94a1fa3606d5a76a1433d",
-    "_dev/local_app/.venv/Lib/site-packages/_virtualenv.py": "6cf30c56faf2a55228914dbbd17f8088ed371ebb08f5e7fa6fd931f913fcaf1d",
-    "_dev/local_app/.venv/pyvenv.cfg": "04aab631ebdc7644173a2564740bbad6491758536f2e596cd591ead3ecf03b30",
-    "_dev/local_app/.venv/Scripts/activate": "1c4d036339f4aec62512490651b6f2da818695504fa2d37a22e0bb627f99cb5a",
-    "_dev/local_app/.venv/Scripts/activate.bat": "e08a174d56f6c880715ba4d62894cec5c247964efd69eb183a18089e7f233f64",
-    "_dev/local_app/.venv/Scripts/activate.csh": "914766b07319fa46754bf18794a5548a8bdc096dada34bf9a28fef8672139463",
-    "_dev/local_app/.venv/Scripts/activate.fish": "ba5889a40bada103f3ee5869d133586d726a407bed4e0d308f6064e35f141e03",
-    "_dev/local_app/.venv/Scripts/activate.nu": "0f136b4c1acdd5b19c9ca2ebdb52f9c4ee3eaf5dd232f426b5bc7a44675d7158",
-    "_dev/local_app/.venv/Scripts/activate.ps1": "dca21b8beb47ee850a784681572f305c570cb7b943a35f6f68c92284982bb99a",
-    "_dev/local_app/.venv/Scripts/activate_this.py": "2f8995de6160f66cd046155e043d88e59ab9c68de596180a469fb7e890fb67d3",
-    "_dev/local_app/.venv/Scripts/deactivate.bat": "13ea86073a9ee43a66e3549312599dd47ff315758b4ca5a0406faf041fb82300",
-    "_dev/local_app/.venv/Scripts/pydoc.bat": "2a8eb66d1bc7b73adcd3c6f59e2383e0a7fe9412609c1f9d1870e35035ee6fee",
-    "_dev/local_app/.venv/Scripts/python.exe": "08f026b906b88237e05b345715a4aca84737c69512d7c21f895d5fc8d6b2b0a9",
-    "_dev/local_app/.venv/Scripts/pythonw.exe": "08f026b906b88237e05b345715a4aca84737c69512d7c21f895d5fc8d6b2b0a9",
     "_dev/local_app/__init__.py": "8e887be9b7adf43948e61eceda568660b6873e30a55ae5c66ef4eccfc080757f",
     "_dev/local_app/backend/api/__init__.py": "c5e79b75137811726e30acef2fa5cfc649514fce1c86da771535b368f43238c0",
     "_dev/local_app/backend/api/maintenance.py": "aa92212a576204aae3fedd25c9d1f3a9404ef24423651db46dec09dec63b679e",
@@ -254,10 +237,84 @@
     "warning": "Scanner timings exclude upload, DB and UI. Installed app already running; no restart performed."
   },
   "git": {
-    "activeRepository": false,
-    "detachedMetadata": "D:/BDOBarterDev_git_backup_20260926",
-    "historicalHead": "dea73fa",
-    "historicalTag": "v1.0",
-    "warning": "Historical metadata is not a clean baseline for the current localhost application."
+    "activeRepository": true,
+    "repository": "kwangs7243/BDOBarterDev",
+    "gitRoot": "D:/BDOBarterDev",
+    "baselineBranch": "main",
+    "workingBranch": "v2",
+    "activeBranch": "v2",
+    "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
+    "branchStartSha": {
+      "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+      "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
+    },
+    "remoteBranchHeadsAtResolution": {
+      "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+      "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
+    },
+    "baselineFileHashEntries": 173,
+    "evidenceUpdateState": "UNCOMMITTED_ON_V2",
+    "freshCloneVerification": "PENDING_COMMIT_OF_UPDATED_MANIFEST_AND_EVIDENCE",
+    "historicalMetadata": {
+      "path": "D:/BDOBarterDev_git_backup_20260926",
+      "head": "dea73fa",
+      "tag": "v1.0",
+      "warning": "Historical metadata remains non-authoritative for the current localhost application."
+    },
+    "workingTreeClean": false,
+    "workingTreeState": "DIRTY_EXPECTED_EVIDENCE_DOCUMENTS_ONLY",
+    "uncommittedEvidenceFiles": [
+      "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
+      "_dev/test_results/recognition-v2/repository-access.json",
+      "_dev/test_results/recognition-v2/git-baseline-proposal.json"
+    ],
+    "localBackupState": "PRESENT_UNMODIFIED_UNTRACKED_LOCAL_ONLY"
+  },
+  "localExcluded": [
+    {
+      "path": "_dev/inputs/ORIGINAL_user_backup_20260923.json",
+      "category": "user_backup",
+      "gitStatus": "local_untracked_excluded",
+      "retainedLocally": true,
+      "requiredInFreshClone": false,
+      "reason": "사용자 지시에 따라 Git과 fresh-clone 필수 해시 대상에서 제외. 로컬 원본은 보존하고 변경하지 않음."
+    }
+  ],
+  "nonRequiredArtifacts": [
+    {
+      "pathPrefix": "_dev/local_app/.venv/",
+      "category": "virtual_environment",
+      "removedFileHashEntries": 16,
+      "gitStatus": "tracked_in_v1_commit_but_matched_by_nested_gitignore",
+      "requiredInFreshClone": false,
+      "reason": "환경별 가상환경 파일은 source/reference/test baseline의 필수 해시 대상이 아님. V1 커밋의 현재 Git 추적 상태는 별도로 사실대로 기록.",
+      "gitTrackedFileCount": 17
+    },
+    {
+      "pathPrefix": "_dev/build/",
+      "category": "generated_build_artifacts",
+      "removedFileHashEntries": 0,
+      "gitTrackedFileCount": 1066,
+      "requiredInFreshClone": false,
+      "reason": "빌드 산출물은 baseline 필수 해시 목록에 없으며 source/reference/test 재현 조건에 사용하지 않음."
+    },
+    {
+      "pathPrefix": "app/",
+      "category": "packaged_application_artifacts",
+      "removedFileHashEntries": 0,
+      "gitTrackedFileCount": 259,
+      "requiredInFreshClone": false,
+      "reason": "배포 패키지는 V1 저장소에 포함되어 있으나 source/reference/test baseline 필수 해시 검증 대상은 아님."
+    }
+  ],
+  "hashAudit": {
+    "originalEntryCount": 190,
+    "removedLocalOnlyEntries": 17,
+    "retainedRequiredEntries": 173,
+    "retainedFilesPresentGitTrackedAndSha256Matched": 173,
+    "ignoredPathsFoundInOriginalManifest": 17,
+    "generatedBuildHashEntries": 0,
+    "packagedAppHashEntries": 0
   }
 }

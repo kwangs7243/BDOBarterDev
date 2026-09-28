@@ -1,16 +1,20 @@
 {
   "schemaVersion": 1,
-  "task": "SPEC-008 T000A",
+  "task": "SPEC-008 T000B",
   "createdAtLocal": "2026-09-28 Asia/Seoul",
-  "status": "T000A_READ_ONLY_COMPLETE_T000B_AWAITING_USER_DIRECTION",
+  "status": "T000B_BASELINE_RESOLVED_EVIDENCE_UPDATE_PENDING_COMMIT",
   "sourceRoot": "D:/BDOBarterDev/_dev",
   "workspaceRoot": "D:/BDOBarterDev",
   "activeRepository": {
-    "workspaceGitDirectory": false,
+    "workspaceGitDirectory": true,
     "devGitDirectory": false,
-    "status": "NO_ACTIVE_WORKTREE",
-    "cleanStatus": null,
-    "existingChanges": "Cannot classify via git status because neither workspace nor _dev is an active Git checkout."
+    "status": "ACTIVE_WORKTREE",
+    "gitRoot": "D:/BDOBarterDev",
+    "repository": "kwangs7243/BDOBarterDev",
+    "currentBranch": "v2",
+    "upstream": "origin/v2",
+    "cleanStatus": false,
+    "existingChanges": "Only the three user-authorized manifest/evidence documents are modified on v2; prior V1 source tree was clean. The excluded user backup remains local and untracked."
   },
   "detachedHistoricalMetadata": {
     "path": "D:/BDOBarterDev_git_backup_20260926",
@@ -29,8 +33,8 @@
   },
   "currentSource": {
     "baselineManifest": "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
-    "manifestSha256": "418AD7E0E7FA3AEFEEACA981B1E3D3C6D5EF524F4263FF7FE8F7EF906465B3C6",
-    "listedFileHashesChecked": 190,
+    "manifestSha256": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "listedFileHashesChecked": 173,
     "listedFileHashDifferences": 0,
     "protectedEquivalence": {
       "command": "node local_app/tests/equivalence/verify-migration.mjs",
@@ -39,8 +43,99 @@
       "constants": 6,
       "regions": 2,
       "files": 15,
-      "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76"
-    }
+      "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+      "recheckedForT000B": true
+    },
+    "gitTrackedManifestEntries": 173,
+    "hashScopeAudit": {
+      "originalEntries": 190,
+      "retainedRequiredSourceReferenceTestEntries": 173,
+      "retainedPresentAndHashMatching": 173,
+      "retainedGitTrackedAtBaselineCommit": 173,
+      "removedLocalOnlyEntries": {
+        "userBackup": 1,
+        "virtualEnvironment": 16
+      },
+      "generatedBuildEntriesInManifest": 0,
+      "generatedBuildFilesTrackedOutsideHashManifest": 1066,
+      "packagedAppEntriesInManifest": 0,
+      "packagedAppFilesTrackedOutsideHashManifest": 259,
+      "ignoreRuleAudit": "17 of 190 paths matched active ignore rules: one local backup via .git/info/exclude and sixteen .venv files via its nested .gitignore; all 17 were removed from required fileHashes.",
+      "virtualEnvironmentGitTrackedFiles": 17
+    },
+    "freshCloneManifestState": "UPDATED_MANIFEST_NOT_YET_IN_REMOTE_COMMIT",
+    "persistenceEvidenceLinesAndHashes": [
+      {
+        "file": "_dev/local_app/backend/storage.py",
+        "sha256": "1E4431D75BC219866EEB54A8E4190CFFC4ABBEC9A681690F4B4E9ADC5CD846A1",
+        "evidence": [
+          {
+            "lines": "11",
+            "claim": "SCHEMA_VERSION is 3"
+          },
+          {
+            "lines": "126-150",
+            "claim": "working_session table and current schema metadata are initialized"
+          },
+          {
+            "lines": "229",
+            "claim": "mutate applies revision/idempotency guarded changes"
+          },
+          {
+            "lines": "290-297",
+            "claim": "update_session replaces or resets the working snapshot"
+          }
+        ]
+      },
+      {
+        "file": "_dev/local_app/backend/api/session.py",
+        "sha256": "186C0980F34142BE7F07586C7029150BB19970FDF6B5C7C34D51842CA8B2BA10",
+        "evidence": [
+          {
+            "lines": "15-25",
+            "claim": "PUT/DELETE working-session API routes to storage update/reset"
+          }
+        ]
+      },
+      {
+        "file": "_dev/local_app/frontend/js/api.js",
+        "sha256": "E9BA38565112D810D6A4DA8058CFD1CF5A8A473E9F7D77A723CC6B05D2F25E79",
+        "evidence": [
+          {
+            "lines": "21",
+            "claim": "frontend sends PUT /api/working-session"
+          }
+        ]
+      },
+      {
+        "file": "_dev/local_app/frontend/js/persistence.js",
+        "sha256": "9F405F1B07DD7B84D50A58D51811236935D685651928235579233F51BA43C885",
+        "evidence": [
+          {
+            "lines": "27",
+            "claim": "mutations are queued and revision-bearing"
+          },
+          {
+            "lines": "63-67",
+            "claim": "working session is snapshotted and persisted"
+          },
+          {
+            "lines": "89-95",
+            "claim": "saved schedule snapshot can be restored to the working session"
+          }
+        ]
+      },
+      {
+        "file": "_dev/local_app/frontend/js/domain/scheduler-runtime.js",
+        "sha256": "70B21BC1A4D549D4B6B25B4F4A587A9EE8679091F5738680C5F8AE9276F29E18",
+        "evidence": [
+          {
+            "lines": "166-181",
+            "claim": "working-session snapshot and restore functions"
+          }
+        ]
+      }
+    ]
   },
   "runtime": {
     "python": "3.12.14",
@@ -79,7 +174,8 @@
     ],
     "newHelper": "saveWorkingSessionSnapshot(candidate) does not exist and must be implemented by its later task.",
     "sourceVsPackage": "Source implementation verified; compiled package module equivalence was not checked.",
-    "docMismatch": "_dev/README.md still describes schema 2, while current storage.py is schema 3. Source code is authoritative."
+    "docMismatch": "_dev/README.md still describes schema 2, while current storage.py is schema 3. Source code is authoritative.",
+    "recheckedForT000B": true
   },
   "repositoryShape": {
     "devFilesRecursive": 1598,
@@ -90,16 +186,55 @@
   },
   "gitDecision": {
     "selectedCase": "B",
-    "resolutionStatus": "AWAITING_USER_DIRECTION",
+    "resolutionStatus": "RESOLVED",
     "ready": false,
-    "reason": "No exact historical tree matches. A new authoritative baseline needs a user-selected Git root and an explicit decision on manifest-referenced local capture/virtual-environment artifacts before staging."
+    "reason": "The authoritative main/v2 starting commit and all 173 retained source/reference/test hashes are verified; protected equivalence and Python imports PASS. T000 ready remains false because the corrected manifest and evidence are uncommitted on v2, so a fresh clone of current remote SHA f13b8e1 still receives the old 190-entry manifest.",
+    "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
+    "sourceManifestHash": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "readinessBlockers": [
+      "The corrected manifest/evidence updates are still uncommitted on v2; current remote SHA f13b8e1 still contains the prior manifest. A fresh clone of the corrected state requires those exact documentation changes to be committed/published and then revalidated."
+    ]
   },
   "sideEffects": {
     "productionCodeChanged": false,
     "protectedFilesChanged": false,
     "userDatabaseChanged": false,
-    "gitMetadataChanged": false,
+    "localBackupChanged": false,
+    "gitMetadataChanged": true,
     "packagesInstalled": false,
-    "applicationRestarted": false
+    "applicationRestarted": false,
+    "evidenceDocumentsUpdated": true
+  },
+  "gitBaseline": {
+    "repository": "kwangs7243/BDOBarterDev",
+    "baselineBranch": "main",
+    "workingBranch": "v2",
+    "branchStartSha": {
+      "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+      "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
+    },
+    "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
+    "remoteHeadsVerified": {
+      "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+      "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
+    },
+    "manifestSha256": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "requiredFileHashEntries": 173,
+    "updatedEvidenceFiles": [
+      "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
+      "_dev/test_results/recognition-v2/repository-access.json",
+      "_dev/test_results/recognition-v2/git-baseline-proposal.json"
+    ],
+    "evidenceUpdatesCommitted": false
+  },
+  "freshCloneVerification": {
+    "status": "PENDING_EVIDENCE_COMMIT",
+    "currentRemoteMain": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "currentRemoteV2": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "currentRemoteManifestHash": "418AD7E0E7FA3AEFEEACA981B1E3D3C6D5EF524F4263FF7FE8F7EF906465B3C6",
+    "correctedWorkingManifestHash": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
+    "reason": "The remote starting commit predates the authorized manifest/evidence updates."
   }
 }
