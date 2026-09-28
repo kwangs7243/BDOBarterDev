@@ -254,22 +254,33 @@
       "v2": "f13b8e15af392f167d153c873448a4b2abec5a0c"
     },
     "baselineFileHashEntries": 173,
-    "evidenceUpdateState": "CANONICAL_GIT_BLOB_HASH_FIX_PENDING_COMMIT",
-    "freshCloneVerification": "PENDING_CANONICAL_HASH_FIX_COMMIT",
+    "evidenceUpdateState": "CANONICAL_GIT_BLOB_HASHES_PUBLISHED; FRESH_CLONE_HASH_GATE_PASS; T000_BLOCKED_BY_EOL_SENSITIVE_EQUIVALENCE_TEST",
+    "freshCloneVerification": "PASS_173_GIT_BLOB_SHA256_ENTRIES_AT_37058738f978c8d497a270faf6591fb730daf725",
     "historicalMetadata": {
       "path": "D:/BDOBarterDev_git_backup_20260926",
       "head": "dea73fa",
       "tag": "v1.0",
       "warning": "Historical metadata remains non-authoritative for the current localhost application."
     },
-    "workingTreeClean": false,
-    "workingTreeState": "DIRTY_EXPECTED_MANIFEST_AND_EVIDENCE_DOCUMENTS_ONLY",
-    "uncommittedEvidenceFiles": [
-      "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
-      "_dev/test_results/recognition-v2/repository-access.json",
-      "_dev/test_results/recognition-v2/git-baseline-proposal.json"
-    ],
-    "localBackupState": "PRESENT_UNMODIFIED_UNTRACKED_LOCAL_ONLY"
+    "workingTreeClean": true,
+    "workingTreeState": "CLEAN_AT_VALIDATED_COMMIT_37058738f978c8d497a270faf6591fb730daf725",
+    "uncommittedEvidenceFiles": [],
+    "localBackupState": "PRESENT_UNMODIFIED_UNTRACKED_LOCAL_ONLY",
+    "validatedV2Commit": "37058738f978c8d497a270faf6591fb730daf725",
+    "freshCloneChecks": {
+      "manifestEntries": 173,
+      "blobSha256Mismatches": 0,
+      "missingBlobs": 0,
+      "untrackedEntries": 0,
+      "excludedBackupPresent": false,
+      "excludedLocalArtifactHashes": 0,
+      "protectedEquivalenceCommand": "node _dev/local_app/tests/equivalence/verify-migration.mjs",
+      "protectedEquivalenceResult": "FAIL_ON_FRESH_CLONE_EOL_SENSITIVE_REFERENCE_HASH",
+      "protectedEquivalenceExpectedReferenceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+      "protectedEquivalenceActualFreshCloneReferenceSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+      "protectedEquivalenceCause": "Git attributes check out *.html as LF; the existing test asserts a raw SHA captured from CRLF bytes. CRLF-to-LF normalized reference contents are equal.",
+      "pythonDependencyImports": "PASS"
+    }
   },
   "localExcluded": [
     {
