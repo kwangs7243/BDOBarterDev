@@ -29,7 +29,8 @@ class WorkingSessionTests(unittest.TestCase):
     def send(self, method, path, payload=None, *, revision=None, mutation=None):
         self.sequence += 1
         body = {"mutationId": mutation or f"test-{self.sequence}", "baseRevision": self.bootstrap()["revision"] if revision is None else revision, **(payload or {})}
-        return self.client.open(path, method=method, json=body, base_url=self.origin), body
+        headers = {"Origin": self.origin, "Sec-Fetch-Site": "same-origin"}
+        return self.client.open(path, method=method, json=body, base_url=self.origin, headers=headers), body
 
     def session(self):
         settings = self.bootstrap()["settings"]
@@ -98,7 +99,8 @@ class WorkingSessionTests(unittest.TestCase):
         self.assertTrue(after["workingSession"]["schedule"]["speed"][0]["trades"][0]["completed"])
         self.assertEqual(after["workingSession"]["remainingParley"], 1467081)
         self.send("PATCH", "/api/inventory", {"kind": "manual", "patch": {"items": {"괴생물 촉수": {"stock": 15}}}})
-        replay = self.client.post("/api/working-session/completion", json=body, base_url=self.origin)
+        replay = self.client.post("/api/working-session/completion", json=body, base_url=self.origin,
+                                  headers={"Origin": self.origin, "Sec-Fetch-Site": "same-origin"})
         self.assertEqual(replay.status_code, 200)
         self.assertTrue(replay.get_json()["idempotent"])
         self.assertEqual(next(row["stock"] for row in self.bootstrap()["inventory"] if row["programName"] == "괴생물 촉수"), 15)
