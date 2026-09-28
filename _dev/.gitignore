@@ -19,6 +19,12 @@ coverage/
 .pytest_cache/
 __pycache__/
 
+# Local-only recognition snapshots, feedback datasets, and benchmark runs
+/recognition-local/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
 # Temporary and backup files
 *.tmp
 *.temp
