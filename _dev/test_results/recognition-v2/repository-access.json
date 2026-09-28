@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "task": "SPEC-008 T000B",
   "createdAtLocal": "2026-09-28 Asia/Seoul",
-  "status": "T000_BLOCKED_FRESH_CLONE_EOL_SENSITIVE_EQUIVALENCE_CHECK",
+  "status": "T000_READY",
   "sourceRoot": "D:/BDOBarterDev/_dev",
   "workspaceRoot": "D:/BDOBarterDev",
   "activeRepository": {
@@ -33,26 +33,26 @@
   },
   "currentSource": {
     "baselineManifest": "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
-    "manifestSha256": "886842755706CB656D1A19F7861EC7FD3ACC7FB642019B8E33E8D390A33DE28A",
+    "manifestSha256": "D17C3DDD7483751442271D9A0F1228561A562D7A5DDAAD9AD09487A4A40C61D9",
     "listedFileHashesChecked": 173,
     "listedFileHashDifferences": 0,
     "protectedEquivalence": {
-      "command": "node local_app/tests/equivalence/verify-migration.mjs",
+      "command": "node _dev/local_app/tests/equivalence/verify-migration.mjs",
       "result": "PASS",
       "protectedFunctions": 42,
       "constants": 6,
       "regions": 2,
       "files": 15,
-      "sourceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+      "sourceSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+      "hashBasis": "sha256-utf8-crlf-to-lf-only",
       "recheckedForT000B": true,
       "freshCloneRecheck": {
-        "command": "node _dev/local_app/tests/equivalence/verify-migration.mjs",
-        "result": "FAIL",
-        "reason": "Existing test compares raw HTML bytes captured with CRLF against a fresh clone checked out as LF; it stops at reference HTML assertion before checking later equivalence assertions.",
-        "expectedReferenceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
-        "actualFreshCloneReferenceSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
-        "normalizedContentEqual": true,
-        "testSourceModified": false
+        "commit": "7a1717d8e193a9ce8ba3b5953b2afe2b81d8fbda",
+        "result": "PASS",
+        "protectedFunctions": 42,
+        "constants": 6,
+        "regions": 2,
+        "files": 15
       }
     },
     "gitTrackedManifestEntries": 173,
@@ -145,7 +145,7 @@
         ]
       }
     ],
-    "manifestHashBasis": "SHA-256 of UTF-8 manifest bytes; per-file fileHashes use SHA-256 of Git blob bytes to avoid checkout EOL variation.",
+    "manifestHashBasis": "SHA-256 of UTF-8 manifest bytes; required fileHashes use SHA-256 of Git blob bytes at the V1 baseline commit.",
     "hashBasisAudit": {
       "requiredGitBlobHashes": 173,
       "verifiedAgainstCurrentBaselineCommit": 173,
@@ -163,6 +163,40 @@
       "untracked": 0,
       "backupPresent": false,
       "ignoredLocalArtifactHashes": 0
+    },
+    "gitBlobBaselineVerification": {
+      "targetCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+      "verified": 173,
+      "mismatches": 0,
+      "missing": 0,
+      "untracked": 0,
+      "excludedBackupPresentInClone": false,
+      "excludedLocalArtifactHashes": 0,
+      "result": "PASS"
+    },
+    "eolNormalizationAudit": {
+      "preChangeMainCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+      "preChangeV2Commit": "3468cd616548cdc2280107649b1ae059c788d8aa",
+      "comparedProtectedPaths": 174,
+      "mainVsV2FreshCloneRawByteEqual": 174,
+      "localVsMainTextRawEolOnlyDifferences": 54,
+      "localVsMainEolNormalizedContentDifferences": 0,
+      "localVsMainBinaryRawByteMismatches": 0,
+      "normalization": "replace CRLF pairs with LF only; all other bytes/characters retained",
+      "referenceHtmlPreviousRawSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+      "referenceHtmlNormalizedSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
+      "protectedFunctionBodiesStrictlyEqual": 42,
+      "constantsStrictlyEqual": 6,
+      "timerTickStrictlyEqual": true,
+      "protectedRegionsStrictlyEqual": 2
+    },
+    "negativeCaseResults": {
+      "crlfLfOnly": "PASS",
+      "codeCharacterChange": "FAIL_DETECTED",
+      "protectedFunctionChange": "FAIL_DETECTED",
+      "protectedConstantChange": "FAIL_DETECTED",
+      "trailingWhitespaceChange": "FAIL_DETECTED",
+      "binaryOneByteChange": "FAIL_DETECTED"
     }
   },
   "runtime": {
@@ -215,14 +249,12 @@
   "gitDecision": {
     "selectedCase": "B",
     "resolutionStatus": "RESOLVED",
-    "ready": false,
-    "reason": "Authoritative commit/tree, all 173 Git-blob hashes, local protected equivalence, Python imports, and fresh-clone manifest validation pass. T000 ready remains false because the existing protected equivalence test fails when run from a fresh clone: its raw HTML SHA is line-ending-sensitive (CRLF local baseline versus LF checkout). The docs-only scope did not authorize changing that test.",
+    "ready": true,
+    "reason": "T000 gates PASS: authoritative V1 baseline commit/tree; 173 required Git-blob SHA-256 entries verified from a fresh v2 clone against main f13; pre-change main/v2 protected files were byte-identical and the 54 local text byte differences were CRLF/LF only; strict EOL-only equivalence passed for 42 functions, 6 constants, 2 protected regions, timer tick and 15 protected files; Python imports passed; no production source or user data changed.",
     "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
     "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
-    "sourceManifestHash": "810A51D2D656B0F7F1361B7B5240F7553D342E2C6E2FB82E1730FE1A5D68DEBB",
-    "readinessBlockers": [
-      "Fresh-clone verify-migration.mjs fails its raw reference HTML SHA assertion because Git checks out *.html as LF while the recorded assertion hash came from CRLF bytes; normalized text content is equal."
-    ]
+    "sourceManifestHash": "D17C3DDD7483751442271D9A0F1228561A562D7A5DDAAD9AD09487A4A40C61D9",
+    "readinessBlockers": []
   },
   "sideEffects": {
     "productionCodeChanged": false,
@@ -246,9 +278,9 @@
     "baselineTreeHash": "2cc09362abc88acf5a6de7155b35e427f9f3f77f",
     "remoteHeadsVerified": {
       "main": "f13b8e15af392f167d153c873448a4b2abec5a0c",
-      "v2": "024d5e4998b6b8f57012aa8d6832ecd1e6d005ea"
+      "v2": "7a1717d8e193a9ce8ba3b5953b2afe2b81d8fbda"
     },
-    "manifestSha256": "886842755706CB656D1A19F7861EC7FD3ACC7FB642019B8E33E8D390A33DE28A",
+    "manifestSha256": "D17C3DDD7483751442271D9A0F1228561A562D7A5DDAAD9AD09487A4A40C61D9",
     "requiredFileHashEntries": 173,
     "updatedEvidenceFiles": [
       "_dev/specs/008-capture-recognition-v2/baseline-manifest.json",
@@ -256,13 +288,23 @@
       "_dev/test_results/recognition-v2/git-baseline-proposal.json"
     ],
     "evidenceUpdatesCommitted": true,
-    "hashBasis": "SHA-256 of Git blob bytes for every required tracked path."
+    "hashBasis": "173 required SHA-256 values are Git blob bytes at baselineCommit; checkout EOL does not affect them.",
+    "validatedV2Commit": "7a1717d8e193a9ce8ba3b5953b2afe2b81d8fbda",
+    "verificationInfraFiles": [
+      "_dev/local_app/tests/equivalence/source-tools.mjs",
+      "_dev/local_app/tests/equivalence/verify-migration.mjs",
+      "_dev/local_app/tests/equivalence/capture-baseline.mjs",
+      "_dev/local_app/tests/equivalence/eol-hash-regression.mjs",
+      "_dev/local_app/tests/equivalence/baseline-manifest.json",
+      "_dev/specs/000-baseline/baseline-manifest.json"
+    ]
   },
   "freshCloneVerification": {
-    "status": "MANIFEST_PASS_T000_READY_BLOCKED",
-    "commit": "37058738f978c8d497a270faf6591fb730daf725",
-    "cloneRoot": "C:/Users/kwang/AppData/Local/Temp/BDOBarterDev-T000-fresh-3705873",
-    "manifestSha256": "886842755706CB656D1A19F7861EC7FD3ACC7FB642019B8E33E8D390A33DE28A",
+    "status": "PASS",
+    "commit": "7a1717d8e193a9ce8ba3b5953b2afe2b81d8fbda",
+    "cloneRoot": "C:/Users/kwang/AppData/Local/Temp/BDOBarterDev-T000-EOL-final-7a1717d",
+    "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "manifestSha256": "D17C3DDD7483751442271D9A0F1228561A562D7A5DDAAD9AD09487A4A40C61D9",
     "manifestEntries": 173,
     "blobMismatches": 0,
     "missing": 0,
@@ -270,11 +312,20 @@
     "backupPresent": false,
     "forbiddenLocalArtifactHashes": 0,
     "equivalenceCommand": "node _dev/local_app/tests/equivalence/verify-migration.mjs",
-    "equivalenceResult": "FAIL_EOL_SENSITIVE_REFERENCE_SHA",
-    "expectedReferenceSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
-    "actualReferenceSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
-    "normalizedTextEqual": true,
+    "equivalenceResult": "PASS",
+    "protectedFunctions": 42,
+    "constants": 6,
+    "protectedRegions": 2,
+    "protectedFiles": 15,
+    "negativeCases": {
+      "crlfLfOnly": "PASS",
+      "codeCharacterChange": "FAIL_DETECTED",
+      "protectedFunctionChange": "FAIL_DETECTED",
+      "protectedConstantChange": "FAIL_DETECTED",
+      "trailingWhitespaceChange": "FAIL_DETECTED",
+      "binaryOneByteChange": "FAIL_DETECTED"
+    },
     "pythonImports": "PASS_Pillow_12.3.0_NumPy_2.5.3_Flask_3.1.3_Waitress_3.0.2",
-    "note": "Manifest gate is reproducible. T000 remains not ready until the existing EOL-sensitive equivalence assertion is addressed in an explicitly authorized scope."
+    "gitStatus": "CLEAN"
   }
 }

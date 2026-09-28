@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "task": "SPEC-008 T000B Case B resolution record",
-  "status": "BASELINE_MANIFEST_PASS_T000_READY_BLOCKED_BY_EOL_SENSITIVE_TEST",
+  "status": "T000_READY",
   "caseAResult": "REJECTED_AS_AUTHORITATIVE_BASELINE",
   "caseBResult": "REQUIRED",
   "recommendedGitRoot": "D:/BDOBarterDev",
@@ -35,10 +35,10 @@
     "generatedBuildTrackedFiles": 1066,
     "packagedAppHashEntries": 0,
     "packagedAppTrackedFiles": 259,
-    "updatedManifestSha256": "886842755706CB656D1A19F7861EC7FD3ACC7FB642019B8E33E8D390A33DE28A",
-    "currentRemoteFreshCloneCheck": "PASS_173_OF_173_AT_37058738f978c8d497a270faf6591fb730daf725",
+    "updatedManifestSha256": "D17C3DDD7483751442271D9A0F1228561A562D7A5DDAAD9AD09487A4A40C61D9",
+    "currentRemoteFreshCloneCheck": "PASS_173_OF_173_AGAINST_f13b8e15af392f167d153c873448a4b2abec5a0c",
     "virtualEnvironmentGitTrackedFiles": 17,
-    "hashBasis": "SHA-256 of Git blob bytes, independent of worktree EOL settings."
+    "hashBasis": "SHA-256 of canonical Git blob bytes at main baseline commit f13; text EOL normalization is used only by the equivalence verifier."
   },
   "proposedExclusionsForReview": [
     "The local-only _dev/inputs/ORIGINAL_user_backup_20260923.json is excluded from Git and fileHashes; its local source file is retained unchanged.",
@@ -56,9 +56,7 @@
     "Review staged paths, binaries, private data and diff; create initial baseline commit only within approved scope.",
     "Compare committed tree and recorded manifest; set repository-access.ready=true only after all gates pass."
   ],
-  "requiredUserDirections": [
-    "If T000 must become ready, authorize a separate minimal change to the existing equivalence test/baseline so its reference hash is independent of checkout EOL; production source does not need content changes."
-  ],
+  "requiredUserDirections": [],
   "notAuthorizedByThisProposal": [
     "Production source implementation or user database changes.",
     "Modification or deletion of the local user backup or the excluded duplicate application directories.",
@@ -80,7 +78,8 @@
     "protectedFilesChanged": false,
     "localBackupChanged": false,
     "GitBaselineCreated": true,
-    "evidenceChangesCommitted": true
+    "evidenceChangesCommitted": true,
+    "protectedSourceChanged": false
   },
   "resolutionStepsPerformed": [
     "User selected D:/BDOBarterDev as the single repository root and authorized the supplied GitHub repository for V1/V2.",
@@ -89,9 +88,10 @@
     "Included the user-requested current app, images and ordinary ignore artifacts, while keeping credential/environment secret files excluded.",
     "Audited all 190 old manifest paths against ignore rules, Git tracking, presence and SHA-256; removed one user backup plus sixteen venv entries from mandatory hashes.",
     "Verified all 173 retained source/reference/test hash entries are tracked, present and SHA-256 matching; build and packaged app have zero mandatory hash entries.",
-    "Re-ran protected equivalence and Python imports; both PASS. Evidence document changes remain uncommitted and fresh-clone verification is pending.",
+    "Re-ran protected equivalence and Python imports; both PASS. Final EOL-independent equivalence and 173 baseline blob hashes were verified from a clean fresh clone.",
     "Committed and pushed the three approved evidence-only updates as 024d5e4998b6b8f57012aa8d6832ecd1e6d005ea; the first fresh-clone pass identified 54 EOL-only raw hash differences, so required hashes were switched to canonical Git blob bytes before final validation.",
-    "At a fresh clone of 37058738f978c8d497a270faf6591fb730daf725, all 173 required Git-blob SHA-256 entries, tracking checks and exclusions passed; Python imports passed. The existing equivalence script failed at a raw HTML SHA assertion due to LF checkout versus CRLF-captured hash, so T000 ready remains false within the docs-only scope."
+    "Before the changes, 174 protected paths were compared: main f13 and pre-change v2 clone were byte-identical; 54 local-vs-clone text byte differences became identical after CRLF-pair-to-LF normalization; no binary or other content differences were found.",
+    "Updated only v2 verification infrastructure and hash manifests. Fresh clone 7a1717d8e193a9ce8ba3b5953b2afe2b81d8fbda passed all 173 baseline Git-blob hashes against main f13, the complete migration equivalence verifier, six EOL/code/function/constant/whitespace/binary negative cases, Python imports, and clean Git status."
   ],
   "hashBasisFinding": {
     "initialFreshCloneCommit": "024d5e4998b6b8f57012aa8d6832ecd1e6d005ea",
@@ -102,20 +102,46 @@
     "resolution": "Store per-file SHA-256 of Git blob bytes and validate blobs in a fresh clone."
   },
   "freshCloneValidation": {
-    "commit": "37058738f978c8d497a270faf6591fb730daf725",
-    "requiredBlobHashes": 173,
+    "commit": "7a1717d8e193a9ce8ba3b5953b2afe2b81d8fbda",
+    "baselineCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "requiredGitBlobHashes": 173,
     "mismatches": 0,
     "missing": 0,
     "untracked": 0,
     "backupPresent": false,
-    "localOnlyArtifactsRequired": 0
+    "excludedLocalArtifactHashes": 0,
+    "equivalence": "PASS_42_FUNCTIONS_6_CONSTANTS_2_REGIONS_15_FILES",
+    "negativeCases": {
+      "crlfLfOnly": "PASS",
+      "codeCharacterChange": "FAIL_DETECTED",
+      "protectedFunctionChange": "FAIL_DETECTED",
+      "protectedConstantChange": "FAIL_DETECTED",
+      "trailingWhitespaceChange": "FAIL_DETECTED",
+      "binaryOneByteChange": "FAIL_DETECTED"
+    },
+    "pythonImports": "PASS",
+    "gitStatus": "CLEAN"
   },
   "protectedEquivalenceFreshClone": {
     "command": "node _dev/local_app/tests/equivalence/verify-migration.mjs",
-    "result": "FAIL_EOL_SENSITIVE_REFERENCE_SHA",
-    "expectedCRLFSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
-    "actualLFSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6",
-    "normalizedTextEqual": true,
-    "sourceModified": false
+    "result": "PASS",
+    "hashBasis": "sha256-utf8-crlf-to-lf-only",
+    "functions": 42,
+    "constants": 6,
+    "protectedRegions": 2,
+    "timerTick": "PASS",
+    "binaryHashBasis": "sha256-raw-bytes"
+  },
+  "preChangeEolComparison": {
+    "preChangeMainCommit": "f13b8e15af392f167d153c873448a4b2abec5a0c",
+    "preChangeV2Commit": "3468cd616548cdc2280107649b1ae059c788d8aa",
+    "comparedProtectedPaths": 174,
+    "mainVsV2FreshCloneRawByteEqual": 174,
+    "localVsMainTextRawEolOnlyDifferences": 54,
+    "localVsMainEolNormalizedContentDifferences": 0,
+    "localVsMainBinaryRawByteMismatches": 0,
+    "normalization": "CRLF pairs to LF only; no other byte/character normalization",
+    "referenceHtmlPreviousRawSha256": "7133ae0140d84dc284a53b7caeedaf5479270161038ca36df4e094983aaf7b76",
+    "referenceHtmlNormalizedSha256": "924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6"
   }
 }
