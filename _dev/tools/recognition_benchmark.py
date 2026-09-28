@@ -432,7 +432,7 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
     """Run R0 with fixture images; oracle truth is opened only after inference."""
     if runs < 1:
         raise ValueError("runs must be at least 1")
-    if engine != "warehouse-current":
+    if engine not in {"warehouse-current", "warehouse-v2"}:
         raise ValueError(f"engine {engine!r} is unavailable in T001; no candidate result was fabricated")
     manifest_path = Path(manifest) if not isinstance(manifest, dict) else None
     loaded = load_json(manifest_path) if manifest_path else manifest
@@ -440,7 +440,19 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
         raise ValueError("manifest must be a path so source hashes can be verified")
     audit = verify_manifest(loaded, manifest_path)
     converter = _load_current_engine()
+    if engine == "warehouse-v2":
+        local_app = ROOT / "local_app"
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from local_app.backend.services.warehouse_recognition import run_r0_shadow
+        profile_path = local_app / "recognition_data" / "profiles.json"
+        anchor_path = local_app / "recognition_data" / "anchors.npz"
+        shadow_converter = lambda image, reference, templates: run_r0_shadow(
+            image, reference, templates, profile_path, anchor_path)
+    else:
+        shadow_converter = converter
     fixture_results = []
+    inference_results = []
     latency_by_run: list[float] = []
     engine_hash = sha256_file(TOOL_DIR / "warehouse_patch.py")
     reference_hash = sha256_file(REFERENCE)
@@ -453,21 +465,33 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
         for _ in range(runs):
             started = time.perf_counter()
             # The recognizer receives only the input image and frozen resources.
-            patch, report = converter(image_path, REFERENCE, TEMPLATES)
+            patch, report = shadow_converter(image_path, REFERENCE, TEMPLATES)
             elapsed_ms = (time.perf_counter() - started) * 1000.0
             timings.append(elapsed_ms)
-            payload_hash = canonical_hash({"patch": patch, "slots": report.get("slots", [])})
+            reproducible_payload = {"patch": patch, "slots": report.get("slots", [])}
+            if engine == "warehouse-v2":
+                reproducible_payload["t006aEvidence"] = report.get("t006aEvidence")
+            payload_hash = canonical_hash(reproducible_payload)
             if first_payload_hash is None:
                 first_payload_hash = payload_hash
             elif payload_hash != first_payload_hash:
                 raise RuntimeError(f"non-deterministic R0 output for {fixture['fixtureId']}")
             last_report = report
         latency_by_run.extend(timings)
-        predictions = _prediction_by_slot(last_report or {})
+        inference_results.append((fixture, last_report or {}))
+
+    # Complete every inference before opening any fixture truth. This keeps
+    # the oracle boundary global to the replay, not just per capture.
+    for fixture, last_report in inference_results:
+        predictions = _prediction_by_slot(last_report)
         truth = load_json((manifest_path.parent / fixture["expectedPath"]).resolve())
         # This evaluation boundary is intentionally after all inference runs.
         record = {**fixture, "truth": truth}
-        fixture_results.append(evaluate_predictions(record, predictions))
+        evaluated = evaluate_predictions(record, predictions)
+        if engine == "warehouse-v2":
+            evaluated["t006aEvidence"] = last_report.get("t006aEvidence")
+            evaluated["r0Predictions"] = predictions
+        fixture_results.append(evaluated)
 
     item = Counter()
     quantity = Counter()
@@ -518,7 +542,7 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
     report = {
         "version": 1,
         "status": "PASS",
-        "engine": "warehouse-current",
+        "engine": engine,
         "engineSemantics": "R0 decisions/proposals; MATCH is reported as accepted and never relabeled HIGH",
         "fixtureCount": len(fixture_results),
         "verifiedUnits": item["evaluated"],
@@ -563,12 +587,18 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
         "audit": {"runs": runs, "reproducibleOutput": True, "quantileMethod": "nearest-rank",
                   "manifest": audit, "sourceHashes": {"engine": engine_hash, "reference": reference_hash,
                                                         "quantityTemplates": template_hash}},
-        "latency": {"measurement": "in-process inference only; excludes process startup/upload/UI/DB",
+        "latency": {"measurement": ("in-process frozen R0 plus T005A1 side-channel evidence; excludes process startup/upload/UI/DB"
+                                      if engine == "warehouse-v2" else "in-process inference only; excludes process startup/upload/UI/DB"),
                     "coldMs": None, "coldStatus": "NOT_MEASURED",
                     "runs": len(latency_by_run), "meanMs": run_seconds_mean,
                     "warmMeanMs": run_seconds_mean, "p95Ms": _percentile_nearest_rank(latency_by_run, 0.95)},
         "peakMemoryBytes": None,
         "policyHash": None,
+        "engineStage": "T006A_R0_EVIDENCE_ONLY" if engine == "warehouse-v2" else "T001_FROZEN_R0",
+        "candidateImprovement": False if engine == "warehouse-v2" else None,
+        "policyApproved": False if engine == "warehouse-v2" else None,
+        "highAuthority": False,
+        "automationEligible": False,
         "datasetHash": audit["manifestHash"],
         "environment": {"python": platform.python_version(), "platform": platform.platform(),
                         "processor": platform.processor() or None},
