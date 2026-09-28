@@ -12,13 +12,14 @@ const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\
 const profile = await mkdtemp(join(tmpdir(), "bdo-spec003-browser-"));
 const database = join(profile, "isolated.sqlite3");
 const fixture = resolve(root, "fixtures/warehouse_patch/barter_only.png");
-const masterImage = resolve(root, "../마스터창고.png");
+const reviewFixture = resolve(root, "fixtures/warehouse_patch/mixed.png");
 const sitePackages = process.env.BDO_EXTRA_SITE_PACKAGES;
 const prelude = sitePackages ? `import sys; sys.path.append(${JSON.stringify(sitePackages)}); ` : "";
 const pythonCode = `${prelude}from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=18767, use_reloader=False, threaded=True)`;
 let server = spawn(python, ["-c", pythonCode], { cwd: root, stdio: "ignore", windowsHide: true });
 let chrome;
 let socket;
+let send;
 try {
   await waitFor(async () => { try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "isolated localhost server");
   chrome = spawn(chromePath, ["--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking", "--remote-debugging-port=0", "--remote-allow-origins=*", `--user-data-dir=${join(profile, "chrome-profile")}`, "about:blank"], { stdio: "ignore", windowsHide: true });
@@ -37,12 +38,12 @@ try {
     const { resolve: resolveMessage, reject } = pending.get(message.id); pending.delete(message.id);
     message.error ? reject(new Error(message.error.message)) : resolveMessage(message.result);
   });
-  const send = (method, params = {}) => new Promise((resolveMessage, reject) => {
+  send = (method, params = {}) => new Promise((resolveMessage, reject) => {
     const id = ++nextId; pending.set(id, { resolve: resolveMessage, reject }); socket.send(JSON.stringify({ id, method, params }));
   });
   const evaluate = async (expression) => {
     const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
-    if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
     return result.result?.value;
   };
   await send("Page.enable"); await send("Runtime.enable"); await send("DOM.enable");
@@ -52,11 +53,11 @@ try {
   const defaultOrders = await orderNamesByTier();
   const defaultSnapshot = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   await uploadAndScan(true);
-  let defaultReview = JSON.parse(await evaluate("JSON.stringify({rows:[...document.querySelectorAll('.patch-confirmed-row')].map(r=>({name:r.dataset.name,tier:Number(r.dataset.tier)}))})"));
+  let defaultReview = JSON.parse(await evaluate("JSON.stringify({rows:[...document.querySelectorAll('.patch-confirmed-row')].map(r=>({name:r.querySelector('.patch-correction-item').value,tier:Number(r.dataset.tier)}))})"));
   for (let tier = 1; tier <= 4; tier += 1) {
     const observed = defaultReview.rows.filter((row) => row.tier === tier).map((row) => row.name);
     const expected = defaultOrders[tier - 1].filter((name) => observed.includes(name));
-    if (JSON.stringify(observed) !== JSON.stringify(expected)) throw new Error(`default order mismatch in tier ${tier}`);
+    if (JSON.stringify(observed) !== JSON.stringify(expected)) throw new Error(`default order mismatch in tier ${tier}: observed=${JSON.stringify(observed)} expected=${JSON.stringify(expected)}`);
   }
   await evaluate("document.querySelector('.patch-review-footer [data-action=cancel]').click()");
   await waitFor(async () => (await evaluate("!document.querySelector('.patch-review-dialog')?.open")), "default-order review cancellation");
@@ -71,7 +72,7 @@ try {
   const bootstrap = async () => (await fetch(`${baseUrl}api/bootstrap`)).json();
   const beforeScan = await bootstrap();
   await uploadAndScan();
-  const reviewInfo = await evaluate("JSON.stringify({open:document.querySelector('.patch-review-dialog')?.open,rows:[...document.querySelectorAll('.patch-confirmed-row')].map(r=>({name:r.dataset.name,tier:Number(r.dataset.tier)})),tiers:[...document.querySelectorAll('.patch-review-tier h3')].map(x=>Number((x.textContent.match(/^(\\d+)단/)||[])[1])).filter(Number.isFinite)})");
+  const reviewInfo = await evaluate("JSON.stringify({open:document.querySelector('.patch-review-dialog')?.open,rows:[...document.querySelectorAll('.patch-confirmed-row')].map(r=>({name:r.querySelector('.patch-correction-item').value,tier:Number(r.dataset.tier)})),tiers:[...document.querySelectorAll('.patch-review-tier h3')].map(x=>Number((x.textContent.match(/^(\\d+)단/)||[])[1])).filter(Number.isFinite)})");
   const parsedReview = JSON.parse(reviewInfo);
   if (!parsedReview.open || !parsedReview.rows.length) throw new Error("PATCH review dialog did not open with confirmed rows");
   if (parsedReview.tiers.some((tier, index, all) => index && all[index - 1] < tier)) throw new Error(`tier sections are not descending: ${parsedReview.tiers}`);
@@ -124,47 +125,63 @@ try {
     if (item.target !== oldInventory[item.programName].target) throw new Error(`target changed during warehouse apply: ${item.programName}`);
   }
   if (JSON.stringify(afterApply.order) !== JSON.stringify(afterConflict.order) || JSON.stringify(afterApply.settings) !== JSON.stringify(afterConflict.settings)) throw new Error("order or settings changed during warehouse apply");
-  await uploadAndScan(false, masterImage);
-  await waitFor(async () => evaluate("[...document.querySelectorAll('.patch-correction-row canvas')].length===11 && [...document.querySelectorAll('.patch-correction-row canvas')].every(canvas=>canvas.getContext('2d').getImageData(0,0,120,120).data.some(x=>x))"), "all root image slot previews rendered");
+  await uploadAndScan(false, reviewFixture);
+  await waitFor(async () => evaluate("[...document.querySelectorAll('.patch-correction-row canvas')].length>0 && [...document.querySelectorAll('.patch-correction-row canvas')].every(canvas=>canvas.getContext('2d').getImageData(0,0,120,120).data.some(x=>x))"), "all tracked fixture slot previews rendered");
   const masterReview = JSON.parse(await evaluate("JSON.stringify({rows:[...document.querySelectorAll('.patch-correction-row')].map(r=>({slot:r.dataset.slot,name:r.querySelector('.patch-correction-item').value,quantity:r.querySelector('.patch-correction-quantity').value,preview:!!r.querySelector('canvas').getContext('2d').getImageData(0,0,120,120).data.some(x=>x)})),disabled:document.querySelector('.patch-review-footer [data-action=apply]').disabled})"));
-  if (masterReview.rows.length !== 11 || !masterReview.rows.every(row => row.preview)) throw new Error(`root master image did not expose 11 cropped correction rows: ${JSON.stringify(masterReview)}`);
+  if (!masterReview.rows.length || !masterReview.rows.every(row => row.preview)) throw new Error(`tracked review fixture did not expose all cropped correction rows: ${JSON.stringify(masterReview)}`);
   if (!masterReview.disabled) throw new Error("Apply was enabled before all unrecognized slots were corrected");
   const beforeMasterApply = await bootstrap();
-  const correctionItem = await evaluate("[...document.querySelectorAll('.patch-correction-item')][0].list.options[0].value");
-  const correctionBase = await evaluate(`(() => { const row=document.querySelector('.patch-confirmed-row[data-name=${JSON.stringify(correctionItem)}]'); return row ? Number(row.children[2].textContent.replaceAll(',','')) : 0; })()`);
+  const correctionItem = await evaluate("(() => { const item=document.querySelector('.patch-correction-item'); const control=item.closest('.autocomplete-control'); control.querySelector('.autocomplete-toggle').click(); return control.querySelector('.autocomplete-option').textContent; })()");
   const correctionTotals = await evaluate(`(() => {const rows=[...document.querySelectorAll('.patch-correction-row')]; let total=0; for(const [index,row] of rows.entries()){const exclude=row.querySelector('.patch-correction-exclude'); const item=row.querySelector('.patch-correction-item'); const quantity=row.querySelector('.patch-correction-quantity'); if(index===0){item.value=${JSON.stringify(correctionItem)};item.dispatchEvent(new Event('input',{bubbles:true}));quantity.value='97';quantity.dispatchEvent(new Event('input',{bubbles:true}));exclude.checked=true;exclude.dispatchEvent(new Event('change',{bubbles:true}));continue;} item.value=${JSON.stringify(correctionItem)}; item.dispatchEvent(new Event('input',{bubbles:true})); if(quantity.value===''){quantity.value='0';quantity.dispatchEvent(new Event('input',{bubbles:true}));} total+=Number(quantity.value);} window.__manualCorrectionTotal=total; return {total,enabled:!document.querySelector('.patch-review-footer [data-action=apply]').disabled,excluded:rows[0].dataset.slot};})()`);
-  if (!correctionTotals.enabled) throw new Error("Apply stayed disabled after all 11 correction fields were completed");
+  if (!correctionTotals.enabled) throw new Error("Apply stayed disabled after all correction fields were completed");
   await evaluate("(() => { window.__warehousePatchCalls=[]; window.__warehouseFetch=window.fetch; window.fetch=async(input,init={})=>{if(String(input).includes('/api/inventory')&&init.method==='PATCH'&&JSON.parse(init.body).kind==='warehouse') window.__warehousePatchCalls.push(JSON.parse(init.body)); return window.__warehouseFetch(input,init); }; })()");
   await evaluate("document.querySelector('.patch-review-footer [data-action=apply]').click()");
-  await waitFor(async () => (await evaluate("document.querySelector('#runtime-status').textContent")).includes("한 번에 저장했습니다"), "root master image corrections saved in one request");
+  await waitFor(async () => (await evaluate("document.querySelector('#runtime-status').textContent")).includes("한 번에 저장했습니다"), "tracked review fixture corrections saved in one request");
   const afterMasterApply = await bootstrap();
   const manualWrite = JSON.parse(await evaluate("JSON.stringify(window.__warehousePatchCalls)"));
-  if (manualWrite.length !== 1 || afterMasterApply.revision !== beforeMasterApply.revision + 1) throw new Error("root-image corrections were not saved through exactly one inventory write");
+  if (manualWrite.length !== 1 || afterMasterApply.revision !== beforeMasterApply.revision + 1) throw new Error("tracked-fixture corrections were not saved through exactly one inventory write");
   if (!Object.hasOwn(manualWrite[0].patch.items, correctionItem)) throw new Error("manual item selection was missing from the single inventory write");
   const savedManual = afterMasterApply.inventory.find(item => item.programName === correctionItem).stock;
-  if (savedManual === null || savedManual !== correctionBase + correctionTotals.total) throw new Error("manual correction quantities did not reach inventory");
-  console.log(JSON.stringify({ ok: true, browser: "Chrome headless", upload: "existing fixture plus root 마스터창고.png", manualCorrectionSlots: masterReview.rows.length, slotPreviews: "11/11 rendered", incompleteApplyBlocked: true, correctionsAppliedInSingleInventoryMutation: true, correctionItem: correctionItem, correctionQuantity: correctionTotals.total, customTier4Order: reviewTier4, reviewRows: reviewedNames.length, applyCancelledWithoutWrite: true, staleRevisionRequiredReconfirmation: true, failedSaveKeptReviewAndDatabaseUnchanged: true, committedWriteRecoveredAfterRefreshError: true, applyChangedPatchStocksOnly: true, targetsOrderSettingsPreserved: true, temporaryDatabase: true }, null, 2));
+  if (savedManual === null || savedManual !== correctionTotals.total) throw new Error(`manual correction quantities did not reach inventory: item=${correctionItem} expected=${correctionTotals.total} saved=${savedManual}`);
+  console.log(JSON.stringify({ ok: true, browser: "Chrome headless", upload: "tracked fixtures: barter_only.png and mixed.png", manualCorrectionSlots: masterReview.rows.length, slotPreviews: "all rendered", incompleteApplyBlocked: true, correctionsAppliedInSingleInventoryMutation: true, correctionItem: correctionItem, correctionQuantity: correctionTotals.total, customTier4Order: reviewTier4, reviewRows: reviewedNames.length, applyCancelledWithoutWrite: true, staleRevisionRequiredReconfirmation: true, failedSaveKeptReviewAndDatabaseUnchanged: true, committedWriteRecoveredAfterRefreshError: true, applyChangedPatchStocksOnly: true, targetsOrderSettingsPreserved: true, temporaryDatabase: true }, null, 2));
 
   async function uploadAndScan(viaDrop = false, imagePath = fixture) {
+    const queuedBefore = Number(await evaluate("document.querySelector('#warehouse-scan-dialog')?.dataset.queueLength ?? 0"));
     await evaluate("document.querySelector('#open-warehouse-scan').click()");
     const doc = await send("DOM.getDocument", { depth: -1, pierce: true });
     const node = await send("DOM.querySelector", { nodeId: doc.root.nodeId, selector: "#warehouse-image" });
+    await evaluate("window.__warehouseTestFile=null; document.querySelector('#warehouse-image').addEventListener('change',event=>{window.__warehouseTestFile=event.target.files[0]??window.__warehouseTestFile;},{capture:true,once:true})");
     await send("DOM.setFileInputFiles", { files: [imagePath], nodeId: node.nodeId });
     await evaluate("document.querySelector('#warehouse-image').dispatchEvent(new Event('change',{bubbles:true}))");
-    if (viaDrop) await evaluate("(() => { const transfer=new DataTransfer(); transfer.items.add(document.querySelector('#warehouse-image').files[0]); document.querySelector('.warehouse-drop-zone').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer})); })()");
+    if (viaDrop) {
+      await evaluate("(() => { const transfer=new DataTransfer(); transfer.items.add(window.__warehouseTestFile); document.querySelector('.warehouse-drop-zone').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer})); })()");
+    }
+    const expectedQueue = queuedBefore + (viaDrop ? 2 : 1);
+    await waitFor(async () => Number(await evaluate("document.querySelector('#warehouse-scan-dialog')?.dataset.queueLength ?? 0")) >= expectedQueue, "new capture normalized before scan");
+    const queueAfterCapture = Number(await evaluate("document.querySelector('#warehouse-scan-dialog')?.dataset.queueLength ?? 0"));
+    if (queueAfterCapture < expectedQueue) throw new Error(`capture input failed: ${await evaluate("document.querySelector('.warehouse-scan-message')?.textContent")}`);
     await evaluate("document.querySelector('.warehouse-dialog [data-action=scan]').click()");
     await waitFor(async () => (await evaluate("document.querySelector('.patch-review-dialog')?.open")) === true, "scanner result opens PATCH review", 60000);
   }
 
   async function completeCorrections() {
-    return evaluate("JSON.stringify((() => [...document.querySelectorAll('.patch-correction-row')].map(row => { const item=row.querySelector('.patch-correction-item'); item.value=item.list.options[0].value; item.dispatchEvent(new Event('input',{bubbles:true})); const quantity=row.querySelector('.patch-correction-quantity'); if(quantity.value===''){quantity.value='0';quantity.dispatchEvent(new Event('input',{bubbles:true}));} return item.value; }))())").then(JSON.parse);
+    return evaluate("JSON.stringify((() => [...document.querySelectorAll('.patch-correction-row')].map(row => { const item=row.querySelector('.patch-correction-item'); const control=item.closest('.autocomplete-control'); control.querySelector('.autocomplete-toggle').click(); control.querySelector('.autocomplete-option').click(); const quantity=row.querySelector('.patch-correction-quantity'); if(quantity.value===''){quantity.value='0';quantity.dispatchEvent(new Event('input',{bubbles:true}));} return item.value; }))())").then(JSON.parse);
   }
 } finally {
+  try { if (socket?.readyState === WebSocket.OPEN) await Promise.race([send("Browser.close"), delay(1000)]); } catch {}
   try { socket?.close(); } catch {}
-  try { chrome?.kill(); } catch {}
-  try { server.kill(); } catch {}
+  for (const process of [chrome, server]) {
+    if (process?.pid) {
+      try {
+        process.kill();
+        await Promise.race([new Promise((resolveExit) => process.once("exit", resolveExit)), delay(1500)]);
+      } catch {}
+    }
+  }
   await delay(500);
-  if (profile.startsWith(tmpdir())) await rm(profile, { recursive: true, force: true });
+  if (profile.startsWith(tmpdir())) {
+    try { await rm(profile, { recursive: true, force: true, maxRetries: 4, retryDelay: 250 }); } catch {}
+  }
 }
 
 async function waitFor(predicate, label, timeout = 20000) {

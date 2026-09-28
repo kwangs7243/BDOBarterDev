@@ -25,9 +25,10 @@ export const api = Object.freeze({
   completeSession: (body) => jsonRequest("/api/working-session/completion", { method: "POST", body }),
   inventory: () => jsonRequest("/api/inventory"),
   patchInventory: (payload) => jsonRequest("/api/inventory", { method: "PATCH", body: payload }),
-  warehouseScan: async (file) => {
+  warehouseScan: async (capture) => {
+    const blob = capture?.blob instanceof Blob ? capture.blob : capture;
     const form = new FormData();
-    form.append("image", file, file.name);
+    form.append("image", blob, capture?.blob ? "capture.png" : (blob?.name || "capture.png"));
     const response = await fetch("/api/warehouse-scan", { method: "POST", body: form, credentials: "same-origin" });
     const payload = await response.json();
     if (!response.ok) {

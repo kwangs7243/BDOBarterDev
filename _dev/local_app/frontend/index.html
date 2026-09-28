@@ -30,7 +30,7 @@
       <details class="tier-rule-details"><summary>단계 규칙</summary><div id="tier-rules-root"></div></details>
     </section>
     <section class="panel session-panel" id="trade-session-panel">
-      <div class="panel-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="actions compact-actions"><button id="open-json-import" class="primary" type="button">JSON 입력</button><button id="add-manual-trade" type="button">행 추가</button><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></div>
+      <div class="panel-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="actions compact-actions"><button id="open-json-import" class="primary" type="button">JSON 입력</button><button id="open-trade-capture" type="button">이미지 초안</button><button id="add-manual-trade" type="button">행 추가</button><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></div>
       <div class="session-toolbar"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button><span id="trade-import-status" class="status-note" role="status"></span></div>
       <div id="trade-list-root" class="trade-list-scroll"></div>
     </section>
@@ -39,6 +39,18 @@
   <dialog id="json-import-dialog" class="app-dialog small-dialog" aria-labelledby="json-dialog-title">
     <div class="dialog-titlebar"><h2 id="json-dialog-title">물교 JSON 입력</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
     <div class="dialog-body"><label class="field" for="trade-json-input">물교 JSON<textarea id="trade-json-input" class="json-editor" spellcheck="false" placeholder='[{"island":"...","fromItem":"...","toItem":"...","reqAmount":1,"count":1,"yield":1}]'></textarea></label><div class="actions"><button id="apply-new-session" class="primary" type="button">새 회차로 적용</button><button id="append-current-trades" type="button">현재 회차에 추가</button><button type="button" data-close-dialog>취소</button></div><p class="hint">붙여넣은 입력은 적용 후 비웁니다. 오류가 있으면 고친 뒤 다시 시도할 수 있습니다.</p></div>
+  </dialog>
+
+  <dialog id="trade-capture-dialog" class="app-dialog small-dialog trade-capture-dialog" aria-labelledby="trade-capture-title" data-capture-context="trade">
+    <div class="dialog-titlebar"><h2 id="trade-capture-title">물교 이미지 초안</h2><button type="button" data-close-trade-capture aria-label="닫기">×</button></div>
+    <div class="dialog-body">
+      <p class="hint">이미지는 임시 초안으로만 보관합니다. OCR, 인식 완료, 물교 목록 생성은 수행하지 않습니다.</p>
+      <label class="field" for="trade-capture-files">이미지 파일 선택<input id="trade-capture-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple></label>
+      <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
+      <p class="capture-status" data-role="capture-status" role="status" aria-live="polite"></p>
+      <ol class="capture-draft-list" data-role="capture-list"></ol>
+      <div class="actions"><button type="button" data-close-trade-capture>닫기</button></div>
+    </div>
   </dialog>
 
   <dialog id="schedule-dialog" class="app-dialog briefing-dialog" aria-labelledby="briefing-title">

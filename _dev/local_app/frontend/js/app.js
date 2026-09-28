@@ -4,6 +4,7 @@ import { renderInventory } from "./inventory-ui.js";
 import { renderSettings } from "./settings-ui.js";
 import { applyViewerState, renderFreeRoute, renderMap, renderViewer } from "./map-ui.js";
 import { initWarehouseScanUI } from "./warehouse-scan-ui.js";
+import { initRecognitionUI } from "./recognition-ui.js";
 import { openPatchReview } from "./patch-review.js";
 import { initTradeSessionUI, renderTradeList } from "./trade-ui.js";
 import { initScheduleUI, syncScheduleState } from "./schedule-ui.js";
@@ -24,7 +25,8 @@ function renderAll() {
   window.__bdoApplyAppZoom?.();
   content.setAttribute("aria-busy", "false");
 }
-initWarehouseScanUI({ setStatus, onPatch: (patch, report, imageFile) => openPatchReview(patch, report, { setStatus, onApplied: renderAll, imageFile }) });
+const warehouseCaptureUI = initWarehouseScanUI({ setStatus, onPatch: (patch, report, imageFile) => openPatchReview(patch, report, { setStatus, onApplied: renderAll, imageFile }) });
+initRecognitionUI({ warehouseCaptureUI });
 initScheduleUI(setStatus);
 window.__bdoRenderTradeList = renderTradeList;
 window.__bdoRenderAll = renderAll;
