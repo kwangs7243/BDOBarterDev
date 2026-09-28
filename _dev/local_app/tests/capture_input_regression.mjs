@@ -68,6 +68,12 @@ const secondPng = await captureFromFile(pngFile, context, adapters);
 assert.deepEqual(new Uint8Array(await firstPng.blob.arrayBuffer()), pngBytes, "PNG source bytes are retained exactly");
 assert.equal(firstPng.metadata.sourceType, "file");
 assert.deepEqual(firstPng.metadata.frame, { width: 4, height: 3 });
+assert.deepEqual(firstPng.metadata.fidelity, {
+  sourceWidth: 4,
+  sourceHeight: 3,
+  rescaled: false,
+  evidence: "file-metadata",
+}, "file PNG records decoded source dimensions and file metadata evidence");
 assert.equal(firstPng.reencoded, false);
 assert.equal(firstPng.sha256, firstPng.sourceSha256);
 assert.notEqual(firstPng.metadata.captureId, secondPng.metadata.captureId);
@@ -103,6 +109,13 @@ jpegFile.testPixels = [17, 28, 39, 40];
 const jpegCapture = await captureFromFile(jpegFile, { ...context, taskType: "trade" }, adapters);
 assert.equal(jpegCapture.metadata.taskType, "trade");
 assert.equal(jpegCapture.metadata.sourceType, "file");
+assert.deepEqual(jpegCapture.metadata.frame, { width: 4, height: 3 });
+assert.deepEqual(jpegCapture.metadata.fidelity, {
+  sourceWidth: 4,
+  sourceHeight: 3,
+  rescaled: false,
+  evidence: "file-metadata",
+}, "non-PNG file retains file-metadata fidelity after PNG normalization");
 assert.equal(jpegCapture.blob.type, "image/png");
 assert.equal(jpegCapture.reencoded, true);
 assert.deepEqual(adapters.lastEncodedPixels, jpegFile.testPixels, "lossless PNG adapter receives the decoded bitmap unchanged");
@@ -117,8 +130,29 @@ const clipboardPng = clipboardEvent([pngFile]);
 const pastedPng = await captureFromPaste(clipboardPng, context, adapters);
 assert.equal(clipboardPng.wasPrevented(), true);
 assert.equal(pastedPng.inputs[0].metadata.sourceType, "clipboard");
+assert.deepEqual(pastedPng.inputs[0].metadata.frame, { width: 4, height: 3 });
+assert.deepEqual(pastedPng.inputs[0].metadata.fidelity, {
+  sourceWidth: null,
+  sourceHeight: null,
+  rescaled: null,
+  evidence: "unknown",
+}, "clipboard PNG keeps decoded dimensions separate from unknown source fidelity");
 assert.match(pastedPng.inputs[0].metadata.batchId, /^[0-9a-f-]{36}$/i);
 assert.deepEqual(new Uint8Array(await pastedPng.inputs[0].blob.arrayBuffer()), pngBytes);
+
+const clipboardJpeg = clipboardEvent([jpegFile]);
+const pastedJpeg = await captureFromPaste(clipboardJpeg, { ...context, taskType: "trade" }, adapters);
+assert.equal(pastedJpeg.inputs[0].metadata.sourceType, "clipboard");
+assert.deepEqual(pastedJpeg.inputs[0].metadata.frame, { width: 4, height: 3 });
+assert.deepEqual(pastedJpeg.inputs[0].metadata.fidelity, {
+  sourceWidth: null,
+  sourceHeight: null,
+  rescaled: null,
+  evidence: "unknown",
+}, "clipboard non-PNG remains unknown after PNG normalization");
+assert.equal(pastedJpeg.inputs[0].blob.type, "image/png");
+assert.equal(pastedJpeg.inputs[0].reencoded, true);
+assert.deepEqual(adapters.lastEncodedPixels, jpegFile.testPixels, "clipboard normalization keeps decoded bitmap pixels unchanged");
 
 const order = [];
 const serialAdapters = {
@@ -174,7 +208,10 @@ for (const kind of ["input", "textarea", "contenteditable", "textbox"]) {
 console.log(JSON.stringify({
   ok: true,
   filePngBytesUnchanged: true,
+  fileFidelityMetadata: true,
   nonPngToLosslessPng: true,
+  clipboardPngFidelityUnknown: true,
+  clipboardNonPngFidelityUnknown: true,
   dimensionsAndMetadata: true,
   multiImageSerial: true,
   maxFrames: captureLimits.MAX_BATCH_FRAMES,

@@ -203,9 +203,9 @@ async function captureBlob(blob, rawContext, sourceType, batchId, adapters) {
       capturedAt: now,
       frame: { width, height },
       fidelity: {
-        sourceWidth: width,
-        sourceHeight: height,
-        rescaled: false,
+        sourceWidth: sourceType === "file" ? width : null,
+        sourceHeight: sourceType === "file" ? height : null,
+        rescaled: sourceType === "file" ? false : null,
         evidence: sourceType === "file" ? "file-metadata" : "unknown",
       },
       profileId: normalizedContext.profileId,
