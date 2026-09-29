@@ -456,6 +456,24 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
             raise ValueError("manifest must be a path so Trade source hashes can be verified")
         base_selection = ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json"
         return run_trade_candidate_t010a2(manifest, selection, base_selection, runs)
+    if engine == "trade-ocr-candidate":
+        if selection is None:
+            raise ValueError("trade-ocr-candidate requires --selection with the T010B1 experiment spec")
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from local_app.tools.trade_ocr_experiment import run_trade_ocr_candidate
+        if isinstance(manifest, dict):
+            raise ValueError("manifest must be a path so Trade source hashes can be verified")
+        result = run_trade_ocr_candidate(
+            manifest, selection,
+            ROOT / "recognition-local" / "results" / "trade-candidate-t010a2.json",
+            ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json",
+            ROOT / "local_app" / "frontend" / "data" / "trade-catalog.json",
+            ROOT / "recognition-local" / "models" / "t010b1" / "official_models" /
+            "korean_PP-OCRv5_mobile_rec_onnx", runs)
+        result["engine"] = engine
+        result["fixtureCount"] = result["captureSet"]["captureCount"]
+        return result
     if engine not in {"warehouse-current", "warehouse-v2"}:
         raise ValueError(f"engine {engine!r} is unavailable; no candidate result was fabricated")
     manifest_path = Path(manifest) if not isinstance(manifest, dict) else None
@@ -642,7 +660,7 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True, type=Path)
-    parser.add_argument("--engine", required=True, choices=("warehouse-current", "warehouse-v2", "trade-candidate", "trade-candidate-t010a2"))
+    parser.add_argument("--engine", required=True, choices=("warehouse-current", "warehouse-v2", "trade-candidate", "trade-candidate-t010a2", "trade-ocr-candidate"))
     parser.add_argument("--policy", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument("--feedback-jsonl", type=Path,
@@ -672,6 +690,11 @@ def main() -> int:
                         "selectedExperimentLaneCandidate": result["selectedExperimentLaneCandidate"],
                         "v1NumericSummary": result["v1NumericSummary"],
                         "v2NumericSummary": result["v2NumericSummary"],
+                        "semanticHash": result["semanticHash"]})
+    elif result.get("task") == "T010B1":
+        summary.update({"captureCount": result["captureSet"]["captureCount"],
+                        "textCandidateMetrics": result["textCandidateMetrics"],
+                        "numericCandidateMetrics": result["numericCandidateMetrics"],
                         "semanticHash": result["semanticHash"]})
     else:
         summary.update({"itemMetrics": result["itemMetrics"], "quantityMetrics": result["quantityMetrics"],
