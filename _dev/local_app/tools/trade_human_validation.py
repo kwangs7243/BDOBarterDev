@@ -5,6 +5,7 @@ import argparse
 import copy
 import hashlib
 import json
+import math
 import os
 import re
 import tempfile
@@ -175,12 +176,10 @@ def select_pilot_rows(rows: list[dict[str, Any]], capture_count: int = 16) -> di
     covered = Counter()
 
     def rarity_score(row: dict[str, Any], uncovered_only: bool) -> float:
-        score = 0.0
-        for feature in features[row["rowId"]]:
-            if uncovered_only and covered[feature]:
-                continue
-            score += 1.0 / max(1, feature_totals[feature])
-        return score
+        terms = [1.0 / max(1, feature_totals[feature])
+                 for feature in sorted(features[row["rowId"]])
+                 if not uncovered_only or not covered[feature]]
+        return math.fsum(terms)
 
     # Guarantee capture coverage first; ties use original row order and rowId.
     for capture_id in capture_order:

@@ -4,7 +4,10 @@ import copy
 import hashlib
 import inspect
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -138,11 +141,35 @@ def test_t010b1_semantic_source_is_pinned_and_payload_verified() -> None:
     assert raw["semanticHash"] == validation.EXPECTED_T010B1_SEMANTIC_HASH
 
 
+def test_frozen_artifact_preserves_historical_pilot_when_available() -> None:
+    if not validation.ARTIFACT_PATH.is_file() or not validation.CATALOG_PATH.is_file():
+        pytest.skip("local frozen T010B1 artifact/catalog are not required Git fixtures")
+    raw = validation._load_json(validation.ARTIFACT_PATH)
+    catalog = validation._load_json(validation.CATALOG_PATH)
+    post = validation.build_postprocessed_artifact(
+        raw, catalog, validation.sha256_file(validation.ARTIFACT_PATH),
+        validation.sha256_file(validation.CATALOG_PATH))
+    pilot = post["pilot"]
+    assert pilot["selectionHash"] == "993f624f4ff87c00317747f3512687037ec053b250fee5917720d33b104ac43c"
+    assert pilot["rowCount"] == 24
+    assert pilot["captureCoverage"] == {
+        "selectedCaptureCount": 16,
+        "requiredCaptureCount": 16,
+        "allCapturesRepresented": True,
+    }
+    saved_pilot = validation.DATA_DIR / "pilot.json"
+    if saved_pilot.is_file():
+        assert pilot["rowIds"] == validation._load_json(saved_pilot)["rowIds"]
+
+
 def test_pilot_is_deterministic_has_24_rows_and_covers_all_16_captures() -> None:
     rows = _artifact()["rows"]
     first = validation.select_pilot_rows(rows)
-    second = validation.select_pilot_rows(rows)
+    second = validation.select_pilot_rows(copy.deepcopy(rows))
     assert first == second
+    assert first["rowIds"] == second["rowIds"]
+    assert first["selectionHash"] == second["selectionHash"]
+    assert first["selectedStrataCounts"] == second["selectedStrataCounts"]
     assert first["rowCount"] == 24
     assert first["captureCoverage"] == {"selectedCaptureCount": 16, "requiredCaptureCount": 16,
                                          "allCapturesRepresented": True}
@@ -150,6 +177,51 @@ def test_pilot_is_deterministic_has_24_rows_and_covers_all_16_captures() -> None
     assert first["blindHoldout"] is False
     assert first["validationKind"] == "HUMAN_LABELED_CALIBRATION_PILOT"
     assert "oracleRows" not in inspect.getsource(validation.select_pilot_rows)
+
+
+def test_pilot_selection_and_postprocessing_are_hash_seed_independent() -> None:
+    raw = _artifact()
+    catalog = _catalog()
+    script = """
+import json, sys
+from local_app.tools import trade_human_validation as validation
+raw, catalog = json.load(sys.stdin)
+post = validation.build_postprocessed_artifact(
+    raw, catalog, 'a' * 64, 'b' * 64,
+    expected_semantic_hash=raw['semanticHash'])
+result = {
+    'rowIds': post['pilot']['rowIds'],
+    'selectionHash': post['pilot']['selectionHash'],
+    'selectedStrataCounts': post['pilot']['selectedStrataCounts'],
+    'scoreQuartiles': post['pilot']['scoreQuartiles'],
+    'captureCoverage': post['pilot']['captureCoverage'],
+    'postprocessingHash': post['postprocessingHash'],
+}
+print(json.dumps(result, ensure_ascii=False, sort_keys=True, separators=(',', ':')))
+"""
+    expected = None
+    for seed in ("0", "1", "2", "7", "42", "123", "random", "random", "random", "random", "random"):
+        env = os.environ.copy()
+        env["PYTHONHASHSEED"] = seed
+        completed = subprocess.run(
+            [sys.executable, "-c", script],
+            input=json.dumps([raw, catalog], ensure_ascii=False),
+            text=True,
+            capture_output=True,
+            check=True,
+            env=env,
+        )
+        actual = completed.stdout.strip()
+        if expected is None:
+            expected = actual
+        assert actual == expected, f"pilot output changed under PYTHONHASHSEED={seed}"
+    result = json.loads(expected)
+    assert len(result["rowIds"]) == 24
+    assert result["captureCoverage"] == {
+        "selectedCaptureCount": 16,
+        "requiredCaptureCount": 16,
+        "allCapturesRepresented": True,
+    }
 
 
 def test_pilot_function_has_no_oracle_input_or_truth_join() -> None:
