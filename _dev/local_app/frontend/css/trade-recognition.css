@@ -1,0 +1,16 @@
+.trade-recognition-panel{margin:1rem 0;padding:.8rem;border:1px solid #394354;border-radius:8px;background:#111923}
+.trade-recognition-toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.trade-recognition-toolbar h3{margin:.1rem 0}.trade-recognition-toolbar p{margin:.25rem 0;color:#aeb9c8}
+.trade-recognition-result{max-height:42vh;overflow:auto;margin-top:.8rem;border-top:1px solid #394354;padding-top:.6rem}
+.trade-recognition-summary{position:sticky;top:0;z-index:1;padding:.5rem;background:#111923;border-bottom:1px solid #394354;color:#e1d3a2}
+.trade-recognition-table-wrap{max-width:100%;overflow:auto}
+.trade-recognition-table{width:100%;min-width:850px;border-collapse:collapse;font-size:.9rem}
+.trade-recognition-table th,.trade-recognition-table td{padding:.45rem .55rem;border-bottom:1px solid #303b4a;text-align:left;vertical-align:top}
+.trade-recognition-table th{position:sticky;top:2.3rem;background:#17212d;color:#d8e0e8}
+.trade-recognition-table td{white-space:pre-wrap;overflow-wrap:anywhere}
+.trade-recognition-row-status{display:inline-block;padding:.2rem .4rem;border:1px solid #8a7846;border-radius:4px;color:#e1d3a2;background:#292518}
+.trade-recognition-field-status{display:block;margin-top:.25rem;color:#aeb9c8;font-size:.78rem}
+.trade-recognition-evidence{margin:.55rem 0;color:#c1cad5}.trade-recognition-evidence ul{padding-left:1.2rem}
+.trade-recognition-actions{margin:.7rem 0}
+.trade-capture-dialog [data-action="recognize-trade"]{white-space:nowrap}
+@media(max-width:650px){.trade-recognition-toolbar{align-items:flex-start;flex-direction:column}.trade-recognition-result{max-height:38vh}.trade-recognition-table{min-width:780px}}
