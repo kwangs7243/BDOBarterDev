@@ -15,6 +15,7 @@ from .api.session import session_api
 from .api.recognition import recognition_api
 from .contracts import ContractError
 from .recognition_store import RecognitionStore, RecognitionStoreError, default_recognition_database_path
+from .services.trade_batch_runtime import TradeBatchRuntime
 from .storage import MutationConflict, RevisionConflict, Storage, default_database_path, load_catalog
 
 HOST = "127.0.0.1"
@@ -55,6 +56,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         recognition_store_error = type(error).__name__
     app.extensions["recognition_store"] = recognition_store
     app.extensions["recognition_store_error"] = recognition_store_error
+    app.extensions["trade_batch_runtime"] = TradeBatchRuntime()
     mutation_condition = threading.Condition()
     app.extensions["bdo_mutation_condition"] = mutation_condition
     app.extensions["bdo_mutation_state"] = {"active": 0, "stopping": False}

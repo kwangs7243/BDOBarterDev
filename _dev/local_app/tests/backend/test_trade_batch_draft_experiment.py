@@ -78,6 +78,17 @@ class TradeBatchDraftExperimentTests(unittest.TestCase):
             artifact = experiment.run_batch([first, second], self.lanes, self.row_parameters,
                                             self.numeric_parameters, StableReader(), "base-sha", runs=10)
         self.assertTrue(artifact["determinism"]["semanticDeterminism"])
+        stable_run_hashes = artifact["determinism"]["contractSemanticRunHashes"]
+        self.assertEqual(len(stable_run_hashes), 10)
+        self.assertEqual(len(set(stable_run_hashes)), 1)
+        self.assertEqual(artifact["contractSemanticHash"], experiment.contract_semantic_hash(artifact))
+        legacy_keys = ("task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
+                       "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism",
+                       "oracleMapping", "approval")
+        legacy_payload = {key: artifact[key] for key in legacy_keys}
+        legacy_payload["determinism"] = {key: value for key, value in artifact["determinism"].items()
+                                         if key != "contractSemanticRunHashes"}
+        self.assertEqual(artifact["semanticHash"], experiment.canonical_hash(legacy_payload))
         self.assertEqual(artifact["captureSet"]["captureCount"], 2)
         self.assertEqual(artifact["metrics"]["rows"]["candidateRows"], 6)
         for row in artifact["draftRows"]:

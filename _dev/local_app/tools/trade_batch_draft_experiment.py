@@ -336,6 +336,112 @@ def _semantic_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         for field, record in row["fields"].items()}} for row in rows]
 
 
+_CONTRACT_ROW_KEYS = ("draftId", "captureId", "batchId", "ordinal", "rowBox", "rowCropHash",
+                      "sourceRefs", "status", "automationDecision")
+_CONTRACT_FIELD_KEYS = ("rawText", "normalizedText", "rawNumericCandidate", "value", "status",
+                        "cropHash", "reasonCodes")
+_CONTRACT_NUMERIC_STRUCTURE_KEYS = ("readerId", "tokenBox", "plausibleTokenBoundaryContact",
+                                    "rawForegroundBoundaryContact", "rowBoundaryContact")
+_CONTRACT_FIELD_METRIC_KEYS = (
+    "rowsTotal", "geometryValid", "ocrAttempted", "ocrNonEmpty", "ocrEmpty", "ocrError",
+    "boundaryContact", "numericStrictCandidate", "geometryAbstain", "geometryEligible",
+    "plausibleTokenBoundaryContact", "strictIntegerRawCandidate", "empty", "invalidToken", "abstain",
+    "secondaryLineRiskCount", "bottomBandForegroundHighCount", "rawTextContainsParleyMarkerCount",
+)
+_CONTRACT_ROW_METRIC_KEYS = (
+    "captureCount", "candidateRows", "completeGeometryRows", "clippedRows", "sixFieldDraftRows",
+    "rowsWithAllTextRawCandidates", "rowsWithAllNumericRawCandidates", "rowsWithAllSixRawCandidates",
+)
+
+
+def _contract_row(row: dict[str, Any]) -> dict[str, Any]:
+    stable = {key: row[key] for key in _CONTRACT_ROW_KEYS if key in row}
+    fields: dict[str, Any] = {}
+    for field, record in row.get("fields", {}).items():
+        stable_field = {key: record[key] for key in _CONTRACT_FIELD_KEYS if key in record}
+        evidence = record.get("readerEvidence", {})
+        geometry = evidence.get("geometry", {})
+        stable_evidence: dict[str, Any] = {}
+        if geometry:
+            stable_evidence["geometry"] = {key: geometry[key] for key in ("valid", "box", "rowClipped")
+                                            if key in geometry}
+        if field in NUMERIC_FIELDS:
+            if "rawNumericParseEvidence" in evidence:
+                stable_evidence["rawNumericParseEvidence"] = evidence["rawNumericParseEvidence"]
+            numeric = evidence.get("numericStructure", {})
+            stable_evidence["numericStructure"] = {
+                key: numeric[key] for key in _CONTRACT_NUMERIC_STRUCTURE_KEYS if key in numeric
+            }
+        if stable_evidence:
+            stable_field["readerEvidence"] = stable_evidence
+        fields[field] = stable_field
+    stable["fields"] = fields
+    return stable
+
+
+def build_contract_semantic_projection(artifact: dict[str, Any]) -> dict[str, Any]:
+    """Project stable recognition semantics; diagnostic visuals and runtime timing are excluded."""
+    capture_set = artifact.get("captureSet", {})
+    captures = capture_set.get("captures", [])
+    capture_identity_keys = ("captureId", "batchId", "captureOrdinal", "imageHash", "rowCount")
+    row_detector = artifact.get("rowDetector", {})
+    field_geometry = artifact.get("fieldGeometry", {})
+    runtime = artifact.get("ocrRuntime", {})
+    metrics = artifact.get("metrics", {})
+    determinism = artifact.get("determinism", {})
+    return {
+        "task": artifact.get("task"),
+        "status": artifact.get("status"),
+        "captureSet": {
+            "captureCount": capture_set.get("captureCount"),
+            "captureSetSha256": capture_set.get("captureSetSha256"),
+            "rowDetector": capture_set.get("rowDetector"),
+            "captures": [{key: item[key] for key in capture_identity_keys if key in item} for item in captures],
+        },
+        "batchContract": artifact.get("batchContract", {}),
+        "rowDetector": {key: row_detector[key] for key in (
+            "id", "parameters", "oracleUsed", "rowCountIsOptimizationTarget", "frozenRowCountRegression"
+        ) if key in row_detector},
+        "fieldGeometry": {key: field_geometry[key] for key in (
+            "selectedFieldLanes", "numericReader", "frozenLaneSources", "numericGeometrySource", "selectedCandidates"
+        ) if key in field_geometry},
+        "ocrRuntime": {key: runtime[key] for key in (
+            "framework", "package", "model", "engine", "onnxruntime", "device", "modelHash",
+            "remoteOcrRequests", "externalImageUpload"
+        ) if key in runtime},
+        "draftRows": [_contract_row(row) for row in artifact.get("draftRows", [])],
+        "metrics": {
+            "rows": {key: metrics.get("rows", {})[key] for key in _CONTRACT_ROW_METRIC_KEYS
+                     if key in metrics.get("rows", {})},
+            "fields": {field: {key: metrics.get("fields", {}).get(field, {})[key]
+                                for key in _CONTRACT_FIELD_METRIC_KEYS
+                                if key in metrics.get("fields", {}).get(field, {})}
+                       for field in FIELDS if field in metrics.get("fields", {})},
+        },
+        "determinism": {key: determinism[key] for key in (
+            "runs", "semanticDeterminism", "rawScoreDeterminism", "semanticFieldsCompared"
+        ) if key in determinism},
+        "oracleMapping": artifact.get("oracleMapping", {}),
+        "approval": artifact.get("approval", {}),
+    }
+
+
+def contract_semantic_hash(artifact: dict[str, Any]) -> str:
+    """Hash stable recognition contract fields, independent of diagnostic visuals/timing."""
+    return canonical_hash(build_contract_semantic_projection(artifact))
+
+
+def _legacy_semantic_hash(artifact: dict[str, Any]) -> str:
+    """Preserve the historical full-representation semanticHash payload and field ordering."""
+    keys = ("task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
+            "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism", "oracleMapping", "approval")
+    legacy = {key: artifact[key] for key in keys}
+    if "contractSemanticRunHashes" in legacy["determinism"]:
+        legacy["determinism"] = {key: value for key, value in legacy["determinism"].items()
+                                  if key != "contractSemanticRunHashes"}
+    return canonical_hash(legacy)
+
+
 def _model_hashes(model_dir: Path) -> dict[str, Any]:
     names = ("inference.onnx", "inference.yml")
     files = {name: sha256_file(model_dir / name) for name in names}
@@ -343,14 +449,9 @@ def _model_hashes(model_dir: Path) -> dict[str, Any]:
     return {"files": files, "logicalBundleSha256": logical}
 
 
-def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str, float]],
-              row_parameters: dict[str, Any], numeric_parameters: dict[str, Any], reader: Any,
-              base_commit: str, capture_evidence: list[dict[str, Any]] | None = None,
-              runs: int = 10, model_hashes: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Create raw six-field drafts. No catalog or oracle parameter is accepted."""
-    if runs != 10:
-        raise ValueError("T010P3A determinism requires exactly 10 semantic runs")
-    detected_rows, detected_captures = _row_records(captures, row_parameters)
+def _build_drafts_from_detected_rows(detected_rows: list[dict[str, Any]],
+                                     selected_lanes: dict[str, dict[str, float]],
+                                     numeric_parameters: dict[str, Any], reader: Any) -> list[dict[str, Any]]:
     drafts: list[dict[str, Any]] = []
     for item in detected_rows:
         lane_boxes, lane_errors = _lane_boxes(item["rowCrop"].width, item["rowCrop"].height, selected_lanes)
@@ -373,33 +474,39 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
                        "ordinal": len(drafts) + 1, "rowBox": item["rowBox"], "sourceRefs": refs,
                        "rowCropHash": item["rowCropHash"], "fields": fields,
                        "status": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"})
+    return drafts
+
+
+def build_batch_drafts_once(captures: list[dict[str, Any]],
+                            selected_lanes: dict[str, dict[str, float]],
+                            row_parameters: dict[str, Any],
+                            numeric_parameters: dict[str, Any], reader: Any) -> dict[str, Any]:
+    """Run selected-geometry row and six-field reading once, without sweeps or oracle input."""
+    detected_rows, capture_evidence = _row_records(captures, row_parameters)
+    return {"captureEvidence": capture_evidence,
+            "draftRows": _build_drafts_from_detected_rows(detected_rows, selected_lanes,
+                                                            numeric_parameters, reader)}
+
+
+def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str, float]],
+              row_parameters: dict[str, Any], numeric_parameters: dict[str, Any], reader: Any,
+              base_commit: str, capture_evidence: list[dict[str, Any]] | None = None,
+              runs: int = 10, model_hashes: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Create raw six-field drafts. No catalog or oracle parameter is accepted."""
+    if runs != 10:
+        raise ValueError("T010P3A determinism requires exactly 10 semantic runs")
+    detected_rows, detected_captures = _row_records(captures, row_parameters)
+    drafts = _build_drafts_from_detected_rows(detected_rows, selected_lanes, numeric_parameters, reader)
     semantic_signature = canonical_hash(_semantic_rows(drafts))
     repeated_signatures = [semantic_signature]
+    repeated_contract_signatures = [canonical_hash([_contract_row(row) for row in drafts])]
     repeated_score_hashes = [canonical_hash([[row["fields"][field]["ocrScore"] for field in FIELDS]
                                              for row in drafts])]
     # The initial drafts are run 1; repeat the exact selected crops 9 more times.
     for _ in range(1, runs):
-        repeat_rows = []
-        for item in detected_rows:
-            lanes, errors = _lane_boxes(item["rowCrop"].width, item["rowCrop"].height, selected_lanes)
-            fields = {}
-            for field in FIELDS:
-                lane = lanes.get(field, {})
-                geometry = {"valid": bool(lane.get("valid")), "box": lane.get("box", {}).get("normalized"),
-                            "laneErrors": errors, "rowClipped": item["clipped"]}
-                crop = None
-                if lane.get("valid"):
-                    box = lane["box"]
-                    crop = item["rowCrop"].crop((box["x"], box["y"], box["x"] + box["width"], box["y"] + box["height"]))
-                fields[field] = _field_record(field, crop, geometry, item["clipped"], numeric_parameters, reader)
-            repeat_rows.append({"draftId": f"{item['capture']['captureId']}:draft-row-{item['rowOrdinal']:02d}",
-                                "captureId": item["capture"]["captureId"], "batchId": item["capture"].get("batchId"),
-                                "ordinal": len(repeat_rows) + 1, "rowBox": item["rowBox"],
-                                "sourceRefs": [{"captureId": item["capture"]["captureId"], "captureOrdinal": item["captureOrdinal"],
-                                                "rowOrdinal": item["rowOrdinal"], "rowCropHash": item["rowCropHash"], "rowBox": item["rowBox"]}],
-                                "rowCropHash": item["rowCropHash"], "fields": fields,
-                                "status": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"})
+        repeat_rows = _build_drafts_from_detected_rows(detected_rows, selected_lanes, numeric_parameters, reader)
         repeated_signatures.append(canonical_hash(_semantic_rows(repeat_rows)))
+        repeated_contract_signatures.append(canonical_hash([_contract_row(row) for row in repeat_rows]))
         repeated_score_hashes.append(canonical_hash([[row["fields"][field]["ocrScore"] for field in FIELDS]
                                                      for row in repeat_rows]))
     field_metrics = {}
@@ -444,6 +551,8 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
     semantic_determinism = len(set(repeated_signatures)) == 1
     if not semantic_determinism:
         raise RuntimeError("10-run selected-geometry semantic output changed")
+    if len(set(repeated_contract_signatures)) != 1:
+        raise RuntimeError("10-run stable contract output changed")
     metrics = {"fields": field_metrics,
                "rows": {"captureCount": len(captures), "candidateRows": len(drafts),
                         "completeGeometryRows": complete_geometry, "clippedRows": clipped_rows,
@@ -486,10 +595,9 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
         "limitations": ["Raw OCR and geometry candidates are unverified; screenshot-row to oracle mapping remains unresolved.",
                         "No cross-capture fuzzy merge, canonicalization, defaults, importer, API, frontend, session or database access."],
     }
-    result["semanticHash"] = canonical_hash({key: result[key] for key in ("task", "baseCommit", "batchId", "captureSet",
-                                                                          "batchContract", "rowDetector", "fieldGeometry",
-                                                                          "ocrRuntime", "draftRows", "metrics", "determinism",
-                                                                          "oracleMapping", "approval")})
+    result["semanticHash"] = _legacy_semantic_hash(result)
+    result["determinism"]["contractSemanticRunHashes"] = repeated_contract_signatures
+    result["contractSemanticHash"] = contract_semantic_hash(result)
     return result
 
 
@@ -649,9 +757,8 @@ def main() -> int:
         artifact["metrics"]["fields"]["fromItem"]["bottomBandForegroundHighCount"] = from_comparison.get("bottomBandForegroundHighCount", 0)
         artifact["metrics"]["fields"]["fromItem"]["contaminationSuspected"] = from_comparison.get("secondaryLineRiskCount", 0)
         artifact["metrics"]["fields"]["fromItem"]["rawTextContainsParleyMarkerCount"] = from_comparison.get("rawTextContainsParleyMarkerCount", 0)
-        artifact["semanticHash"] = canonical_hash({key: artifact[key] for key in (
-            "task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
-            "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism", "oracleMapping", "approval")})
+        artifact["semanticHash"] = _legacy_semantic_hash(artifact)
+        artifact["contractSemanticHash"] = contract_semantic_hash(artifact)
         args.out.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"semanticHash": artifact["semanticHash"], "comparisonMetrics": comparison,
                           "contactSheet": str(args.contact_sheet)}, ensure_ascii=False, indent=2))
@@ -673,9 +780,7 @@ def main() -> int:
         "matched": observed_counts == frozen_counts and sum(observed_counts) == 80}
     if not artifact["rowDetector"]["frozenRowCountRegression"]["matched"]:
         artifact["status"] = "T010P3A_BLOCKED_REQUIRES_SOL"
-    artifact["semanticHash"] = canonical_hash({key: artifact[key] for key in (
-        "task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
-        "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism", "oracleMapping", "approval")})
+    artifact["semanticHash"] = _legacy_semantic_hash(artifact)
     artifact["ocrRuntime"]["initializationMs"] = round(init_ms, 3)
     comparison = write_contact_sheet(args.contact_sheet, rows, selected, lanes, numeric_parameters, reader)
     artifact["fieldGeometry"]["comparisonMetrics"] = comparison
@@ -684,12 +789,12 @@ def main() -> int:
     artifact["metrics"]["fields"]["fromItem"]["bottomBandForegroundHighCount"] = from_comparison.get("bottomBandForegroundHighCount", 0)
     artifact["metrics"]["fields"]["fromItem"]["contaminationSuspected"] = from_comparison.get("secondaryLineRiskCount", 0)
     artifact["metrics"]["fields"]["fromItem"]["rawTextContainsParleyMarkerCount"] = from_comparison.get("rawTextContainsParleyMarkerCount", 0)
-    artifact["semanticHash"] = canonical_hash({key: artifact[key] for key in (
-        "task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
-        "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism", "oracleMapping", "approval")})
+    artifact["semanticHash"] = _legacy_semantic_hash(artifact)
+    artifact["contractSemanticHash"] = contract_semantic_hash(artifact)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(artifact, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"status": artifact["status"], "semanticHash": artifact["semanticHash"],
+                      "contractSemanticHash": artifact["contractSemanticHash"],
                       "captureCount": artifact["captureSet"]["captureCount"],
                       "metrics": artifact["metrics"], "determinism": artifact["determinism"],
                       "out": str(args.out), "contactSheet": str(args.contact_sheet)}, ensure_ascii=False, indent=2))
