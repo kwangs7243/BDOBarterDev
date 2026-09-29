@@ -1,0 +1,733 @@
+{
+  "version": 1,
+  "task": "T010P3A",
+  "baseCommit": "b2a9ada6440734fdd6cad48a9508a00aa1601bcb",
+  "rowDetector": "repeated-horizontal-separator-pair-v1",
+  "rowParameters": {
+    "separatorPixelDelta": 24,
+    "separatorSupportThreshold": 0.55,
+    "rowHeightMin": 55,
+    "rowHeightMax": 90
+  },
+  "baseLanes": {
+    "island": {
+      "x0": 0.055,
+      "x1": 0.255,
+      "y0": 0.12,
+      "y1": 0.45
+    },
+    "fromItem": {
+      "x0": 0.34,
+      "x1": 0.63,
+      "y0": 0.12,
+      "y1": 0.9
+    },
+    "reqAmount": {
+      "x0": 0.285,
+      "x1": 0.34,
+      "y0": 0.4,
+      "y1": 0.95
+    },
+    "toItem": {
+      "x0": 0.71,
+      "x1": 0.95,
+      "y0": 0.12,
+      "y1": 0.9
+    },
+    "count": {
+      "x0": 0.19,
+      "x1": 0.28,
+      "y0": 0.45,
+      "y1": 0.9
+    },
+    "yield": {
+      "x0": 0.66,
+      "x1": 0.71,
+      "y0": 0.35,
+      "y1": 0.95
+    }
+  },
+  "fieldCandidateSweeps": {
+    "island": [
+      "base",
+      "shrink-right-010",
+      "shrink-right-020",
+      "shrink-right-030"
+    ],
+    "fromItem": [
+      "base",
+      "name-line-y1-065",
+      "name-line-y1-060",
+      "name-line-y1-055",
+      "name-line-y1-050",
+      "name-line-y1-045"
+    ],
+    "toItem": [
+      "base",
+      "shrink-right-010",
+      "shrink-right-020",
+      "shrink-right-030",
+      "shrink-right-040"
+    ],
+    "count": {
+      "leftShift": [
+        0,
+        0.02,
+        0.04
+      ],
+      "rightShrink": [
+        0,
+        0.02,
+        0.04
+      ]
+    },
+    "reqAmount": "T010A2_FROZEN",
+    "yield": "T010A2_FROZEN"
+  },
+  "selectedFieldLanes": {
+    "island": {
+      "selectedCandidate": "shrink-right-020",
+      "lane": {
+        "x0": 0.055,
+        "x1": 0.23500000000000001,
+        "y0": 0.12,
+        "y1": 0.45
+      },
+      "approval": "NOT_PRODUCTION_APPROVED"
+    },
+    "toItem": {
+      "selectedCandidate": "shrink-right-020",
+      "lane": {
+        "x0": 0.71,
+        "x1": 0.9299999999999999,
+        "y0": 0.12,
+        "y1": 0.9
+      },
+      "approval": "NOT_PRODUCTION_APPROVED"
+    },
+    "fromItem": {
+      "selectedCandidate": "name-line-y1-055",
+      "lane": {
+        "x0": 0.34,
+        "x1": 0.63,
+        "y0": 0.12,
+        "y1": 0.55
+      },
+      "approval": "NOT_PRODUCTION_APPROVED"
+    },
+    "count": {
+      "selectedCandidate": "shift-left-020-shrink-right-000",
+      "lane": {
+        "x0": 0.165,
+        "x1": 0.28,
+        "y0": 0.45,
+        "y1": 0.9
+      },
+      "approval": "NOT_PRODUCTION_APPROVED"
+    },
+    "reqAmount": {
+      "source": "T010A2_FROZEN",
+      "lane": {
+        "x0": 0.285,
+        "x1": 0.34,
+        "y0": 0.41000000000000003,
+        "y1": 0.94
+      },
+      "approval": "NOT_PRODUCTION_APPROVED"
+    },
+    "yield": {
+      "source": "T010A2_FROZEN",
+      "lane": {
+        "x0": 0.66,
+        "x1": 0.71,
+        "y0": 0.33999999999999997,
+        "y1": 0.95
+      },
+      "approval": "NOT_PRODUCTION_APPROVED"
+    }
+  },
+  "selectionBasis": "finite image structure and raw OCR nonempty evidence only; catalog/oracle/human-label values unused",
+  "ocrCandidate": {
+    "candidateId": "paddle-korean-ppocrv5-mobile-onnx-cpu-v1",
+    "framework": "PaddleOCR",
+    "package": "paddleocr==3.7.0",
+    "model": "korean_PP-OCRv5_mobile_rec",
+    "engine": "onnxruntime",
+    "onnxruntimePackage": "onnxruntime==1.30.0",
+    "device": "cpu",
+    "runs": 10
+  },
+  "frozenSources": {
+    "t010aSemanticHash": "ac20f39823f498bcdd7663fa030a42e19742b167fb622bf1e75e13753fd2d83a",
+    "t010a2SemanticHash": "28c7233d5cfddc62a9bdbf8a27acd7feb15878d200b463286d85ea97b01bb925",
+    "t010b1SemanticHash": "ff73a677a7712628741606d1282557c8e6984673aa2b34d8535386cd6a434eab"
+  },
+  "oracleUsed": false,
+  "approved": false,
+  "production": false,
+  "engineSelectedForProduction": false,
+  "importerIntegration": false,
+  "HIGH": 0,
+  "fieldCandidateMeasurements": {
+    "island": [
+      {
+        "candidateId": "base",
+        "lane": {
+          "x0": 0.055,
+          "x1": 0.255,
+          "y0": 0.12,
+          "y1": 0.45
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 3639,
+        "rightEdgeForegroundRatioMean": 0.12018009600663442,
+        "bottomBandForegroundRatioMean": 0.3206304836836719,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.0,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-010",
+        "lane": {
+          "x0": 0.055,
+          "x1": 0.245,
+          "y0": 0.12,
+          "y1": 0.45
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 484,
+        "rightEdgeForegroundRatioMean": 0.017866639476918026,
+        "bottomBandForegroundRatioMean": 0.35108677226230717,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8643041553970986,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 3155,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-020",
+        "lane": {
+          "x0": 0.055,
+          "x1": 0.23500000000000001,
+          "y0": 0.12,
+          "y1": 0.45
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.3574716095106435,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8494283255470862,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 3639,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-030",
+        "lane": {
+          "x0": 0.055,
+          "x1": 0.225,
+          "y0": 0.12,
+          "y1": 0.45
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.3574716095106435,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8494283255470862,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 3639,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      }
+    ],
+    "toItem": [
+      {
+        "candidateId": "base",
+        "lane": {
+          "x0": 0.71,
+          "x1": 0.95,
+          "y0": 0.12,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 4701,
+        "rightEdgeForegroundRatioMean": 0.513961212294294,
+        "bottomBandForegroundRatioMean": 0.00042352371732817036,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.0,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-010",
+        "lane": {
+          "x0": 0.71,
+          "x1": 0.94,
+          "y0": 0.12,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 440,
+        "rightEdgeForegroundRatioMean": 0.5405725766595093,
+        "bottomBandForegroundRatioMean": 0.0004510309278350515,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8274613462722237,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 4261,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-020",
+        "lane": {
+          "x0": 0.71,
+          "x1": 0.9299999999999999,
+          "y0": 0.12,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 30,
+        "rightEdgeForegroundRatioMean": 0.00038819875776397513,
+        "bottomBandForegroundRatioMean": 0.0004528985507246377,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8115291306079588,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 4671,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-030",
+        "lane": {
+          "x0": 0.71,
+          "x1": 0.9199999999999999,
+          "y0": 0.12,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 98,
+        "rightEdgeForegroundRatioMean": 0.0014153756629463573,
+        "bottomBandForegroundRatioMean": 0.00046942060085836915,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8102980048520838,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 4603,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shrink-right-040",
+        "lane": {
+          "x0": 0.71,
+          "x1": 0.9099999999999999,
+          "y0": 0.12,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 200,
+        "rightEdgeForegroundRatioMean": 0.003168631811091059,
+        "bottomBandForegroundRatioMean": 0.0004949095022624434,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 0.8058080168012456,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 4501,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      }
+    ],
+    "fromItem": [
+      {
+        "candidateId": "base",
+        "lane": {
+          "x0": 0.34,
+          "x1": 0.63,
+          "y0": 0.12,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.38855103724033735,
+        "fromItemNameLineForegroundPixels": 40826,
+        "foregroundRetentionAgainstBase": 1.0,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": 1.0
+      },
+      {
+        "candidateId": "name-line-y1-065",
+        "lane": {
+          "x0": 0.34,
+          "x1": 0.63,
+          "y0": 0.12,
+          "y1": 0.65
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.47026235985839177,
+        "fromItemNameLineForegroundPixels": 40826,
+        "foregroundRetentionAgainstBase": 0.743093397187007,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": 1.0
+      },
+      {
+        "candidateId": "name-line-y1-060",
+        "lane": {
+          "x0": 0.34,
+          "x1": 0.63,
+          "y0": 0.12,
+          "y1": 0.6
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.37771278213520404,
+        "fromItemNameLineForegroundPixels": 40826,
+        "foregroundRetentionAgainstBase": 0.6167101184948137,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": 1.0
+      },
+      {
+        "candidateId": "name-line-y1-055",
+        "lane": {
+          "x0": 0.34,
+          "x1": 0.63,
+          "y0": 0.12,
+          "y1": 0.55
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.09303803449951367,
+        "fromItemNameLineForegroundPixels": 40826,
+        "foregroundRetentionAgainstBase": 0.45681485045484554,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": 1.0
+      },
+      {
+        "candidateId": "name-line-y1-050",
+        "lane": {
+          "x0": 0.34,
+          "x1": 0.63,
+          "y0": 0.12,
+          "y1": 0.5
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.20728917539936956,
+        "fromItemNameLineForegroundPixels": 40826,
+        "foregroundRetentionAgainstBase": 0.45681485045484554,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": 1.0
+      },
+      {
+        "candidateId": "name-line-y1-045",
+        "lane": {
+          "x0": 0.34,
+          "x1": 0.63,
+          "y0": 0.12,
+          "y1": 0.45
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.4171940466406902,
+        "fromItemNameLineForegroundPixels": 40423,
+        "foregroundRetentionAgainstBase": 0.4523055577312551,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": 0.9901288394650468
+      }
+    ],
+    "count": [
+      {
+        "candidateId": "shift-left-000-shrink-right-000",
+        "lane": {
+          "x0": 0.185,
+          "x1": 0.28,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.02642272084979007,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.0,
+        "plausibleTokenBoundaryContactCount": 54,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-000-shrink-right-020",
+        "lane": {
+          "x0": 0.185,
+          "x1": 0.26,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.02642272084979007,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.0,
+        "plausibleTokenBoundaryContactCount": 54,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-000-shrink-right-040",
+        "lane": {
+          "x0": 0.185,
+          "x1": 0.24000000000000002,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.02642272084979007,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.0,
+        "plausibleTokenBoundaryContactCount": 54,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-020-shrink-right-000",
+        "lane": {
+          "x0": 0.165,
+          "x1": 0.28,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 125,
+        "rightEdgeForegroundRatioMean": 0.011405109489051095,
+        "bottomBandForegroundRatioMean": 0.022902048639591627,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.2418780129951792,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": -125,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-020-shrink-right-020",
+        "lane": {
+          "x0": 0.165,
+          "x1": 0.26,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.02092652074595242,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.2287780339551457,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-020-shrink-right-040",
+        "lane": {
+          "x0": 0.165,
+          "x1": 0.24000000000000002,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.02092652074595242,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.2287780339551457,
+        "plausibleTokenBoundaryContactCount": 0,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-040-shrink-right-000",
+        "lane": {
+          "x0": 0.145,
+          "x1": 0.28,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 125,
+        "rightEdgeForegroundRatioMean": 0.007370283018867925,
+        "bottomBandForegroundRatioMean": 0.03242915419427494,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.922657723747642,
+        "plausibleTokenBoundaryContactCount": 10,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": -125,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-040-shrink-right-020",
+        "lane": {
+          "x0": 0.145,
+          "x1": 0.26,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.0312309905377317,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.9095577447076084,
+        "plausibleTokenBoundaryContactCount": 10,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      },
+      {
+        "candidateId": "shift-left-040-shrink-right-040",
+        "lane": {
+          "x0": 0.145,
+          "x1": 0.24000000000000002,
+          "y0": 0.45,
+          "y1": 0.9
+        },
+        "rowsTotal": 80,
+        "geometryValid": 80,
+        "ocrNonEmpty": 80,
+        "ocrNonEmptyRate": 1.0,
+        "rightEdgeForegroundPixels": 0,
+        "rightEdgeForegroundRatioMean": 0.0,
+        "bottomBandForegroundRatioMean": 0.0312309905377317,
+        "fromItemNameLineForegroundPixels": 0,
+        "foregroundRetentionAgainstBase": 1.9095577447076084,
+        "plausibleTokenBoundaryContactCount": 10,
+        "strictIntegerRawCandidate": 0,
+        "ocrErrors": 0,
+        "rightEdgeReductionAgainstBase": 0,
+        "fromItemNameLineForegroundRetentionAgainstBase": null
+      }
+    ]
+  }
+}
