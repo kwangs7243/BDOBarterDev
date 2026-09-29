@@ -742,7 +742,7 @@ HTML_PAGE = r"""<!doctype html>
 <div id="pilot-complete" class="complete" hidden>검증 완료 — 24개 pilot row의 모든 field action이 저장되었습니다. 실제 label 결과는 요약 파일에서 확인할 수 있습니다.</div><div id="error" class="error" role="alert"></div>
 <section class="layout"><div class="panel"><h2>원본 row</h2><div id="row-meta" class="meta"></div><img id="row-crop" class="row-image" alt="선택한 row crop"><details><summary>진단 정보</summary><pre id="diagnostics"></pre></details></div><div id="fields" class="fields"></div></section></main>
 <script>
-const FIELDS=['island','fromItem','reqAmount','toItem','count','yield'];const LABELS={island:'섬',fromItem:'교환 전 물품',reqAmount:'요구 수량',toItem:'교환 후 물품',count:'보유 수량',yield:'결과 수량'};let state=null,index=0;
+const FIELDS=['island','fromItem','reqAmount','toItem','count','yield'];const LABELS={island:'섬',fromItem:'교환 전 물품',reqAmount:'요구 수량',toItem:'교환 후 물품',count:'남은 교환 횟수',yield:'결과 수량'};let state=null,index=0;
 const $=s=>document.querySelector(s);const esc=s=>encodeURIComponent(s);const text=(parent,tag,value,cls='')=>{const e=document.createElement(tag);e.textContent=value??'';if(cls)e.className=cls;parent.append(e);return e};
 async function load(){const r=await fetch('/api/state');if(!r.ok)throw new Error('검수 상태를 불러오지 못했습니다.');state=await r.json();index=Math.max(0,Math.min(state.currentIndex,state.rows.length-1));render()}
 function button(label,action,rowId,field,value=null){const b=document.createElement('button');b.textContent=label;b.dataset.action=action;b.dataset.field=field;b.addEventListener('click',()=>save(rowId,field,action,value));return b}
