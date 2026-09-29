@@ -428,12 +428,26 @@ def _legacy_feedback_replay(path: Path) -> dict[str, Any]:
 
 
 def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: dict[str, Any] | None = None,
-                  runs: int = 10, feedback_jsonl: str | Path | None = None) -> dict[str, Any]:
+                  runs: int = 10, feedback_jsonl: str | Path | None = None,
+                  selection: str | Path | None = None) -> dict[str, Any]:
     """Run R0 with fixture images; oracle truth is opened only after inference."""
     if runs < 1:
         raise ValueError("runs must be at least 1")
+    if engine == "trade-candidate":
+        if selection is None:
+            raise ValueError("trade-candidate requires --selection with the T010A experiment spec")
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from local_app.tools.trade_recognition_experiments import run_trade_candidate
+        if isinstance(manifest, dict):
+            raise ValueError("manifest must be a path so Trade source hashes can be verified")
+        result = run_trade_candidate(manifest, selection, runs)
+        result["engine"] = engine
+        result["fixtureCount"] = result["captureCount"]
+        result["engineSemantics"] = "T010A row/lane and numeric component evidence only; no OCR, oracle mapping, or recognition decision"
+        return result
     if engine not in {"warehouse-current", "warehouse-v2"}:
-        raise ValueError(f"engine {engine!r} is unavailable in T001; no candidate result was fabricated")
+        raise ValueError(f"engine {engine!r} is unavailable; no candidate result was fabricated")
     manifest_path = Path(manifest) if not isinstance(manifest, dict) else None
     loaded = load_json(manifest_path) if manifest_path else manifest
     if manifest_path is None:
@@ -629,18 +643,25 @@ def main() -> int:
     args = parser.parse_args()
     try:
         result = run_benchmark(args.engine, args.manifest,
-                               load_json(args.policy) if args.policy else None, args.runs, args.feedback_jsonl)
+                               load_json(args.policy) if args.policy else None, args.runs, args.feedback_jsonl,
+                               args.selection)
     except (FileNotFoundError, ValueError, RuntimeError) as error:
         print(json.dumps({"status": "BLOCKED", "reason": str(error)}, ensure_ascii=False, indent=2), file=sys.stderr)
         return 2
     args.out.parent.mkdir(parents=True, exist_ok=True)
     payload = (json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     args.out.write_bytes(payload)
-    print(json.dumps({"status": result["status"], "engine": result["engine"], "fixtureCount": result["fixtureCount"],
-                      "itemMetrics": result["itemMetrics"], "quantityMetrics": result["quantityMetrics"],
-                      "decisionMetrics": result["decisionMetrics"], "captureMetrics": result["captureMetrics"],
-                      "legacyFeedbackReplay": result["legacyFeedbackReplay"],
-                      "out": str(args.out)}, ensure_ascii=False, indent=2))
+    summary = {"status": result["status"], "engine": result["engine"], "fixtureCount": result["fixtureCount"],
+               "out": str(args.out)}
+    if result["engine"] == "trade-candidate":
+        summary.update({"rowDetection": {key: result["rowDetection"].get(key) for key in
+                                         ("capturesProcessed", "candidateRows", "completeRows", "clippedRows", "rowsPerCapture")},
+                        "numericEvidence": result["numericEvidence"], "semanticHash": result["semanticHash"]})
+    else:
+        summary.update({"itemMetrics": result["itemMetrics"], "quantityMetrics": result["quantityMetrics"],
+                        "decisionMetrics": result["decisionMetrics"], "captureMetrics": result["captureMetrics"],
+                        "legacyFeedbackReplay": result["legacyFeedbackReplay"]})
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
 
