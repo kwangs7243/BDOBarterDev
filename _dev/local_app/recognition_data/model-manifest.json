@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "task": "SPEC-008/T006A",
+  "task": "SPEC-008/T006B_CANDIDATE_MEASUREMENT",
   "engine": {
     "id": "warehouse-r0-template-reference-bundle",
     "version": "frozen-r0",
@@ -392,6 +392,120 @@
   "automationEligible": false,
   "notes": [
     "R0 is a deterministic template/reference bundle, not an ML model.",
-    "T006A shadow evidence only; no production recognition activation."
-  ]
+    "T006A shadow evidence only; no production recognition activation.",
+    "T006B measures R1/Q1 candidate evidence only; thresholds, readers, strata, HIGH, and production activation remain unapproved."
+  ],
+  "candidateMeasurements": {
+    "stage": "T006B_CANDIDATE_MEASUREMENT",
+    "r0ResourcesPreserved": true,
+    "R1": {
+      "implementationSha256": "13a67f152b23a52027c2c8c2521b25ceb89c6bbdac1c5a400efd783f9c80ce92",
+      "implementationFile": "local_app/backend/services/warehouse_candidate_readers.py",
+      "parameters": {
+        "version": 1,
+        "roi": {
+          "referenceCrop": [
+            1,
+            1,
+            42,
+            26
+          ],
+          "t005a1IconRegion": "icon"
+        },
+        "resizeKernel": "lanczos",
+        "grayscale": "Pillow-L",
+        "ncc": "mean-centered dot / l2 norms; epsilon=1e-12",
+        "brightnessNormalization": "per-image mean-center and variance-normalize within item ROI",
+        "colorEvidence": "RGB mean-absolute and RMS distance divided by 255",
+        "ranking": "grayscale-NCC descending; color is separate evidence only"
+      },
+      "parameterSha256": "c8191fcc1281ab5ddfc3dddecfed907e8872e8169509a057648d8ffd85de57b2",
+      "usesQuantityRoi": false,
+      "pHashStatus": "NOT_IMPLEMENTED_WITH_REASON",
+      "pHashImplementationSha256": null
+    },
+    "Q1": {
+      "implementationSha256": "13a67f152b23a52027c2c8c2521b25ceb89c6bbdac1c5a400efd783f9c80ce92",
+      "implementationFile": "local_app/backend/services/warehouse_candidate_readers.py",
+      "parameters": {
+        "version": 1,
+        "quantityRoiCanonical": [
+          1,
+          29,
+          44,
+          44
+        ],
+        "rawRoiProjection": "full lower slot band; scaleX/scaleY from T005A1 geometry",
+        "whiteMask": {
+          "maxRgbGreaterThan": 0.62,
+          "maxMinusMinLessThan": 0.22
+        },
+        "connectivity": 8,
+        "minimumComponentPixels": 2,
+        "glyphNormalization": {
+          "canvas": [
+            8,
+            12
+          ],
+          "aspectPreserved": true,
+          "paddingPixels": 1,
+          "resizeKernel": "nearest"
+        },
+        "templateDistance": "binary-mask RMS; best distance per distinct digit label",
+        "minimumDistinctDigitMargin": 0.015,
+        "minimumSafetyMarginPixels": 1,
+        "maximumDigitComponents": 4,
+        "maximumSingleComponentWidth": 8,
+        "maximumTrailingMarginPixels": 8,
+        "maximumBestTemplateDistance": 0.38,
+        "splitSuspect": {
+          "maxNeighborGap": 1,
+          "minimumVerticalOverlapRatio": 0.75,
+          "interpretation": "candidate abstention signal; adjacent legitimate digits may also match"
+        },
+        "policy": "candidate measurement only; all thresholds unapproved"
+      },
+      "parameterSha256": "960d8835a504ddf3ef49e06667a44ae41a40a7d06d173d0833ef9fa698ed73e3",
+      "templateSha256": "2c247ba93a49c65fff739ebc92d836bd752bf7e7afe3fe45941bf7b6b977a302",
+      "templateCoverage": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "perDigitTemplateCount": {
+        "0": 4,
+        "1": 12,
+        "2": 18,
+        "3": 15,
+        "4": 14,
+        "5": 10,
+        "6": 4,
+        "7": 5,
+        "8": 6,
+        "9": 4
+      }
+    },
+    "measurementCodeSha256": "8b89378d44c095c61ae3f781728904aaaaebe7e833e5d6947023f3d338e872ea",
+    "datasetHashes": {
+      "fixtureManifestSha256": "96ddb32a8b78d67a036aec1d124171553e20ca62a2f69129bbf2540da8e72db5",
+      "profileSha256": "c24c9e1cdb0ff40a23d3ef6d8ed69ea7ef80be03e978bd14e5506402625ce779",
+      "anchorLogicalSha256": "a250b93ec523dfce4be30053ec5f3d53e1292048d2808f799424e85332d62706"
+    },
+    "policyHash": null,
+    "approved": false,
+    "highAuthority": false,
+    "automationEligible": false,
+    "approvedReaders": [],
+    "approvedThresholds": [],
+    "approvedStrata": [],
+    "HIGH": 0,
+    "productionRecognitionActivated": false
+  }
 }
