@@ -6,6 +6,7 @@
   <title>BDO 물교</title>
   <link rel="stylesheet" href="/assets/css/app.css">
   <link rel="stylesheet" href="/assets/css/warehouse-scan.css">
+  <link rel="stylesheet" href="/assets/css/trade-roi.css">
   <link rel="stylesheet" href="/assets/css/patch-review.css">
   <link rel="stylesheet" href="/assets/css/trade-session.css">
   <link rel="stylesheet" href="/assets/css/schedule.css">
@@ -48,10 +49,31 @@
   <dialog id="trade-capture-dialog" class="app-dialog small-dialog trade-capture-dialog" aria-labelledby="trade-capture-title" data-capture-context="trade">
     <div class="dialog-titlebar"><h2 id="trade-capture-title">물교 이미지 초안</h2><button type="button" data-close-trade-capture aria-label="닫기">×</button></div>
     <div class="dialog-body">
-      <p class="hint">이미지는 임시 초안으로만 보관합니다. OCR, 인식 완료, 물교 목록 생성은 수행하지 않습니다.</p>
+      <p class="hint">화면을 연결한 뒤 물교 목록 영역에 박스를 맞추고 스크롤하면서 필요한 만큼 반복 캡처할 수 있습니다. 캡처 이미지는 아직 인식하거나 목록에 적용하지 않습니다.</p>
+      <section class="trade-roi-panel" aria-label="물교 화면 캡처 영역">
+        <p class="capture-status" data-role="trade-preview-status" role="status" aria-live="polite">화면이 연결되지 않았습니다. 위의 ‘화면 연결’을 먼저 사용하세요.</p>
+        <div class="trade-preview-stage" data-role="trade-preview-stage">
+          <video data-role="trade-preview-video" muted autoplay playsinline aria-label="연결된 화면 미리보기"></video>
+          <div class="trade-roi-box" data-role="trade-roi" role="group" aria-label="물교 캡처 영역" hidden>
+            <button type="button" class="trade-roi-move" data-roi-move aria-label="캡처 영역 이동"></button>
+            <button type="button" class="trade-roi-handle n" data-roi-handle="n" aria-label="위쪽 크기 조절"></button>
+            <button type="button" class="trade-roi-handle s" data-roi-handle="s" aria-label="아래쪽 크기 조절"></button>
+            <button type="button" class="trade-roi-handle e" data-roi-handle="e" aria-label="오른쪽 크기 조절"></button>
+            <button type="button" class="trade-roi-handle w" data-roi-handle="w" aria-label="왼쪽 크기 조절"></button>
+            <button type="button" class="trade-roi-handle ne" data-roi-handle="ne" aria-label="오른쪽 위 크기 조절"></button>
+            <button type="button" class="trade-roi-handle nw" data-roi-handle="nw" aria-label="왼쪽 위 크기 조절"></button>
+            <button type="button" class="trade-roi-handle se" data-roi-handle="se" aria-label="오른쪽 아래 크기 조절"></button>
+            <button type="button" class="trade-roi-handle sw" data-roi-handle="sw" aria-label="왼쪽 아래 크기 조절"></button>
+          </div>
+        </div>
+        <div class="actions trade-roi-actions">
+          <button type="button" data-action="capture-trade-roi" disabled>선택 영역 캡처</button>
+          <button type="button" data-action="reset-trade-roi">영역 초기화</button>
+          <button type="button" data-action="clear-trade-queue" disabled>대기 이미지 전체 삭제</button>
+        </div>
+      </section>
       <label class="field" for="trade-capture-files">이미지 파일 선택<input id="trade-capture-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple></label>
       <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
-      <button type="button" data-screen-capture="trade" disabled>연결된 화면에서 캡처</button>
       <p class="capture-status" data-role="capture-status" role="status" aria-live="polite"></p>
       <ol class="capture-draft-list" data-role="capture-list"></ol>
       <div class="actions"><button type="button" data-close-trade-capture>닫기</button></div>

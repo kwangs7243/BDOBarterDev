@@ -103,11 +103,11 @@ try {
   const tradeRowsBefore = await evaluate("document.querySelector('#trade-list-root').textContent");
   await evaluate("document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.open"), "Trade capture context");
-  await evaluate("document.querySelector('[data-screen-capture=trade]').click()");
+  await evaluate("document.querySelector('[data-action=capture-trade-roi]').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength==='1'"), "one explicit Trade draft captured");
   const tradeState = await evaluate("JSON.stringify({label:document.querySelector('.capture-draft-item').textContent,draft:document.querySelector('.capture-draft-item [class=capture-draft-state]').textContent,rows:document.querySelector('#trade-list-root').textContent})").then(JSON.parse);
   assert.match(tradeState.label, /화면/);
-  assert.match(tradeState.draft, /OCR 미실행/);
+  assert.match(tradeState.draft, /인식 미실행/);
   assert.equal(tradeState.rows, tradeRowsBefore, "Trade capture does not create or modify trade rows");
   await evaluate("document.querySelector('#trade-capture-dialog [data-close-trade-capture]').click()");
   assert.equal(await evaluate("document.querySelector('#screen-capture-session').dataset.state"), "CONNECTED", "closing Trade keeps the shared screen stream");

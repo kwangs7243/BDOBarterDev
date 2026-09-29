@@ -3,6 +3,64 @@ const MAX_IMAGE_PIXELS = 32_000_000;
 const MAX_BATCH_FRAMES = 100;
 const MAX_BATCH_BYTES = 20 * 1024 * 1024;
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+export const DEFAULT_TRADE_ROI = Object.freeze({ x: 0.1, y: 0.1, width: 0.8, height: 0.8 });
+
+export function normalizeRegion(region) {
+  const values = [region?.x, region?.y, region?.width, region?.height].map(Number);
+  if (!values.every(Number.isFinite) || values[2] <= 0 || values[3] <= 0 || values[0] < 0 || values[1] < 0 || values[0] + values[2] > 1 || values[1] + values[3] > 1) {
+    throw new CaptureError("invalid_capture_region", "캡처 영역이 올바른 화면 범위가 아닙니다.");
+  }
+  return { x: values[0], y: values[1], width: values[2], height: values[3] };
+}
+
+export function regionToSourceRect(region, frameWidth, frameHeight) {
+  const normalized = normalizeRegion(region);
+  if (!Number.isSafeInteger(frameWidth) || !Number.isSafeInteger(frameHeight) || frameWidth < 1 || frameHeight < 1) {
+    throw new CaptureError("screen_frame_unavailable", "화면 크기를 확인할 수 없습니다.");
+  }
+  const x = Math.max(0, Math.min(frameWidth, Math.floor(normalized.x * frameWidth)));
+  const y = Math.max(0, Math.min(frameHeight, Math.floor(normalized.y * frameHeight)));
+  const right = Math.max(x, Math.min(frameWidth, Math.ceil((normalized.x + normalized.width) * frameWidth)));
+  const bottom = Math.max(y, Math.min(frameHeight, Math.ceil((normalized.y + normalized.height) * frameHeight)));
+  const rect = { x, y, width: right - x, height: bottom - y };
+  if (rect.width < 1 || rect.height < 1) throw new CaptureError("capture_region_too_small", "선택 영역이 너무 작습니다.");
+  return rect;
+}
+
+export function displayedVideoContentRect(video, container = video) {
+  const box = container.getBoundingClientRect();
+  const left = box.left + (Number(container.clientLeft) || 0);
+  const top = box.top + (Number(container.clientTop) || 0);
+  const boxWidth = Number(container.clientWidth) || box.width;
+  const boxHeight = Number(container.clientHeight) || box.height;
+  const videoWidth = Number(video.videoWidth);
+  const videoHeight = Number(video.videoHeight);
+  if (!(boxWidth > 0 && boxHeight > 0 && videoWidth > 0 && videoHeight > 0)) return null;
+  const scale = Math.min(boxWidth / videoWidth, boxHeight / videoHeight);
+  const width = videoWidth * scale;
+  const height = videoHeight * scale;
+  return { left: left + (boxWidth - width) / 2, top: top + (boxHeight - height) / 2, width, height };
+}
+
+export function moveNormalizedRegion(region, dx, dy, minWidth, minHeight) {
+  const current = normalizeRegion(region);
+  const width = Math.max(minWidth, current.width);
+  const height = Math.max(minHeight, current.height);
+  return { ...current, x: Math.max(0, Math.min(1 - width, current.x + dx)), y: Math.max(0, Math.min(1 - height, current.y + dy)) };
+}
+
+export function resizeNormalizedRegion(region, handle, dx, dy, minWidth, minHeight) {
+  const current = normalizeRegion(region);
+  const west = handle.includes("w"); const east = handle.includes("e");
+  const north = handle.includes("n"); const south = handle.includes("s");
+  let left = current.x; let right = current.x + current.width;
+  let top = current.y; let bottom = current.y + current.height;
+  if (west) left = Math.max(0, Math.min(right - minWidth, left + dx));
+  if (east) right = Math.min(1, Math.max(left + minWidth, right + dx));
+  if (north) top = Math.max(0, Math.min(bottom - minHeight, top + dy));
+  if (south) bottom = Math.min(1, Math.max(top + minHeight, bottom + dy));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
 
 export class CaptureError extends Error {
   constructor(code, message) {
@@ -278,6 +336,7 @@ export class ScreenCaptureSession {
   #connectPromise = null;
   #capturing = false;
   #listeners = new Set();
+  #previewElements = new Set();
   #onTrackEnded = () => this.disconnectScreen("track-ended");
   #onPageHide = () => this.disconnectScreen("pagehide");
   #onBeforeUnload = () => this.disconnectScreen("beforeunload");
@@ -298,6 +357,31 @@ export class ScreenCaptureSession {
   get state() { return this.#state; }
   get reason() { return this.#reason; }
   get connected() { return this.#state === "CONNECTED" || this.#state === "CAPTURING"; }
+
+  attachPreview(videoElement) {
+    if (!videoElement) throw new TypeError("videoElement is required");
+    this.#previewElements.add(videoElement);
+    videoElement.muted = true;
+    videoElement.autoplay = true;
+    videoElement.playsInline = true;
+    if (this.connected && this.#stream) {
+      if (videoElement.srcObject !== this.#stream) {
+        videoElement.srcObject = this.#stream;
+        try { void videoElement.play?.().catch?.(() => {}); } catch {}
+      }
+      return true;
+    }
+    videoElement.srcObject = null;
+    return false;
+  }
+
+  detachPreview(videoElement) {
+    this.#previewElements.delete(videoElement);
+    if (videoElement) {
+      try { videoElement.pause?.(); } catch {}
+      videoElement.srcObject = null;
+    }
+  }
 
   subscribe(listener) {
     if (typeof listener !== "function") throw new TypeError("listener must be a function");
@@ -352,6 +436,13 @@ export class ScreenCaptureSession {
 
       this.#stream = stream;
       this.#track = track;
+      for (const preview of this.#previewElements) {
+        preview.muted = true;
+        preview.autoplay = true;
+        preview.playsInline = true;
+        preview.srcObject = stream;
+        try { void preview.play?.().catch?.(() => {}); } catch {}
+      }
       const video = this.#createVideo();
       this.#video = video;
       video.muted = true;
@@ -488,6 +579,65 @@ export class ScreenCaptureSession {
     }
   }
 
+  async captureRegion(context, region, batchId = null) {
+    if (this.#state !== "CONNECTED" || !this.#stream || !this.#track || !this.#video) {
+      throw new CaptureError("screen_not_connected", "먼저 화면 연결을 시작해 주세요.");
+    }
+    if (this.#capturing) throw new CaptureError("capture_in_progress", "화면 캡처가 진행 중입니다.");
+    const normalizedContext = normalizeContext(context);
+    const normalizedRegion = normalizeRegion(region);
+    this.#capturing = true;
+    this.#setState("CAPTURING");
+    const startedAt = performance.now();
+    let canvas;
+    try {
+      const video = this.#video;
+      const track = this.#track;
+      if (track.readyState !== "live") throw new CaptureError("screen_unavailable", "화면 공유가 종료되었습니다. 다시 연결해 주세요.");
+      const readiness = await this.#waitForFrame(video, track);
+      if (this.#state !== "CAPTURING" || track.readyState !== "live") throw new CaptureError("screen_unavailable", "화면 공유가 종료되었습니다. 다시 연결해 주세요.");
+      const frameWidth = Number(video.videoWidth); const frameHeight = Number(video.videoHeight);
+      const sourceRect = regionToSourceRect(normalizedRegion, frameWidth, frameHeight);
+      if (sourceRect.width < 8 || sourceRect.height < 8) throw new CaptureError("capture_region_too_small", "선택 영역이 너무 작습니다.");
+      if (sourceRect.width * sourceRect.height > MAX_IMAGE_PIXELS) throw new CaptureError("image_too_large", "선택 영역이 32메가픽셀 제한을 초과합니다.");
+      canvas = this.#createCanvas(); canvas.width = sourceRect.width; canvas.height = sourceRect.height;
+      const context2d = canvas.getContext("2d", { alpha: true });
+      if (!context2d) throw new CaptureError("canvas_unavailable", "선택 영역을 준비할 수 없습니다.");
+      context2d.drawImage(video, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height, 0, 0, sourceRect.width, sourceRect.height);
+      if (Number(video.videoWidth) !== frameWidth || Number(video.videoHeight) !== frameHeight) throw new CaptureError("STREAM_RESIZING", "공유 화면 크기가 바뀌는 중입니다. 잠시 후 다시 캡처해 주세요.");
+      const blob = await new Promise((resolve, reject) => canvas.toBlob((result) => result ? resolve(result) : reject(new CaptureError("encode_failed", "선택 영역을 PNG로 만들지 못했습니다.")), "image/png"));
+      if (Number(video.videoWidth) !== frameWidth || Number(video.videoHeight) !== frameHeight) throw new CaptureError("STREAM_RESIZING", "공유 화면 크기가 바뀌는 중입니다. 잠시 후 다시 캡처해 주세요.");
+      if (!(blob instanceof Blob) || blob.type.toLowerCase() !== "image/png" || blob.size < 1 || blob.size > MAX_IMAGE_BYTES) throw new CaptureError("screen_frame_invalid", "선택 영역을 제한된 PNG로 준비하지 못했습니다.");
+      const settings = (() => { try { return track.getSettings?.() ?? {}; } catch { return {}; } })();
+      const sourceWidth = Number.isSafeInteger(settings.width) && settings.width > 0 ? settings.width : null;
+      const sourceHeight = Number.isSafeInteger(settings.height) && settings.height > 0 ? settings.height : null;
+      const hasTrackDimensions = sourceWidth !== null && sourceHeight !== null;
+      const capturedAt = this.#now();
+      const capturedAtIso = capturedAt instanceof Date ? capturedAt.toISOString() : new Date(capturedAt).toISOString();
+      const metadata = {
+        version: 1, captureId: this.#uuid(), batchId, taskType: normalizedContext.taskType, sourceType: "browser-stream", capturedAt: capturedAtIso,
+        frame: { width: sourceRect.width, height: sourceRect.height },
+        fidelity: { sourceWidth: hasTrackDimensions ? sourceWidth : null, sourceHeight: hasTrackDimensions ? sourceHeight : null, rescaled: null, evidence: hasTrackDimensions ? "track-settings" : "unknown" },
+        profileId: normalizedContext.profileId, profileVersion: normalizedContext.profileVersion,
+        context: { baseRevision: normalizedContext.baseRevision, sessionId: normalizedContext.sessionId, sessionRevision: normalizedContext.sessionRevision },
+        observed: { browserDpr: Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : null, windowsDpi: null, gameResolution: null, gameUiScale: null },
+      };
+      return {
+        metadata, blob, sha256: await defaultHash(blob), sourceSha256: null, reencoded: false, sourceBytes: null, bytes: blob.size,
+        regionEvidence: { normalized: normalizedRegion, sourceRect, sourceFrame: { width: frameWidth, height: frameHeight } },
+        observation: { freshnessEvidence: readiness.evidence, mediaTime: readiness.mediaTime, presentedFrames: readiness.presentedFrames, elapsedMs: Math.max(0, performance.now() - startedAt) },
+      };
+    } catch (error) {
+      if (this.#state === "CAPTURING" && this.#track?.readyState === "live") this.#setState("CONNECTED");
+      else if (this.#state === "CAPTURING") this.disconnectScreen("capture-error");
+      throw error;
+    } finally {
+      if (canvas) { canvas.width = 0; canvas.height = 0; }
+      this.#capturing = false;
+      if (this.#state === "CAPTURING") this.#setState("CONNECTED");
+    }
+  }
+
   #waitForFrame(video, track) {
     const haveCurrentData = Number(globalThis.HTMLMediaElement?.HAVE_CURRENT_DATA ?? 2);
     if (track.readyState !== "live" || video.readyState < haveCurrentData || video.paused || video.videoWidth < 1 || video.videoHeight < 1) {
@@ -532,6 +682,10 @@ export class ScreenCaptureSession {
     this.#stream = null;
     this.#track = null;
     this.#video = null;
+    for (const preview of this.#previewElements) {
+      try { preview.pause?.(); } catch {}
+      preview.srcObject = null;
+    }
     if (video) {
       try { video.pause?.(); } catch {}
       video.srcObject = null;
