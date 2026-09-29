@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "stage": "T007A_CANDIDATE_DERIVATION",
+  "approved": false,
+  "usableReviewApproved": false,
+  "releaseApproved": false,
+  "autoApproved": false,
+  "approvedCandidateId": null,
+  "supportedStrata": [],
+  "auditFrequency": null,
+  "confidenceLevel": null,
+  "allowedRisk": null,
+  "productionV2Activated": false,
+  "HIGHAuthority": false,
+  "calibrationScope": {
+    "capture": "warehouse-grid-crop",
+    "source": "checked-in fixture/replay",
+    "geometry": "current native observed geometry",
+    "fullPanel": "unsupported",
+    "liveWindow": "unsupported",
+    "realGameScale": "unsupported"
+  }
+}
