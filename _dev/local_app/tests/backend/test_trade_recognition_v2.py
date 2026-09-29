@@ -18,6 +18,7 @@ from local_app.backend.services.trade_recognition import (  # noqa: E402
     infer_trade_capture, validate_trade_integer,
 )
 from local_app.tools.trade_recognition_experiments import (  # noqa: E402
+    _candidate_lanes, infer_trade_numeric_field_v2, run_trade_candidate,
     validate_trade_manifest,
 )
 
@@ -28,6 +29,7 @@ class TradeRecognitionV2Tests(unittest.TestCase):
         cls.fixture_root = ROOT / "tests" / "fixtures" / "recognition-v2"
         cls.manifest = json.loads((cls.fixture_root / "manifest.json").read_text(encoding="utf-8"))
         cls.experiment = json.loads((ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json").read_text(encoding="utf-8"))
+        cls.experiment_v2 = json.loads((ROOT / "local_app" / "recognition_data" / "trade-t010a2-experiment.json").read_text(encoding="utf-8"))
 
     def test_manifest_keeps_all_trade_mapping_unresolved(self):
         audit = validate_trade_manifest(self.manifest)
@@ -84,6 +86,65 @@ class TradeRecognitionV2Tests(unittest.TestCase):
         self.assertFalse(record["readerEvidence"]["reconstructable"])
         self.assertEqual(record["readerEvidence"]["componentCount"], 1)
         self.assertTrue(record["readerEvidence"]["components"])
+
+    def test_t010a2_separates_raw_edge_noise_from_plausible_token_clipping(self):
+        noise_and_token = Image.new("RGB", (40, 20), (0, 0, 0))
+        draw = ImageDraw.Draw(noise_and_token)
+        draw.line((0, 1, 20, 1), fill=(250, 250, 250), width=1)
+        draw.rectangle((15, 5, 18, 15), fill=(250, 250, 250))
+        result = infer_trade_numeric_field_v2(
+            noise_and_token, "count", {"top": False, "bottom": False}, self.experiment_v2)
+        self.assertEqual(result["readerEvidence"]["readerId"], "connected-component-token-structure-v2")
+        self.assertEqual(result["status"], "UNVERIFIED_NUMERIC_CANDIDATE")
+        self.assertIn("FOREGROUND_EDGE_NOISE", result["reasonCodes"])
+        self.assertNotIn("TOKEN_BOUNDARY_CONTACT", result["reasonCodes"])
+        self.assertTrue(result["readerEvidence"]["rawForegroundBoundaryContact"]["left"])
+        self.assertFalse(any(result["readerEvidence"]["plausibleTokenBoundaryContact"].values()))
+        self.assertIsNone(result["value"])
+        self.assertFalse(result["readerEvidence"]["reconstructable"])
+
+    def test_t010a2_actual_plausible_edge_component_remains_clipped(self):
+        image = Image.new("RGB", (40, 20), (0, 0, 0))
+        ImageDraw.Draw(image).rectangle((0, 5, 3, 15), fill=(250, 250, 250))
+        result = infer_trade_numeric_field_v2(
+            image, "yield", {"top": False, "bottom": False}, self.experiment_v2)
+        self.assertEqual(result["status"], "CLIPPED")
+        self.assertIn("TOKEN_BOUNDARY_CONTACT", result["reasonCodes"])
+
+    def test_t010a2_empty_and_small_partial_classification(self):
+        empty = infer_trade_numeric_field_v2(
+            Image.new("RGB", (40, 20), (0, 0, 0)), "reqAmount",
+            {"top": False, "bottom": False}, self.experiment_v2)
+        self.assertEqual(empty["status"], "MISSING")
+        self.assertIn("NO_FOREGROUND_COMPONENTS", empty["reasonCodes"])
+        partial = Image.new("RGB", (40, 20), (0, 0, 0))
+        ImageDraw.Draw(partial).rectangle((10, 7, 11, 8), fill=(250, 250, 250))
+        result = infer_trade_numeric_field_v2(
+            partial, "reqAmount", {"top": False, "bottom": False}, self.experiment_v2)
+        self.assertEqual(result["status"], "UNREADABLE")
+        self.assertIn("NO_PLAUSIBLE_TOKEN_COMPONENTS", result["reasonCodes"])
+        self.assertIsNone(result["value"])
+
+    def test_t010a2_finite_lane_candidates_obey_bounds_and_overlap_guards(self):
+        operations = self.experiment_v2["laneCandidateDerivation"]["operations"]
+        candidates = _candidate_lanes(self.experiment["parameters"]["lanes"], "reqAmount", operations)
+        self.assertEqual(len(candidates), len(operations))
+        results = []
+        for candidate in candidates:
+            lanes, errors = _lane_boxes(990, 70, candidate["lanes"])
+            results.append((candidate["candidateId"], lanes, errors))
+        self.assertTrue(any(errors for _, _, errors in results), "expansion touching an adjacent semantic lane must be rejected")
+        self.assertTrue(any(not errors and all(item["valid"] for item in lanes.values())
+                            for _, lanes, errors in results), "finite sweep must retain valid candidates")
+
+    def test_original_t010a_benchmark_semantic_hash_is_reproducible(self):
+        fixture_root = ROOT / "tests" / "fixtures" / "recognition-v2"
+        artifact = run_trade_candidate(
+            fixture_root / "manifest.json",
+            ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json", runs=10)
+        payload = {key: value for key, value in artifact.items() if key not in {"timing", "semanticHash"}}
+        payload["baseCommit"] = self.experiment_v2["baselineT010ACommit"]
+        self.assertEqual(canonical_hash(payload), self.experiment_v2["baselineT010ASemanticHash"])
 
     def test_trade_integer_domain_rejects_bool_float_negative_and_zero_minima(self):
         self.assertTrue(validate_trade_integer("count", 0))

@@ -446,6 +446,16 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
         result["fixtureCount"] = result["captureCount"]
         result["engineSemantics"] = "T010A row/lane and numeric component evidence only; no OCR, oracle mapping, or recognition decision"
         return result
+    if engine == "trade-candidate-t010a2":
+        if selection is None:
+            raise ValueError("trade-candidate-t010a2 requires --selection with the T010A2 experiment spec")
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from local_app.tools.trade_recognition_experiments import run_trade_candidate_t010a2
+        if isinstance(manifest, dict):
+            raise ValueError("manifest must be a path so Trade source hashes can be verified")
+        base_selection = ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json"
+        return run_trade_candidate_t010a2(manifest, selection, base_selection, runs)
     if engine not in {"warehouse-current", "warehouse-v2"}:
         raise ValueError(f"engine {engine!r} is unavailable; no candidate result was fabricated")
     manifest_path = Path(manifest) if not isinstance(manifest, dict) else None
@@ -632,7 +642,7 @@ def run_benchmark(engine: str, manifest: str | Path | dict[str, Any], policy: di
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True, type=Path)
-    parser.add_argument("--engine", required=True, choices=("warehouse-current", "warehouse-v2", "trade-candidate"))
+    parser.add_argument("--engine", required=True, choices=("warehouse-current", "warehouse-v2", "trade-candidate", "trade-candidate-t010a2"))
     parser.add_argument("--policy", type=Path)
     parser.add_argument("--selection", type=Path)
     parser.add_argument("--feedback-jsonl", type=Path,
@@ -657,6 +667,12 @@ def main() -> int:
         summary.update({"rowDetection": {key: result["rowDetection"].get(key) for key in
                                          ("capturesProcessed", "candidateRows", "completeRows", "clippedRows", "rowsPerCapture")},
                         "numericEvidence": result["numericEvidence"], "semanticHash": result["semanticHash"]})
+    elif result["engine"] == "trade-candidate-t010a2":
+        summary.update({"sourceT010AHash": result["sourceT010AHash"],
+                        "selectedExperimentLaneCandidate": result["selectedExperimentLaneCandidate"],
+                        "v1NumericSummary": result["v1NumericSummary"],
+                        "v2NumericSummary": result["v2NumericSummary"],
+                        "semanticHash": result["semanticHash"]})
     else:
         summary.update({"itemMetrics": result["itemMetrics"], "quantityMetrics": result["quantityMetrics"],
                         "decisionMetrics": result["decisionMetrics"], "captureMetrics": result["captureMetrics"],
