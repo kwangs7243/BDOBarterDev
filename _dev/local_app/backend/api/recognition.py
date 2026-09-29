@@ -203,6 +203,7 @@ def post_trade_batch():
     return jsonify({"ok": True, "result": {
         "version": 1, "batchId": batch_id, "status": "DRAFT_UNVERIFIED",
         "captures": result["captures"], "draftRows": result["draftRows"],
+        "edgeSegments": result["edgeSegments"],
         "metrics": {**result.get("metrics", {}), "captureCount": len(raw_captures),
                      "draftRowCount": len(result["draftRows"]), "countMeaning": "remainingExchangeCount"},
         "runtime": result["runtime"],

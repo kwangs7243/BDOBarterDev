@@ -37,7 +37,15 @@ class FakeRuntime:
                                  "reasonCodes": ["NEEDS_REVIEW"]}
             rows.append({"captureId": item["captureId"], "ordinal": ordinal, "fields": values,
                          "status": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"})
-        return {"captures": [{"captureId": item["captureId"]} for item in captures], "draftRows": rows,
+        capture_evidence = [{"captureId": captures[0]["captureId"], "detectedCandidateCount": 2,
+                             "completeRowCount": 1, "edgeSegmentCount": 1},
+                            {"captureId": captures[1]["captureId"], "detectedCandidateCount": 1,
+                             "completeRowCount": 1, "edgeSegmentCount": 0}]
+        return {"captures": capture_evidence, "draftRows": rows,
+                "edgeSegments": [{"captureId": captures[0]["captureId"], "rowBox": {"x": 0, "y": 0, "width": 20, "height": 12},
+                                  "boundarySide": "top", "classification": "EDGE_SEGMENT_UNCERTAIN"}],
+                "metrics": {"boundaryPolicy": "edge-segments-evidence-only-v1", "detectedCandidateCount": 3,
+                            "completeRowCount": 2, "edgeSegmentCount": 1, "draftRowCount": 2},
                 "runtime": {"available": True, "engineId": "test-only"}}
 
 app = create_app(r'${database}', testing=True)
@@ -123,7 +131,7 @@ try {
   const beforeRecognition = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
   await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden===false"), "recognition draft result");
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 목록 미적용')"), true);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용')"), true);
   assert.deepEqual(await evaluate("JSON.stringify([...document.querySelectorAll('.trade-recognition-table thead th')].map(cell=>cell.textContent))").then(JSON.parse),
     ["행", "섬", "소모품", "필요 수량", "획득품", "남은 교환 횟수", "수율", "상태"]);
   assert.equal(await evaluate("document.querySelector('.trade-recognition-table tbody').textContent.includes('10회')"), true, "raw numeric text is displayed without parsing");

@@ -83,14 +83,20 @@ class TradeBatchDraftExperimentTests(unittest.TestCase):
         self.assertEqual(len(set(stable_run_hashes)), 1)
         self.assertEqual(artifact["contractSemanticHash"], experiment.contract_semantic_hash(artifact))
         legacy_keys = ("task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
-                       "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism",
+                       "fieldGeometry", "ocrRuntime", "boundaryPolicy", "edgeSegments", "draftRows", "metrics", "determinism",
                        "oracleMapping", "approval")
         legacy_payload = {key: artifact[key] for key in legacy_keys}
         legacy_payload["determinism"] = {key: value for key, value in artifact["determinism"].items()
                                          if key != "contractSemanticRunHashes"}
         self.assertEqual(artifact["semanticHash"], experiment.canonical_hash(legacy_payload))
         self.assertEqual(artifact["captureSet"]["captureCount"], 2)
-        self.assertEqual(artifact["metrics"]["rows"]["candidateRows"], 6)
+        self.assertEqual(artifact["metrics"]["rows"]["detectedCandidateCount"], 6)
+        self.assertEqual(artifact["metrics"]["rows"]["completeRowCount"], 2)
+        self.assertEqual(artifact["metrics"]["rows"]["edgeSegmentCount"], 4)
+        self.assertEqual(artifact["metrics"]["rows"]["draftRowCount"], 2)
+        self.assertEqual(artifact["boundaryPolicy"], experiment.BOUNDARY_POLICY)
+        self.assertEqual(len(artifact["edgeSegments"]), 4)
+        self.assertTrue(all("fields" not in edge for edge in artifact["edgeSegments"]))
         for row in artifact["draftRows"]:
             self.assertEqual(set(row["fields"]), set(FIELDS))
             self.assertEqual(row["automationDecision"], "REVIEW")
@@ -127,6 +133,59 @@ class TradeBatchDraftExperimentTests(unittest.TestCase):
         self.assertEqual(evidence["readerEvidence"]["readerId"], "connected-component-token-structure-v2")
         self.assertIn("rawForegroundBoundaryContact", evidence["readerEvidence"])
         self.assertIn("plausibleTokenBoundaryContact", evidence["readerEvidence"])
+
+    def test_partition_scenarios_and_unexpected_clipped_diagnostic(self):
+        def row(clipped=False, top=False, bottom=False):
+            return {"clipped": clipped, "boundaryContact": {"top": top, "bottom": bottom}}
+        scenarios = {
+            "A": ([row()], (1, 0)),
+            "B": ([row(True, top=True), row(), row()], (2, 1)),
+            "C": ([row(), row(True, bottom=True)], (1, 1)),
+            "D": ([row(True, top=True), row(), row(), row(), row(True, bottom=True)], (3, 2)),
+            "E": ([row()], (1, 0)),
+            "F": ([], (0, 0)),
+        }
+        for name, (detected, expected) in scenarios.items():
+            with self.subTest(scenario=name):
+                complete, edges = experiment.partition_detected_rows(detected)
+                self.assertEqual((len(complete), len(edges)), expected)
+        with self.assertRaisesRegex(ValueError, "UNEXPECTED_CLIPPED_ROW"):
+            experiment.partition_detected_rows([row(True)])
+
+    def test_edge_rows_never_reach_six_field_ocr(self):
+        class CountingReader:
+            calls = 0
+            def predict(self, input, batch_size=1):
+                self.calls += 1
+                return [{"rec_text": "123", "rec_score": .9}]
+        raw_rows = ([{"top": 0, "bottom": 12, "height": 12, "clipped": True,
+                      "boundaryContact": {"top": True, "bottom": False}, "reasonCodes": ["ROW_CLIPPED_TOP"]}]
+                    + [{"top": top, "bottom": top + 70, "height": 70, "clipped": False,
+                        "boundaryContact": {"top": False, "bottom": False},
+                        "separatorEvidence": {"topSupport": .9, "bottomSupport": .9}, "rawMetric": .9}
+                       for top in (20, 100, 180)]
+                    + [{"top": 260, "bottom": 320, "height": 60, "clipped": True,
+                        "boundaryContact": {"top": False, "bottom": True}, "reasonCodes": ["ROW_CLIPPED_BOTTOM"]}])
+        reader = CountingReader()
+        with tempfile.TemporaryDirectory() as folder:
+            image_path = Path(folder) / "capture.png"
+            Image.new("RGB", (320, 320), (25, 28, 30)).save(image_path)
+            capture = {"captureId": "cap", "batchId": "batch", "imagePath": str(image_path)}
+            selection = experiment._json(Path(experiment.__file__).resolve().parents[1]
+                                         / "recognition_data" / "trade-t010p3a-experiment.json")
+            lanes = {name: record["lane"] for name, record in selection["selectedFieldLanes"].items()}
+            from unittest.mock import patch
+            with patch.object(experiment, "detect_rows", return_value=raw_rows):
+                result = experiment.build_batch_drafts_once([capture], lanes, self.row_parameters,
+                                                              self.numeric_parameters, reader)
+        self.assertEqual((len(result["draftRows"]), len(result["edgeSegments"])), (3, 2))
+        self.assertEqual(reader.calls, 18)
+        self.assertEqual([edge["boundarySide"] for edge in result["edgeSegments"]], ["top", "bottom"])
+        self.assertTrue(all(edge["classification"] == "EDGE_SEGMENT_UNCERTAIN"
+                            and "fields" not in edge and "value" not in edge for edge in result["edgeSegments"]))
+        self.assertEqual(result["captureEvidence"][0]["detectedCandidateCount"], 5)
+        self.assertEqual(result["captureEvidence"][0]["completeRowCount"], 3)
+        self.assertEqual(result["captureEvidence"][0]["edgeSegmentCount"], 2)
 
 
 if __name__ == "__main__":

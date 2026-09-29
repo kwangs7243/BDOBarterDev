@@ -21,6 +21,7 @@ MODEL_BUNDLE_SHA256 = "f56168a615fa6439b18f42e55cf48dad52883dd0411590a7a4d73603e
 MAX_BATCH_BYTES = 20 * 1024 * 1024
 MAX_CAPTURES = 100
 WORKER_TIMEOUT_SECONDS = 120
+BOUNDARY_POLICY = "edge-segments-evidence-only-v1"
 
 
 class TradeBatchRuntimeError(RuntimeError):
@@ -149,14 +150,41 @@ class TradeBatchRuntime:
         if not isinstance(payload, dict) or payload.get("batchId") != batch_id or payload.get("version") != 1:
             raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned an invalid result.", 502)
         capture_evidence = payload.get("captures")
+        edge_segments = payload.get("edgeSegments")
+        metrics = payload.get("metrics")
         if (payload.get("captureIds") != expected or not isinstance(capture_evidence, list)
                 or [item.get("captureId") for item in capture_evidence if isinstance(item, dict)] != expected
-                or len(capture_evidence) != len(expected) or not isinstance(payload.get("draftRows"), list)):
+                or len(capture_evidence) != len(expected) or not isinstance(payload.get("draftRows"), list)
+                or not isinstance(edge_segments, list) or not isinstance(metrics, dict)
+                or metrics.get("boundaryPolicy") != BOUNDARY_POLICY):
             raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned an invalid result.", 502)
+        detected = complete = edge_count = 0
+        for item in capture_evidence:
+            dimensions = item.get("imageDimensions")
+            if (not isinstance(item.get("imageHash"), str) or len(item["imageHash"]) != 64
+                    or not isinstance(dimensions, dict)
+                    or any(not isinstance(dimensions.get(key), int) or dimensions[key] <= 0 for key in ("width", "height"))):
+                raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned invalid capture evidence.", 502)
+            counts = (item.get("detectedCandidateCount"), item.get("completeRowCount"), item.get("edgeSegmentCount"))
+            if any(not isinstance(value, int) or value < 0 for value in counts) or counts[0] != counts[1] + counts[2]:
+                raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned invalid capture metrics.", 502)
+            detected += counts[0]
+            complete += counts[1]
+            edge_count += counts[2]
+        if (metrics.get("detectedCandidateCount") != detected or metrics.get("completeRowCount") != complete
+                or metrics.get("edgeSegmentCount") != edge_count or metrics.get("draftRowCount") != len(payload["draftRows"])
+                or len(edge_segments) != edge_count or len(payload["draftRows"]) != complete):
+            raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned inconsistent row metrics.", 502)
+        for edge in edge_segments:
+            if (not isinstance(edge, dict) or edge.get("captureId") not in expected
+                    or edge.get("classification") != "EDGE_SEGMENT_UNCERTAIN"
+                    or edge.get("boundarySide") not in ("top", "bottom", "both") or "fields" in edge):
+                raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned invalid edge evidence.", 502)
         for row in payload["draftRows"]:
             fields = row.get("fields") if isinstance(row, dict) else None
             if (not isinstance(fields, dict) or set(fields) != {"island", "fromItem", "reqAmount", "toItem", "count", "yield"}
                     or row.get("status") != "DRAFT_UNVERIFIED" or row.get("automationDecision") != "REVIEW"
                     or row.get("captureId") not in expected
-                    or any(not isinstance(value, dict) or value.get("value") is not None for value in fields.values())):
+                    or any(not isinstance(value, dict) or value.get("value") is not None
+                           or "ROW_BOUNDARY_CONTACT" in value.get("reasonCodes", []) for value in fields.values())):
                 raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned an invalid draft.", 502)

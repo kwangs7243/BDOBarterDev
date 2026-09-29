@@ -126,8 +126,28 @@ def _visual_evidence(crop: Image.Image, field: str,
     }
 
 
-def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    all_rows: list[dict[str, Any]] = []
+BOUNDARY_POLICY = "edge-segments-evidence-only-v1"
+PREVIOUS_CONTRACT_SEMANTIC_HASH = "2652498e21a345deab3f5249de82b8ed94aa48973cf9d76dda33dd2a3a5a0c8b"
+
+
+def partition_detected_rows(detected: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Keep image-edge candidates as evidence; only unclipped rows are draft eligible."""
+    complete, edge_segments = [], []
+    for detector_ordinal, row in enumerate(detected, 1):
+        if not bool(row.get("clipped")):
+            complete.append((detector_ordinal, row))
+            continue
+        contact = row.get("boundaryContact") or {}
+        top, bottom = bool(contact.get("top")), bool(contact.get("bottom"))
+        if not (top or bottom):
+            raise ValueError("UNEXPECTED_CLIPPED_ROW")
+        edge_segments.append((detector_ordinal, row, "both" if top and bottom else "top" if top else "bottom"))
+    return complete, edge_segments
+
+
+def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    complete_rows: list[dict[str, Any]] = []
+    edge_segments: list[dict[str, Any]] = []
     capture_evidence: list[dict[str, Any]] = []
     for capture_ordinal, capture in enumerate(captures, 1):
         path = Path(capture["imagePath"]).resolve()
@@ -138,18 +158,33 @@ def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any])
         with Image.open(path) as image_handle:
             image = image_handle.convert("RGB")
         detected = detect_rows(image, row_parameters)
+        complete, edges = partition_detected_rows(detected)
         capture_evidence.append({"captureId": capture["captureId"], "batchId": capture.get("batchId"),
                                  "captureOrdinal": capture_ordinal, "imageHash": actual_hash,
                                  "imageDimensions": {"width": image.width, "height": image.height},
-                                 "rowCount": len(detected)})
-        for ordinal, row in enumerate(detected, 1):
+                                 "detectedCandidateCount": len(detected), "completeRowCount": len(complete),
+                                 "edgeSegmentCount": len(edges)})
+        for ordinal, row in complete:
             box = {key: int(row[key]) for key in ("top", "bottom", "height")}
             row_box = {"x": 0, "y": box["top"], "width": image.width, "height": box["height"]}
             crop = image.crop((0, box["top"], image.width, box["bottom"]))
-            all_rows.append({"capture": capture, "captureOrdinal": capture_ordinal, "rowOrdinal": ordinal,
+            complete_rows.append({"capture": capture, "captureOrdinal": capture_ordinal, "rowOrdinal": ordinal,
                              "rowBox": row_box, "rowCrop": crop, "rowCropHash": _crop_hash(crop),
-                             "clipped": bool(row.get("clipped")), "boundaryContact": row.get("boundaryContact", {})})
-    return all_rows, capture_evidence
+                             "clipped": False, "boundaryContact": row.get("boundaryContact", {})})
+        for ordinal, row, side in edges:
+            top, bottom = int(row["top"]), int(row["bottom"])
+            crop = image.crop((0, top, image.width, bottom))
+            edge_segments.append({"captureId": capture["captureId"], "captureOrdinal": capture_ordinal,
+                                  "detectorOrdinal": ordinal,
+                                  "rowBox": {"x": 0, "y": top, "width": image.width, "height": bottom - top},
+                                  "rowCropHash": _crop_hash(crop), "boundarySide": side,
+                                  "classification": "EDGE_SEGMENT_UNCERTAIN",
+                                  "reasonCodes": list(row.get("reasonCodes", [])) or ["IMAGE_BOUNDARY_CONTACT"],
+                                  "separatorEvidence": row.get("separatorEvidence", {}),
+                                  "rawMetric": row.get("rawMetric"),
+                                  "normalized": {"y0": top / image.height, "y1": bottom / image.height,
+                                                 "height": (bottom - top) / image.height}})
+    return complete_rows, edge_segments, capture_evidence
 
 
 def _count_lane_candidates(base: dict[str, float]) -> list[dict[str, Any]]:
@@ -262,7 +297,7 @@ def measure_geometry_candidates(captures: list[dict[str, Any]], base_lanes: dict
                                 row_parameters: dict[str, Any], numeric_parameters: dict[str, Any],
                                 reader: Any) -> dict[str, Any]:
     """Measure finite image/OCR-only candidates; signature deliberately excludes oracle inputs."""
-    rows, capture_evidence = _row_records(captures, row_parameters)
+    rows, _edge_segments, capture_evidence = _row_records(captures, row_parameters)
     sets = _candidate_sets(base_lanes)
     measurements = {field: _measure_candidate_set(rows, field, candidates, reader, numeric_parameters)
                     for field, candidates in sets.items()}
@@ -274,7 +309,7 @@ def measure_geometry_candidates(captures: list[dict[str, Any]], base_lanes: dict
             "candidateMeasurements": measurements, "selected": selections, "selectedLanes": lanes}
 
 
-def _field_record(field: str, crop: Image.Image | None, geometry: dict[str, Any], row_clipped: bool,
+def _field_record(field: str, crop: Image.Image | None, geometry: dict[str, Any],
                   numeric_parameters: dict[str, Any], reader: Any) -> dict[str, Any]:
     if crop is None or not geometry.get("valid"):
         return {"rawText": None, "normalizedText": None, "ocrScore": None, "rawNumericCandidate": None,
@@ -296,16 +331,14 @@ def _field_record(field: str, crop: Image.Image | None, geometry: dict[str, Any]
         numeric = infer_trade_numeric_field_v2(crop, field, boundary,
                                                {"componentPlausibility": numeric_parameters})
         contact = numeric["readerEvidence"]["plausibleTokenBoundaryContact"]
-        if row_clipped or any(contact.values()):
-            status, reasons = "FIELD_CLIPPED", ["ROW_BOUNDARY_CONTACT" if row_clipped else "TOKEN_BOUNDARY_CONTACT"]
+        if any(contact.values()):
+            status, reasons = "FIELD_CLIPPED", ["TOKEN_BOUNDARY_CONTACT"]
         elif raw in (None, ""):
             status, reasons = ("OCR_ERROR", ["OCR_OUTPUT_NULL"]) if raw is None else ("EMPTY_OCR", ["OCR_EMPTY"])
         elif parse is not None:
             status, reasons = "NUMERIC_OCR_CANDIDATE", ["STRICT_ASCII_INTEGER_TOKEN"]
         else:
             status, reasons = "UNREADABLE", [parse_status]
-    elif row_clipped:
-        status, reasons = "FIELD_CLIPPED", ["ROW_BOUNDARY_CONTACT"]
     elif raw in (None, ""):
         status, reasons = ("OCR_ERROR", ["OCR_OUTPUT_NULL"]) if raw is None else ("EMPTY_OCR", ["OCR_EMPTY"])
     else:
@@ -344,12 +377,14 @@ _CONTRACT_NUMERIC_STRUCTURE_KEYS = ("readerId", "tokenBox", "plausibleTokenBound
                                     "rawForegroundBoundaryContact", "rowBoundaryContact")
 _CONTRACT_FIELD_METRIC_KEYS = (
     "rowsTotal", "geometryValid", "ocrAttempted", "ocrNonEmpty", "ocrEmpty", "ocrError",
-    "boundaryContact", "numericStrictCandidate", "geometryAbstain", "geometryEligible",
+    "boundaryContact", "fieldClippedCount", "tokenBoundaryContactCount",
+    "numericStrictCandidate", "geometryAbstain", "geometryEligible",
     "plausibleTokenBoundaryContact", "strictIntegerRawCandidate", "empty", "invalidToken", "abstain",
     "secondaryLineRiskCount", "bottomBandForegroundHighCount", "rawTextContainsParleyMarkerCount",
 )
 _CONTRACT_ROW_METRIC_KEYS = (
-    "captureCount", "candidateRows", "completeGeometryRows", "clippedRows", "sixFieldDraftRows",
+    "captureCount", "detectedCandidateCount", "completeRowCount", "edgeSegmentCount", "draftRowCount",
+    "completeGeometryRows", "fieldClippedCount", "sixFieldDraftRows",
     "rowsWithAllTextRawCandidates", "rowsWithAllNumericRawCandidates", "rowsWithAllSixRawCandidates",
 )
 
@@ -383,7 +418,8 @@ def build_contract_semantic_projection(artifact: dict[str, Any]) -> dict[str, An
     """Project stable recognition semantics; diagnostic visuals and runtime timing are excluded."""
     capture_set = artifact.get("captureSet", {})
     captures = capture_set.get("captures", [])
-    capture_identity_keys = ("captureId", "batchId", "captureOrdinal", "imageHash", "rowCount")
+    capture_identity_keys = ("captureId", "batchId", "captureOrdinal", "imageHash",
+                             "detectedCandidateCount", "completeRowCount", "edgeSegmentCount")
     row_detector = artifact.get("rowDetector", {})
     field_geometry = artifact.get("fieldGeometry", {})
     runtime = artifact.get("ocrRuntime", {})
@@ -399,6 +435,11 @@ def build_contract_semantic_projection(artifact: dict[str, Any]) -> dict[str, An
             "captures": [{key: item[key] for key in capture_identity_keys if key in item} for item in captures],
         },
         "batchContract": artifact.get("batchContract", {}),
+        "boundaryPolicy": artifact.get("boundaryPolicy"),
+        "edgeSegments": [{key: item[key] for key in (
+            "captureId", "captureOrdinal", "detectorOrdinal", "rowBox", "rowCropHash", "boundarySide",
+            "classification", "reasonCodes", "separatorEvidence", "rawMetric", "normalized"
+        ) if key in item} for item in artifact.get("edgeSegments", [])],
         "rowDetector": {key: row_detector[key] for key in (
             "id", "parameters", "oracleUsed", "rowCountIsOptimizationTarget", "frozenRowCountRegression"
         ) if key in row_detector},
@@ -434,7 +475,8 @@ def contract_semantic_hash(artifact: dict[str, Any]) -> str:
 def _legacy_semantic_hash(artifact: dict[str, Any]) -> str:
     """Preserve the historical full-representation semanticHash payload and field ordering."""
     keys = ("task", "baseCommit", "batchId", "captureSet", "batchContract", "rowDetector",
-            "fieldGeometry", "ocrRuntime", "draftRows", "metrics", "determinism", "oracleMapping", "approval")
+            "fieldGeometry", "ocrRuntime", "boundaryPolicy", "edgeSegments", "draftRows", "metrics",
+            "determinism", "oracleMapping", "approval")
     legacy = {key: artifact[key] for key in keys}
     if "contractSemanticRunHashes" in legacy["determinism"]:
         legacy["determinism"] = {key: value for key, value in legacy["determinism"].items()
@@ -459,12 +501,12 @@ def _build_drafts_from_detected_rows(detected_rows: list[dict[str, Any]],
         for field in FIELDS:
             lane = lane_boxes.get(field, {})
             geometry = {"valid": bool(lane.get("valid")), "box": lane.get("box", {}).get("normalized"),
-                        "laneErrors": lane_errors, "rowClipped": item["clipped"]}
+                        "laneErrors": lane_errors, "rowClipped": False}
             crop = None
             if lane.get("valid"):
                 box = lane["box"]
                 crop = item["rowCrop"].crop((box["x"], box["y"], box["x"] + box["width"], box["y"] + box["height"]))
-            fields[field] = _field_record(field, crop, geometry, item["clipped"], numeric_parameters, reader)
+            fields[field] = _field_record(field, crop, geometry, numeric_parameters, reader)
         capture_id = item["capture"]["captureId"]
         refs = [{"captureId": capture_id, "captureOrdinal": item["captureOrdinal"],
                  "rowOrdinal": item["rowOrdinal"], "rowCropHash": item["rowCropHash"],
@@ -482,8 +524,9 @@ def build_batch_drafts_once(captures: list[dict[str, Any]],
                             row_parameters: dict[str, Any],
                             numeric_parameters: dict[str, Any], reader: Any) -> dict[str, Any]:
     """Run selected-geometry row and six-field reading once, without sweeps or oracle input."""
-    detected_rows, capture_evidence = _row_records(captures, row_parameters)
-    return {"captureEvidence": capture_evidence,
+    detected_rows, edge_segments, capture_evidence = _row_records(captures, row_parameters)
+    return {"captureEvidence": capture_evidence, "edgeSegments": edge_segments,
+            "boundaryPolicy": BOUNDARY_POLICY,
             "draftRows": _build_drafts_from_detected_rows(detected_rows, selected_lanes,
                                                             numeric_parameters, reader)}
 
@@ -495,7 +538,7 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
     """Create raw six-field drafts. No catalog or oracle parameter is accepted."""
     if runs != 10:
         raise ValueError("T010P3A determinism requires exactly 10 semantic runs")
-    detected_rows, detected_captures = _row_records(captures, row_parameters)
+    detected_rows, edge_segments, detected_captures = _row_records(captures, row_parameters)
     drafts = _build_drafts_from_detected_rows(detected_rows, selected_lanes, numeric_parameters, reader)
     semantic_signature = canonical_hash(_semantic_rows(drafts))
     repeated_signatures = [semantic_signature]
@@ -519,6 +562,8 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
             "ocrNonEmpty": sum(record["rawText"] not in (None, "") for record in records),
             "ocrEmpty": statuses["EMPTY_OCR"], "ocrError": statuses["OCR_ERROR"],
             "boundaryContact": sum(record["status"] == "FIELD_CLIPPED" for record in records),
+            "fieldClippedCount": sum(record["status"] == "FIELD_CLIPPED" for record in records),
+            "tokenBoundaryContactCount": sum("TOKEN_BOUNDARY_CONTACT" in record.get("reasonCodes", []) for record in records),
             "contaminationSuspected": sum(
                 record["readerEvidence"].get("visual", {}).get(
                     "bottomBandWarmForegroundRatio" if field == "fromItem" else "bottomBandForegroundRatio", 0)
@@ -542,7 +587,8 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
         "abstain": sum(record["status"] == "GEOMETRY_ABSTAIN" for record in count_records),
     })
     complete_geometry = sum(all(row["fields"][field]["status"] != "GEOMETRY_ABSTAIN" for field in FIELDS) for row in drafts)
-    clipped_rows = sum(any(row["fields"][field]["status"] == "FIELD_CLIPPED" for field in FIELDS) for row in drafts)
+    field_clipped_rows = sum(any(row["fields"][field]["status"] == "FIELD_CLIPPED" for field in FIELDS) for row in drafts)
+    detected_candidate_count = sum(item["detectedCandidateCount"] for item in detected_captures)
     all_text = sum(all(row["fields"][field]["rawText"] not in (None, "") for field in TEXT_FIELDS) for row in drafts)
     all_numeric = sum(all(row["fields"][field]["rawNumericCandidate"] is not None for field in NUMERIC_FIELDS) for row in drafts)
     all_six = sum(all(row["fields"][field]["rawText"] not in (None, "") and
@@ -553,15 +599,18 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
         raise RuntimeError("10-run selected-geometry semantic output changed")
     if len(set(repeated_contract_signatures)) != 1:
         raise RuntimeError("10-run stable contract output changed")
-    metrics = {"fields": field_metrics,
-               "rows": {"captureCount": len(captures), "candidateRows": len(drafts),
-                        "completeGeometryRows": complete_geometry, "clippedRows": clipped_rows,
+    metrics = {"boundaryPolicy": BOUNDARY_POLICY, "fields": field_metrics,
+               "rows": {"captureCount": len(captures), "detectedCandidateCount": detected_candidate_count,
+                        "completeRowCount": len(detected_rows), "edgeSegmentCount": len(edge_segments),
+                        "draftRowCount": len(drafts), "completeGeometryRows": complete_geometry,
+                        "fieldClippedCount": field_clipped_rows,
                         "sixFieldDraftRows": sum(len(row["fields"]) == 6 for row in drafts),
                         "rowsWithAllTextRawCandidates": all_text,
                         "rowsWithAllNumericRawCandidates": all_numeric,
                         "rowsWithAllSixRawCandidates": all_six}}
     capture_set = capture_evidence if capture_evidence is not None else detected_captures
-    capture_hash = canonical_hash([{key: item[key] for key in ("captureId", "batchId", "captureOrdinal", "imageHash", "rowCount") if key in item} for item in capture_set])
+    capture_hash = canonical_hash([{key: item[key] for key in ("captureId", "batchId", "captureOrdinal", "imageHash",
+                         "detectedCandidateCount", "completeRowCount", "edgeSegmentCount") if key in item} for item in capture_set])
     count_clip_fraction = (field_metrics["count"]["plausibleTokenBoundaryContact"] / len(count_records)
                            if count_records else 1.0)
     status = ("T010P3A_BLOCKED_REQUIRES_SOL" if len(drafts) != 80 or count_clip_fraction > .5
@@ -583,6 +632,8 @@ def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str
         "ocrRuntime": {"framework": "PaddleOCR", "package": "paddleocr==3.7.0", "model": MODEL_NAME,
                        "engine": "onnxruntime", "onnxruntime": "1.30.0", "device": "cpu",
                        "modelHash": model_hashes, "remoteOcrRequests": 0, "externalImageUpload": False},
+        "boundaryPolicy": BOUNDARY_POLICY, "previousContractSemanticHash": PREVIOUS_CONTRACT_SEMANTIC_HASH,
+        "edgeSegments": edge_segments,
         "draftRows": drafts, "metrics": metrics,
         "determinism": {"runs": runs, "semanticDeterminism": semantic_determinism,
                         "semanticRunHashes": repeated_signatures, "rawScoreDeterminism": score_determinism,
@@ -744,7 +795,7 @@ def main() -> int:
         print(json.dumps({"candidateMeasurements": summary,
                           "selected": {key: value.get("selectedCandidate") for key, value in selection["selectedFieldLanes"].items()}}, ensure_ascii=False, indent=2))
         return 0
-    rows, capture_evidence = _row_records(captures, row_selection["parameters"])
+    rows, _edge_segments, capture_evidence = _row_records(captures, row_selection["parameters"])
     if args.contact_sheet_only:
         comparison = write_contact_sheet(args.contact_sheet, rows, selected, lanes, numeric_parameters, reader)
         artifact = _json(args.out)
@@ -774,7 +825,7 @@ def main() -> int:
     artifact["fieldGeometry"]["selectedCandidates"] = {
         field: value.get("selectedCandidate") for field, value in selection.get("selectedFieldLanes", {}).items()}
     frozen_counts = numeric_selection.get("frozenObservedRowsPerCapture", [])
-    observed_counts = [item["rowCount"] for item in capture_evidence]
+    observed_counts = [item["completeRowCount"] for item in capture_evidence]
     artifact["rowDetector"]["frozenRowCountRegression"] = {
         "expectedPerCapture": frozen_counts, "observedPerCapture": observed_counts,
         "matched": observed_counts == frozen_counts and sum(observed_counts) == 80}

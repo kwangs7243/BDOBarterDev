@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 FIELDS = {"island", "fromItem", "reqAmount", "toItem", "count", "yield"}
+BOUNDARY_POLICY = "edge-segments-evidence-only-v1"
 EXPECTED = {
     "inference.onnx": "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08",
     "inference.yml": "f757fa1c40e99edcf27e9cce879b93eb2a51fa46f5ef39095689b8c37dd75998",
@@ -91,12 +92,19 @@ def run(request_path: Path, output_path: Path, model_dir: Path) -> None:
     rows = result["draftRows"]
     if any(set(row.get("fields", {})) != FIELDS or row.get("status") != "DRAFT_UNVERIFIED"
            or row.get("automationDecision") != "REVIEW"
-           or any(field.get("value") is not None for field in row["fields"].values()) for row in rows):
+           or any(field.get("value") is not None or "ROW_BOUNDARY_CONTACT" in field.get("reasonCodes", [])
+                  for field in row["fields"].values()) for row in rows):
         raise ValueError("draft contract validation failed")
+    captures_out = result["captureEvidence"]
+    detected = sum(item["detectedCandidateCount"] for item in captures_out)
+    complete = sum(item["completeRowCount"] for item in captures_out)
+    edges = sum(item["edgeSegmentCount"] for item in captures_out)
     payload = {"version": 1, "batchId": batch_id,
                "captureIds": [capture["captureId"] for capture in captures],
-               "captures": result["captureEvidence"], "draftRows": rows,
-               "metrics": {"captureCount": len(captures), "draftRowCount": len(rows),
+               "captures": captures_out, "draftRows": rows, "edgeSegments": result["edgeSegments"],
+               "metrics": {"boundaryPolicy": BOUNDARY_POLICY, "captureCount": len(captures),
+                           "detectedCandidateCount": detected, "completeRowCount": complete,
+                           "edgeSegmentCount": edges, "draftRowCount": len(rows),
                            "countMeaning": "remainingExchangeCount"}}
     output_path.parent.mkdir(parents=True, exist_ok=True)
     handle, temporary_name = tempfile.mkstemp(prefix="trade-result-", suffix=".json", dir=output_path.parent)

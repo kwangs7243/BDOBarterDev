@@ -42,8 +42,14 @@ function validateResult(body, expectedCaptureIds, expectedBatchId) {
   const result = body?.result;
   const approval = result?.approval;
   if (body?.ok !== true || !result || typeof result !== "object" || Array.isArray(result)
-      || typeof result.batchId !== "string" || result.batchId !== expectedBatchId
+      || result.version !== 1 || typeof result.batchId !== "string" || result.batchId !== expectedBatchId
       || !Array.isArray(result.captures) || !Array.isArray(result.draftRows)
+      || !Array.isArray(result.edgeSegments) || result.metrics?.boundaryPolicy !== "edge-segments-evidence-only-v1"
+      || ["detectedCandidateCount", "completeRowCount", "edgeSegmentCount", "draftRowCount"]
+        .some((key) => !Number.isInteger(result.metrics[key]) || result.metrics[key] < 0)
+      || result.metrics.detectedCandidateCount !== result.metrics.completeRowCount + result.metrics.edgeSegmentCount
+      || result.metrics.draftRowCount !== result.metrics.completeRowCount
+      || result.metrics.edgeSegmentCount !== result.edgeSegments.length
       || result.status !== "DRAFT_UNVERIFIED" || approval?.production !== false || approval?.HIGH !== 0
       || approval?.importerIntegration !== false || approval?.automationDecision !== "REVIEW") {
     throw new TradeRecognitionError("contract_violation");
@@ -53,11 +59,38 @@ function validateResult(body, expectedCaptureIds, expectedBatchId) {
       || responseCaptureIds.some((id, index) => id !== expectedCaptureIds[index])) {
     throw new TradeRecognitionError("contract_violation");
   }
+  for (const edge of result.edgeSegments) {
+    if (!edge || typeof edge !== "object" || typeof edge.captureId !== "string"
+        || !responseCaptureIds.includes(edge.captureId)
+        || !edge.rowBox || typeof edge.rowBox !== "object"
+        || ["x", "y", "width", "height"].some((key) => !Number.isFinite(edge.rowBox[key]))
+        || edge.classification !== "EDGE_SEGMENT_UNCERTAIN"
+        || !["top", "bottom", "both"].includes(edge.boundarySide)
+        || Object.hasOwn(edge, "fields")) {
+      throw new TradeRecognitionError("contract_violation");
+    }
+  }
+  let detectedCount = 0;
+  let completeCount = 0;
+  let edgeCount = 0;
+  for (const capture of result.captures) {
+    const values = [capture?.detectedCandidateCount, capture?.completeRowCount, capture?.edgeSegmentCount];
+    if (values.some((value) => !Number.isInteger(value) || value < 0)
+        || values[0] !== values[1] + values[2]) throw new TradeRecognitionError("contract_violation");
+    detectedCount += values[0]; completeCount += values[1]; edgeCount += values[2];
+  }
+  if (detectedCount !== result.metrics.detectedCandidateCount || completeCount !== result.metrics.completeRowCount
+      || edgeCount !== result.metrics.edgeSegmentCount || completeCount !== result.metrics.draftRowCount) {
+    throw new TradeRecognitionError("contract_violation");
+  }
   for (const row of result.draftRows) {
     if (!row || typeof row !== "object" || row.status !== "DRAFT_UNVERIFIED" || row.automationDecision !== "REVIEW"
         || !row.fields || typeof row.fields !== "object" || Array.isArray(row.fields)
         || FIELD_KEYS.length !== Object.keys(row.fields).length
         || FIELD_KEYS.some((key) => !Object.hasOwn(row.fields, key))) {
+      throw new TradeRecognitionError("contract_violation");
+    }
+    if (FIELD_KEYS.some((key) => row.fields[key]?.reasonCodes?.includes("ROW_BOUNDARY_CONTACT"))) {
       throw new TradeRecognitionError("contract_violation");
     }
     if (FIELD_KEYS.some((key) => !row.fields[key] || typeof row.fields[key] !== "object"

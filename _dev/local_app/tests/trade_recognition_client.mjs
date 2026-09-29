@@ -18,8 +18,12 @@ const success = (captures = [first, second], overrides = {}) => ({
   ok: true,
   result: {
     version: 1, batchId: "recognition-request-id", status: "DRAFT_UNVERIFIED",
-    captures: captures.map((item) => ({ captureId: item.metadata.captureId })),
+    captures: captures.map((item) => ({ captureId: item.metadata.captureId,
+      detectedCandidateCount: 1, completeRowCount: 1, edgeSegmentCount: 0 })),
     draftRows: captures.map((item) => row(item.metadata.captureId)),
+    edgeSegments: [],
+    metrics: { boundaryPolicy: "edge-segments-evidence-only-v1", detectedCandidateCount: captures.length,
+      completeRowCount: captures.length, edgeSegmentCount: 0, draftRowCount: captures.length },
     approval: { production: false, HIGH: 0, importerIntegration: false, automationDecision: "REVIEW" },
     ...overrides,
   },
@@ -79,6 +83,12 @@ try {
     success([first], { draftRows: [{ ...row(first.metadata.captureId), fields: Object.fromEntries(fieldNames.slice(0, -1).map((name) => [name, makeFields()[name]])) }] }),
     success([first], { draftRows: [{ ...row(first.metadata.captureId), fields: { ...makeFields(), island: { ...makeFields().island, value: "canonical" } } }] }),
     success([first], { draftRows: [{ ...row(first.metadata.captureId), automationDecision: "APPLY" }] }),
+    success([first], { edgeSegments: [{ captureId: first.metadata.captureId, rowBox: {}, boundarySide: "left",
+      classification: "EDGE_SEGMENT_UNCERTAIN" }], metrics: { boundaryPolicy: "edge-segments-evidence-only-v1",
+      detectedCandidateCount: 1, completeRowCount: 1, edgeSegmentCount: 1, draftRowCount: 1 } }),
+    success([first], { edgeSegments: [{ captureId: first.metadata.captureId, rowBox: {}, boundarySide: "top",
+      classification: "EDGE_SEGMENT_UNCERTAIN", fields: {} }], metrics: { boundaryPolicy: "edge-segments-evidence-only-v1",
+      detectedCandidateCount: 2, completeRowCount: 1, edgeSegmentCount: 1, draftRowCount: 1 } }),
   ];
   for (const body of malformedCases) {
     globalThis.fetch = async (_url, options) => {

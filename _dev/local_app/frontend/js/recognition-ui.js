@@ -106,7 +106,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeRecognitionResultRegion.hidden = !tradeRecognitionResult;
     if (!tradeRecognitionResult) return;
     const result = tradeRecognitionResult;
-    const summary = makeElement("div", "trade-recognition-summary", `로컬 인식 초안 · ${result.draftRows.length}행 · 이미지 ${result.captures.length}장 · 목록 미적용`);
+    const edgeSummary = result.edgeSegments.length ? ` · 경계 후보 ${result.edgeSegments.length}행 제외` : "";
+    const summary = makeElement("div", "trade-recognition-summary", `로컬 인식 초안 · ${result.draftRows.length}행 · 이미지 ${result.captures.length}장${edgeSummary} · 목록 미적용`);
     const clear = makeElement("button", "trade-recognition-actions", "인식 결과 지우기");
     clear.type = "button";
     clear.dataset.action = "clear-trade-recognition-result";

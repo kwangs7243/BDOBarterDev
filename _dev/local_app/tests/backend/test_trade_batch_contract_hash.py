@@ -29,7 +29,15 @@ def _artifact():
         "baseCommit": "provenance-only",
         "captureSet": {"captureCount": 1, "captureSetSha256": "captures", "rowDetector": "rows-v1",
                        "captures": [{"captureId": "capture-1", "batchId": "batch", "captureOrdinal": 1,
-                                     "imageHash": "image-1", "rowCount": 1}]},
+                                     "imageHash": "image-1", "detectedCandidateCount": 2,
+                                     "completeRowCount": 1, "edgeSegmentCount": 1}]},
+        "boundaryPolicy": "edge-segments-evidence-only-v1",
+        "previousContractSemanticHash": "2652498e21a345deab3f5249de82b8ed94aa48973cf9d76dda33dd2a3a5a0c8b",
+        "edgeSegments": [{"captureId": "capture-1", "captureOrdinal": 1, "detectorOrdinal": 1,
+                          "rowBox": {"x": 0, "y": 0, "width": 2, "height": 3}, "rowCropHash": "edge-crop",
+                          "boundarySide": "top", "classification": "EDGE_SEGMENT_UNCERTAIN",
+                          "reasonCodes": ["ROW_CLIPPED_TOP"], "separatorEvidence": {"topSupport": None},
+                          "rawMetric": None, "normalized": {"y0": 0, "y1": .1, "height": .1}}],
         "batchContract": {"fieldOrder": list(FIELDS), "fieldKeys": list(FIELDS),
                           "fieldSemantics": {"count": "remainingExchangeCount"}, "canonicalValue": None,
                           "rowStatus": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"},
@@ -48,7 +56,10 @@ def _artifact():
                         "rowBox": {"x": 0, "y": 1, "width": 2, "height": 3}, "rowCropHash": "row-crop-1",
                         "sourceRefs": [{"captureId": "capture-1", "rowOrdinal": 1}], "status": "DRAFT_UNVERIFIED",
                         "automationDecision": "REVIEW", "fields": fields}],
-        "metrics": {"rows": {"captureCount": 1, "candidateRows": 1, "completeGeometryRows": 1, "clippedRows": 0,
+        "metrics": {"boundaryPolicy": "edge-segments-evidence-only-v1",
+                    "rows": {"captureCount": 1, "detectedCandidateCount": 2, "completeRowCount": 1,
+                              "edgeSegmentCount": 1, "draftRowCount": 1, "completeGeometryRows": 1,
+                              "fieldClippedCount": 0,
                               "sixFieldDraftRows": 1, "rowsWithAllTextRawCandidates": 1,
                               "rowsWithAllNumericRawCandidates": 1, "rowsWithAllSixRawCandidates": 1, "elapsedMs": 10},
                     "fields": {n: {"rowsTotal": 1, "geometryValid": 1, "ocrAttempted": 1, "ocrNonEmpty": 1,
@@ -125,6 +136,21 @@ class TradeBatchContractHashTests(unittest.TestCase):
         field = projection["draftRows"][0]["fields"]["fromItem"]
         self.assertNotIn("visual", field.get("readerEvidence", {}))
         self.assertNotIn("semanticRunHashes", projection["determinism"])
+
+    def test_boundary_policy_edge_evidence_and_partition_counts_are_semantic(self):
+        baseline = contract_semantic_hash(_artifact())
+        changed = copy.deepcopy(_artifact())
+        changed["boundaryPolicy"] = "different-policy"
+        self.assertNotEqual(baseline, contract_semantic_hash(changed))
+        changed = copy.deepcopy(_artifact())
+        changed["edgeSegments"][0]["rowCropHash"] = "different-crop"
+        self.assertNotEqual(baseline, contract_semantic_hash(changed))
+        changed = copy.deepcopy(_artifact())
+        changed["metrics"]["rows"].update(detectedCandidateCount=3, edgeSegmentCount=2)
+        self.assertNotEqual(baseline, contract_semantic_hash(changed))
+        changed = copy.deepcopy(_artifact())
+        changed["previousContractSemanticHash"] = "provenance-only-change"
+        self.assertEqual(baseline, contract_semantic_hash(changed))
 
 if __name__ == "__main__":
     unittest.main()

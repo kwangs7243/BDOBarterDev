@@ -35,10 +35,19 @@ def _fake_result(command):
                                         "reasonCodes": ["OCR_ERROR"], "cropHash": None}
                                 for field in FIELDS},
                      "status": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"})
+    count = len(rows)
     output_path.write_text(json.dumps({"version": 1, "batchId": manifest["batchId"],
                                        "captureIds": [item["captureId"] for item in manifest["captures"]],
-                                       "captures": [{"captureId": item["captureId"]} for item in manifest["captures"]],
-                                       "draftRows": rows, "metrics": {"countMeaning": "remainingExchangeCount"}}),
+                                       "captures": [{"captureId": item["captureId"], "imageHash": "a" * 64,
+                                                     "imageDimensions": {"width": 80, "height": 50},
+                                                     "detectedCandidateCount": 1, "completeRowCount": 1,
+                                                     "edgeSegmentCount": 0}
+                                                    for item in manifest["captures"]],
+                                       "draftRows": rows, "edgeSegments": [],
+                                       "metrics": {"boundaryPolicy": "edge-segments-evidence-only-v1",
+                                                   "detectedCandidateCount": count, "completeRowCount": count,
+                                                   "edgeSegmentCount": 0, "draftRowCount": count,
+                                                   "countMeaning": "remainingExchangeCount"}}),
                            encoding="utf-8")
     return SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -115,13 +124,15 @@ class TradeBatchRuntimeTests(unittest.TestCase):
                      "captureOrdinal": 1, "rowOrdinal": 1, "rowBox": {"x": 0, "y": 5, "width": 240, "height": 70},
                      "rowCrop": crop, "rowCropHash": "a" * 64, "clipped": False}]
         seen = []
-        def field_record(field, field_crop, geometry, clipped, numeric_parameters, reader):
+        def field_record(field, field_crop, geometry, numeric_parameters, reader):
             seen.append((field, geometry["box"]))
             return {"rawText": None, "normalizedText": None, "ocrScore": None, "rawNumericCandidate": None,
                     "value": None, "status": "OCR_ERROR", "cropHash": None,
                     "readerEvidence": {"geometryEligible": False}, "reasonCodes": ["OCR_ERROR"]}
         with patch("local_app.tools.trade_batch_draft_experiment._row_records",
-                   return_value=(detected, [{"captureId": detected[0]["capture"]["captureId"], "rowCount": 1}])), \
+                   return_value=(detected, [], [{"captureId": detected[0]["capture"]["captureId"],
+                                                 "detectedCandidateCount": 1, "completeRowCount": 1,
+                                                 "edgeSegmentCount": 0}])), \
              patch("local_app.tools.trade_batch_draft_experiment._field_record", side_effect=field_record):
             result = build_batch_drafts_once([{"captureId": detected[0]["capture"]["captureId"]}], lanes,
                                              {"row": "fixed"}, object(), object())

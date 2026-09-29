@@ -88,6 +88,12 @@ class TradeBatchApiTests(unittest.TestCase):
         self.assertEqual([row["captureId"] for row in result["draftRows"]],
                          [first[0]["captureId"], second[0]["captureId"]])
         self.assertEqual(result["metrics"]["countMeaning"], "remainingExchangeCount")
+        self.assertEqual(result["version"], 1)
+        self.assertEqual(result["edgeSegments"], [])
+        self.assertEqual(result["metrics"]["boundaryPolicy"], "edge-segments-evidence-only-v1")
+        self.assertEqual(result["metrics"]["detectedCandidateCount"], 2)
+        self.assertEqual(result["metrics"]["completeRowCount"], 2)
+        self.assertEqual(result["metrics"]["edgeSegmentCount"], 0)
         self.assertEqual(result["approval"], {"production": False, "HIGH": 0,
                                                "importerIntegration": False, "automationDecision": "REVIEW"})
         self.assertEqual(self.database.read_bytes(), main_before)
@@ -95,6 +101,39 @@ class TradeBatchApiTests(unittest.TestCase):
         self.assertEqual(list(self.runtime_dir.iterdir()), [])
         single = self._post([self._capture()])
         self.assertEqual(single.status_code, 200)
+
+    def test_edge_segment_evidence_is_passed_through_without_database_writes(self):
+        original_runner = self.runtime.runner
+        def edge_result(command, **kwargs):
+            result = original_runner(command, **kwargs)
+            output = Path(command[command.index("--out") + 1])
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            for capture in payload["captures"]:
+                capture.update(detectedCandidateCount=2, completeRowCount=1, edgeSegmentCount=1)
+                payload["edgeSegments"].append({"captureId": capture["captureId"], "captureOrdinal": 1,
+                    "detectorOrdinal": 1, "rowBox": {"x": 0, "y": 0, "width": 80, "height": 12},
+                    "rowCropHash": "a" * 64, "boundarySide": "top",
+                    "classification": "EDGE_SEGMENT_UNCERTAIN", "reasonCodes": ["ROW_CLIPPED_TOP"],
+                    "separatorEvidence": {}, "rawMetric": None,
+                    "normalized": {"y0": 0, "y1": .24, "height": .24}})
+            payload["metrics"].update(detectedCandidateCount=len(payload["captures"]) * 2,
+                completeRowCount=len(payload["captures"]), edgeSegmentCount=len(payload["captures"]))
+            output.write_text(json.dumps(payload), encoding="utf-8")
+            return result
+        self.runtime.runner = edge_result
+        first, second = self._capture(), self._capture()
+        main_before, sidecar_before = self.database.read_bytes(), self.sidecar.read_bytes()
+        response = self._post([first, second])
+        self.assertEqual(response.status_code, 200, response.get_json())
+        result = response.get_json()["result"]
+        self.assertEqual(result["version"], 1)
+        self.assertEqual(len(result["edgeSegments"]), 2)
+        self.assertEqual(result["metrics"]["detectedCandidateCount"], 4)
+        self.assertEqual(result["metrics"]["completeRowCount"], 2)
+        self.assertEqual(result["metrics"]["edgeSegmentCount"], 2)
+        self.assertEqual(result["metrics"]["draftRowCount"], 2)
+        self.assertEqual(self.database.read_bytes(), main_before)
+        self.assertEqual(self.sidecar.read_bytes(), sidecar_before)
 
     def test_duplicate_ids_parts_count_task_frame_and_png_are_rejected(self):
         item = self._capture()
