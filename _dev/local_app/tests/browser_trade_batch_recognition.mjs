@@ -26,9 +26,10 @@ class FakeRuntime:
                            "metadataBatchIds": [item["metadata"].get("batchId") for item in captures]})
         if self.mode == "delay": time.sleep(1.0)
         if self.mode == "busy": raise TradeBatchRuntimeError("engine_busy", "busy", 409, retryable=True)
+        empty = self.mode == "empty"
         fields = ("island", "fromItem", "reqAmount", "toItem", "count", "yield")
         rows = []
-        for ordinal, item in enumerate(captures, 1):
+        for ordinal, item in enumerate(() if empty else captures, 1):
             values = {}
             for field in fields:
                 raw = "10회" if field == "count" else field + " raw"
@@ -37,15 +38,14 @@ class FakeRuntime:
                                  "reasonCodes": ["NEEDS_REVIEW"]}
             rows.append({"captureId": item["captureId"], "ordinal": ordinal, "fields": values,
                          "status": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"})
-        capture_evidence = [{"captureId": captures[0]["captureId"], "detectedCandidateCount": 2,
-                             "completeRowCount": 1, "edgeSegmentCount": 1},
-                            {"captureId": captures[1]["captureId"], "detectedCandidateCount": 1,
-                             "completeRowCount": 1, "edgeSegmentCount": 0}]
+        capture_evidence = [{"captureId": item["captureId"], "detectedCandidateCount": (1 if index == 0 else 0) if empty else (2 if index == 0 else 1),
+                             "completeRowCount": 0 if empty else 1, "edgeSegmentCount": 1 if index == 0 else 0}
+                            for index, item in enumerate(captures)]
         return {"captures": capture_evidence, "draftRows": rows,
                 "edgeSegments": [{"captureId": captures[0]["captureId"], "rowBox": {"x": 0, "y": 0, "width": 20, "height": 12},
                                   "boundarySide": "top", "classification": "EDGE_SEGMENT_UNCERTAIN"}],
-                "metrics": {"boundaryPolicy": "edge-segments-evidence-only-v1", "detectedCandidateCount": 3,
-                            "completeRowCount": 2, "edgeSegmentCount": 1, "draftRowCount": 2},
+                "metrics": {"boundaryPolicy": "edge-segments-evidence-only-v1", "detectedCandidateCount": 1 if empty else 3,
+                            "completeRowCount": len(rows), "edgeSegmentCount": 1, "draftRowCount": len(rows)},
                 "runtime": {"available": True, "engineId": "test-only"}}
 
 app = create_app(r'${database}', testing=True)
@@ -129,8 +129,33 @@ try {
   const queueIds = await evaluate("JSON.stringify([...document.querySelectorAll('.capture-draft-item')].map(item=>item.dataset.captureId))").then(JSON.parse);
   const queueBatchIds = await evaluate("JSON.stringify([...document.querySelectorAll('.capture-draft-item')].map(item=>item.dataset.batchId))").then(JSON.parse);
   const beforeRecognition = await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  await evaluate(`(()=>{
+    window.__nativeFetch=window.fetch.bind(window);window.__catalogFetchMode='reject';window.__catalogFetchStarted=false;
+    window.fetch=async (input,init)=>{
+      if(String(input).includes('/assets/data/trade-catalog.json')){
+        window.__catalogFetchStarted=true;
+        if(window.__catalogFetchMode==='reject')return new Response('test catalog failure',{status:503});
+        if(window.__catalogFetchMode==='delay')await new Promise(resolve=>window.__releaseCatalogFetch=resolve);
+      }
+      return window.__nativeFetch(input,init);
+    };
+  })()`);
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async () => evaluate("document.querySelector('.trade-review-error')?.dataset.diagnosticCode==='REVIEW_MOUNT_FAILED'"), "visible review mount rejection");
+  assert.equal(await evaluate("document.querySelector('.trade-review-error').textContent.includes('REVIEW_MOUNT_FAILED')"), true, "mount rejection exposes a diagnostic code");
+  const errorVisibility = await evaluate("(()=>{const e=document.querySelector('.trade-review-error').getBoundingClientRect(),v=document.querySelector('#trade-capture-dialog .dialog-body').getBoundingClientRect();return {visible:e.height>0&&e.bottom>v.top&&e.top<v.bottom,error:{top:e.top,bottom:e.bottom,height:e.height},body:{top:v.top,bottom:v.bottom},scrollTop:document.querySelector('#trade-capture-dialog .dialog-body').scrollTop}})()");
+  assert.equal(errorVisibility.visible, true, `mount error is scrolled into the visible dialog area: ${JSON.stringify(errorVisibility)}`);
+  assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"), /REVIEW_MOUNT_FAILED/);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').querySelector('.trade-review-table')===null"), true);
+  await evaluate("window.__catalogFetchMode='delay';window.__catalogFetchStarted=false;document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async () => evaluate("window.__catalogFetchStarted && document.querySelector('[data-role=trade-recognition-status]').textContent.includes('검수 화면을 준비하는 중')"), "review mount pending status");
+  assert.equal(await evaluate("document.querySelector('.trade-review-summary')===null"), true, "review content has not mounted while catalog resolution is pending");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('표시했습니다')"), false, "success is not announced before the review DOM mounts");
+  await evaluate("window.__releaseCatalogFetch()");
   await waitFor(async () => evaluate("(() => { const region=document.querySelector('[data-role=trade-recognition-result]'); const summary=region?.querySelector('.trade-review-summary'); return region?.hidden===false && Boolean(summary) && summary.textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용'); })()"), "recognition review summary");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"), "인식 초안을 검수 화면에 표시했습니다. 목록에는 적용되지 않았습니다.", "success follows completed review mount");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').getBoundingClientRect().height>=200"), true, "review panel reserves usable viewport height");
+  assert.equal(await evaluate("(()=>{const e=document.querySelector('.trade-review-summary').getBoundingClientRect(),v=document.querySelector('#trade-capture-dialog .dialog-body').getBoundingClientRect();return e.height>0&&e.bottom>v.top&&e.top<v.bottom})()"), true, "review summary is inside the visible dialog area");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용')"), true);
   assert.deepEqual(await evaluate("JSON.stringify([...document.querySelectorAll('.trade-recognition-table thead th')].map(cell=>cell.textContent))").then(JSON.parse),
     ["행", "섬", "소모품", "필요 수량", "획득품", "남은 교환 횟수", "수율", "상태"]);
@@ -139,9 +164,9 @@ try {
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "2", "success retains queue");
   assert.equal(await evaluate("document.querySelector('#screen-capture-session').dataset.state"), "CONNECTED", "recognition keeps screen stream connected");
   const fakeState = await (await fetch(`${baseUrl}__test__/trade-runtime`)).json();
-  assert.equal(fakeState.calls.length, 1);
-  assert.deepEqual(fakeState.calls[0].captureIds, queueIds, "POST capture order matches queue order");
-  assert.deepEqual(fakeState.calls[0].metadataBatchIds, queueBatchIds, "capture batch metadata is preserved");
+  assert.equal(fakeState.calls.length, 2, "the failed mount and successful retry each preserve one recognition request");
+  assert.deepEqual(fakeState.calls[1].captureIds, queueIds, "POST capture order matches queue order");
+  assert.deepEqual(fakeState.calls[1].metadataBatchIds, queueBatchIds, "capture batch metadata is preserved");
   assert.deepEqual(await (await fetch(`${baseUrl}api/bootstrap`)).json(), beforeRecognition, "main DB semantic bootstrap unchanged");
   assert.equal(await evaluate("document.querySelector('#trade-list-root').textContent"), tradeListBefore, "trade list unchanged");
 
@@ -155,6 +180,13 @@ try {
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true);
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "2", "clear result retains queue");
   assert.equal(await evaluate("document.querySelector('#screen-capture-session').dataset.state"), "CONNECTED", "clear result retains stream");
+  await evaluate(`fetch('/__test__/trade-runtime/empty',{method:'POST'})`);
+  await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async () => evaluate("document.querySelector('.trade-review-empty')?.textContent.includes('완전한 물교 행을 찾지 못했습니다')"), "visible empty recognition result");
+  assert.equal(await evaluate("document.querySelector('.trade-review-summary').textContent.includes('logical 0행')"), true);
+  assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), true, "empty review cannot be completed as if rows were reviewed");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('완전한 물교 행이 없습니다')"), true);
+  await evaluate("document.querySelector('[data-action=clear-trade-recognition-result]').click()");
   await evaluate(`fetch('/__test__/trade-runtime/delay',{method:'POST'})`);
   await evaluate(`new Promise(resolve=>{
     const canvas=document.createElement('canvas');canvas.width=100;canvas.height=60;
@@ -175,7 +207,7 @@ try {
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true, "stale result is not rendered");
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "3", "in-flight capture is retained");
   const afterDelay = await (await fetch(`${baseUrl}__test__/trade-runtime`)).json();
-  assert.equal(afterDelay.calls.length, 2, "duplicate click does not send a second pending request");
+  assert.equal(afterDelay.calls.length, 4, "duplicate click does not send a second pending request");
 
   await evaluate("document.querySelector('.capture-draft-item:last-child button').click()");
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "2", "removing in-flight capture restores original queue size");

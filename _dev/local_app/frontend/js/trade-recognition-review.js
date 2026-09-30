@@ -264,7 +264,7 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
     const risks = rowStates.flatMap(({ row }) => FIELD_KEYS.filter((key) => row.fields[key].riskReasons?.length
       || ["AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"].includes(row.fields[key].status)));
     summary.textContent = `로컬 인식 초안 · ${sourceCount}행 · 이미지 ${recognitionResult.captures.length}장${edgeSegments.length ? ` · 경계 후보 ${edgeSegments.length}행 제외` : ""} · 목록 미적용 · 인식 source COMPLETE ${sourceCount}행 · 검수 logical ${rowStates.length}행 · 겹침 통합 ${mergedGroupCount}그룹 · 충돌 ${conflictGroupCount}그룹 · 전체 행 ${rowStates.length} · 전체 필드 ${rowStates.length * 6} · 확인 권장 ${risks.length} · 수정 ${edits.length} · 모름 ${unknowns.length} · 경계 ${edgeSegments.length}`;
-    completeButton.disabled = completed || !confirmBox.checked || editorRefs.some((reference) => !reference.state.unknown && reference.state.invalid);
+    completeButton.disabled = completed || rowStates.length === 0 || !confirmBox.checked || editorRefs.some((reference) => !reference.state.unknown && reference.state.invalid);
   };
 
   rowStates.forEach(({ row, fields }, rowIndex) => {
@@ -444,6 +444,16 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
     tr.append(rowStatus);
     body.append(tr);
   });
+  if (rowStates.length === 0) {
+    const emptyRow = document.createElement("tr");
+    emptyRow.className = "trade-review-empty";
+    emptyRow.setAttribute("role", "status");
+    emptyRow.setAttribute("aria-live", "polite");
+    const emptyCell = make("td", "", "완전한 물교 행을 찾지 못했습니다. 캡처 이미지는 유지됩니다. 경계 후보와 인식 원본을 확인해 주세요.");
+    emptyCell.colSpan = 8;
+    emptyRow.append(emptyCell);
+    body.append(emptyRow);
+  }
   table.append(head, body);
   tableWrap.append(table);
 

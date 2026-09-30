@@ -67,6 +67,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeReviewController = null;
   let tradeReviewGeneration = 0;
   let tradeReviewForResult = null;
+  let tradeReviewMountPromise = null;
   let tradeObservationJob = null;
   let tradeSavedObservation = null;
   let tradeObservationInFlight = false;
@@ -404,7 +405,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const renderTradeRecognitionResult = () => {
     if (tradeRecognitionResult && tradeReviewForResult === tradeRecognitionResult) {
       tradeRecognitionResultRegion.hidden = false;
-      return;
+      if (tradeReviewController) return Promise.resolve({ status: "mounted" });
+      if (tradeReviewMountPromise) return tradeReviewMountPromise;
     }
     if (tradeReviewController) {
       tradeReviewController.destroy();
@@ -414,10 +416,14 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const generation = ++tradeReviewGeneration;
     tradeRecognitionResultRegion.replaceChildren();
     tradeRecognitionResultRegion.hidden = !tradeRecognitionResult;
-    if (!tradeRecognitionResult) return;
+    if (!tradeRecognitionResult) {
+      tradeRecognitionRegion.style.flex = "";
+      return Promise.resolve({ status: "empty" });
+    }
+    tradeRecognitionRegion.style.flex = "1 0 min(55vh, 600px)";
     const result = tradeRecognitionResult;
     tradeReviewForResult = result;
-    void mountTradeRecognitionReview({
+    const mountPromise = mountTradeRecognitionReview({
       root: tradeRecognitionResultRegion,
       recognitionResult: result,
       captures: [...tradeQueue.items],
@@ -450,16 +456,35 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     }).then((controller) => {
       if (generation !== tradeReviewGeneration || result !== tradeRecognitionResult) {
         controller.destroy();
-        return;
+        return { status: "stale" };
+      }
+      const reviewRoot = tradeRecognitionResultRegion;
+      const mountedContent = result.draftRows.length === 0
+        ? reviewRoot.querySelector(".trade-review-empty")
+        : reviewRoot.querySelector(".trade-review-table tbody tr[data-capture-id]");
+      if (!reviewRoot.querySelector(".trade-review-summary") || !mountedContent) {
+        controller.destroy();
+        throw new Error("review DOM mount did not produce visible review content");
       }
       tradeReviewController = controller;
-    }).catch(() => {
-      if (generation !== tradeReviewGeneration || result !== tradeRecognitionResult) return;
+      reviewRoot.querySelector(".trade-review-summary")?.scrollIntoView({ block: "start", inline: "nearest" });
+      return { status: "mounted" };
+    }).catch((error) => {
+      if (generation !== tradeReviewGeneration || result !== tradeRecognitionResult) return { status: "stale" };
+      tradeReviewForResult = null;
       tradeRecognitionResultRegion.replaceChildren();
       tradeRecognitionResultRegion.hidden = false;
       const message = document.createElement("p");
       message.className = "trade-review-error";
-      message.textContent = "검수 후보를 만들지 못했습니다. 인식 원본은 유지했습니다.";
+      message.dataset.diagnosticCode = "REVIEW_MOUNT_FAILED";
+      message.setAttribute("role", "alert");
+      message.textContent = "인식 결과는 받았지만 검수 화면을 만들지 못했습니다. 인식 원본은 유지했습니다. 진단 코드: REVIEW_MOUNT_FAILED";
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "오류 정보 보기";
+      const detailText = document.createElement("pre");
+      detailText.textContent = `${error?.name || "Error"}: ${String(error?.message || error || "상세 오류가 없습니다.")}`;
+      details.append(summary, detailText);
       const clear = document.createElement("button");
       clear.type = "button";
       clear.dataset.action = "clear-trade-recognition-result";
@@ -470,8 +495,15 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         renderTradeRecognitionResult();
         tradeRecognitionStatus.textContent = "인식 결과를 지웠습니다. 대기 이미지와 화면 연결은 유지됩니다.";
       });
-      tradeRecognitionResultRegion.append(message, clear);
+      tradeRecognitionResultRegion.append(message, details, clear);
+      message.scrollIntoView({ block: "nearest", inline: "nearest" });
+      tradeRecognitionStatus.textContent = "인식은 완료했지만 검수 화면 표시 중 오류가 발생했습니다. 진단 코드: REVIEW_MOUNT_FAILED";
+      return { status: "error", diagnosticCode: "REVIEW_MOUNT_FAILED" };
+    }).finally(() => {
+      if (generation === tradeReviewGeneration) tradeReviewMountPromise = null;
     });
+    tradeReviewMountPromise = mountPromise;
+    return mountPromise;
   };
   const updateRecognitionControls = () => {
     tradeRecognitionButton.disabled = tradeRecognitionPending || Boolean(tradeObservationJob) || !tradeRuntimeAvailable || tradeQueue.length === 0;
@@ -665,8 +697,14 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       }
       tradeRecognitionResult = result;
       tradeRecognitionResultRevision = requestRevision;
-      renderTradeRecognitionResult();
-      tradeRecognitionStatus.textContent = "인식 초안을 표시했습니다. 목록에는 적용되지 않았습니다.";
+      tradeRecognitionStatus.textContent = "인식 결과를 받았습니다. 검수 화면을 준비하는 중…";
+      const mountResult = await renderTradeRecognitionResult();
+      if (requestRevision !== tradeQueueRevision || result !== tradeRecognitionResult) return;
+      if (mountResult?.status === "mounted") {
+        tradeRecognitionStatus.textContent = result.draftRows.length === 0
+          ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
+          : "인식 초안을 검수 화면에 표시했습니다. 목록에는 적용되지 않았습니다.";
+      }
     } catch (error) {
       tradeRecognitionStatus.textContent = error?.message || "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.";
     } finally {
