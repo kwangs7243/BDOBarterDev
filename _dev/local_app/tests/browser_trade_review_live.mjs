@@ -11,9 +11,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
 const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_PARENT = "bc24d35dfef3718816b18813a1c55a1428a32039";
+const EXPECTED_PARENT = "b1f34f0d1574b3a2027c0cc6f4ce9f929c1bdafe";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const HARNESS_SUBJECT = "fix: prepare independent live validation";
+const HARNESS_SUBJECT = "fix: stabilize live capture evidence";
 const CAPTURE_QUEUE_STABLE_MS = 1500;
 const CAPTURE_QUEUE_POLL_MS = 250;
 const EVALUATION_POLICY = "trade-review-evaluation-v1";
@@ -436,8 +436,83 @@ async function openTradeDialog(browser, baseUrl) {
   return { bootstrap, runtimeStatus };
 }
 
+function installBlobEvidenceRegistryInPage() {
+  if (window.__r011BlobEvidenceByUrl instanceof Map && window.__r011RestoreCreateObjectURL) {
+    throw new Error("CAPTURE_BLOB_EVIDENCE_REGISTRY_ALREADY_INSTALLED");
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
+  const original = URL.createObjectURL;
+  if (typeof original !== "function" || !descriptor) throw new Error("CAPTURE_BLOB_EVIDENCE_UNSUPPORTED");
+  const registry = new Map();
+  const wrapper = function (blob) {
+    const objectUrl = Reflect.apply(original, URL, [blob]);
+    if (blob instanceof Blob) {
+      const evidence = (async () => {
+        const bytes = await blob.arrayBuffer();
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        const bitmapSha256 = [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+        return { bitmapSha256, bitmapBytes: bytes.byteLength, blobType: blob.type || "" };
+      })();
+      registry.set(objectUrl, evidence);
+    }
+    return objectUrl;
+  };
+  Object.defineProperty(URL, "createObjectURL", { ...descriptor, value: wrapper });
+  window.__r011OriginalCreateObjectURL = original;
+  window.__r011WrappedCreateObjectURL = wrapper;
+  window.__r011CreateObjectURLDescriptor = descriptor;
+  window.__r011BlobEvidenceByUrl = registry;
+  window.__r011RestoreCreateObjectURL = () => {
+    if (URL.createObjectURL === wrapper) Object.defineProperty(URL, "createObjectURL", descriptor);
+    return URL.createObjectURL === original;
+  };
+  return { installed: URL.createObjectURL === wrapper, registry: window.__r011BlobEvidenceByUrl };
+}
+
+async function restoreBlobEvidenceWrapper(browser) {
+  return await browser.evaluate(`(()=>{
+    const restore=window.__r011RestoreCreateObjectURL;
+    if(!restore)return true;
+    const restored=restore();
+    window.__r011RestoreCreateObjectURL=null;
+    return restored;
+  })()`);
+}
+
+async function runCaptureBlobEvidenceProbe(browser) {
+  const sample = "r011-capture-blob-evidence-probe";
+  const expectedSha256 = createHash("sha256").update(sample, "utf8").digest("hex");
+  return await browser.evaluate(`(async()=>{
+    const sample=${JSON.stringify(sample)};
+    const expectedSha256=${JSON.stringify(expectedSha256)};
+    let objectUrl=null;let result=null;let failure=null;let createObjectUrlRestored=false;let objectUrlRevoked=false;
+    try{
+      const install=(${installBlobEvidenceRegistryInPage.toString()})();
+      if(!install.installed)throw new Error("CAPTURE_BLOB_EVIDENCE_INSTALL_FAILED");
+      objectUrl=URL.createObjectURL(new Blob([sample],{type:"text/plain"}));
+      const pending=window.__r011BlobEvidenceByUrl.get(objectUrl);
+      if(!pending)throw new Error("CAPTURE_BLOB_EVIDENCE_MISSING");
+      const evidence=await pending;
+      result={status:"PASS",bytes:evidence.bitmapBytes,expectedBytes:new TextEncoder().encode(sample).byteLength,
+        sha256:evidence.bitmapSha256,sha256Matched:evidence.bitmapSha256===expectedSha256,
+        previewFetchUsed:false};
+      if(result.bytes!==result.expectedBytes||!result.sha256Matched)throw new Error("CAPTURE_BLOB_EVIDENCE_PROBE_MISMATCH");
+    }catch(error){failure=error.message;}
+    finally{
+      const restore=window.__r011RestoreCreateObjectURL;
+      createObjectUrlRestored=restore?restore():true;
+      window.__r011RestoreCreateObjectURL=null;
+      if(objectUrl){try{URL.revokeObjectURL(objectUrl);objectUrlRevoked=true;}catch{}}
+    }
+    if(failure)throw new Error(failure);
+    return {...result,createObjectUrlRestored,objectUrlRevoked};
+  })()`);
+}
+
 async function armRecognitionGate(browser) {
   await browser.evaluate(`(()=>{
+    const install=(${installBlobEvidenceRegistryInPage.toString()})();
+    if(!install.installed)throw new Error("CAPTURE_BLOB_EVIDENCE_INSTALL_FAILED");
     window.__r011SourceSetFrozen=false;
     window.__r011PrematureRecognitionAttempts=0;
     window.__r011ExpectedFileCaptures=0;
@@ -463,15 +538,25 @@ async function armRecognitionGate(browser) {
 }
 
 async function releaseRecognitionGate(browser) {
-  return await browser.evaluate(`(()=>{
+  const result = await browser.evaluate(`(()=>{
     window.__r011SourceSetFrozen=true;
     if(window.__r011RecognitionGate){document.removeEventListener('click',window.__r011RecognitionGate,true);window.__r011RecognitionGate=null;}
     if(window.__r011CountFileSelection){document.querySelector('#trade-capture-files')?.removeEventListener('change',window.__r011CountFileSelection,true);window.__r011CountFileSelection=null;}
     if(window.__r011CountPasteImages){document.removeEventListener('paste',window.__r011CountPasteImages,true);window.__r011CountPasteImages=null;}
-    return {prematureRecognitionAttempts:window.__r011PrematureRecognitionAttempts||0,
+    const restore=window.__r011RestoreCreateObjectURL;
+    const createObjectUrlRestored=restore?restore():false;
+    window.__r011RestoreCreateObjectURL=null;
+    return {sourceSetFrozen:window.__r011SourceSetFrozen===true,
+      recognitionGateRemoved:!window.__r011RecognitionGate,
+      createObjectUrlRestored,
+      prematureRecognitionAttempts:window.__r011PrematureRecognitionAttempts||0,
       expectedFileCaptures:window.__r011ExpectedFileCaptures||0,
       expectedPasteCaptures:window.__r011ExpectedPasteCaptures||0};
   })()`);
+  if (!result.sourceSetFrozen || !result.recognitionGateRemoved || !result.createObjectUrlRestored) {
+    throw new Error(`SOURCE_FREEZE_GATE_RELEASE_INCOMPLETE: ${JSON.stringify(result)}`);
+  }
+  return result;
 }
 
 async function runPreflight(options) {
@@ -485,7 +570,7 @@ async function runPreflight(options) {
   if (!(await stat(chromePath).catch(() => null))?.isFile()) throw new Error(`Chrome 실행 파일이 없습니다: ${chromePath}`);
   if (!(await stat(path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs")).catch(() => null))?.isFile()) throw new Error("R010 evaluator 파일이 없습니다.");
   const workspace = await import("node:fs/promises").then(({ mkdtemp }) => mkdtemp(path.join(tmpdir(), "bdo-r011-preflight-")));
-  const port = await findPort(); let server; let browser; let result; let cdpControls = null;
+  const port = await findPort(); let server; let browser; let result; let cdpControls = null; let captureBlobEvidenceProbe = null;
   const deviceScaleFactor = Number(options["device-scale-factor"] ?? "1.3");
   if (!Number.isFinite(deviceScaleFactor) || deviceScaleFactor <= 0 || deviceScaleFactor > 4) throw new Error("--device-scale-factor는 0 초과 4 이하 수치여야 합니다.");
   try {
@@ -502,6 +587,13 @@ async function runPreflight(options) {
     browser = await launchChrome({ chromePath, baseUrl: server.baseUrl, profile, deviceScaleFactor });
     stage = "production_page_and_capture_ui";
     const ui = await openTradeDialog(browser, server.baseUrl);
+    stage = "capture_blob_evidence_probe";
+    captureBlobEvidenceProbe = await runCaptureBlobEvidenceProbe(browser);
+    if (captureBlobEvidenceProbe.status !== "PASS" || !captureBlobEvidenceProbe.sha256Matched
+      || captureBlobEvidenceProbe.previewFetchUsed !== false || !captureBlobEvidenceProbe.createObjectUrlRestored
+      || !captureBlobEvidenceProbe.objectUrlRevoked) {
+      throw new Error(`CAPTURE_BLOB_EVIDENCE_PROBE_FAILED: ${JSON.stringify(captureBlobEvidenceProbe)}`);
+    }
     const viewport = await pageFacts(browser);
     if (!viewport.appReady || !viewport.url.startsWith(server.baseUrl) || !viewport.innerWidth || !viewport.innerHeight) throw new Error("visible Chrome의 production UI/viewport 확인이 실패했습니다.");
     const mode = deviceScaleFactor;
@@ -517,6 +609,7 @@ async function runPreflight(options) {
         initialTargets: browser.initialTargets, blankTarget: browser.blankTarget, appTarget: browser.appTarget,
         browserLevelWebSocketUsedForPageCommands: false, websocket: browser.diagnostics },
       runtime: ui.runtimeStatus,
+      captureBlobEvidenceProbe,
       model: { available: ui.runtimeStatus.available, modelReady: ui.runtimeStatus.modelReady,
         engineId: ui.runtimeStatus.engineId, modelBundleSha256: ui.runtimeStatus.modelBundleSha256 ?? null },
       storageIsolation: { isolatedMainDb: server.mainDb, isolatedRecognitionSidecar: server.sidecar,
@@ -539,12 +632,14 @@ async function runPreflight(options) {
         pid: browser?.spawnedPid ?? null, debugPort: browser?.debugPort ?? null,
         devToolsActivePort: browser?.activePortPath ?? null, stderrTail: browser?.stderr?.().slice(-6000) ?? null },
       cdpControls,
+      captureBlobEvidenceProbe,
       runtime: server?.runtime ?? null,
       storageIsolation: server ? { isolatedMainDb: server.mainDb, isolatedRecognitionSidecar: server.sidecar,
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false } : null };
     await writeFile(path.join(outputDir, "preflight.json"), `${JSON.stringify(failed, null, 2)}\n`, { flag: "wx" }).catch(() => {});
     throw error;
   } finally {
+    if (browser) await restoreBlobEvidenceWrapper(browser).catch(() => false);
     if (browser) await browser.close().catch(() => {});
     if (server?.child) await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true, maxRetries: 5, retryDelay: 1000 });
@@ -587,8 +682,8 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R3 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
-  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R3 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
+  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R4 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
+  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R4 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
   if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
@@ -719,13 +814,22 @@ function getQueuedCapturesExpression() {
       const heading=item.querySelector('h4')?.textContent||'';
       const detail=item.querySelector('.capture-draft-details')?.textContent||'';
       const image=item.querySelector('img');
-      let bitmapSha256=null,bitmapBytes=null;
-      if(image?.currentSrc){const response=await fetch(image.currentSrc);const blob=await response.blob();const bytes=await blob.arrayBuffer();
-        bitmapBytes=bytes.byteLength;const digest=await crypto.subtle.digest('SHA-256',bytes);bitmapSha256=[...new Uint8Array(digest)].map(value=>value.toString(16).padStart(2,'0')).join('');}
+      const previewUrl=image?.currentSrc||image?.src||null;
+      const registry=window.__r011BlobEvidenceByUrl;
+      const pending=previewUrl&&registry instanceof Map?registry.get(previewUrl):null;
       const match=heading.match(/(\\d+)×(\\d+)/);
       const sourceType=detail.includes('클립보드')?'clipboard':detail.includes('화면')?'browser-stream':detail.includes('파일')?'file':null;
+      if(!pending&&window.__r011SourceSetFrozen===true){
+        return {captureId:item.dataset.captureId||null,queueStatus:item.dataset.status||null,heading,detail,sourceType,
+          frame:match?{width:Number(match[1]),height:Number(match[2])}:null,
+          bitmapSha256:null,bitmapBytes:null,blobType:null,reencoded:detail.includes('PNG 변환')};
+      }
+      if(!pending)throw new Error('CAPTURE_BLOB_EVIDENCE_MISSING: '+(item.dataset.captureId||previewUrl||'unknown'));
+      const evidence=await pending;
       return {captureId:item.dataset.captureId||null,queueStatus:item.dataset.status||null,heading,detail,sourceType,
-        frame:match?{width:Number(match[1]),height:Number(match[2])}:null,bitmapSha256,bitmapBytes,reencoded:detail.includes('PNG 변환')};
+        frame:match?{width:Number(match[1]),height:Number(match[2])}:null,
+        bitmapSha256:evidence.bitmapSha256,bitmapBytes:evidence.bitmapBytes,blobType:evidence.blobType,
+        reencoded:detail.includes('PNG 변환')};
     }));
   })()`;
 }
@@ -1128,7 +1232,12 @@ async function runLive(options) {
     }
     throw error;
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    if (browser) {
+      const restored = await restoreBlobEvidenceWrapper(browser).catch(() => false);
+      caseRecord.createObjectUrlRestoredOnCleanup = restored;
+      await writeJson(caseManifestPath, caseRecord).catch(() => {});
+      await browser.close().catch(() => {});
+    }
     if (server?.child) await stopChild(server.child);
     if (workspace) await rm(workspace, { recursive: true, force: true, maxRetries: 5, retryDelay: 1000 });
   }
