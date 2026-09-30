@@ -1,0 +1,48 @@
+.trade-capture-dialog{width:min(1180px,calc(100vw - 24px));height:min(92vh,1000px)}
+.trade-capture-dialog>.dialog-body{height:calc(100% - 43px);max-height:none;display:flex;flex-direction:column;min-height:0}
+.trade-capture-dialog [data-role=trade-recognition]{display:flex;flex-direction:column;min-height:0;flex:1}
+.trade-capture-dialog [data-role=trade-recognition-result]{min-height:0;flex:1;display:flex;flex-direction:column;gap:.45rem}
+.trade-capture-dialog [data-role=trade-recognition-result][hidden]{display:none}
+.trade-review-summary{font-size:.78rem;color:#cbd5e1;line-height:1.5}
+.trade-review-clear{align-self:flex-start;font-size:.76rem}
+.trade-review-edges{border:1px solid #9a5c16;border-left-width:4px;border-radius:5px;background:#3a2a13;padding:.5rem .65rem;color:#fde68a}
+.trade-review-edge-title{display:block;font-size:.84rem}
+.trade-review-edge-list{margin:.35rem 0 0;padding-left:1.3rem;font-size:.76rem}
+.trade-review-edge-details{margin:.25rem 0;color:#fef3c7}
+.trade-review-edge-details pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.7rem}
+.trade-review-table-wrap{min-height:9rem;flex:1;max-height:52vh;overscroll-behavior:contain;border:1px solid #374151;border-radius:5px}
+.trade-review-table{min-width:1120px;table-layout:fixed}
+.trade-review-table th:first-child,.trade-review-table td:first-child{width:3.2rem}
+.trade-review-table th:last-child,.trade-review-table td:last-child{width:10rem}
+.trade-review-table td.trade-review-field{min-width:10rem;padding:.35rem;white-space:normal}
+.trade-review-input{display:block;width:100%;min-width:7rem;margin-bottom:.25rem}
+.trade-review-input:disabled{opacity:.65}
+.trade-review-unknown{display:inline-flex;align-items:center;gap:.25rem;margin-right:.35rem;font-size:.72rem;color:#cbd5e1}
+.trade-review-unknown input{margin:0}
+.trade-review-badge{display:inline-block;border:1px solid #526173;border-radius:999px;padding:.08rem .38rem;font-size:.67rem;color:#d1d5db;vertical-align:middle}
+.trade-review-badge.is-warning{border-color:#c17b24;background:#3a2a13;color:#fde68a}
+.trade-review-risk-summary{margin:.25rem 0;color:#fde68a;font-size:.68rem;line-height:1.35;white-space:normal}
+.trade-review-field[data-state=warning],.trade-review-field[data-state=master-disagreement]{background:#352718}
+.trade-review-field[data-state=edited]{background:#132f3c}
+.trade-review-field[data-state=unknown]{background:#292638}
+.trade-review-field[data-state=master-disagreement]{outline:1px solid #b879d0;outline-offset:-1px}
+.trade-review-validation{display:block;min-height:1.1em;color:#fca5a5;font-size:.68rem}
+.trade-review-evidence{margin-top:.2rem;font-size:.7rem}
+.trade-review-evidence>summary,.trade-review-edge-details>summary{cursor:pointer;color:#cbd5e1}
+.trade-review-evidence-list{display:grid;grid-template-columns:minmax(5rem,.45fr) minmax(0,1fr);gap:.18rem .4rem;margin:.35rem 0}
+.trade-review-evidence-list dt{color:#9ca3af}
+.trade-review-evidence-list dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.trade-review-master-compare{border-left:3px solid #b879d0;padding-left:.45rem;color:#e9d5ff}
+.trade-review-master-compare p{margin:.2rem 0}
+.trade-review-crop-button{margin:.2rem .35rem .2rem 0;font-size:.68rem;padding:.18rem .35rem}
+.trade-review-crop-status{font-size:.68rem;color:#9ca3af}
+.trade-review-crop{display:block;max-width:min(100%,32rem);max-height:10rem;object-fit:contain;margin-top:.3rem;border:1px solid #526173;background:#fff}
+.trade-review-footer{position:sticky;bottom:0;z-index:2;border:1px solid #3b5265;border-radius:5px;background:#17212df2;padding:.45rem .6rem;box-shadow:0 -5px 15px #11182788}
+.trade-review-footer-summary{margin:.1rem 0 .3rem;color:#cbd5e1;font-size:.75rem}
+.trade-review-confirm{display:flex;align-items:flex-start;gap:.4rem;font-weight:600;font-size:.82rem}
+.trade-review-confirm input{margin:.15rem 0 0}
+.trade-review-message{min-height:1.1em;margin:.2rem 0;color:#fde68a;font-size:.75rem}
+.trade-review-complete{font-weight:700;background:#075985;border-color:#0284c7}
+.trade-review-complete:disabled{cursor:not-allowed;opacity:.55}
+.trade-review-error{color:#fca5a5;font-weight:600}
+@media(max-width:700px){.trade-capture-dialog{height:94vh}.trade-review-table-wrap{max-height:48vh}.trade-review-footer{position:sticky}.trade-review-table{min-width:1080px}}

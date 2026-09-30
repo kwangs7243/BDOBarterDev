@@ -1,6 +1,7 @@
 import { state } from "./state.js";
 import { CaptureError, CaptureQueue, DEFAULT_TRADE_ROI, PreviewRegistry, ScreenCaptureSession, captureFromFile, captureFromPaste, captureLimits, displayedVideoContentRect, isEditableTarget, moveNormalizedRegion, normalizeRegion, resizeNormalizedRegion } from "./capture.js";
 import { getTradeRecognitionRuntime, recognizeTradeBatch } from "./trade-recognition-client.js";
+import { mountTradeRecognitionReview } from "./trade-recognition-review.js";
 
 function captureContext(taskType) {
   const sessionId = state.session?.id;
@@ -59,6 +60,10 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeRuntimeAvailable = false;
   let tradeRecognitionPending = false;
   let tradeRecognitionResult = null;
+  let tradeRecognitionResultRevision = null;
+  let tradeReviewController = null;
+  let tradeReviewGeneration = 0;
+  let tradeReviewForResult = null;
   let previewResizeObserver;
 
   const previewContent = () => displayedVideoContentRect(tradePreview, tradePreviewStage);
@@ -82,93 +87,60 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     renderTradeRoi();
   };
 
-  const fieldLabels = { island: "섬", fromItem: "소모품", reqAmount: "필요 수량", toItem: "획득품", count: "남은 교환 횟수", yield: "수율" };
-  const fieldStatusLabels = {
-    RAW_OCR_CANDIDATE: "인식 후보", NUMERIC_OCR_CANDIDATE: "숫자 후보", UNREADABLE: "확인 필요",
-    EMPTY_OCR: "읽지 못함", FIELD_CLIPPED: "영역 잘림", GEOMETRY_ABSTAIN: "판독 보류", OCR_ERROR: "인식 오류",
-  };
-  const makeElement = (tag, className, text) => {
-    const element = document.createElement(tag);
-    if (className) element.className = className;
-    if (text !== undefined) element.textContent = text;
-    return element;
-  };
-  const displayFieldValue = (key, field) => {
-    if (["reqAmount", "count", "yield"].includes(key)) {
-      if (Number.isInteger(field.rawNumericCandidate)) return String(field.rawNumericCandidate);
-      return typeof field.rawText === "string" && field.rawText.length ? field.rawText : "읽지 못함";
-    }
-    if (typeof field.normalizedText === "string" && field.normalizedText.length) return field.normalizedText;
-    return typeof field.rawText === "string" && field.rawText.length ? field.rawText : "읽지 못함";
-  };
   const renderTradeRecognitionResult = () => {
+    if (tradeRecognitionResult && tradeReviewForResult === tradeRecognitionResult) {
+      tradeRecognitionResultRegion.hidden = false;
+      return;
+    }
+    if (tradeReviewController) {
+      tradeReviewController.destroy();
+      tradeReviewController = null;
+    }
+    tradeReviewForResult = null;
+    const generation = ++tradeReviewGeneration;
     tradeRecognitionResultRegion.replaceChildren();
     tradeRecognitionResultRegion.hidden = !tradeRecognitionResult;
     if (!tradeRecognitionResult) return;
     const result = tradeRecognitionResult;
-    const edgeSummary = result.edgeSegments.length ? ` · 경계 후보 ${result.edgeSegments.length}행 제외` : "";
-    const summary = makeElement("div", "trade-recognition-summary", `로컬 인식 초안 · ${result.draftRows.length}행 · 이미지 ${result.captures.length}장${edgeSummary} · 목록 미적용`);
-    const clear = makeElement("button", "trade-recognition-actions", "인식 결과 지우기");
-    clear.type = "button";
-    clear.dataset.action = "clear-trade-recognition-result";
-    clear.addEventListener("click", () => {
-      tradeRecognitionResult = null;
-      renderTradeRecognitionResult();
-      tradeRecognitionStatus.textContent = "인식 결과를 지웠습니다. 대기 이미지와 화면 연결은 유지됩니다.";
-    });
-    const tableWrap = makeElement("div", "trade-recognition-table-wrap");
-    const table = makeElement("table", "trade-recognition-table");
-    const head = document.createElement("thead");
-    const headerRow = document.createElement("tr");
-    ["행", ...Object.values(fieldLabels), "상태"].forEach((label) => headerRow.append(makeElement("th", "", label)));
-    head.append(headerRow);
-    const body = document.createElement("tbody");
-    result.draftRows.forEach((row, index) => {
-      const tr = document.createElement("tr");
-      tr.dataset.captureId = row.captureId ?? "";
-      tr.dataset.ordinal = String(row.ordinal ?? index + 1);
-      tr.append(makeElement("th", "", String(index + 1)));
-      for (const key of Object.keys(fieldLabels)) {
-        const field = row.fields[key];
-        const td = makeElement("td");
-        const value = makeElement("span", "trade-recognition-value", displayFieldValue(key, field));
-        const status = makeElement("span", "trade-recognition-field-status", fieldStatusLabels[field.status] ?? "확인 필요");
-        status.title = `${field.status ?? "UNKNOWN"}${Array.isArray(field.reasonCodes) && field.reasonCodes.length ? ` · ${field.reasonCodes.join(", ")}` : ""}`;
-        td.append(value, status);
-        tr.append(td);
+    tradeReviewForResult = result;
+    void mountTradeRecognitionReview({
+      root: tradeRecognitionResultRegion,
+      recognitionResult: result,
+      captures: [...tradeQueue.items],
+      reviewRevision: tradeRecognitionResultRevision,
+      getCurrentRevision: () => tradeQueueRevision,
+      onComplete: () => { tradeRecognitionStatus.textContent = "검수를 완료했습니다. 목록에는 적용되지 않았습니다."; },
+      onClear: () => {
+        tradeRecognitionResult = null;
+        tradeRecognitionResultRevision = null;
+        renderTradeRecognitionResult();
+        tradeRecognitionStatus.textContent = "인식 결과를 지웠습니다. 대기 이미지와 화면 연결은 유지됩니다.";
+      },
+    }).then((controller) => {
+      if (generation !== tradeReviewGeneration || result !== tradeRecognitionResult) {
+        controller.destroy();
+        return;
       }
-      tr.append(makeElement("td", "", "인식 초안 · 검토 필요"));
-      body.append(tr);
-      const rawDiffers = Object.values(row.fields).some((field) => typeof field.rawText === "string"
-        && typeof field.normalizedText === "string" && field.rawText !== field.normalizedText);
-      const hasReasons = Object.values(row.fields).some((field) => Array.isArray(field.reasonCodes) && field.reasonCodes.length);
-      if (rawDiffers || hasReasons) {
-        const detailRow = document.createElement("tr");
-        const detailCell = document.createElement("td");
-        detailCell.colSpan = 8;
-        const details = document.createElement("details");
-        details.className = "trade-recognition-evidence";
-        details.append(makeElement("summary", "", `행 ${index + 1} 판독 근거`));
-        const list = document.createElement("ul");
-        for (const key of Object.keys(fieldLabels)) {
-          const field = row.fields[key];
-          const evidence = [];
-          if (typeof field.rawText === "string" && field.rawText.length) evidence.push(`원문: ${field.rawText}`);
-          evidence.push(`상태: ${field.status ?? "UNKNOWN"}`);
-          if (Array.isArray(field.reasonCodes) && field.reasonCodes.length) evidence.push(`사유: ${field.reasonCodes.join(", ")}`);
-          if (evidence.length > 1 || (typeof field.normalizedText === "string" && field.rawText !== field.normalizedText)) {
-            list.append(makeElement("li", "", `${fieldLabels[key]} · ${evidence.join(" · ")}`));
-          }
-        }
-        details.append(list);
-        detailCell.append(details);
-        detailRow.append(detailCell);
-        body.append(detailRow);
-      }
+      tradeReviewController = controller;
+    }).catch(() => {
+      if (generation !== tradeReviewGeneration || result !== tradeRecognitionResult) return;
+      tradeRecognitionResultRegion.replaceChildren();
+      tradeRecognitionResultRegion.hidden = false;
+      const message = document.createElement("p");
+      message.className = "trade-review-error";
+      message.textContent = "검수 후보를 만들지 못했습니다. 인식 원본은 유지했습니다.";
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.dataset.action = "clear-trade-recognition-result";
+      clear.textContent = "인식 결과 지우기";
+      clear.addEventListener("click", () => {
+        tradeRecognitionResult = null;
+        tradeRecognitionResultRevision = null;
+        renderTradeRecognitionResult();
+        tradeRecognitionStatus.textContent = "인식 결과를 지웠습니다. 대기 이미지와 화면 연결은 유지됩니다.";
+      });
+      tradeRecognitionResultRegion.append(message, clear);
     });
-    table.append(head, body);
-    tableWrap.append(table);
-    tradeRecognitionResultRegion.append(summary, clear, tableWrap);
   };
   const updateRecognitionControls = () => {
     tradeRecognitionButton.disabled = tradeRecognitionPending || !tradeRuntimeAvailable || tradeQueue.length === 0;
@@ -180,6 +152,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradePasteTarget.disabled = tradeRecognitionPending;
     tradeRoiReset.disabled = tradeRecognitionPending;
   };
+  const resizeTradeDialog = () => {
+    const scale = Number(getComputedStyle(document.body).zoom) || 1;
+    tradeDialog.style.width = `${Math.min(1180, (window.innerWidth - 24) / scale)}px`;
+  };
+  window.addEventListener("resize", resizeTradeDialog);
   const refreshTradeRuntime = async () => {
     tradeRuntimeAvailable = false;
     tradeRuntimeStatus.textContent = "로컬 인식 엔진 확인 중…";
@@ -195,6 +172,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
   const invalidateRecognitionResult = (message = "대기 이미지가 변경되었습니다. 다시 인식하세요.") => {
     tradeRecognitionResult = null;
+    tradeRecognitionResultRevision = null;
     renderTradeRecognitionResult();
     tradeRecognitionStatus.textContent = message;
   };
@@ -333,6 +311,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradePreviews.clear();
     tradeBatchId = null;
     tradeRecognitionResult = null;
+    tradeRecognitionResultRevision = null;
     renderTradeRecognitionResult();
     renderTradeQueue();
     tradeStatus.textContent = "대기 이미지를 모두 삭제했습니다. 화면 연결과 영역은 유지됩니다.";
@@ -354,6 +333,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         return;
       }
       tradeRecognitionResult = result;
+      tradeRecognitionResultRevision = requestRevision;
       renderTradeRecognitionResult();
       tradeRecognitionStatus.textContent = "인식 초안을 표시했습니다. 목록에는 적용되지 않았습니다.";
     } catch (error) {
@@ -396,6 +376,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   openTradeButton.addEventListener("click", () => {
     tradeStatus.textContent = "파일을 선택하거나 붙여넣기 버튼을 누른 뒤 Ctrl+V를 사용하세요.";
     renderTradeQueue();
+    resizeTradeDialog();
     tradeDialog.showModal();
     renderTradeRecognitionResult();
     void refreshTradeRuntime();
@@ -469,8 +450,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     getTradeDraftCount: () => tradeQueue.length,
     cleanup: () => {
       document.removeEventListener("paste", onPaste);
+      window.removeEventListener("resize", resizeTradeDialog);
       screenSession.disconnectScreen("beforeunload");
       previewResizeObserver?.disconnect();
+      tradeReviewController?.destroy();
+      tradeReviewController = null;
       tradePreviews.clear();
       tradeQueue.clear();
     },
