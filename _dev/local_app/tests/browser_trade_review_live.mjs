@@ -11,9 +11,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
 const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_HEAD = "0728861123001cb41ae2c6b43a1163d3391cd861";
+const EXPECTED_PARENT = "1b0766aa06f873d35787011b0316d5eae7c50409";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const HARNESS_SUBJECT = "test: add independent live trade review harness";
+const HARNESS_SUBJECT = "test: make live capture set explicit";
+const CAPTURE_QUEUE_STABLE_MS = 1500;
+const CAPTURE_QUEUE_POLL_MS = 250;
 const EVALUATION_POLICY = "trade-review-evaluation-v1";
 const RAW_EVALUATION = "trade-raw-eval-v1";
 const MAPPING_POLICY = "reviewed-trade-dto-mapping-v1";
@@ -38,6 +40,9 @@ function usage() {
 
 --preflight는 실제 게임 화면을 캡처하지 않고 격리 backend/sidecar, 실제 로컬 OCR runtime/model,
 표시 모드 Chrome, 1920×1080 브라우저 viewport 및 capture 창 열기만 확인합니다.
+
+--live에서는 Chrome에서 이 case에 사용할 모든 캡처를 추가한 뒤 터미널에 DONE을 입력해야 합니다.
+DONE 뒤 queue가 안정된 시점의 capture set을 recognition 전에 고정합니다.
 
 --live에서는 사용자가 실제 BDO 화면을 직접 캡처하고 인식 결과의 모든 행/필드를 검수해야 합니다.
 이 도구는 후보 정답을 입력하거나 행을 제외하거나 회차 적용 버튼을 대신 누르지 않습니다.
@@ -131,7 +136,10 @@ async function waitFor(predicate, label, timeoutMs = 30000, intervalMs = 150) {
   const started = Date.now();
   let lastError;
   while (!interrupted && Date.now() - started < timeoutMs) {
-    try { const value = await predicate(); if (value) return value; } catch (error) { lastError = error; }
+    try { const value = await predicate(); if (value) return value; } catch (error) {
+      if (error.code === "CAPTURE_QUEUE_CHANGED_AFTER_FREEZE") throw error;
+      lastError = error;
+    }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   if (interrupted) throw new Error("사용자가 중단했습니다.");
@@ -421,6 +429,44 @@ async function openTradeDialog(browser, baseUrl) {
   return { bootstrap, runtimeStatus };
 }
 
+async function armRecognitionGate(browser) {
+  await browser.evaluate(`(()=>{
+    window.__r011SourceSetFrozen=false;
+    window.__r011PrematureRecognitionAttempts=0;
+    window.__r011ExpectedFileCaptures=0;
+    window.__r011ExpectedPasteCaptures=0;
+    window.__r011RecognitionGate=(event)=>{
+      const target=event.target instanceof Element?event.target:null;
+      if(!target?.closest('[data-action="recognize-trade"]')||window.__r011SourceSetFrozen===true)return;
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      window.__r011PrematureRecognitionAttempts+=1;
+      const status=document.querySelector('[data-role="trade-recognition-status"]');
+      if(status)status.textContent='캡처 추가를 마친 뒤 터미널에 DONE을 입력해야 인식을 시작할 수 있습니다.';
+    };
+    window.__r011CountFileSelection=(event)=>{window.__r011ExpectedFileCaptures+=event.target?.files?.length||0;};
+    window.__r011CountPasteImages=(event)=>{
+      const editable=(node)=>node instanceof Element&&!!node.closest("input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='textbox']");
+      if(!document.querySelector('#trade-capture-dialog')?.open||editable(event.target)||editable(document.activeElement))return;
+      window.__r011ExpectedPasteCaptures+=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&String(item.type||'').toLowerCase().startsWith('image/')).length;
+    };
+    document.addEventListener('click',window.__r011RecognitionGate,true);
+    document.querySelector('#trade-capture-files')?.addEventListener('change',window.__r011CountFileSelection,true);
+    document.addEventListener('paste',window.__r011CountPasteImages,true);
+  })()`);
+}
+
+async function releaseRecognitionGate(browser) {
+  return await browser.evaluate(`(()=>{
+    window.__r011SourceSetFrozen=true;
+    if(window.__r011RecognitionGate){document.removeEventListener('click',window.__r011RecognitionGate,true);window.__r011RecognitionGate=null;}
+    if(window.__r011CountFileSelection){document.querySelector('#trade-capture-files')?.removeEventListener('change',window.__r011CountFileSelection,true);window.__r011CountFileSelection=null;}
+    if(window.__r011CountPasteImages){document.removeEventListener('paste',window.__r011CountPasteImages,true);window.__r011CountPasteImages=null;}
+    return {prematureRecognitionAttempts:window.__r011PrematureRecognitionAttempts||0,
+      expectedFileCaptures:window.__r011ExpectedFileCaptures||0,
+      expectedPasteCaptures:window.__r011ExpectedPasteCaptures||0};
+  })()`);
+}
+
 async function runPreflight(options) {
   const defaultDir = path.join(R011_ROOT, `preflight-${new Date().toISOString().replaceAll(":", "-")}`);
   const outputDir = assertInsideR011(options["run-dir"] || defaultDir);
@@ -533,8 +579,8 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_HEAD) throw new Error("R011-A harness commit의 parent가 승인된 R010 baseline SHA가 아닙니다.");
-  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
+  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R2 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
+  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R2 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
   if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
@@ -688,20 +734,80 @@ function checkCaptureSet(input, queued, freeze, previousCases) {
   return queued.map((item, index) => ({ captureOrdinal: index + 1, ...item }));
 }
 
-async function waitForHumanQueue(browser, mode, timeoutMs) {
-  console.log(`\n[${mode}] Chrome capture 창에서 실제 BDO 물교 화면을 준비하세요.`);
-  console.log("사용자가 직접 화면 공유/파일/붙여넣기를 선택하고 필요한 캡처를 완료합니다.");
-  console.log("캡처 목록이 이 case의 고정 source set이 됩니다. recognition 결과가 나쁘더라도 삭제하거나 교체하지 마세요.");
-  return await waitFor(async () => {
-    const queue = await queuedCaptures(browser);
-    return queue.length ? queue : false;
-  }, "사용자 capture queue", timeoutMs, 700);
+function captureQueueSignature(captures) {
+  return JSON.stringify(captures.map(({ captureId, bitmapSha256, sourceType, frame }) => ({
+    captureId, bitmapSha256, sourceType, frame: frame ? { width: frame.width, height: frame.height } : null,
+  })));
 }
 
-async function waitForRecognition(browser, timeoutMs) {
+function queueHasRequiredEvidence(captures, expectedCount = null) {
+  return captures.length > 0 && (expectedCount === null || (expectedCount > 0 && captures.length === expectedCount))
+    && captures.every((item) => item.captureId && item.bitmapSha256
+    && item.sourceType && item.frame?.width > 0 && item.frame?.height > 0);
+}
+
+async function waitForHumanQueue(browser, mode, timeoutMs) {
+  console.log(`\n[${mode}] Chrome에서 이 case에 사용할 모든 캡처를 추가하세요.`);
+  console.log("STREAM은 스크롤 위치를 바꾸며 여러 번 캡처할 수 있고, FILE 여러 장 선택과 PASTE 반복도 가능합니다.");
+  console.log("모두 추가한 뒤 터미널에 DONE을 입력하세요. DONE 전에는 source set을 고정하거나 recognition을 시작하지 않습니다.");
+  let done = false;
+  while (!done) {
+    if (interrupted) throw new Error("사용자가 중단했습니다.");
+    const answer = await promptLine("모든 캡처를 추가했으면 DONE을 입력하세요: ");
+    if (interrupted) throw new Error("사용자가 중단했습니다.");
+    if (answer.toLowerCase() === "done") done = true;
+    else console.log("DONE만 입력할 수 있습니다. 캡처 추가가 끝난 뒤 다시 입력하세요.");
+  }
+
+  const startedAt = Date.now();
+  let previousSignature = null;
+  let stableSince = null;
+  let stableConfirmations = 0;
+  let lastSnapshot = [];
+  while (!interrupted && Date.now() - startedAt < timeoutMs) {
+    const snapshot = await queuedCaptures(browser);
+    lastSnapshot = snapshot;
+    const expectedCount = mode === "FILE"
+      ? await browser.evaluate("window.__r011ExpectedFileCaptures||0")
+      : mode === "PASTE" ? await browser.evaluate("window.__r011ExpectedPasteCaptures||0") : null;
+    const signature = queueHasRequiredEvidence(snapshot, expectedCount) ? captureQueueSignature(snapshot) : null;
+    if (signature && signature === previousSignature) {
+      stableConfirmations += 1;
+    } else if (signature) {
+      previousSignature = signature;
+      stableSince = Date.now();
+      stableConfirmations = 1;
+    } else {
+      previousSignature = null;
+      stableSince = null;
+      stableConfirmations = 0;
+    }
+    const stableForMs = stableSince === null ? 0 : Date.now() - stableSince;
+    if (stableConfirmations >= 2 && stableForMs >= CAPTURE_QUEUE_STABLE_MS) {
+      return { captures: snapshot, stableConfirmations, stableForMs, freezeTrigger: "USER_TYPED_DONE",
+        expectedInputCaptureCount: expectedCount };
+    }
+    await new Promise((resolve) => setTimeout(resolve, CAPTURE_QUEUE_POLL_MS));
+  }
+  if (interrupted) throw new Error("사용자가 중단했습니다.");
+  throw new Error(`CAPTURE_QUEUE_NOT_STABLE: DONE 뒤 queue가 안정되지 않았습니다 (${lastSnapshot.length}개 관측).`);
+}
+
+async function assertFrozenQueueUnchanged(browser, frozenCaptures, phase) {
+  const current = await queuedCaptures(browser);
+  if (captureQueueSignature(current) !== captureQueueSignature(frozenCaptures)) {
+    const error = new Error(`CAPTURE_QUEUE_CHANGED_AFTER_FREEZE (${phase}): recognition source set을 수정하지 않고 case를 중단합니다.`);
+    error.code = "CAPTURE_QUEUE_CHANGED_AFTER_FREEZE";
+    throw error;
+  }
+  return current;
+}
+
+async function waitForRecognition(browser, timeoutMs, frozenCaptures) {
   console.log("\nsource capture set이 기록되었습니다. 이제 인식 버튼을 직접 누르세요.");
   console.log("인식이 끝나면 모든 logical row와 6개 필드를 직접 확인·수정하고, 모르는 값은 UNKNOWN으로 표시한 뒤 ‘검수 완료’를 누르세요.");
   return await waitFor(async () => {
+    await assertFrozenQueueUnchanged(browser, frozenCaptures, "waiting_for_recognition");
     const state = await browser.evaluate(`JSON.stringify({rows:document.querySelectorAll('.trade-review-table tbody tr[data-projection-row-id],.trade-review-table tbody tr[data-capture-id]').length,
       table:Boolean(document.querySelector('.trade-review-table')),recognizeDisabled:document.querySelector('[data-action=recognize-trade]')?.disabled??null,
       queued:Number(document.querySelector('#trade-capture-dialog')?.dataset.queueLength||0)})`).then(JSON.parse);
@@ -709,9 +815,10 @@ async function waitForRecognition(browser, timeoutMs) {
   }, "real recognition result/review rows", timeoutMs, 500);
 }
 
-async function waitForObservation(browser, timeoutMs) {
+async function waitForObservation(browser, timeoutMs, frozenCaptures) {
   console.log("검수 완료 후 backend가 observation을 저장하면 export를 자동 보관합니다.");
   return await waitFor(async () => {
+    await assertFrozenQueueUnchanged(browser, frozenCaptures, "waiting_for_observation");
     const reply = [...browser.observationReplies].reverse().find((item) => item.body?.ok === true && item.body?.receipt?.observationId);
     if (reply) return reply;
     const status = await browser.evaluate(`document.querySelector('[data-role=trade-recognition-status]')?.textContent||document.querySelector('#trade-recognition-status')?.textContent||''`);
@@ -832,32 +939,43 @@ async function runLive(options) {
       console.log(`주의: 사용자가 attested한 display 값이 목표(1920×1080, 130%)와 다릅니다: ${input.displayWidth}×${input.displayHeight}, ${input.displayScalePercent}%`);
     }
     if (opened.runtimeStatus.available !== true) throw new Error("actual runtime status unavailable");
+    await armRecognitionGate(browser);
     const attestation = await promptLine("이 캡처가 freeze 이후 실제 BDO 화면에서 새로 준비된 source임을 확인하면 Y를 입력하세요: ");
     if (attestation.toLowerCase() !== "y") throw new Error("사용자가 fresh BDO source attestation을 확인하지 않았습니다.");
     caseRecord.freshGameSourceUserAttested = true;
-    const queued = await waitForHumanQueue(browser, input.inputMode, timeoutMs);
-    const frozenCaptures = checkCaptureSet(input, queued, freeze, existingCases);
+    const queueFreeze = await waitForHumanQueue(browser, input.inputMode, timeoutMs);
+    const frozenCaptures = checkCaptureSet(input, queueFreeze.captures, freeze, existingCases);
     caseRecord.sourceCaptures = frozenCaptures;
     caseRecord.status = "SOURCE_SET_FROZEN_BEFORE_RECOGNITION";
     caseRecord.sourceSetFrozenAt = isoNow();
+    caseRecord.sourceSetFreeze = { trigger: queueFreeze.freezeTrigger,
+      stableSnapshotConfirmations: queueFreeze.stableConfirmations, stableForMs: queueFreeze.stableForMs,
+      expectedInputCaptureCount: queueFreeze.expectedInputCaptureCount };
     caseRecord.independenceBasis = "USER_ATTESTED_FRESH_GAME_CAPTURE_AFTER_FREEZE_AND_CAPTURE_HASH_CHECK";
     log.events.push({ at: isoNow(), event: "SOURCE_SET_FROZEN", captureCount: frozenCaptures.length,
-      captureIds: frozenCaptures.map((item) => item.captureId), bitmapHashes: frozenCaptures.map((item) => item.bitmapSha256) });
+      captureIds: frozenCaptures.map((item) => item.captureId), bitmapHashes: frozenCaptures.map((item) => item.bitmapSha256),
+      trigger: queueFreeze.freezeTrigger, stableSnapshotConfirmations: queueFreeze.stableConfirmations,
+      stableForMs: queueFreeze.stableForMs, expectedInputCaptureCount: queueFreeze.expectedInputCaptureCount });
     await writeJson(caseManifestPath, caseRecord);
     await writeJson(caseFiles.browserObservationsPath, { schemaVersion: 1, environment: environmentObservation,
       python: { executable: probe.executable, version: probe.version, prefix: probe.prefix }, chrome: browser.version,
       runtime: opened.runtimeStatus, isolatedStorage: { mainDb: server.mainDb, recognitionSidecar: server.sidecar,
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false },
-      sourceSetFrozenAt: caseRecord.sourceSetFrozenAt, queuedCaptures: frozenCaptures, observationResponse: null,
+      sourceSetFrozenAt: caseRecord.sourceSetFrozenAt, sourceSetFreeze: caseRecord.sourceSetFreeze,
+      queuedCaptures: frozenCaptures, observationResponse: null,
       observationExport: null, preReviewTruthInferred: false });
     await updateRunManifest(runDir, gitState, [...existingCases.map((item) => ({ ...item,
       caseManifestPath: path.join(runDir, "cases", item.caseId, "case-manifest.json") })),
       { ...caseRecord, caseManifestPath }], null);
-    const recognition = await waitForRecognition(browser, timeoutMs);
+    Object.assign(caseRecord.sourceSetFreeze, await releaseRecognitionGate(browser));
+    await writeJson(caseManifestPath, caseRecord);
+    const recognition = await waitForRecognition(browser, timeoutMs, frozenCaptures);
+    await assertFrozenQueueUnchanged(browser, frozenCaptures, "recognition_result_mounted");
     caseRecord.status = "RECOGNITION_RESULT_MOUNTED_HUMAN_REVIEW_PENDING";
     caseRecord.recognitionUi = recognition;
     log.events.push({ at: isoNow(), event: "RECOGNITION_RESULT_MOUNTED", reviewRowCount: recognition.rows });
-    const reply = await waitForObservation(browser, timeoutMs);
+    const reply = await waitForObservation(browser, timeoutMs, frozenCaptures);
+    await assertFrozenQueueUnchanged(browser, frozenCaptures, "observation_saved");
     if (reply.status !== 200 || reply.body?.ok !== true) throw new Error(`observation save was not successful: ${JSON.stringify({ status: reply.status, body: reply.body })}`);
     const observationId = reply.body.receipt.observationId;
     caseRecord.observationId = observationId;
