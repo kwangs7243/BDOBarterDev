@@ -1,3 +1,4 @@
+import copy
 import json
 import hashlib
 import io
@@ -73,6 +74,158 @@ def observation_payload(with_geometry=False):
             "captures": [{"captureId": capture_id, "metadata": capture_metadata, "bitmapSha256": digest, "sourceSha256": None,
                 "bitmapBytes": 1234, "sourceBytes": 1234, "reencoded": False}], "gameVersion": None},
         "cropPlan": {"policy": "C2_REVIEW_VALUE_SUBSET_V1", "entries": crop_entries}}
+
+
+def reconciled_observation_payload(*, conflict_method="USER_EDITED", conflict_field="yield", conflict_values=(48, 148), overlap_mode="suffix"):
+    """Deterministic R007-C1 synthetic: six source rows become four logical rows."""
+    payload = observation_payload()
+    capture_a, capture_b = "11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"
+    batch = payload["completion"]["recognitionBatchId"]
+    projection = payload["sourceContext"]["projection"]["snapshot"]
+    projection.update({"schemaVersion": 2, "reconciliation": None})
+    source_rows, source_evidence, source_by_id = [], [], {}
+    image_b = "d" * 64 if overlap_mode == "duplicate" else "e" * 64
+    capture_values = [(capture_a, 1, "d" * 64), (capture_b, 2, image_b)]
+    payload["sourceContext"]["captures"] = []
+    for capture_id, ordinal, digest in capture_values:
+        capture = copy.deepcopy(payload["sourceContext"]["captures"][0]) if payload["sourceContext"]["captures"] else copy.deepcopy(observation_payload()["sourceContext"]["captures"][0])
+        capture["captureId"] = capture_id; capture["metadata"]["captureId"] = capture_id
+        capture["metadata"]["batchId"] = batch; capture["bitmapSha256"] = digest
+        payload["sourceContext"]["captures"].append(capture)
+    payload["sourceContext"]["recognition"]["captureEvidence"]["captures"] = [
+        {"captureId": cid, "batchId": batch, "captureOrdinal": ordinal, "imageHash": digest,
+         "imageDimensions": {"width": 100, "height": 80}, "detectedCandidateCount": 3,
+         "completeRowCount": 3, "edgeSegmentCount": 0}
+        for cid, ordinal, digest in capture_values]
+
+    # A=[A,B,C], B=[B,C,D], with only yield conflicting on C.
+    raw_names = [("A", "A"), ("B", "B"), ("C", "C"), ("B", "B"), ("C", "C"), ("D", "D")]
+    if overlap_mode == "duplicate": raw_names = [("A", "A"), ("B", "B"), ("C", "C"), ("A", "A"), ("B", "B"), ("C", "C")]
+    if overlap_mode == "single_crop": raw_names[3] = ("C", "C")
+    ids = []
+    for index, (label, identity) in enumerate(raw_names):
+        capture_id = capture_a if index < 3 else capture_b
+        ordinal = index + 1 if index < 3 else index - 2
+        sid = f"draft:{capture_id}:{ordinal}"; ids.append(sid)
+        refs = [{"captureId": capture_id, "ordinal": ordinal, "draftRowId": sid}]
+        row_box = {"x": 0, "y": (ordinal - 1) * 20, "width": 80, "height": 20}
+        row_hash = f"{index + 1:064x}"
+        if overlap_mode == "single_crop" and index == 3: row_hash = f"{3:064x}"
+        nums = {"reqAmount": 1, "count": 0, "yield": 20}
+        if overlap_mode != "duplicate":
+            if index == 2: nums[conflict_field] = conflict_values[0]
+            if index == 4: nums[conflict_field] = conflict_values[1]
+            if overlap_mode == "single_crop" and index == 3: nums[conflict_field] = conflict_values[0]
+        texts = {"island": "섬", "fromItem": f"재료-{identity}", "toItem": f"교환품-{identity}"}
+        original_fields, projected_fields = {}, {}
+        for field_name in ("island", "fromItem", "reqAmount", "toItem", "count", "yield"):
+            numeric = field_name in nums
+            raw_text = str(nums[field_name]) if numeric else texts[field_name]
+            raw = {"value": None, "rawText": raw_text, "normalizedText": raw_text,
+                   "rawNumericCandidate": nums[field_name] if numeric else None,
+                   "status": "RAW_OCR_CANDIDATE", "reasonCodes": [],
+                   "readerEvidence": {"readerId": "test-reader", "cropHash": f"{index + 10:064x}",
+                                      "geometry": {"box": {"x": 0, "y": 1, "width": 8, "height": 8}}}}
+            original_fields[field_name] = copy.deepcopy(raw)
+            candidate = None if numeric else {"value": texts[field_name], "stableId": None,
+                "legacyNameKey": "island-key" if field_name == "island" else f"{field_name}:{identity}",
+                "kind": "ISLAND" if field_name == "island" else "ITEM", "tier": None,
+                "authorityStatus": "LEGACY_UNVERIFIED", "canonicalName": None, "nameSource": "LEGACY_NAME"}
+            projected_fields[field_name] = {"field": field_name, "labelKo": field_name,
+                "rawEvidence": copy.deepcopy(raw), "candidate": candidate, "alternatives": [],
+                "correctionReason": [], "masterVersion": "registry-v1:test", "masterRevision": "registry-v1:test",
+                "riskReasons": [], "shownValue": nums[field_name] if numeric else texts[field_name],
+                "reviewState": "SYSTEM_PREDICTION_UNREVIEWED", "editable": True, "status": "MATCHED", "normalizationSteps": []}
+        original = {"captureId": capture_id, "ordinal": ordinal, "rowBox": row_box, "rowCropHash": row_hash,
+                    "sourceRefs": refs, "fields": original_fields, "status": "DRAFT_UNVERIFIED", "automationDecision": "REVIEW"}
+        source_projection = {"projectionRowId": sid, "sourceIndex": index, "rowStatus": "COMPLETE", "sourceRefs": refs,
+            "captureId": capture_id, "ordinal": ordinal, "rowBox": row_box, "rowCropHash": row_hash,
+            "originalRowEvidence": original, "fields": projected_fields, "reviewState": "SYSTEM_PREDICTION_UNREVIEWED"}
+        source_by_id[sid] = source_projection
+        source_rows.append({"sourceRowId": sid, "captureId": capture_id, "ordinal": ordinal,
+            "projectionSourceIndex": index, "sourceRefs": refs, "rowBox": row_box, "rowCropHash": row_hash})
+        if index in {1, 2, 3, 4}: source_evidence.append(copy.deepcopy(source_projection))
+
+    if overlap_mode == "duplicate": group_members = [[ids[0], ids[3]], [ids[1], ids[4]], [ids[2], ids[5]]]
+    elif overlap_mode == "single_crop": group_members = [[ids[0]], [ids[1]], [ids[2], ids[3]], [ids[4]], [ids[5]]]
+    else: group_members = [[ids[0]], [ids[1], ids[3]], [ids[2], ids[4]], [ids[5]]]
+    logical_rows, groups, source_map = [], [], []
+    for members in group_members:
+        rep_id = members[0]; rep = copy.deepcopy(source_by_id[rep_id]); group_id = f"reconcile-group:{source_by_id[rep_id]['sourceIndex']}"
+        status = "UNMERGED" if len(members) == 1 else "EXACT_OVERLAP"
+        if members == [ids[2], ids[4]] and overlap_mode == "suffix":
+            status = "CONFLICT"
+            field = rep["fields"][conflict_field]
+            field.update({"shownValue": None, "candidate": None, "status": "AMBIGUOUS",
+                "riskReasons": [{"code": "RECONCILIATION_CONFLICT", "messageKo": "겹침 출처의 값이 다릅니다.", "detail": {"sourceRowIds": members}}],
+                "alternatives": [{"value": conflict_values[0], "identityKey": None, "sourceRowIds": [ids[2]], "sourceRefs": source_by_id[ids[2]]["sourceRefs"]},
+                                 {"value": conflict_values[1], "identityKey": None, "sourceRowIds": [ids[4]], "sourceRefs": source_by_id[ids[4]]["sourceRefs"]}]})
+        refs = []
+        for sid in members:
+            for ref in source_by_id[sid]["sourceRefs"]:
+                if ref not in refs: refs.append(copy.deepcopy(ref))
+        rep["sourceRefs"] = refs; rep.update({"reconciliationGroupId": group_id, "reconciliationStatus": status,
+            "reconciliationMembers": [{"projectionRowId": sid, "captureId": source_by_id[sid]["captureId"],
+                "ordinal": source_by_id[sid]["ordinal"], "sourceRefs": copy.deepcopy(source_by_id[sid]["sourceRefs"]),
+                "rowBox": copy.deepcopy(source_by_id[sid]["rowBox"]), "rowCropHash": source_by_id[sid]["rowCropHash"]} for sid in members]})
+        logical_rows.append(rep)
+        overlap_refs = ["overlap:0:1"] if len(members) > 1 else []
+        groups.append({"reconciliationGroupId": group_id, "status": status, "memberSourceRowIds": members,
+            "representativeSourceRowId": rep_id, "logicalProjectionRowId": rep_id, "mergeEvidenceIds": overlap_refs})
+        for sid in members: source_map.append({"sourceRowId": sid, "logicalProjectionRowId": rep_id})
+    # Persist all member projections only for multi-source logical rows.
+    merged_ids = {sid for group in group_members if len(group) > 1 for sid in group}
+    source_evidence = [copy.deepcopy(source_by_id[item["sourceRowId"]]) for item in source_rows if item["sourceRowId"] in merged_ids]
+    if overlap_mode == "duplicate":
+        overlap_pairs = [{"leftSourceRowId": ids[index], "rightSourceRowId": ids[index + 3]} for index in range(3)]
+        overlap_basis = "DUPLICATE_IMAGE"
+    elif overlap_mode == "single_crop":
+        overlap_pairs = [{"leftSourceRowId": ids[2], "rightSourceRowId": ids[3]}]
+        overlap_basis = "ADJACENT_ROW_CROP_HASH"
+    else:
+        overlap_pairs = [{"leftSourceRowId": ids[1], "rightSourceRowId": ids[3]}, {"leftSourceRowId": ids[2], "rightSourceRowId": ids[4]}]
+        overlap_basis = "ADJACENT_SUFFIX_PREFIX"
+    reconciliation = {"schemaVersion": 1, "phase": "FINAL", "policyVersion": "trade-batch-reconciliation-v1",
+        "captureOrder": [{"captureId": cid, "captureOrdinal": ordinal, "imageHash": digest} for cid, ordinal, digest in capture_values],
+        "sourceRows": source_rows, "overlaps": [{"overlapId": "overlap:0:1", "basis": overlap_basis,
+            "leftCaptureId": capture_a, "rightCaptureId": capture_b, "pairs": overlap_pairs}],
+        "groups": groups, "sourceToLogical": source_map, "sourceProjectionEvidence": source_evidence, "findings": []}
+    logical_for_source = {sid: members[0] for members in group_members for sid in members}
+    reconciliation["sourceToLogical"] = [{"sourceRowId": item["sourceRowId"], "logicalProjectionRowId": logical_for_source[item["sourceRowId"]]} for item in source_rows]
+    logical_rows.sort(key=lambda row: next(group["projectionSourceIndex"] for group in source_rows if group["sourceRowId"] == row["projectionRowId"]))
+    projection.update({"schemaVersion": 2, "reconciliation": reconciliation, "rows": logical_rows})
+    completion_rows, crop_entries = [], []
+    for row in logical_rows:
+        fields = []
+        for field_name in ("island", "fromItem", "reqAmount", "toItem", "count", "yield"):
+            projected = row["fields"][field_name]
+            is_conflict = projected["status"] == "AMBIGUOUS"
+            method = conflict_method if is_conflict else "USER_BATCH_CONFIRMED_UNCHANGED"
+            final = conflict_values[1] if is_conflict and method == "USER_EDITED" else None if is_conflict else projected["shownValue"]
+            fields.append({"field": field_name, "shownValueBefore": projected["shownValue"], "finalValue": final,
+                "verificationMethod": method, "projectionStatus": projected["status"], "candidate": projected["candidate"],
+                "rawEvidence": projected["rawEvidence"], "correctionReason": projected["correctionReason"],
+                "riskReasons": projected["riskReasons"], "masterVersion": projected["masterVersion"]})
+            risky = bool(projected["riskReasons"]) or projected["status"] in {"AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"}
+            reasons = ([method] if method in {"USER_EDITED", "USER_MARKED_UNKNOWN"} else []) + (["RISKY_FIELD"] if risky else [])
+            crop_entries.append({"projectionRowId": row["projectionRowId"], "field": field_name, "selected": bool(reasons),
+                "selectionReasons": reasons, "geometry": {"source": "CAPTURE_BITMAP_PIXELS", "captureId": row["captureId"],
+                    "x": row["rowBox"]["x"], "y": row["rowBox"]["y"] + 1, "width": 8, "height": 8},
+                "readerCropHash": projected["rawEvidence"]["readerEvidence"]["cropHash"], "skipReason": None if reasons else "NOT_SELECTED"})
+        completion_rows.append({"projectionRowId": row["projectionRowId"], "captureId": row["captureId"], "ordinal": row["ordinal"],
+            "sourceRefs": copy.deepcopy(row["sourceRefs"]), "rowBox": copy.deepcopy(row["rowBox"]),
+            "rowCropHash": row["rowCropHash"], "fields": fields})
+    payload["completion"]["rows"] = completion_rows
+    unchanged = edited = unknown = 0
+    for row in completion_rows:
+        for field in row["fields"]:
+            if field["verificationMethod"] == "USER_EDITED": edited += 1
+            elif field["verificationMethod"] == "USER_MARKED_UNKNOWN": unknown += 1
+            else: unchanged += 1
+    payload["completion"]["summary"] = {"rowCount": len(logical_rows), "fieldCount": len(logical_rows) * 6, "unchangedFieldCount": unchanged,
+        "editedFieldCount": edited, "unknownFieldCount": unknown, "riskFieldCount": 1 if overlap_mode == "suffix" else 0, "edgeSegmentCount": 0}
+    payload["cropPlan"]["entries"] = crop_entries
+    return payload
 
 
 class TradeReviewObservationTests(unittest.TestCase):
@@ -241,6 +394,202 @@ class TradeReviewObservationTests(unittest.TestCase):
         self.assertEqual(crop["retentionClass"], "UNKNOWN_30_DAY")
         with closing(sqlite3.connect(self.sidecar)) as connection:
             self.assertEqual(connection.execute("SELECT state FROM trade_review_artifact WHERE observation_id=?", (observation_id,)).fetchone()[0], "EXPIRED")
+
+    def test_reconciled_source_six_logical_four_validation(self):
+        payload = reconciled_observation_payload()
+        before = copy.deepcopy(payload)
+        validate_trade_review_observation(payload)
+        self.assertEqual(payload, before)
+        recognition = payload["sourceContext"]["recognition"]["captureEvidence"]["captures"]
+        self.assertEqual([item["completeRowCount"] for item in recognition], [3, 3])
+        reconciliation = payload["sourceContext"]["projection"]["snapshot"]["reconciliation"]
+        self.assertEqual(len(reconciliation["sourceRows"]), 6)
+        self.assertEqual(len(payload["sourceContext"]["projection"]["snapshot"]["rows"]), 4)
+        self.assertEqual(len(payload["completion"]["rows"]), 4)
+        self.assertEqual(payload["completion"]["summary"]["fieldCount"], 24)
+
+    def test_reconciled_count_spoof_rejected(self):
+        mutations = [
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"].pop(),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"].append(
+                {**copy.deepcopy(p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][0]),
+                 "sourceRowId": "draft:11111111-1111-4111-8111-111111111111:4", "ordinal": 4, "projectionSourceIndex": 6}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][0].update(
+                {"captureId": "22222222-2222-4222-8222-222222222222", "ordinal": 4}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][1].update(
+                {"sourceRowId": p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][0]["sourceRowId"]}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][1].update({"ordinal": 1}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][1].update({"projectionSourceIndex": 0}),
+        ]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate):
+                payload = reconciled_observation_payload(); mutate(payload)
+                with self.assertRaises(RecognitionContractError): validate_trade_review_observation(payload)
+
+    def test_reconciled_partition_invalid_rejected(self):
+        mutations = [
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceToLogical"].pop(),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceToLogical"][1].update(
+                p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceToLogical"][0]),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceToLogical"][0].update({"logicalProjectionRowId": "unknown"}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["groups"][1].update({"representativeSourceRowId": "unknown"}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["groups"][0].update({"memberSourceRowIds": []}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["groups"][1].update({"logicalProjectionRowId": "draft:11111111-1111-4111-8111-111111111111:1"}),
+        ]
+        for mutate in mutations:
+            with self.subTest(mutation=mutate):
+                payload = reconciled_observation_payload(); mutate(payload)
+                with self.assertRaises(RecognitionContractError): validate_trade_review_observation(payload)
+
+    def test_reconciled_source_evidence_union_rejected(self):
+        def missing_source(p): p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceProjectionEvidence"].pop()
+        def raw_mismatch(p): p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceProjectionEvidence"][0]["sourceIndex"] = 99
+        def member_refs(p): p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"][1]["sourceRefs"] = []
+        def union_loss(p): p["sourceContext"]["projection"]["snapshot"]["rows"][1]["sourceRefs"].pop()
+        def completion_mismatch(p): p["completion"]["rows"][1]["sourceRefs"].pop()
+        for mutate in (missing_source, raw_mismatch, member_refs, union_loss, completion_mismatch):
+            with self.subTest(mutation=mutate):
+                payload = reconciled_observation_payload(); mutate(payload)
+                with self.assertRaises(RecognitionContractError): validate_trade_review_observation(payload)
+        valid = reconciled_observation_payload()
+        rec = valid["sourceContext"]["projection"]["snapshot"]["reconciliation"]
+        duplicate = copy.deepcopy(rec["sourceRows"][0]["sourceRefs"][0])
+        rec["sourceRows"][0]["sourceRefs"].append(copy.deepcopy(duplicate))
+        logical = valid["sourceContext"]["projection"]["snapshot"]["rows"][0]
+        logical["originalRowEvidence"]["sourceRefs"].append(copy.deepcopy(duplicate))
+        logical["reconciliationMembers"][0]["sourceRefs"].append(copy.deepcopy(duplicate))
+        # Logical lineage is an exact ordered union: a repeated ref is retained once.
+        validate_trade_review_observation(valid)
+        merged = valid["sourceContext"]["projection"]["snapshot"]["rows"][1]
+        self.assertEqual(len(merged["sourceRefs"]), 2)
+        self.assertEqual([len(member["sourceRefs"]) for member in merged["reconciliationMembers"]], [1, 1])
+
+    def test_reconciled_overlap_basis_contract(self):
+        validate_trade_review_observation(reconciled_observation_payload())
+        validate_trade_review_observation(reconciled_observation_payload(overlap_mode="single_crop"))
+        validate_trade_review_observation(reconciled_observation_payload(overlap_mode="duplicate"))
+        for mutation in (
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["overlaps"][0]["pairs"].pop(),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["overlaps"][0].update({"leftCaptureId": "22222222-2222-4222-8222-222222222222"}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["overlaps"][0].update({"basis": "DUPLICATE_IMAGE"}),
+            lambda p: p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceProjectionEvidence"][0]["fields"]["fromItem"]["candidate"].update({"legacyNameKey": "different"}),
+        ):
+            with self.subTest(mutation=mutation):
+                payload = reconciled_observation_payload(); mutation(payload)
+                with self.assertRaises(RecognitionContractError): validate_trade_review_observation(payload)
+
+    def test_reconciled_conflict_truth_and_alternatives(self):
+        for field, values in (("reqAmount", (1, 2)), ("count", (0, 1)), ("yield", (48, 148)), ("count", (None, 1))):
+            with self.subTest(field=field, values=values):
+                validate_trade_review_observation(reconciled_observation_payload(conflict_field=field, conflict_values=values))
+        unknown = reconciled_observation_payload(conflict_method="USER_MARKED_UNKNOWN")
+        validate_trade_review_observation(unknown)
+        conflict = unknown["sourceContext"]["projection"]["snapshot"]["rows"][2]["fields"]["yield"]
+        conflict["alternatives"].pop()
+        with self.assertRaises(RecognitionContractError): validate_trade_review_observation(unknown)
+        silent_choice = reconciled_observation_payload()
+        chosen_row = silent_choice["sourceContext"]["projection"]["snapshot"]["rows"][2]
+        chosen_row["fields"]["yield"]["shownValue"] = 48
+        silent_choice["completion"]["rows"][2]["fields"][5]["shownValueBefore"] = 48
+        with self.assertRaises(RecognitionContractError): validate_trade_review_observation(silent_choice)
+        missing_lineage = reconciled_observation_payload()
+        missing_lineage["sourceContext"]["projection"]["snapshot"]["rows"][2]["fields"]["yield"]["alternatives"][0]["sourceRefs"] = []
+        with self.assertRaises(RecognitionContractError): validate_trade_review_observation(missing_lineage)
+        duplicate_identity_disagreement = reconciled_observation_payload(overlap_mode="duplicate")
+        duplicate_identity_disagreement["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceProjectionEvidence"][3]["fields"]["island"]["candidate"]["legacyNameKey"] = "different-island"
+        with self.assertRaises(RecognitionContractError): validate_trade_review_observation(duplicate_identity_disagreement)
+
+    def test_reconciled_version_and_null_path_compatibility(self):
+        validate_trade_review_observation(observation_payload())
+        missing_tag = observation_payload(); missing_tag["sourceContext"]["projection"]["snapshot"].pop("schemaVersion", None)
+        validate_trade_review_observation(missing_tag)
+        invalid = []
+        p = reconciled_observation_payload(); p["sourceContext"]["projection"]["snapshot"]["schemaVersion"] = 1; invalid.append(p)
+        p = reconciled_observation_payload(); p["sourceContext"]["projection"]["snapshot"]["reconciliation"] = None; invalid.append(p)
+        p = reconciled_observation_payload(); p["sourceContext"]["projection"]["snapshot"]["schemaVersion"] = True; invalid.append(p)
+        p = reconciled_observation_payload(); p["sourceContext"]["projection"]["snapshot"]["schemaVersion"] = 3; invalid.append(p)
+        p = reconciled_observation_payload(); p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["phase"] = "PRELIMINARY"; invalid.append(p)
+        p = reconciled_observation_payload(); p["sourceContext"]["projection"]["snapshot"]["reconciliation"]["policyVersion"] = "future"; invalid.append(p)
+        p = observation_payload(); p["sourceContext"]["projection"]["snapshot"]["rows"][0]["reconciliationGroupId"] = "reconciled"; invalid.append(p)
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                with self.assertRaises(RecognitionContractError): validate_trade_review_observation(payload)
+
+    def test_reconciled_endpoint_roundtrip_retry_export(self):
+        payload = reconciled_observation_payload()
+        url, origin = "/api/recognition/trade-review-observations", "http://127.0.0.1:18765"
+        post = lambda value: self.client.post(url, base_url=origin, data=json.dumps(value, ensure_ascii=False), content_type="application/json", headers=self.headers)
+        first = post(payload); self.assertEqual(first.status_code, 201, first.get_json())
+        receipt = first.get_json()["receipt"]
+        replay = post(payload); self.assertEqual(replay.status_code, 200); self.assertTrue(replay.get_json()["receipt"]["duplicate"])
+        changed = copy.deepcopy(payload); changed["sourceContext"]["projection"]["snapshot"]["reconciliation"]["findings"].append(
+            {"code": "SOURCE_NOTE", "messageKo": "검수 참고", "sourceRowIds": [], "captureIds": []})
+        self.assertEqual(post(changed).status_code, 409)
+        read = self.client.get(f"{url}/{receipt['observationId']}", base_url=origin)
+        self.assertEqual(read.status_code, 200)
+        stored = read.get_json()["observation"]
+        self.assertEqual(len(stored["sourceContext"]["projection"]["snapshot"]["reconciliation"]["sourceRows"]), 6)
+        export = self.client.get(f"{url}/{receipt['observationId']}/export", base_url=origin)
+        self.assertEqual(export.status_code, 200)
+        self.assertEqual(export.get_json()["schemaVersion"], 1)
+        self.assertIn("semantic", export.get_json())
+        with closing(sqlite3.connect(self.sidecar)) as connection:
+            self.assertEqual(connection.execute("SELECT count(*) FROM trade_review_observation").fetchone()[0], 1)
+        with closing(sqlite3.connect(self.db)) as connection:
+            self.assertEqual(connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='trade_review_observation'").fetchall(), [])
+
+    def test_reconciled_projection_and_payload_hash_mapping(self):
+        first = validate_trade_review_observation(reconciled_observation_payload())
+        changed = copy.deepcopy(first)
+        rec = changed["sourceContext"]["projection"]["snapshot"]["reconciliation"]
+        ref = {"captureId": "11111111-1111-4111-8111-111111111111", "ordinal": 1, "draftRowId": "draft:11111111-1111-4111-8111-111111111111:1", "lineage": "retained"}
+        source = rec["sourceRows"][0]; source["sourceRefs"].append(ref)
+        row = changed["sourceContext"]["projection"]["snapshot"]["rows"][0]
+        row["sourceRefs"].append(ref); row["reconciliationMembers"][0]["sourceRefs"].append(ref)
+        row["originalRowEvidence"]["sourceRefs"].append(ref)
+        changed["completion"]["rows"][0]["sourceRefs"].append(ref)
+        validate_trade_review_observation(changed)
+        self.assertNotEqual(json.dumps(first, sort_keys=True), json.dumps(changed, sort_keys=True))
+        first["mutationId"] = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        changed["mutationId"] = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        post = lambda value: self.client.post("/api/recognition/trade-review-observations", base_url="http://127.0.0.1:18765", data=json.dumps(value), content_type="application/json", headers=self.headers)
+        first_response = post(first); self.assertEqual(first_response.status_code, 201)
+        changed_response = post(changed); self.assertEqual(changed_response.status_code, 201)
+        self.assertNotEqual(first_response.get_json()["receipt"]["payloadHash"], changed_response.get_json()["receipt"]["payloadHash"])
+        changed["mutationId"] = first["mutationId"]
+        response = post(changed)
+        self.assertEqual(response.status_code, 409)
+
+    def test_reconciled_representative_c2_crop(self):
+        payload = reconciled_observation_payload()
+        validate_trade_review_observation(payload)
+        conflict_row = payload["sourceContext"]["projection"]["snapshot"]["rows"][2]
+        crop = next(item for item in payload["cropPlan"]["entries"] if item["projectionRowId"] == conflict_row["projectionRowId"] and item["field"] == "yield")
+        self.assertEqual(crop["geometry"]["captureId"], "11111111-1111-4111-8111-111111111111")
+        self.assertEqual(crop["selected"], True)
+        from PIL import Image
+        output = io.BytesIO(); Image.new("RGBA", (8, 8), (1, 2, 3, 255)).save(output, format="PNG"); png = output.getvalue()
+        url = "/api/recognition/trade-review-observations"
+        saved = self.client.post(url, base_url="http://127.0.0.1:18765", data=json.dumps(payload, ensure_ascii=False), content_type="application/json", headers=self.headers)
+        self.assertEqual(saved.status_code, 201, saved.get_json())
+        observation_id = saved.get_json()["receipt"]["observationId"]
+        metadata = {"version": 1, "cropMutationId": str(uuid.uuid4()), "projectionRowId": conflict_row["projectionRowId"],
+            "field": "yield", "sha256": hashlib.sha256(png).hexdigest(), "width": 8, "height": 8}
+        uploaded = self.client.post(f"{url}/{observation_id}/crops", base_url="http://127.0.0.1:18765", headers=self.headers,
+            data={"metadata": json.dumps(metadata), "image": (io.BytesIO(png), "crop.png", "image/png")})
+        self.assertEqual(uploaded.status_code, 201, uploaded.get_json())
+        crop["geometry"]["captureId"] = "22222222-2222-4222-8222-222222222222"
+        with self.assertRaises(RecognitionContractError): validate_trade_review_observation(payload)
+
+    def test_legacy_stored_observation_integrity_unchanged(self):
+        payload = validate_trade_review_observation(observation_payload())
+        receipt, duplicate = self.app.extensions["recognition_store"].create_trade_review_observation(payload)
+        self.assertFalse(duplicate)
+        read = self.app.extensions["recognition_store"].get_trade_review_observation(receipt["observationId"])
+        self.assertIsNone(read["sourceContext"]["projection"]["snapshot"].get("reconciliation"))
+        self.assertEqual(read["completion"]["rows"], payload["completion"]["rows"])
+        exported = self.app.extensions["recognition_store"].export_trade_review_observation(receipt["observationId"])
+        self.assertEqual(exported["schemaVersion"], 1)
 
 
 if __name__ == "__main__": unittest.main()

@@ -69,6 +69,231 @@ def _same_trade_json(left: Any, right: Any) -> bool:
     except (TypeError, ValueError): return False
 
 
+def _validate_reconciled_trade_projection(proj: dict[str, Any], captures: list[dict[str, Any]], evidence_by_id: dict[str, Any], completion_rows: list[Any]) -> dict[str, int]:
+    """Validate R007-C1 source accounting without treating logical rows as sources."""
+    import re
+    keys = {"schemaVersion", "phase", "policyVersion", "captureOrder", "sourceRows", "overlaps", "groups", "sourceToLogical", "sourceProjectionEvidence", "findings"}
+    rec = proj.get("reconciliation")
+    if type(proj.get("schemaVersion")) is not int or proj["schemaVersion"] != 2 or not isinstance(rec, dict) or set(rec) != keys:
+        _trade_fail("Unsupported reconciled projection schema.")
+    if type(rec.get("schemaVersion")) is not int or rec["schemaVersion"] != 1 or rec.get("phase") != "FINAL" or rec.get("policyVersion") != "trade-batch-reconciliation-v1":
+        _trade_fail("Unsupported reconciliation version or policy.")
+    captures_ordered = [capture["captureId"] for capture in captures]
+    if not isinstance(rec.get("captureOrder"), list) or len(rec["captureOrder"]) != len(captures): _trade_fail()
+    image_hashes = {}
+    for index, (entry, capture) in enumerate(zip(rec["captureOrder"], captures, strict=True), 1):
+        if not isinstance(entry, dict) or set(entry) != {"captureId", "captureOrdinal", "imageHash"}: _trade_fail()
+        evidence = evidence_by_id[capture["captureId"]]
+        if entry.get("captureId") != capture["captureId"] or type(entry.get("captureOrdinal")) is not int or entry["captureOrdinal"] != index or entry.get("imageHash") != evidence.get("imageHash"):
+            _trade_fail("Reconciliation capture order does not match recognition evidence.")
+        image_hashes[capture["captureId"]] = entry["imageHash"]
+
+    ledger = rec.get("sourceRows")
+    if not isinstance(ledger, list) or len(ledger) > 1000: _trade_fail()
+    ledger_keys = {"sourceRowId", "captureId", "ordinal", "projectionSourceIndex", "sourceRefs"}
+    optional = {"draftId", "rowBox", "rowCropHash"}
+    sources = {}
+    per_capture = {cid: [] for cid in captures_ordered}
+    seen_positions, indices = set(), []
+    for item in ledger:
+        if not isinstance(item, dict) or not ledger_keys <= set(item) or set(item) - ledger_keys - optional: _trade_fail()
+        sid, cid, ordinal, index = (item.get(key) for key in ("sourceRowId", "captureId", "ordinal", "projectionSourceIndex"))
+        if not isinstance(sid, str) or not sid or len(sid.encode("utf-8")) > 256 or sid in sources: _trade_fail("Duplicate or invalid source row ID.")
+        if cid not in per_capture or type(ordinal) is not int or not 1 <= ordinal <= 9_007_199_254_740_991 or (cid, ordinal) in seen_positions: _trade_fail("Invalid source capture/ordinal.")
+        if type(index) is not int or not 0 <= index < len(ledger): _trade_fail("Invalid projection source index.")
+        if not isinstance(item.get("sourceRefs"), list) or len(item["sourceRefs"]) > 100: _trade_fail()
+        if "draftId" in item and item["draftId"] is not None and (not isinstance(item["draftId"], str) or not item["draftId"]): _trade_fail()
+        if "rowCropHash" in item and item["rowCropHash"] is not None and (not isinstance(item["rowCropHash"], str) or not re.fullmatch(r"[0-9a-f]{64}", item["rowCropHash"])): _trade_fail()
+        if "rowBox" in item and item["rowBox"] is not None:
+            box = item["rowBox"]
+            if not isinstance(box, dict) or set(box) != {"x", "y", "width", "height"} or any(type(box.get(k)) is not int for k in box) or box["x"] < 0 or box["y"] < 0 or box["width"] < 1 or box["height"] < 1: _trade_fail()
+        sources[sid] = item; per_capture[cid].append(item); seen_positions.add((cid, ordinal)); indices.append(index)
+    if sorted(indices) != list(range(len(ledger))): _trade_fail("Projection source indices must be a permutation.")
+    if ledger != sorted(ledger, key=lambda x: (captures_ordered.index(x["captureId"]), x["ordinal"])): _trade_fail("Source rows must follow capture order and ordinal.")
+    counts = {cid: len(per_capture[cid]) for cid in captures_ordered}
+    for ordinal, capture in enumerate(captures, 1):
+        evidence = evidence_by_id[capture["captureId"]]
+        if evidence.get("captureOrdinal") != ordinal or evidence.get("completeRowCount") != counts[capture["captureId"]]: _trade_fail("Capture metrics do not match source rows and edges.")
+
+    logical = proj.get("rows")
+    if not isinstance(logical, list) or not isinstance(completion_rows, list) or len(logical) != len(completion_rows) or len(logical) > 1000: _trade_fail()
+    logical_by_id = {}
+    for row in logical:
+        if not isinstance(row, dict) or not isinstance(row.get("projectionRowId"), str) or not row["projectionRowId"] or row["projectionRowId"] in logical_by_id: _trade_fail("Invalid or duplicate logical row ID.")
+        logical_by_id[row["projectionRowId"]] = row
+    groups = rec.get("groups")
+    group_keys = {"reconciliationGroupId", "status", "memberSourceRowIds", "representativeSourceRowId", "logicalProjectionRowId", "mergeEvidenceIds"}
+    if not isinstance(groups, list) or len(groups) != len(logical): _trade_fail()
+    assigned, group_by_logical = {}, {}
+    order = lambda sid: (captures_ordered.index(sources[sid]["captureId"]), sources[sid]["ordinal"])
+    for group in groups:
+        if not isinstance(group, dict) or set(group) != group_keys: _trade_fail()
+        members = group.get("memberSourceRowIds")
+        if not isinstance(members, list) or not members or len(members) != len(set(members)) or any(sid not in sources or sid in assigned for sid in members): _trade_fail("Source rows must be assigned exactly once.")
+        ordered = sorted(members, key=order); rep = ordered[0]; lid = group.get("logicalProjectionRowId")
+        if members != ordered or group.get("representativeSourceRowId") != rep or lid != rep: _trade_fail("Invalid representative or member order.")
+        if group.get("reconciliationGroupId") != f"reconcile-group:{sources[rep]['projectionSourceIndex']}" or lid not in logical_by_id or lid in group_by_logical: _trade_fail()
+        if len({sources[sid]["captureId"] for sid in members}) != len(members): _trade_fail("A group cannot contain multiple rows from one capture.")
+        status = group.get("status")
+        if status not in {"UNMERGED", "EXACT_OVERLAP", "CONFLICT"} or (len(members) == 1) != (status == "UNMERGED"): _trade_fail()
+        row = logical_by_id[lid]
+        if row.get("reconciliationGroupId") != group["reconciliationGroupId"] or row.get("reconciliationStatus") != status or row.get("captureId") != sources[rep]["captureId"] or row.get("ordinal") != sources[rep]["ordinal"] or row.get("projectionRowId") != lid: _trade_fail("Logical row representative metadata disagrees.")
+        member_meta = row.get("reconciliationMembers")
+        if not isinstance(member_meta, list) or len(member_meta) != len(members): _trade_fail()
+        for sid, meta in zip(members, member_meta, strict=True):
+            src = sources[sid]; required_meta = {"projectionRowId", "captureId", "ordinal", "sourceRefs"}
+            if not isinstance(meta, dict) or not required_meta <= set(meta) or set(meta) - required_meta - optional: _trade_fail()
+            if meta.get("projectionRowId") != sid or meta.get("captureId") != src["captureId"] or type(meta.get("ordinal")) is not int or meta["ordinal"] != src["ordinal"] or not _same_trade_json(meta.get("sourceRefs"), src["sourceRefs"]): _trade_fail("Member metadata disagrees with the source ledger.")
+            if any((key in src) != (key in meta) or key in src and not _same_trade_json(meta.get(key), src[key]) for key in optional): _trade_fail("Member provenance is missing or inconsistent.")
+            assigned[sid] = lid
+        if not isinstance(group.get("mergeEvidenceIds"), list) or len(group["mergeEvidenceIds"]) != len(set(group["mergeEvidenceIds"])): _trade_fail()
+        group_by_logical[lid] = group
+    if set(assigned) != set(sources) or set(group_by_logical) != set(logical_by_id): _trade_fail("Source partition is incomplete.")
+    if [group["logicalProjectionRowId"] for group in groups] != [row["projectionRowId"] for row in logical]: _trade_fail("Logical rows and reconciliation groups must share order.")
+    expected_mapping = [{"sourceRowId": item["sourceRowId"], "logicalProjectionRowId": assigned[item["sourceRowId"]]} for item in ledger]
+    if not _same_trade_json(rec.get("sourceToLogical"), expected_mapping): _trade_fail("Source-to-logical mapping is inconsistent.")
+
+    extra_evidence = rec.get("sourceProjectionEvidence")
+    if not isinstance(extra_evidence, list) or len(extra_evidence) > len(ledger): _trade_fail()
+    evidence_rows = {}
+    for row in extra_evidence:
+        if not isinstance(row, dict) or row.get("projectionRowId") not in sources or row["projectionRowId"] in evidence_rows: _trade_fail()
+        evidence_rows[row["projectionRowId"]] = row
+    merged_sources = {sid for group in groups if len(group["memberSourceRowIds"]) > 1 for sid in group["memberSourceRowIds"]}
+    if set(evidence_rows) != merged_sources: _trade_fail("Multi-source evidence must be complete and singleton evidence must not be duplicated.")
+    if list(evidence_rows) != [item["sourceRowId"] for item in ledger if item["sourceRowId"] in merged_sources]: _trade_fail("Multi-source evidence order must follow source order.")
+
+    def exact_union(values):
+        union = []
+        for value in values:
+            if not any(_same_trade_json(value, old) for old in union): union.append(value)
+        return union
+    def semantic(field_name, field):
+        if field_name in {"reqAmount", "count", "yield"}:
+            value = field.get("shownValue")
+            if value is not None and type(value) is not int: _trade_fail()
+            return ("number", value), None
+        candidate = field.get("candidate")
+        identity = None
+        if isinstance(candidate, dict) and isinstance(candidate.get("stableId"), str) and candidate["stableId"]:
+            identity = {"stableId": candidate["stableId"]}
+        elif isinstance(candidate, dict) and isinstance(candidate.get("legacyNameKey"), str) and candidate["legacyNameKey"]:
+            identity = {"legacyNameKey": candidate["legacyNameKey"]}
+        elif isinstance(candidate, dict) and candidate.get("authorityStatus") == "OPEN_WORLD" and field_name == "fromItem" and isinstance(field.get("shownValue"), str):
+            identity = {"openWorld": field["shownValue"]}
+        return ("identity", identity if identity is not None else field.get("shownValue")), identity
+    for lid, group in group_by_logical.items():
+        members = group["memberSourceRowIds"]; row = logical_by_id[lid]; member_rows = []
+        for sid in members:
+            source_row = sources[sid]; member = row if len(members) == 1 else evidence_rows[sid]
+            if member.get("projectionRowId") != sid or member.get("captureId") != source_row["captureId"] or member.get("ordinal") != source_row["ordinal"] or member.get("sourceIndex") != source_row["projectionSourceIndex"] or member.get("rowStatus") != "COMPLETE" or member.get("reviewState") != "SYSTEM_PREDICTION_UNREVIEWED": _trade_fail("Source projection evidence disagrees with the ledger.")
+            if (len(members) > 1 and not _same_trade_json(member.get("sourceRefs"), source_row["sourceRefs"])) or any((key in source_row) != (key in member) or key in source_row and not _same_trade_json(member.get(key), source_row[key]) for key in optional): _trade_fail("Source refs or geometry disagree with the ledger.")
+            original = member.get("originalRowEvidence")
+            if not isinstance(original, dict) or original.get("captureId") != source_row["captureId"] or original.get("ordinal") != source_row["ordinal"] or not _same_trade_json(original.get("sourceRefs"), source_row["sourceRefs"]): _trade_fail()
+            if any((key in source_row) != (key in original) or key in source_row and not _same_trade_json(original.get(key), source_row[key]) for key in optional): _trade_fail("Original row evidence metadata disagrees with the ledger.")
+            original_id = original.get("rowId")
+            expected_source_id = original_id if isinstance(original_id, str) and original_id else f"draft:{source_row['captureId']}:{source_row['ordinal']}"
+            if expected_source_id != sid or not isinstance(original.get("fields"), dict) or set(original["fields"]) != set(TRADE_FIELDS): _trade_fail("Source row ID or raw field evidence does not match R003 semantics.")
+            if not isinstance(member.get("fields"), dict) or set(member["fields"]) != set(TRADE_FIELDS) or not isinstance(row.get("fields"), dict) or set(row["fields"]) != set(TRADE_FIELDS): _trade_fail()
+            for field_name in TRADE_FIELDS:
+                projected_field = member["fields"][field_name]
+                if not isinstance(projected_field, dict) or not _same_trade_json(projected_field.get("rawEvidence"), original["fields"][field_name]): _trade_fail("R003 raw source evidence was changed.")
+            member_rows.append(member)
+        expected_refs = exact_union([ref for member in member_rows for ref in member["sourceRefs"]])
+        if not _same_trade_json(row.get("sourceRefs"), expected_refs): _trade_fail("Logical source refs must be the deterministic member union.")
+        if not _same_trade_json(row.get("rowBox"), sources[members[0]].get("rowBox")) or not _same_trade_json(row.get("rowCropHash"), sources[members[0]].get("rowCropHash")): _trade_fail("Logical crop compatibility fields must use the representative source.")
+        has_conflict = False
+        for field_name in TRADE_FIELDS:
+            member_fields = [member["fields"][field_name] for member in member_rows]
+            logical_field = row["fields"][field_name]
+            semantic_values = [semantic(field_name, field) for field in member_fields]
+            distinct = []
+            for value, identity in semantic_values:
+                if not any(_same_trade_json(value, seen[0]) for seen in distinct): distinct.append((value, identity))
+            if len(distinct) > 1:
+                has_conflict = True
+                if logical_field.get("shownValue") is not None or logical_field.get("candidate") is not None or logical_field.get("status") != "AMBIGUOUS": _trade_fail("Conflicting source fields cannot select one value.")
+                expected_alternatives = []
+                for distinct_value, identity in distinct:
+                    selected_ids = [sid for sid, sem_value in zip(members, semantic_values, strict=True) if _same_trade_json(sem_value[0], distinct_value)]
+                    expected_alternatives.append({"value": member_fields[members.index(selected_ids[0])].get("shownValue"),
+                        "identityKey": identity, "sourceRowIds": selected_ids,
+                        "sourceRefs": exact_union([ref for sid in selected_ids for ref in sources[sid]["sourceRefs"]])})
+                if not _same_trade_json(logical_field.get("alternatives"), expected_alternatives): _trade_fail("Conflict alternatives must preserve every distinct source result and lineage.")
+                conflicts = [item for item in logical_field.get("riskReasons", []) if isinstance(item, dict) and item.get("code") == "RECONCILIATION_CONFLICT"]
+                if len(conflicts) != 1 or not _same_trade_json(conflicts[0].get("detail"), {"sourceRowIds": members}): _trade_fail("Conflict risk provenance is missing.")
+            else:
+                representative = member_fields[0]
+                if any(not _same_trade_json(logical_field.get(key), representative.get(key)) for key in ("shownValue", "candidate", "status", "normalizationSteps")): _trade_fail("Equal source fields must preserve the representative candidate.")
+            expected_risks = exact_union([item for field in member_fields for item in field.get("riskReasons", [])])
+            if len(distinct) > 1:
+                conflict_risks = [item for item in logical_field.get("riskReasons", []) if isinstance(item, dict) and item.get("code") == "RECONCILIATION_CONFLICT"]
+                expected_risks = exact_union(expected_risks + conflict_risks)
+            expected_reasons = exact_union([item for field in member_fields for item in field.get("correctionReason", [])])
+            if not _same_trade_json(logical_field.get("riskReasons", []), expected_risks) or not _same_trade_json(logical_field.get("correctionReason", []), expected_reasons):
+                _trade_fail("Source risks and correction reasons must be preserved deterministically.")
+        if (group["status"] == "CONFLICT") != has_conflict: _trade_fail("Group status must reflect source field conflicts.")
+    overlaps = rec.get("overlaps")
+    if not isinstance(overlaps, list) or len(overlaps) > 200: _trade_fail()
+    overlap_ids = set(); links = set()
+    def source_identity(sid, field_name):
+        member = evidence_rows.get(sid)
+        if not isinstance(member, dict): return None
+        field = member.get("fields", {}).get(field_name)
+        if not isinstance(field, dict) or field.get("status") in {"AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"}: return None
+        candidate = field.get("candidate")
+        if isinstance(candidate, dict) and isinstance(candidate.get("stableId"), str) and candidate["stableId"]: return ("stableId", candidate["stableId"])
+        if isinstance(candidate, dict) and isinstance(candidate.get("legacyNameKey"), str) and candidate["legacyNameKey"]: return ("legacyNameKey", candidate["legacyNameKey"])
+        if field_name == "fromItem" and isinstance(candidate, dict) and candidate.get("authorityStatus") == "OPEN_WORLD" and isinstance(field.get("shownValue"), str): return ("openWorld", field["shownValue"])
+        return None
+    for overlap in overlaps:
+        if not isinstance(overlap, dict) or set(overlap) != {"overlapId", "basis", "leftCaptureId", "rightCaptureId", "pairs"}: _trade_fail()
+        oid, basis, left, right, pairs = (overlap.get(key) for key in ("overlapId", "basis", "leftCaptureId", "rightCaptureId", "pairs"))
+        if not isinstance(oid, str) or oid in overlap_ids or basis not in {"ADJACENT_SUFFIX_PREFIX", "ADJACENT_ROW_CROP_HASH", "DUPLICATE_IMAGE"} or left not in per_capture or right not in per_capture or not isinstance(pairs, list) or not pairs: _trade_fail()
+        overlap_ids.add(oid); li, ri = captures_ordered.index(left), captures_ordered.index(right)
+        if li >= ri or basis != "DUPLICATE_IMAGE" and (ri != li + 1 or image_hashes[left] == image_hashes[right]): _trade_fail()
+        left_rows, right_rows = sorted(per_capture[left], key=lambda x: x["ordinal"]), sorted(per_capture[right], key=lambda x: x["ordinal"])
+        left_ord, right_ord = [], []
+        for pair in pairs:
+            if not isinstance(pair, dict) or set(pair) != {"leftSourceRowId", "rightSourceRowId"}: _trade_fail()
+            ls, rs = pair["leftSourceRowId"], pair["rightSourceRowId"]
+            if ls not in sources or rs not in sources or sources[ls]["captureId"] != left or sources[rs]["captureId"] != right: _trade_fail()
+            if assigned.get(ls) != assigned.get(rs): _trade_fail("Overlap pair endpoints must belong to one logical group.")
+            if basis != "DUPLICATE_IMAGE" and any(source_identity(ls, name) is None or source_identity(ls, name) != source_identity(rs, name) for name in ("island", "fromItem", "toItem")):
+                _trade_fail("Ordinary overlap requires matching resolved identity3 evidence.")
+            link = frozenset((ls, rs))
+            if link in links: _trade_fail("A source pair cannot be asserted by multiple overlap descriptors.")
+            left_ord.append(sources[ls]["ordinal"]); right_ord.append(sources[rs]["ordinal"]); links.add(link)
+        if basis == "ADJACENT_SUFFIX_PREFIX":
+            if len(pairs) < 2 or left_ord != [x["ordinal"] for x in left_rows[-len(pairs):]] or right_ord != [x["ordinal"] for x in right_rows[:len(pairs)]]: _trade_fail()
+        elif basis == "ADJACENT_ROW_CROP_HASH":
+            if len(pairs) != 1 or left_ord != [left_rows[-1]["ordinal"]] or right_ord != [right_rows[0]["ordinal"]]: _trade_fail()
+            lh, rh = sources[pairs[0]["leftSourceRowId"]].get("rowCropHash"), sources[pairs[0]["rightSourceRowId"]].get("rowCropHash")
+            if not isinstance(lh, str) or not re.fullmatch(r"[0-9a-f]{64}", lh) or lh != rh: _trade_fail()
+        else:
+            if image_hashes[left] != image_hashes[right] or len(left_rows) != len(right_rows) or [x["ordinal"] for x in left_rows] != [x["ordinal"] for x in right_rows] or len(pairs) != len(left_rows) or left_ord != [x["ordinal"] for x in left_rows] or right_ord != left_ord: _trade_fail()
+    for group in groups:
+        members = group["memberSourceRowIds"]
+        internal = [link for link in links if link <= set(members)]
+        if len(members) > 1:
+            adjacency = {sid: set() for sid in members}
+            for link in internal:
+                left, right = tuple(link); adjacency[left].add(right); adjacency[right].add(left)
+            reached, pending = set(), [members[0]]
+            while pending:
+                current = pending.pop()
+                if current in reached: continue
+                reached.add(current); pending.extend(adjacency[current] - reached)
+            if len(reached) != len(members): _trade_fail("Merged group is disconnected from overlap evidence.")
+        expected_ids = [overlap["overlapId"] for overlap in overlaps if any(pair["leftSourceRowId"] in members and pair["rightSourceRowId"] in members for pair in overlap["pairs"])]
+        if group["mergeEvidenceIds"] != expected_ids: _trade_fail("Group overlap references do not match pair evidence.")
+    findings = rec.get("findings")
+    if not isinstance(findings, list) or len(findings) > 1000: _trade_fail()
+    for finding in findings:
+        if not isinstance(finding, dict) or set(finding) != {"code", "messageKo", "sourceRowIds", "captureIds"} or not isinstance(finding.get("code"), str) or not isinstance(finding.get("messageKo"), str) or not isinstance(finding.get("sourceRowIds"), list) or any(sid not in sources for sid in finding["sourceRowIds"]) or not isinstance(finding.get("captureIds"), list) or any(cid not in per_capture for cid in finding["captureIds"]): _trade_fail()
+    return counts
+
+
 def _trade_json_walk(value: Any, *, depth: int = 0, budget: list[int] | None = None) -> None:
     if budget is None: budget = [250_000]
     budget[0] -= 1
@@ -177,11 +402,19 @@ def validate_trade_review_observation(payload: dict[str, Any]) -> dict[str, Any]
     proj_rows = proj.get("rows") if isinstance(proj, dict) else None
     rows, edges = completion["rows"], completion["edgeSegments"]
     if not isinstance(proj_rows, list) or not isinstance(rows, list) or len(rows) != len(proj_rows) or len(rows) > 1000 or not isinstance(edges, list) or len(edges) > 200: _trade_fail()
+    reconciliation = proj.get("reconciliation")
+    if reconciliation is None:
+        if "schemaVersion" in proj and (type(proj["schemaVersion"]) is not int or proj["schemaVersion"] != 1): _trade_fail("Unsupported legacy projection schema.")
+        for row in proj_rows:
+            if isinstance(row, dict) and any(key in row for key in ("reconciliationGroupId", "reconciliationStatus", "reconciliationMembers")): _trade_fail("Reconciled row metadata requires a reconciliation mapping.")
+    else:
+        _validate_reconciled_trade_projection(proj, captures, evidence_by_id, rows)
     if completion["projectionHash"] != proj.get("projectionHash") or completion["registryVersion"] != registry["snapshot"].get("registryVersion") or completion["registryVersion"] != proj.get("masterVersion") or completion["correctionVersion"] != proj.get("correctionPolicyVersion"): _trade_fail("Completion and source snapshots disagree.")
     if not _same_trade_json(edges, recognition["captureEvidence"]["edgeSegments"]): _trade_fail("Edge evidence does not match the recognition source.")
     for ordinal, capture in enumerate(captures, 1):
         evidence = evidence_by_id[capture["captureId"]]
-        complete_count = sum(1 for row in proj_rows if row.get("captureId") == capture["captureId"])
+        complete_count = (sum(1 for row in proj_rows if row.get("captureId") == capture["captureId"])
+                          if reconciliation is None else sum(1 for source_row in reconciliation["sourceRows"] if source_row["captureId"] == capture["captureId"]))
         edge_count = sum(1 for edge in edges if edge.get("captureId") == capture["captureId"])
         if evidence["captureOrdinal"] != ordinal or evidence["completeRowCount"] != complete_count or evidence["edgeSegmentCount"] != edge_count: _trade_fail("Capture metrics do not match reviewed rows and edges.")
     unchanged = edited = unknown = risky_count = 0
