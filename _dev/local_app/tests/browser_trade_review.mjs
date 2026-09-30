@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -128,10 +128,10 @@ try {
   assert.equal(await evaluate("document.querySelectorAll('.trade-review-table tbody tr[data-capture-id]').length"), 4);
   assert.equal(await evaluate("document.querySelectorAll('.trade-review-input').length"), 24, "four logical rows expose all six editable values");
   const reconciliationSummary = await evaluate("document.querySelector('.trade-review-summary').textContent");
-  assert.match(reconciliationSummary, /source COMPLETE 6행/);
-  assert.match(reconciliationSummary, /logical 4행/);
-  assert.match(reconciliationSummary, /겹침 통합 2그룹/);
-  assert.match(reconciliationSummary, /충돌 1그룹/);
+  assert.match(reconciliationSummary, /원본 COMPLETE 6/);
+  assert.match(reconciliationSummary, /검수 행 4/);
+  assert.match(reconciliationSummary, /겹침 통합 2/);
+  assert.match(reconciliationSummary, /충돌 1/);
   assert.equal(await evaluate("document.querySelectorAll('.trade-review-conflict-badge').length"), 1, "conflict row is visibly labelled");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 3 수율\"]').value"), "", "48/148 conflict is not prefilled");
   assert.equal(await evaluate("document.querySelector('.trade-review-table').textContent.includes('48')&&document.querySelector('.trade-review-table').textContent.includes('148')"), true, "both conflict alternatives are visible");
@@ -179,11 +179,12 @@ try {
   const writesBeforeCompletion = await (await fetch(`${baseUrl}__test__/requests`)).json();
   assert.equal(writesBeforeCompletion.filter((item) => item.method === "POST" && item.path.includes("trade-review-observations")).length, 0, "completion is the first persistence boundary");
   await evaluate(`(()=>{window.__r005Payload=null;window.__r005CompletionEvents=0;window.addEventListener('bdo:trade-review-completed',event=>{window.__r005CompletionEvents++;window.__r005Payload=event.detail;});})()`);
-  await evaluate("document.querySelector('[data-close-trade-capture]').click()");
+  await evaluate("document.querySelector('[data-close-trade-review]').click()");
   await waitFor(async () => evaluate("!document.querySelector('#trade-capture-dialog').open"), "dialog close");
   await evaluate("document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').open"), "dialog reopen");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 섬\"]').value"), "달래나루 수정", "pending edit persists across close/reopen");
+  await evaluate("document.querySelector('[data-action=open-trade-review]').click()");
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), false);
   await evaluate("(()=>{window.__r005ButtonClicks=0;window.__r005Errors=[];window.addEventListener('error',event=>window.__r005Errors.push(event.message));document.querySelector('.trade-review-complete').addEventListener('click',()=>window.__r005ButtonClicks++,true)})()");
   await evaluate(`(()=>{window.__observationReceipt=null;window.__observationBodies=[];window.__parentFailures=['503','offline'];window.__lostObservationResponse=false;window.__cropAttempts=[];window.__cropFailureUsed=false;const original=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input.url;if(url.includes('/trade-review-observations')&&init.method==='POST'&&!url.includes('/crops')){window.__observationBodies.push(init.body);if(window.__rejectNextObservation){window.__rejectNextObservation=false;return new Response(JSON.stringify({ok:false,error:{code:'invalid_contract',message:'invalid_contract',retryable:false}}),{status:422,headers:{'Content-Type':'application/json'}})}const failure=window.__parentFailures.shift();if(failure==='503')return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}});if(failure==='offline')throw new TypeError('simulated offline');const response=await original(input,init);window.__observationReceipt=await response.clone().json();if(!window.__lostObservationResponse){window.__lostObservationResponse=true;throw new TypeError('simulated response loss after server commit')}return response}if(url.includes('/trade-review-observations')&&url.includes('/crops')&&init.method==='POST'){const metadata=JSON.parse(init.body.get('metadata'));window.__cropAttempts.push(metadata);if(!window.__cropFailureUsed){window.__cropFailureUsed=true;return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary crop outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}})}}return original(input,init)}})()`);
@@ -218,9 +219,10 @@ try {
   assert.equal(exportedObservation.schemaVersion, 1);
   assert.equal(exportedObservation.semantic.observation.sourceContext.projection.snapshot.reconciliation.sourceRows.length, 6);
   assert.equal(exportedObservation.semantic.dataset.fields.length, 24, "export contains logical human fields, not multiplied source truths");
-  await evaluate("document.querySelector('[data-close-trade-capture]').click()");
+  await evaluate("document.querySelector('[data-close-trade-review]').click()");
   await evaluate("document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').open"), "reopen while persistence retry is pending");
+  await evaluate("document.querySelector('[data-action=open-trade-review]').click()");
   await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').click()");
   await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('원본 영역은 아직 연결되지 않았습니다')"), "partial crop retry state");
   assert.equal(await evaluate("window.__observationBodies.length"), 4, "503, offline, response-loss, and replay attempts reuse one observation job");
@@ -249,7 +251,7 @@ try {
   assert.deepEqual(await (await fetch(`${baseUrl}api/bootstrap`)).json(), bootstrapBefore, "isolated DB bootstrap unchanged");
   assert.equal(await evaluate("document.querySelector('#trade-list-root').textContent"), tradeListBefore, "current trade list unchanged");
   await evaluate("document.querySelector('.trade-review-footer').scrollIntoView({block:'end'})");
-  const viewport = await evaluate("JSON.stringify({innerWidth,innerHeight,devicePixelRatio,dialog:(()=>{const r=document.querySelector('#trade-capture-dialog').getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}})(),footerVisible:(()=>{const r=document.querySelector('.trade-review-footer').getBoundingClientRect();return r.bottom<=innerHeight&&r.top>=0})(),reviewScrollable:document.querySelector('.trade-review-table-wrap').scrollHeight>=document.querySelector('.trade-review-table-wrap').clientHeight})").then(JSON.parse);
+  const viewport = await evaluate("JSON.stringify({innerWidth,innerHeight,devicePixelRatio,dialog:(()=>{const r=document.querySelector('#trade-recognition-review-dialog').getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}})(),footerVisible:(()=>{const r=document.querySelector('.trade-review-footer').getBoundingClientRect();return r.bottom<=innerHeight&&r.top>=0})(),reviewScrollable:document.querySelector('.trade-review-table-wrap').scrollHeight>=document.querySelector('.trade-review-table-wrap').clientHeight})").then(JSON.parse);
   assert.ok(Math.abs(viewport.devicePixelRatio - 1.3) < 0.001);
   assert.ok(viewport.dialog.left >= 0 && viewport.dialog.top >= 0 && viewport.dialog.right <= viewport.innerWidth && viewport.dialog.bottom <= viewport.innerHeight, `dialog should fit viewport: ${JSON.stringify(viewport)}`);
   assert.equal(viewport.footerVisible, true, JSON.stringify(viewport));
@@ -295,6 +297,70 @@ try {
   const testDb = await (await fetch(`${baseUrl}__test__/db`)).json();
   assert.equal(testDb.databaseExists, true);
   assert.ok(testDb.appDbPath.startsWith(profile), "only the temporary test DB was accessed");
+  await evaluate(`(async()=>{
+    const {captureFromFile}=await import('/assets/js/capture.js');
+    const {mountTradeRecognitionReview}=await import('/assets/js/trade-recognition-review.js');
+    const batchId=crypto.randomUUID(),captures=[],sourceCaptures=[],draftRows=[],edgeSegments=[];
+    const keys=['island','fromItem','reqAmount','toItem','count','yield'];
+    for(let c=0;c<14;c++){
+      const canvas=document.createElement('canvas');canvas.width=800;canvas.height=240;
+      const context=canvas.getContext('2d');context.fillStyle='hsl('+c*23+' 70% 45%)';context.fillRect(0,0,800,240);
+      const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));
+      const capture=await captureFromFile(new File([blob],'synthetic-'+c+'.png',{type:'image/png'}),{taskType:'trade',baseRevision:0});
+      captures.push(capture);const captureId=capture.metadata.captureId;
+      sourceCaptures.push({captureId,captureOrdinal:c+1,imageHash:capture.sha256,completeRowCount:6,edgeSegmentCount:1});
+      for(let ordinal=1;ordinal<=6;ordinal++){
+        const values={island:'달래나루',fromItem:'테스트 원자재 '+c+'-'+ordinal,reqAmount:c===0&&ordinal===1?null:'10',toItem:'갈퀴 꽃 씨앗 주머니x',count:'0',yield:'48'};
+        const fields=Object.fromEntries(keys.map((key,index)=>[key,{value:null,rawText:values[key],normalizedText:values[key],rawNumericCandidate:['reqAmount','count','yield'].includes(key)&&values[key]!==null?Number(values[key]):null,status:values[key]===null?'EMPTY_OCR':'RAW_OCR_CANDIDATE',reasonCodes:values[key]===null?['EMPTY_OCR']:[],readerEvidence:{geometry:{box:{x:index*100,y:0,width:90,height:25}}}}]));
+        draftRows.push({captureId,ordinal,rowBox:{x:0,y:(ordinal-1)*30,width:800,height:30},sourceRefs:[{captureId,ordinal}],fields,status:'DRAFT_UNVERIFIED',automationDecision:'REVIEW'});
+      }
+      edgeSegments.push({captureId,boundarySide:'bottom',rowBox:{x:0,y:180,width:800,height:30},reasonCodes:['ROW_BOUNDARY_CONTACT'],classification:'EDGE_SEGMENT_UNCERTAIN'});
+    }
+    const recognitionResult={batchId,captures:sourceCaptures,draftRows,edgeSegments};
+    window.__largeReview=await mountTradeRecognitionReview({root:document.querySelector('[data-role=trade-review-workspace]'),recognitionResult,captures,reviewRevision:0,getCurrentRevision:()=>0,onComplete:payload=>window.__largeCompletion=payload});
+    if(document.querySelector('#trade-capture-dialog').open)document.querySelector('#trade-capture-dialog').close();
+    const dialog=document.querySelector('#trade-recognition-review-dialog');if(!dialog.open)dialog.showModal();
+  })()`);
+  assert.equal(await evaluate("document.querySelector('#trade-recognition-review-dialog').open&&!document.querySelector('#trade-capture-dialog').open"), true, "DEDICATED_REVIEW_DIALOG_OPEN");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog .trade-review-table')===null"), true);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-input').length"), 504);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-table tbody tr[data-capture-id]').length"), 84);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-raw-text').length"), 504, "RAW_RECOGNITION_VISIBLE per field");
+  assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 획득품\"]').value"), "갈퀴 꽃 씨앗 주머니", "CANDIDATE_VISIBLE");
+  assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 획득품\"]').parentElement.querySelector('.trade-review-raw-text').textContent.includes('갈퀴 꽃 씨앗 주머니x')"), true, "RAW_CANDIDATE_DIFFERENCE_VISIBLE");
+  assert.equal(await evaluate("document.querySelector('.trade-review-missing').textContent.includes('값 없음')&&document.querySelector('.trade-review-raw-text').parentElement.parentElement.querySelector('[data-field=reqAmount]').parentElement.textContent.includes('인식값 없음')"), true);
+  assert.equal(await evaluate("document.querySelector('.trade-review-edges').open"), false, "EDGE_COLLAPSED_DEFAULT");
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-edge-list>li').length"), 14);
+  const evidenceDir=resolve(root,"recognition-local/r011-review-ui-regression");await mkdir(evidenceDir,{recursive:true});
+  await writeFile(join(evidenceDir,"candidate-84-rows.png"),Buffer.from((await send("Page.captureScreenshot",{format:"png"})).data,"base64"));
+  const largeLayout = await evaluate(`(()=>{const d=document.querySelector('#trade-recognition-review-dialog').getBoundingClientRect(),main=document.querySelector('.trade-review-main'),m=main.getBoundingClientRect(),f=document.querySelector('.trade-review-footer').getBoundingClientRect();return {dialog:{width:d.width,height:d.height},mainHeight:m.height,visibleRows:[...document.querySelectorAll('.trade-review-table tbody tr')].filter(row=>{const r=row.getBoundingClientRect();return r.top>=m.top&&r.bottom<=m.bottom}).length,footerVisible:f.top>=0&&f.bottom<=innerHeight,sticky:getComputedStyle(document.querySelector('.trade-review-table thead th')).position,nestedScrollAreas:[...main.querySelectorAll('*')].filter(e=>['auto','scroll'].includes(getComputedStyle(e).overflowY)&&e.scrollHeight>e.clientHeight).length}})()`);
+  assert.ok(largeLayout.dialog.width >= 1700 && largeLayout.dialog.height >= 1000, JSON.stringify(largeLayout));
+  assert.ok(largeLayout.mainHeight >= 650 && largeLayout.visibleRows >= 3, JSON.stringify(largeLayout));
+  assert.equal(largeLayout.footerVisible, true);
+  assert.equal(largeLayout.sticky, "sticky");
+  assert.equal(largeLayout.nestedScrollAreas, 0);
+  await writeFile(join(evidenceDir,"candidate-84-rows.png"),Buffer.from((await send("Page.captureScreenshot",{format:"png"})).data,"base64"));
+  await evaluate("document.querySelector('.trade-review-main').scrollTop=document.querySelector('.trade-review-main').scrollHeight");
+  assert.equal(await evaluate("(()=>{const r=document.querySelector('.trade-review-table tbody tr:last-child').getBoundingClientRect(),m=document.querySelector('.trade-review-main').getBoundingClientRect();return r.top<m.bottom&&r.bottom>m.top})()"), true, "LARGE_TABLE_SCROLL to final row");
+  await evaluate("document.querySelector('[data-review-view=original]').click()");
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-original-capture').length"), 14);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-original-table tbody tr').length"), 84);
+  assert.equal(await evaluate("document.querySelector('.trade-review-original').hidden"), false);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-original input').length"), 0, "original recognition is read-only");
+  await evaluate("document.querySelector('.trade-review-original .trade-review-row-crop-button').click()");
+  await waitFor(async()=>evaluate("document.querySelector('.trade-review-original .trade-review-row-crop:not([hidden])')?.naturalWidth===800"),"memory-only row crop");
+  await writeFile(join(evidenceDir,"original-84-rows.png"),Buffer.from((await send("Page.captureScreenshot",{format:"png"})).data,"base64"));
+  await evaluate("document.querySelector('[data-review-view=candidate]').click();document.querySelector('[aria-label=\"행 1 필요 수량 모름으로 표시\"]').click();document.querySelector('[aria-label=\"표시된 모든 행과 경계 경고를 확인했습니다.\"]').click();document.querySelector('.trade-review-complete').click()");
+  assert.equal(await evaluate("window.__largeCompletion.rows.length"), 84, "REVIEW_COMPLETE_FLOW");
+  assert.equal(await evaluate("window.__largeCompletion.summary.unknownFieldCount"), 1);
+  await send("Emulation.setDeviceMetricsOverride",{width:1280,height:720,deviceScaleFactor:1.3,mobile:false});
+  const smallerLayout = await evaluate(`(()=>{window.dispatchEvent(new Event('resize'));const d=document.querySelector('#trade-recognition-review-dialog').getBoundingClientRect(),f=document.querySelector('.trade-review-footer').getBoundingClientRect(),m=document.querySelector('.trade-review-main');return {width:d.width,height:d.height,fits:d.left>=0&&d.right<=innerWidth&&d.top>=0&&d.bottom<=innerHeight,footerVisible:f.top>=0&&f.bottom<=innerHeight,horizontalScroll:m.scrollWidth>m.clientWidth}})()`);
+  assert.equal(smallerLayout.fits,true,JSON.stringify(smallerLayout));
+  assert.equal(smallerLayout.footerVisible,true);
+  assert.equal(smallerLayout.horizontalScroll,true);
+  await writeFile(join(evidenceDir,"layout.json"),JSON.stringify(largeLayout,null,2));
+  console.log("large_review_ui: PASS · 14 captures / 84 logical rows / 504 fields / 14 collapsed edges",JSON.stringify(largeLayout));
+  await evaluate("window.__largeReview.destroy()");
   console.log("browser_trade_review: PASS · Chrome 1920×1080 + CDP deviceScaleFactor 1.3");
 } finally {
   try { socket?.close(); } catch {}

@@ -143,20 +143,22 @@ try {
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
   await waitFor(async () => evaluate("document.querySelector('.trade-review-error')?.dataset.diagnosticCode==='REVIEW_MOUNT_FAILED'"), "visible review mount rejection");
   assert.equal(await evaluate("document.querySelector('.trade-review-error').textContent.includes('REVIEW_MOUNT_FAILED')"), true, "mount rejection exposes a diagnostic code");
-  const errorVisibility = await evaluate("(()=>{const e=document.querySelector('.trade-review-error').getBoundingClientRect(),v=document.querySelector('#trade-capture-dialog .dialog-body').getBoundingClientRect();return {visible:e.height>0&&e.bottom>v.top&&e.top<v.bottom,error:{top:e.top,bottom:e.bottom,height:e.height},body:{top:v.top,bottom:v.bottom},scrollTop:document.querySelector('#trade-capture-dialog .dialog-body').scrollTop}})()");
+  const errorVisibility = await evaluate("(()=>{const e=document.querySelector('.trade-review-error').getBoundingClientRect(),v=document.querySelector('#trade-recognition-review-dialog').getBoundingClientRect();return {visible:e.height>0&&e.bottom>v.top&&e.top<v.bottom,error:{top:e.top,bottom:e.bottom,height:e.height},body:{top:v.top,bottom:v.bottom},scrollTop:document.querySelector('#trade-recognition-review-dialog').scrollTop}})()");
   assert.equal(errorVisibility.visible, true, `mount error is scrolled into the visible dialog area: ${JSON.stringify(errorVisibility)}`);
   assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"), /REVIEW_MOUNT_FAILED/);
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').querySelector('.trade-review-table')===null"), true);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-review-workspace]').querySelector('.trade-review-table')===null"), true);
   await evaluate("window.__catalogFetchMode='delay';window.__catalogFetchStarted=false;document.querySelector('[data-action=recognize-trade]').click()");
   await waitFor(async () => evaluate("window.__catalogFetchStarted && document.querySelector('[data-role=trade-recognition-status]').textContent.includes('검수 화면을 준비하는 중')"), "review mount pending status");
   assert.equal(await evaluate("document.querySelector('.trade-review-summary')===null"), true, "review content has not mounted while catalog resolution is pending");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('표시했습니다')"), false, "success is not announced before the review DOM mounts");
   await evaluate("window.__releaseCatalogFetch()");
-  await waitFor(async () => evaluate("(() => { const region=document.querySelector('[data-role=trade-recognition-result]'); const summary=region?.querySelector('.trade-review-summary'); return region?.hidden===false && Boolean(summary) && summary.textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용'); })()"), "recognition review summary");
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"), "인식 초안을 검수 화면에 표시했습니다. 목록에는 적용되지 않았습니다.", "success follows completed review mount");
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').getBoundingClientRect().height>=200"), true, "review panel reserves usable viewport height");
-  assert.equal(await evaluate("(()=>{const e=document.querySelector('.trade-review-summary').getBoundingClientRect(),v=document.querySelector('#trade-capture-dialog .dialog-body').getBoundingClientRect();return e.height>0&&e.bottom>v.top&&e.top<v.bottom})()"), true, "review summary is inside the visible dialog area");
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용')"), true);
+  await waitFor(async () => evaluate("(() => { const region=document.querySelector('[data-role=trade-review-workspace]'); const summary=region?.querySelector('.trade-review-summary'); return region?.hidden===false && Boolean(summary) && summary.textContent.includes('캡처 2 · 원본 COMPLETE 2 · 검수 행 2 · 경계 조각 1'); })()"), "recognition review summary");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"), "인식 결과를 검수 창에 표시했습니다. 목록에는 아직 적용되지 않았습니다.", "success follows completed review mount");
+  assert.equal(await evaluate("document.querySelector('#trade-recognition-review-dialog').open && !document.querySelector('#trade-capture-dialog').open"), true, "recognition auto-opens the dedicated dialog without overlapping capture modal");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog .trade-review-table')===null"), true);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-review-workspace]').getBoundingClientRect().height>=200"), true, "review panel reserves usable viewport height");
+  assert.equal(await evaluate("(()=>{const e=document.querySelector('.trade-review-summary').getBoundingClientRect(),v=document.querySelector('#trade-recognition-review-dialog').getBoundingClientRect();return e.height>0&&e.bottom>v.top&&e.top<v.bottom})()"), true, "review summary is inside the visible dialog area");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-review-workspace]').textContent.includes('캡처 2 · 원본 COMPLETE 2 · 검수 행 2 · 경계 조각 1')"), true);
   assert.deepEqual(await evaluate("JSON.stringify([...document.querySelectorAll('.trade-recognition-table thead th')].map(cell=>cell.textContent))").then(JSON.parse),
     ["행", "섬", "소모품", "필요 수량", "획득품", "남은 교환 횟수", "수율", "상태"]);
   assert.equal(await evaluate("document.querySelector('.trade-recognition-table tbody').textContent.includes('10회')"), true, "raw numeric text is displayed without parsing");
@@ -170,11 +172,13 @@ try {
   assert.deepEqual(await (await fetch(`${baseUrl}api/bootstrap`)).json(), beforeRecognition, "main DB semantic bootstrap unchanged");
   assert.equal(await evaluate("document.querySelector('#trade-list-root').textContent"), tradeListBefore, "trade list unchanged");
 
-  await evaluate("document.querySelector('[data-close-trade-capture]').click()");
+  await evaluate("document.querySelector('[data-close-trade-review]').click()");
   await waitFor(async () => evaluate("!document.querySelector('#trade-capture-dialog').open"), "dialog close");
   await evaluate("document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').open && document.querySelector('[data-role=trade-runtime-status]').textContent==='로컬 인식 사용 가능'"), "dialog reopen and runtime refresh");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), false, "result remains in memory across dialog close");
+  await evaluate("document.querySelector('[data-action=open-trade-review]').click();document.querySelector('[data-action=return-trade-capture]').click()");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').open&&!document.querySelector('#trade-recognition-review-dialog').open"), true, "return to capture preserves queue and results");
 
   await evaluate("document.querySelector('[data-action=clear-trade-recognition-result]').click()");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true);
@@ -183,7 +187,7 @@ try {
   await evaluate(`fetch('/__test__/trade-runtime/empty',{method:'POST'})`);
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
   await waitFor(async () => evaluate("document.querySelector('.trade-review-empty')?.textContent.includes('완전한 물교 행을 찾지 못했습니다')"), "visible empty recognition result");
-  assert.equal(await evaluate("document.querySelector('.trade-review-summary').textContent.includes('logical 0행')"), true);
+  assert.equal(await evaluate("document.querySelector('.trade-review-summary').textContent.includes('검수 행 0')"), true);
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), true, "empty review cannot be completed as if rows were reviewed");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('완전한 물교 행이 없습니다')"), true);
   await evaluate("document.querySelector('[data-action=clear-trade-recognition-result]').click()");

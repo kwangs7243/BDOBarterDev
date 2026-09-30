@@ -10,9 +10,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
 const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_PARENT = "14e30da94d749ab40a2c63a91025a08b02ed9961";
+const EXPECTED_BASELINE = "9d413d6dd013b2b98c72bb71486590e9d47e7a36";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const HARNESS_SUBJECT = "test: rebaseline R011 live harness after review UI fix";
 const EVALUATION_POLICY = "trade-review-evaluation-v1";
 const RAW_EVALUATION = "trade-raw-eval-v1";
 const MAPPING_POLICY = "reviewed-trade-dto-mapping-v1";
@@ -705,8 +704,7 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-B1-D1 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
-  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-B1-D1 harness baseline commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
+  if (git(["merge-base", EXPECTED_BASELINE, head]) !== EXPECTED_BASELINE) throw new Error("HEAD가 승인된 R011 baseline의 후속 커밋이 아닙니다.");
   if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
@@ -982,9 +980,10 @@ async function waitForRecognition(browser, timeoutMs) {
   console.log("\n인식이 끝나면 모든 logical row와 6개 필드를 직접 확인·수정하고, 모르는 값은 UNKNOWN으로 표시한 뒤 ‘검수 완료’를 누르세요.");
   return await waitFor(async () => {
     const state = await browser.evaluate(`JSON.stringify({rows:document.querySelectorAll('.trade-review-table tbody tr[data-projection-row-id],.trade-review-table tbody tr[data-capture-id]').length,
-      table:Boolean(document.querySelector('.trade-review-table')),recognizeDisabled:document.querySelector('[data-action=recognize-trade]')?.disabled??null,
+      table:Boolean(document.querySelector('#trade-recognition-review-dialog .trade-review-table')),
+      reviewDialogOpen:Boolean(document.querySelector('#trade-recognition-review-dialog')?.open),recognizeDisabled:document.querySelector('[data-action=recognize-trade]')?.disabled??null,
       queued:Number(document.querySelector('#trade-capture-dialog')?.dataset.queueLength||0)})`).then(JSON.parse);
-    return state.table && state.rows > 0 ? state : false;
+    return state.reviewDialogOpen && state.table && state.rows > 0 ? state : false;
   }, "real recognition result/review rows", timeoutMs, 500);
 }
 

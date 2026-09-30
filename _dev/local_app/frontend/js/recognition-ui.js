@@ -42,6 +42,37 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const tradeRecognitionStatus = tradeDialog.querySelector("[data-role='trade-recognition-status']");
   const tradeRecognitionRegion = tradeDialog.querySelector("[data-role='trade-recognition']");
   const tradeRecognitionResultRegion = tradeDialog.querySelector("[data-role='trade-recognition-result']");
+  const tradeReviewDialog = document.querySelector("#trade-recognition-review-dialog");
+  const tradeReviewRoot = tradeReviewDialog.querySelector("[data-role='trade-review-workspace']");
+  const reviewLauncher = document.createElement("button");
+  reviewLauncher.type = "button";
+  reviewLauncher.textContent = "검수 창 열기";
+  reviewLauncher.dataset.action = "open-trade-review";
+  tradeRecognitionResultRegion.append(reviewLauncher);
+  const reviewStorage = document.createElement("section");
+  reviewStorage.className = "trade-review-storage";
+  const reviewStatus = document.createElement("p");
+  reviewStatus.setAttribute("role", "status");
+  reviewStatus.setAttribute("aria-live", "polite");
+  reviewStorage.append(reviewStatus);
+  new MutationObserver(() => { reviewStatus.textContent = tradeRecognitionStatus.textContent; }).observe(tradeRecognitionStatus, { childList: true, characterData: true, subtree: true });
+  const resizeTradeReviewDialog = () => {
+    const scale = Number(getComputedStyle(document.body).zoom) || 1;
+    tradeReviewDialog.style.width = `${Math.min(1800, (window.innerWidth - 24) / scale)}px`;
+    tradeReviewDialog.style.height = `${(window.innerHeight - 24) / scale}px`;
+  };
+  window.addEventListener("resize", resizeTradeReviewDialog);
+  const openReviewDialog = () => {
+    if (tradeDialog.open) tradeDialog.close();
+    resizeTradeReviewDialog();
+    if (!tradeReviewDialog.open) tradeReviewDialog.showModal();
+  };
+  reviewLauncher.addEventListener("click", openReviewDialog);
+  tradeReviewDialog.querySelector("[data-close-trade-review]").addEventListener("click", () => tradeReviewDialog.close());
+  tradeReviewDialog.querySelector("[data-action='return-trade-capture']").addEventListener("click", () => {
+    tradeReviewDialog.close();
+    openTradeButton.click();
+  });
   const warehouseScreenCaptureButton = document.createElement("button");
   warehouseScreenCaptureButton.type = "button";
   warehouseScreenCaptureButton.className = "warehouse-screen-capture";
@@ -84,11 +115,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const downloadTradeObservation = document.createElement("button");
   downloadTradeObservation.type = "button"; downloadTradeObservation.textContent = "검수 자료 내려받기"; downloadTradeObservation.hidden = true;
   tradeObservationActions.append(retryTradeObservation, downloadTradeObservation);
-  tradeRecognitionStatus.after(tradeObservationActions);
+  reviewStorage.append(tradeObservationActions);
   const sessionApplyPanel = document.createElement("section");
   sessionApplyPanel.className = "trade-review-session-apply";
   sessionApplyPanel.hidden = true;
-  tradeObservationActions.after(sessionApplyPanel);
+  reviewStorage.append(sessionApplyPanel);
 
   const setTradeStorageStatus = (message, { retry = false, download = false } = {}) => {
     tradeRecognitionStatus.textContent = message;
@@ -160,6 +191,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     else checkAgain.hidden = true;
     reset.hidden = !sessionCommitJob || !["READY", "STALE", "FAILED", "APPLIED", "NO_CHANGE"].includes(sessionCommitJob.status);
     sessionApplyPanel.append(controls, commit, retry, checkAgain, reset);
+    if (tradeReviewDialog.open) sessionApplyPanel.scrollIntoView({ block: "nearest", inline: "nearest" });
   };
   const refreshReviewedBatch = async () => {
     const saved = tradeSavedObservation;
@@ -414,17 +446,21 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     }
     tradeReviewForResult = null;
     const generation = ++tradeReviewGeneration;
-    tradeRecognitionResultRegion.replaceChildren();
+    tradeReviewRoot.replaceChildren();
     tradeRecognitionResultRegion.hidden = !tradeRecognitionResult;
     if (!tradeRecognitionResult) {
+      tradeReviewRoot.hidden = true;
+      if (tradeReviewDialog.open) tradeReviewDialog.close();
+      // Keep the immutable persistence job available after queue invalidation.
+      tradeRecognitionStatus.after(reviewStorage);
       tradeRecognitionRegion.style.flex = "";
       return Promise.resolve({ status: "empty" });
     }
-    tradeRecognitionRegion.style.flex = "1 0 min(55vh, 600px)";
+    tradeRecognitionRegion.style.flex = "";
     const result = tradeRecognitionResult;
     tradeReviewForResult = result;
     const mountPromise = mountTradeRecognitionReview({
-      root: tradeRecognitionResultRegion,
+      root: tradeReviewRoot,
       recognitionResult: result,
       captures: [...tradeQueue.items],
       reviewRevision: tradeRecognitionResultRevision,
@@ -458,7 +494,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         controller.destroy();
         return { status: "stale" };
       }
-      const reviewRoot = tradeRecognitionResultRegion;
+      const reviewRoot = tradeReviewRoot;
       const mountedContent = result.draftRows.length === 0
         ? reviewRoot.querySelector(".trade-review-empty")
         : reviewRoot.querySelector(".trade-review-table tbody tr[data-capture-id]");
@@ -467,12 +503,15 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         throw new Error("review DOM mount did not produce visible review content");
       }
       tradeReviewController = controller;
-      reviewRoot.querySelector(".trade-review-summary")?.scrollIntoView({ block: "start", inline: "nearest" });
+      reviewRoot.querySelector(".trade-review-main").append(reviewStorage);
+      reviewLauncher.textContent = `인식 결과 ${controller.projection.rows.length}행 준비됨 · 검수 창 열기`;
+      openReviewDialog();
       return { status: "mounted" };
     }).catch((error) => {
       if (generation !== tradeReviewGeneration || result !== tradeRecognitionResult) return { status: "stale" };
       tradeReviewForResult = null;
-      tradeRecognitionResultRegion.replaceChildren();
+      tradeReviewRoot.replaceChildren();
+      tradeReviewRoot.hidden = false;
       tradeRecognitionResultRegion.hidden = false;
       const message = document.createElement("p");
       message.className = "trade-review-error";
@@ -495,8 +534,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         renderTradeRecognitionResult();
         tradeRecognitionStatus.textContent = "인식 결과를 지웠습니다. 대기 이미지와 화면 연결은 유지됩니다.";
       });
-      tradeRecognitionResultRegion.append(message, details, clear);
-      message.scrollIntoView({ block: "nearest", inline: "nearest" });
+      tradeReviewRoot.append(message, details, clear, reviewStorage);
+      openReviewDialog();
       tradeRecognitionStatus.textContent = "인식은 완료했지만 검수 화면 표시 중 오류가 발생했습니다. 진단 코드: REVIEW_MOUNT_FAILED";
       return { status: "error", diagnosticCode: "REVIEW_MOUNT_FAILED" };
     }).finally(() => {
@@ -703,7 +742,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       if (mountResult?.status === "mounted") {
         tradeRecognitionStatus.textContent = result.draftRows.length === 0
           ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
-          : "인식 초안을 검수 화면에 표시했습니다. 목록에는 적용되지 않았습니다.";
+          : "인식 결과를 검수 창에 표시했습니다. 목록에는 아직 적용되지 않았습니다.";
       }
     } catch (error) {
       tradeRecognitionStatus.textContent = error?.message || "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.";

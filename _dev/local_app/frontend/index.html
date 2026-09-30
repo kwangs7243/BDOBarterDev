@@ -90,6 +90,12 @@
     </div>
   </dialog>
 
+  <dialog id="trade-recognition-review-dialog" class="app-dialog trade-recognition-review-dialog" aria-labelledby="trade-review-title">
+    <div class="dialog-titlebar"><h2 id="trade-review-title">물교 인식 결과 검수</h2><button type="button" data-close-trade-review aria-label="검수 창 닫기">×</button></div>
+    <div class="trade-review-workspace" data-role="trade-review-workspace" hidden></div>
+    <div class="trade-review-window-actions"><button type="button" data-action="return-trade-capture">캡처 화면으로 돌아가기</button></div>
+  </dialog>
+
   <dialog id="schedule-dialog" class="app-dialog briefing-dialog" aria-labelledby="briefing-title">
     <div class="dialog-titlebar"><h2 id="briefing-title">출항 브리핑</h2><div class="dialog-actions"><button id="generate-schedule" class="primary" type="button">스케줄 생성 / 다시 계산</button><button type="button" data-close-dialog aria-label="닫기">×</button></div></div>
     <div class="dialog-body briefing-body">

@@ -186,6 +186,21 @@ async function createFieldCrop({ row, field, captures }) {
   }
 }
 
+async function createRowCrop(row, captures) {
+  const capture = captures.find((item) => item?.metadata?.captureId === row.captureId);
+  const box = row.rowBox;
+  if (!capture?.blob || !box || !["x", "y", "width", "height"].every((key) => Number.isSafeInteger(box[key]))
+      || box.x < 0 || box.y < 0 || box.width < 1 || box.height < 1) return null;
+  const bitmap = await createImageBitmap(capture.blob);
+  try {
+    if (box.x + box.width > bitmap.width || box.y + box.height > bitmap.height) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = box.width; canvas.height = box.height;
+    canvas.getContext("2d").drawImage(bitmap, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+    return await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  } finally { bitmap.close?.(); }
+}
+
 export async function mountTradeRecognitionReview({ root, recognitionResult, captures, reviewRevision, getCurrentRevision, onComplete, onClear } = {}) {
   if (!(root instanceof Element) || !recognitionResult || !Array.isArray(captures)) throw new TypeError("review mount requires a root, recognition result, and captures");
   const registrySnapshot = await loadRegistry();
@@ -227,13 +242,15 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
   const summary = make("div", "trade-recognition-summary trade-review-summary", "");
   summary.setAttribute("aria-live", "polite");
   const edgeSegments = Array.isArray(recognitionResult.edgeSegments) ? cloneJson(recognitionResult.edgeSegments) : [];
-  const edges = make("section", "trade-review-edges");
+  const edges = make("details", "trade-review-edges");
   edges.setAttribute("aria-label", "캡처 경계 경고");
+  edges.append(make("summary", "trade-review-edge-toggle", `경계 조각 ${edgeSegments.length}개 · 보기`));
   if (edgeSegments.length) {
     const title = make("strong", "trade-review-edge-title", `캡처 경계에서 잘린 후보 ${edgeSegments.length}행이 있습니다. 추가 캡처가 필요할 수 있습니다.`);
     const list = make("ul", "trade-review-edge-list");
     edgeSegments.forEach((edge, index) => {
-      const item = make("li", "", `경계 후보 ${index + 1} · 캡처 ${edge.captureId} · 위치 ${edge.boundarySide} · ${edge.reasonCodes?.length ? edge.reasonCodes.join(", ") : edge.classification}`);
+      const side = { top: "위쪽", bottom: "아래쪽", both: "위·아래" }[edge.boundarySide] ?? edge.boundarySide;
+      const item = make("li", "", `경계 후보 ${index + 1} · 캡처 ${edge.captureId} · 위치 ${side} · ${edge.reasonCodes?.length ? edge.reasonCodes.join(", ") : edge.classification} · 영역 ${JSON.stringify(edge.rowBox ?? null)}`);
       const details = make("details", "trade-review-edge-details");
       details.append(make("summary", "", "경계 후보 근거"), make("pre", "", JSON.stringify(edge, null, 2)));
       item.append(details);
@@ -263,7 +280,8 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
     const unknowns = rowStates.flatMap(({ fields }) => FIELD_KEYS.filter((key) => fields[key].unknown));
     const risks = rowStates.flatMap(({ row }) => FIELD_KEYS.filter((key) => row.fields[key].riskReasons?.length
       || ["AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"].includes(row.fields[key].status)));
-    summary.textContent = `로컬 인식 초안 · ${sourceCount}행 · 이미지 ${recognitionResult.captures.length}장${edgeSegments.length ? ` · 경계 후보 ${edgeSegments.length}행 제외` : ""} · 목록 미적용 · 인식 source COMPLETE ${sourceCount}행 · 검수 logical ${rowStates.length}행 · 겹침 통합 ${mergedGroupCount}그룹 · 충돌 ${conflictGroupCount}그룹 · 전체 행 ${rowStates.length} · 전체 필드 ${rowStates.length * 6} · 확인 권장 ${risks.length} · 수정 ${edits.length} · 모름 ${unknowns.length} · 경계 ${edgeSegments.length}`;
+    summary.textContent = `캡처 ${recognitionResult.captures.length} · 원본 COMPLETE ${sourceCount} · 검수 행 ${rowStates.length} · 경계 조각 ${edgeSegments.length} · 겹침 통합 ${mergedGroupCount} · 충돌 ${conflictGroupCount} · 수정 ${edits.length} · 모름 ${unknowns.length}`;
+    summary.dataset.riskFieldCount = String(risks.length);
     completeButton.disabled = completed || rowStates.length === 0 || !confirmBox.checked || editorRefs.some((reference) => !reference.state.unknown && reference.state.invalid);
   };
 
@@ -309,6 +327,10 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
       const detail = make("details", "trade-review-evidence");
       const detailSummary = make("summary", "", `${FIELD_LABELS[key]} 근거 보기`);
       const evidence = projected.rawEvidence ?? {};
+      const raw = make("p", "trade-review-raw-text", `OCR 원문: ${evidence.rawText === null || evidence.rawText === undefined || evidence.rawText === "" ? "인식값 없음" : evidence.rawText}`);
+      if (Object.hasOwn(NUMERIC_MINIMUM, key)) raw.append(make("span", "trade-review-raw-numeric", `숫자 원본 후보: ${evidence.rawNumericCandidate === null || evidence.rawNumericCandidate === undefined ? "기록 없음" : evidence.rawNumericCandidate}`));
+      const missing = projected.shownValue === null || projected.shownValue === undefined || projected.shownValue === ""
+        ? make("span", "trade-review-missing", "값 없음 · 입력 또는 모름 선택") : null;
       const list = make("dl", "trade-review-evidence-list");
       const addEvidence = (label, value) => {
         const term = make("dt", "", label);
@@ -391,14 +413,18 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
         td.dataset.state = state.unknown ? "unknown" : state.invalid ? "warning" : !sameSemanticValue(key, projected.shownValue, state.value) ? "edited" : risky ? "warning" : "normal";
         updateSummary();
       });
-      td.append(input, unknownLabel, badge);
-      if (riskSummary) td.append(riskSummary);
+      td.append(input, raw, unknownLabel, badge);
+      if (missing) td.append(missing);
+      if (riskSummary) detail.append(riskSummary);
       td.append(validation, detail);
       tr.append(td);
       editorRefs.push({ key, row, state, input, unknown, validation });
     });
     const memberCount = row.reconciliationMembers?.length ?? 1;
     const rowStatus = make("td", "trade-review-row-status", `인식 초안 · 검토 필요 · 검수 대기${memberCount > 1 ? ` · 겹침 ${memberCount}개 출처 통합` : ""}${row.reconciliationStatus === "CONFLICT" ? " · 겹침 충돌" : ""}`);
+    const lineage = make("details", "trade-review-lineage");
+    lineage.append(make("summary", "", "출처 / 원본 행"), make("p", "", `캡처 ${row.captureId} · 원본 ${row.ordinal}행 · ${row.reconciliationStatus ?? "UNMERGED"}`));
+    rowStatus.append(lineage);
     rowStatus.setAttribute("aria-label", `행 ${rowIndex + 1} 검수 대기`);
     if (memberCount > 1) rowStatus.append(make("span", "trade-review-source-badge", `겹침 ${memberCount}개 출처 통합`));
     if (row.reconciliationStatus === "CONFLICT") rowStatus.append(make("span", "trade-review-conflict-badge", "겹침 충돌"));
@@ -598,8 +624,66 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
     window.dispatchEvent(new CustomEvent("bdo:trade-review-completed", { detail: payload }));
     updateSummary();
   });
-  footer.append(footerSummary, confirmLabel, message, completeButton);
-  root.append(summary, clear, edges, tableWrap, footer);
+  footer.append(footerSummary, confirmLabel, message, completeButton, clear);
+
+  const original = make("section", "trade-review-original");
+  original.hidden = true;
+  original.setAttribute("aria-label", "보정 전 원본 인식");
+  const appendRowPreview = (parent, row) => {
+    const available = row.rowBox && captures.some((capture) => capture.metadata.captureId === row.captureId && capture.blob);
+    if (!available) { parent.append(make("span", "trade-review-row-crop-status", "원본 영역 없음")); return; }
+    const button = make("button", "trade-review-row-crop-button", "원본 행 보기"); button.type = "button";
+    const image = make("img", "trade-review-row-crop"); image.hidden = true; image.alt = `캡처 ${row.captureId} 원본 ${row.ordinal}행`;
+    const status = make("span", "trade-review-row-crop-status");
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const blob = await createRowCrop(row, captures);
+        if (destroyed) return;
+        if (!blob) { status.textContent = "원본 영역 없음"; return; }
+        const url = URL.createObjectURL(blob); objectUrls.add(url); image.src = url; image.hidden = false;
+      } catch { status.textContent = "원본 영역 없음"; }
+      finally { button.disabled = false; }
+    });
+    parent.append(button, status, image);
+  };
+  [...body.querySelectorAll("tr[data-capture-id]")].forEach((tr, index) => appendRowPreview(tr.querySelector(".trade-review-lineage"), projection.rows[index]));
+  for (const [captureIndex, capture] of recognitionResult.captures.entries()) {
+    const group = make("section", "trade-review-original-capture");
+    group.dataset.captureId = capture.captureId;
+    group.append(make("h3", "", `캡처 ${captureIndex + 1} · ${capture.captureId}`));
+    const sourceTable = make("table", "trade-review-original-table");
+    const sourceHead = make("thead"); const sourceHeader = make("tr");
+    ["원본 행", ...FIELD_KEYS.map((key) => FIELD_LABELS[key])].forEach((label) => sourceHeader.append(make("th", "", label)));
+    sourceHead.append(sourceHeader); const sourceBody = make("tbody");
+    for (const row of recognitionResult.draftRows.filter((item) => item.captureId === capture.captureId)) {
+      const tr = make("tr"); tr.dataset.sourceOrdinal = String(row.ordinal);
+      const number = make("td", "", row.ordinal); appendRowPreview(number, row); tr.append(number);
+      for (const key of FIELD_KEYS) {
+        const field = row.fields?.[key] ?? {};
+        const cell = make("td");
+        for (const [label, value] of [["OCR 원문", field.rawText], ["정리된 원문", field.normalizedText], ["숫자 원본 후보", field.rawNumericCandidate], ["인식 상태", field.status], ["사유", field.reasonCodes?.length ? field.reasonCodes.join(", ") : null]]) {
+          cell.append(make("p", "", `${label}: ${value === null || value === undefined || value === "" ? "기록 없음" : value}`));
+        }
+        tr.append(cell);
+      }
+      sourceBody.append(tr);
+    }
+    sourceTable.append(sourceHead, sourceBody); group.append(sourceTable); original.append(group);
+  }
+  const tabs = make("div", "trade-review-tabs");
+  const candidateTab = make("button", "", "검수 후보"); candidateTab.type = "button"; candidateTab.dataset.reviewView = "candidate";
+  const originalTab = make("button", "", "원본 인식"); originalTab.type = "button"; originalTab.dataset.reviewView = "original";
+  candidateTab.setAttribute("aria-pressed", "true"); originalTab.setAttribute("aria-pressed", "false");
+  const main = make("div", "trade-review-main"); main.tabIndex = 0;
+  const showView = (raw) => {
+    tableWrap.hidden = raw; original.hidden = !raw; main.scrollTop = 0;
+    candidateTab.setAttribute("aria-pressed", String(!raw)); originalTab.setAttribute("aria-pressed", String(raw));
+  };
+  candidateTab.addEventListener("click", () => showView(false)); originalTab.addEventListener("click", () => showView(true));
+  tabs.append(candidateTab, originalTab);
+  main.append(edges, tableWrap, original);
+  root.append(summary, tabs, main, footer);
   updateSummary();
 
   return {
