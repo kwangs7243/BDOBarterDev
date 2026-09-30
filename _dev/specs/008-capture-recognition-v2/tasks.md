@@ -1,3 +1,9 @@
+## Active Roadmap Authority
+
+현재 작업 순서는 [CURRENT-ROADMAP.md](CURRENT-ROADMAP.md)를 따릅니다. 아래 T000~T014는 historical implementation plan + preserved invariants이며 번호와 이력을 보존합니다. old T010P3E2는 SUPERSEDED_PENDING_PRODUCT_REALIGNMENT, T010P3D4-S1은 ON_HOLD입니다. 현재 목표 계약은 [CURRENT-PRODUCT-CONTRACT.md](CURRENT-PRODUCT-CONTRACT.md)를 참조하세요.
+
+---
+
 # Luna High Implementation Tasks
 
 작업 디렉터리: `D:/BDOBarterDev/_dev`. 아래 파일은 이 root 기준 정확한 상대 경로이며 `{a,b}`는 각각의 명시된 파일이다. production 코드 변경은 후속 구현 요청에서만 수행한다. `<PY>`는 T000에서 검증한 실제 Python3.11+ executable이다. 모든 DB/오류/동시성 테스트는 copy/mock 또는 isolated LOCALAPPDATA에서 수행한다. 현재 사용자 앱을 BDO_TEST_URL로 지정하지 않는다.

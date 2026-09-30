@@ -1,3 +1,9 @@
+## Current Product Authority
+
+현재 목표 제품 동작의 정본은 [CURRENT-PRODUCT-CONTRACT.md](CURRENT-PRODUCT-CONTRACT.md)입니다. 아래 원문은 foundational requirements와 historical baseline이며 FR 번호와 보호 invariant를 보존합니다. 목표가 충돌하면 current contract의 명시적 amendment가 우선합니다. 현재 실행 동작은 production code/tests가 정본입니다.
+
+---
+
 # SPEC-008 — Capture / Recognition Automation V2
 
 상태: **READY_FOR_LUNA_PHASE0 — 최종 설계 보정 완료**. T000의 읽기 전용 기준점 조사·해결안 작성은 지금 착수 가능하다. 생산 구현은 authoritative Git baseline 확정 후에만 시작한다. Phase 1 기반 계약은 확정됐으며 선행 조건은 [tasks.md](tasks.md)에 있다. 이 상태는 Warehouse usable V2·완전 자동 적용·Trade engine의 검증 완료를 뜻하지 않는다. 이번에는 문서만 보정했다.
