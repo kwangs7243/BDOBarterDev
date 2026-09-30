@@ -99,7 +99,7 @@
 - **Invariants**: SAFE처럼 보여도 숨김 금지, prediction truth 금지, capture revision 바뀌면 완료 무효, edge는 별도 경고.
 - **Interfaces**: ReviewProjection→pending edits→review completion event(immutable observation payload). session mutation 없음.
 - **Sequence**: owner 강조/전체확인/disagreement UX 선택→R003 연결→편집/unknown→완료 상태→isolated browser validation.
-- **Tests**: 일반필드 수정, 행 누락/필터/페이지 미검수 guard, 숫자0/null, unknown, 재인식 invalidate, cancel preserves input, edge warning, manual/queue 회귀. 실제 Chrome 1920×1080·130%는 별도로 기록.
+- **Tests**: 일반필드 수정, 행 누락/필터/페이지 미검수 guard, 숫자0/null, unknown, 재인식 invalidate, cancel preserves input, edge warning, manual/queue 회귀. 자동 브라우저 회귀는 1920×1080 viewport·CDP DSF 1.3 기준을 별도로 기록하며, 이는 Windows 배율이나 Chrome zoom을 뜻하지 않음.
 - **Completion gate**: 전 COMPLETE×6 표시/편집, 한국어 reasons, explicit completion만 verified event, test PASS; browser 미실행이면 UI 검증 gate 미완료.
 - **Model recommendation**: Luna High; truth event 변경 Sol.
 
@@ -180,7 +180,7 @@
 - **목표 동작**: 새로운 다양한 화면/수량/겹침에서 모든 후보를 확인하고 최종 회차까지 검증.
 - **Target files**: `local_app/tests/browser_trade_review_live.mjs` (new, isolated harness), `recognition-local/live-validation/r011/` (new ignored package). production tuning 포함 금지.
 - **Prohibited files**: 공통 + 검증 중 engine/threshold/master/기존 truth 조정.
-- **Invariants**: actual Chrome/game와 mock 자동검증 구별, 1920×1080·130% 조건 포함 및 source scaling 기록, 사용자 조작 capture, local only.
+- **Invariants**: actual Chrome/game와 mock 자동검증 구별. 자동 브라우저 기준은 1920×1080 viewport·CDP DSF 1.3으로 유지할 수 있으나 independent live는 실제 사용자 환경을 변경하지 않음. Windows 배율, Chrome zoom, browser DPR, capture source scaling을 구분해 기록하고 특정 130%를 요구하지 않음. 사용자 조작 capture, local only.
 - **Interfaces**: frozen versions+새 captures+explicit human observations→metrics/manifest/release recommendation.
 - **Sequence**: R005~R010의 준비 gate→독립 capture 요청→review→isolated session/browser output→오류/부담 집계. 기준 미달 시 tuning과 test set 분리.
 - **Tests**: whole user flow, clipboard/file/stream fidelity, overlap/unknown/master disagreement, numeric multi-digit, evidence failure/retry, manual fallback. package는 R012.

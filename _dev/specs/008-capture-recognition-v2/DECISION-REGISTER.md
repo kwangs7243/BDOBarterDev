@@ -94,11 +94,20 @@
 - **Still valid**: local/offline, no Gemini/OpenAI/remote OCR, main/V1 보호, 수동/JSON fallback, 사용자 DB 접근 금지(이번 작업).
 - **Revisit condition**: R001에서 actual source drift/critical identity conflict가 나오면 범위 확대 대신 보고. 제품 flow 자체 변경은 Astra.
 
+## DR-011 — R011-LIVE-ENVIRONMENT (ACTIVE)
+
+- **Decision**: independent live validation은 사용자의 평소 Windows/Chrome 환경에서 수행하며 Windows 배율이나 Chrome zoom을 특정 값으로 강제하지 않는다. 환경 인자는 알고 있는 실제 값을 기록할 때만 제공하고 미제공 값은 unknown으로 둔다.
+- **Reason**: 검증 환경을 조정하면 실사용 환경의 검수 가능성 측정이 왜곡된다.
+- **Evidence**: Product Owner 환경 결정, R011-A-R3 live harness bootstrap 검토.
+- **Supersedes**: R011 live에서 1920×1080·Windows 130%를 요구하거나 CDP deviceScaleFactor를 OS 배율/Chrome zoom으로 해석하는 문구.
+- **Still valid**: automated browser regression의 1920×1080 viewport 및 CDP DSF 1.3 deterministic reference. 이는 live 환경 요구가 아니다. Browser-observed DPR와 viewport, user-attested Windows scale/Chrome zoom, capture source scaling은 별도 값이다.
+- **Revisit condition**: 실제 환경 기록이 필요한 검증 요구가 바뀔 때. 이 결정은 recognition truth, DTO, session, Master 또는 OCR 정책을 변경하지 않는다.
+
 ## 실행 상태 요약
 
 | 대상 | 현재 상태 | 처리 |
 |---|---|---|
-| DR-001~008,010 | ACTIVE | current contract의 대응 절에 따라 구현 |
+| DR-001~008,010~011 | ACTIVE | current contract의 대응 절에 따라 구현 |
 | DR-009 / D4-S1 | ON_HOLD | 실제 review 비용 증거 전 재개 금지 |
 | old T010P3E2 | SUPERSEDED_PENDING_PRODUCT_REALIGNMENT | 그대로 실행 금지; 자동화 아이디어만 미래 gate로 재사용 |
 | original T000~T014 | HISTORICAL | 번호·본문 보존, 현재 실행 순서 아님 |

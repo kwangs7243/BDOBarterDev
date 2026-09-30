@@ -11,9 +11,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
 const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_PARENT = "1b0766aa06f873d35787011b0316d5eae7c50409";
+const EXPECTED_PARENT = "bc24d35dfef3718816b18813a1c55a1428a32039";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const HARNESS_SUBJECT = "test: make live capture set explicit";
+const HARNESS_SUBJECT = "fix: prepare independent live validation";
 const CAPTURE_QUEUE_STABLE_MS = 1500;
 const CAPTURE_QUEUE_POLL_MS = 250;
 const EVALUATION_POLICY = "trade-review-evaluation-v1";
@@ -35,8 +35,9 @@ function usage() {
   node _dev/local_app/tests/browser_trade_review_live.mjs --help
   node _dev/local_app/tests/browser_trade_review_live.mjs --preflight [--run-dir <ignored r011 path>] [--device-scale-factor <수치>]
   node _dev/local_app/tests/browser_trade_review_live.mjs --live --run-dir <ignored r011 path> --case-id <고유 ID> \\
-    --input-mode STREAM|FILE|PASTE --display-width <정수> --display-height <정수> \\
-    --display-scale-percent <수치> --cohort INDEPENDENT [--notes <설명>] [--human-timeout-minutes <분>]
+    --input-mode STREAM|FILE|PASTE --cohort INDEPENDENT [--display-width <정수>] [--display-height <정수>] \\
+    [--windows-scale-percent <수치>] [--chrome-zoom-percent <수치>] [--device-scale-factor <수치>] \\
+    [--notes <설명>] [--human-timeout-minutes <분>]
 
 --preflight는 실제 게임 화면을 캡처하지 않고 격리 backend/sidecar, 실제 로컬 OCR runtime/model,
 표시 모드 Chrome, 1920×1080 브라우저 viewport 및 capture 창 열기만 확인합니다.
@@ -48,9 +49,12 @@ DONE 뒤 queue가 안정된 시점의 capture set을 recognition 전에 고정�
 이 도구는 후보 정답을 입력하거나 행을 제외하거나 회차 적용 버튼을 대신 누르지 않습니다.
 화면/원본 파일 해시가 이전 live-validation evidence와 겹치면 INDEPENDENT case로 인정하지 않습니다.
 
-표시 해상도와 OS 배율은 사용자가 제공한 값으로 기록합니다. CDP deviceScaleFactor나 browser DPR은
-OS 배율로 해석하지 않습니다. 이 harness의 준비 완료는 R011 usability 승인, auto-accept 승인,
-release/package 승인을 뜻하지 않습니다.\n`;
+실제 live 검증은 평소 사용 환경 그대로 실행합니다. Windows 배율이나 Chrome zoom을 바꿀 필요가 없습니다.
+환경 인자를 모르면 생략해도 됩니다. 인자는 사용자가 아는 실제 값을 기록하는 용도이며, 생략 값은 null로 남습니다.
+기존 --display-scale-percent는 의미가 모호한 deprecated alias이며 --windows-scale-percent로 대체되었습니다.
+CDP deviceScaleFactor/browser DPR은 Windows 배율이나 Chrome zoom이 아닙니다. --live의 기본은 native rendering입니다.
+모든 capture를 추가한 뒤 터미널에 DONE을 입력해야 queue를 고정하고 인식을 시작합니다.
+이 harness의 준비 완료는 R011 usability 승인, auto-accept 승인, release/package 승인을 뜻하지 않습니다.\n`;
 }
 
 function parseArgs(argv) {
@@ -305,12 +309,13 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
     close: () => { if (socket.readyState < WebSocket.CLOSING) socket.close(); } };
 }
 
-async function launchChrome({ chromePath, baseUrl, profile, deviceScaleFactor, headless = false }) {
+async function launchChrome({ chromePath, baseUrl, profile, deviceScaleFactor, windowSize = { width: 1920, height: 1080 }, headless = false }) {
   await mkdir(profile, { recursive: true });
   const args = [
     ...(headless ? ["--headless=new"] : []), "--no-sandbox", "--disable-gpu", "--no-first-run",
     "--disable-extensions", "--disable-crash-reporter", "--disable-breakpad", "--disable-background-networking",
-    "--window-size=1920,1080", "--remote-debugging-port=0", "--remote-allow-origins=*",
+    ...(windowSize ? [`--window-size=${windowSize.width},${windowSize.height}`] : []),
+    "--remote-debugging-port=0", "--remote-allow-origins=*",
     `--user-data-dir=${profile}`, "about:blank",
   ];
   const child = spawn(chromePath, args, { stdio: ["ignore", "ignore", "pipe"], windowsHide: headless });
@@ -342,8 +347,10 @@ async function launchChrome({ chromePath, baseUrl, profile, deviceScaleFactor, h
       page.close();
       page = await connectPageTarget(appTarget);
       await page.send("Page.enable"); await page.send("Runtime.enable"); await page.send("DOM.enable"); await page.send("Network.enable");
-      await page.send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080,
-        deviceScaleFactor: deviceScaleFactor ?? 1.3, mobile: false });
+      if (deviceScaleFactor != null) {
+        await page.send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080,
+          deviceScaleFactor, mobile: false });
+      }
       await waitFor(async () => page.evaluate(`location.href.startsWith(${JSON.stringify(baseUrl)}) && document.readyState==='complete'`),
         "app page navigation and document ready", 30000);
     }
@@ -517,6 +524,7 @@ async function runPreflight(options) {
         productionSidecarAccessed: false },
       browser: { ...viewport, targetViewport: { width: 1920, height: 1080 },
         cdpDeviceScaleFactor: mode, cdpDeviceScaleFactorIsOsScale: false,
+        cdpDeviceScaleFactorIsWindowsScale: false, cdpDeviceScaleFactorIsChromeZoom: false,
         captureDialogOpened: true, runtimeLabel: "로컬 인식 사용 가능" },
       r010Evaluator: path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs"),
     };
@@ -579,8 +587,8 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R2 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
-  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R2 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
+  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R3 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
+  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R3 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
   if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
@@ -597,6 +605,9 @@ async function loadOrCreateFreeze(runDir, gitState, environment) {
       throw new Error("기존 freeze-manifest가 현재 harness commit/main/branch와 달라 덮어쓰지 않고 중단합니다.");
     }
     if (existing.evaluationPolicyVersion !== EVALUATION_POLICY || existing.rawEvaluationVersion !== RAW_EVALUATION) throw new Error("freeze-manifest의 R010 policy가 현재와 다릅니다.");
+    if (existing.liveUserEnvironmentRequirement !== "USE_ACTUAL_USER_ENVIRONMENT_WITHOUT_FORCED_SCALING_OR_ZOOM") {
+      throw new Error("기존 freeze-manifest에 실제 사용자 환경 정책이 없습니다. 기존 evidence를 덮어쓰지 않고 중단합니다.");
+    }
     return existing;
   }
   const legacyRoot = path.join(ROOT, "recognition-local", "live-validation");
@@ -606,8 +617,10 @@ async function loadOrCreateFreeze(runDir, gitState, environment) {
     evaluationPolicyVersion: EVALUATION_POLICY, rawEvaluationVersion: RAW_EVALUATION,
     mappingPolicyVersion: MAPPING_POLICY, correctionVersion: null, registryVersion: null,
     runtime: environment.runtime, model: environment.model,
-    createdAt: isoNow(), environmentTarget: { displayWidth: 1920, displayHeight: 1080, displayScalePercent: 130,
-      targetViewport: { width: 1920, height: 1080 }, cdpDeviceScaleFactorIsOsScale: false },
+    createdAt: isoNow(), automatedBrowserReference: { viewport: { width: 1920, height: 1080 },
+      cdpDeviceScaleFactor: 1.3, purpose: "DETERMINISTIC_BROWSER_REGRESSION_REFERENCE",
+      cdpDeviceScaleFactorIsWindowsScale: false, cdpDeviceScaleFactorIsChromeZoom: false },
+    liveUserEnvironmentRequirement: "USE_ACTUAL_USER_ENVIRONMENT_WITHOUT_FORCED_SCALING_OR_ZOOM",
     preFreezeImageEvidence: oldEvidence,
     preFreezeImageHashes: [...new Set(oldEvidence.map((item) => item.sha256))].sort(),
     protectedExistingDirty: gitState.protectedDirty,
@@ -624,11 +637,12 @@ async function writeJson(filePath, value) {
 async function updateRunManifest(runDir, gitState, cases, evaluationReport, limitations = []) {
   const caseRefs = cases.map((item) => ({ caseId: item.caseId, status: item.status,
     caseManifest: path.relative(runDir, item.caseManifestPath).replaceAll(path.sep, "/"),
+    userAttestedEnvironment: item.userAttestedEnvironment ?? null,
+    browserObservedEnvironment: item.browserObservedEnvironment ?? null,
     observationId: item.observationId ?? null, exportPath: item.exportPath ?? null }));
   const manifest = {
     schemaVersion: 1, task: "R011", status: "LIVE_CASES_RECORDED_NOT_FINAL_R011", frozenGitSha: gitState.head,
-    environment: { target: { displayWidth: 1920, displayHeight: 1080, displayScalePercent: 130 },
-      valuesAreUserAttested: true }, cases: caseRefs,
+    environmentPolicy: "ACTUAL_USER_ENVIRONMENT_RECORDED_NOT_FORCED", cases: caseRefs,
     observationRefs: caseRefs.filter((item) => item.observationId).map(({ caseId, observationId, exportPath }) => ({ caseId, observationId, exportPath })),
     evaluationReport, sessionResults: cases.map((item) => ({ caseId: item.caseId, status: item.sessionStatus ?? "NOT_RECORDED" })),
     automatedRegressionRefs: [], limitations: [...limitations, "R011-A harness does not issue final R011 usability approval."],
@@ -644,18 +658,30 @@ function parseNumber(value, label, { integer = true, minimum = 1 } = {}) {
   return number;
 }
 
+function optionalNumber(value, label, options) {
+  return value == null ? null : parseNumber(value, label, options);
+}
+
 function liveArgs(options) {
-  const required = ["run-dir", "case-id", "input-mode", "display-width", "display-height", "display-scale-percent", "cohort"];
+  const required = ["run-dir", "case-id", "input-mode", "cohort"];
   const missing = required.filter((name) => !options[name]);
   if (missing.length) throw new Error(`--live 필수 옵션 누락: ${missing.map((name) => `--${name}`).join(", ")}`);
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/.test(options["case-id"])) throw new Error("--case-id는 영문/숫자/._-로 구성된 1~80자여야 합니다.");
   const inputMode = options["input-mode"].toUpperCase();
   if (!["STREAM", "FILE", "PASTE"].includes(inputMode)) throw new Error("--input-mode는 STREAM, FILE, PASTE 중 하나여야 합니다.");
   if (options.cohort !== "INDEPENDENT") throw new Error("R011 primary live case는 --cohort INDEPENDENT만 허용합니다.");
+  if (options["display-scale-percent"] && options["windows-scale-percent"]) {
+    throw new Error("--display-scale-percent와 --windows-scale-percent를 함께 사용할 수 없습니다.");
+  }
+  if (options["display-scale-percent"]) {
+    console.warn("--display-scale-percent는 폐기 예정의 모호한 별칭입니다. --windows-scale-percent를 사용하세요.");
+  }
   return { caseId: options["case-id"], inputMode, cohort: "INDEPENDENT",
-    displayWidth: parseNumber(options["display-width"], "--display-width"),
-    displayHeight: parseNumber(options["display-height"], "--display-height"),
-    displayScalePercent: parseNumber(options["display-scale-percent"], "--display-scale-percent", { integer: false }),
+    displayWidth: optionalNumber(options["display-width"], "--display-width"),
+    displayHeight: optionalNumber(options["display-height"], "--display-height"),
+    windowsScalePercent: optionalNumber(options["windows-scale-percent"] ?? options["display-scale-percent"],
+      options["display-scale-percent"] ? "--display-scale-percent (deprecated Windows scale alias)" : "--windows-scale-percent", { integer: false }),
+    chromeZoomPercent: optionalNumber(options["chrome-zoom-percent"], "--chrome-zoom-percent", { integer: false }),
     notes: options.notes ?? null,
     humanTimeoutMs: parseNumber(options["human-timeout-minutes"] ?? "120", "--human-timeout-minutes", { minimum: 1 }) * 60 * 1000 };
 }
@@ -886,6 +912,7 @@ async function runLive(options) {
   const runDir = assertInsideR011(options["run-dir"]);
   const caseDir = path.join(runDir, "cases", input.caseId);
   await mkdir(runDir, { recursive: true });
+  await mkdir(path.join(runDir, "cases"), { recursive: true });
   try { await mkdir(caseDir, { recursive: false }); } catch (error) {
     if (error.code === "EEXIST") throw new Error(`case-id가 이미 존재합니다. 기존 기록을 덮어쓰지 않습니다: ${input.caseId}`);
     throw error;
@@ -894,7 +921,8 @@ async function runLive(options) {
   const caseRecord = { schemaVersion: 1, task: "R011", caseId: input.caseId, status: "STARTED_CAPTURE_PENDING",
     cohort: input.cohort, inputMode: input.inputMode,
     userAttestedEnvironment: { displayWidth: input.displayWidth, displayHeight: input.displayHeight,
-      displayScalePercent: input.displayScalePercent, source: "USER_ATTESTED_ENVIRONMENT" },
+      windowsScalePercent: input.windowsScalePercent, chromeZoomPercent: input.chromeZoomPercent,
+      source: "USER_ATTESTED_OPTIONAL" },
     notes: input.notes, createdAt: isoNow(), sourceCaptures: [], observationId: null, exportPath: null,
     exportSha256: null, explicitExclusions: [], r008Status: null, sessionStatus: "NOT_STARTED" };
   await writeJson(caseManifestPath, caseRecord);
@@ -924,20 +952,18 @@ async function runLive(options) {
       model: { engineId: server.runtime.engineId, modelBundleSha256: server.runtime.modelBundleSha256 ?? null } };
     freeze = await loadOrCreateFreeze(runDir, gitState, environment);
     profile = path.join(workspace, "chrome-profile"); await mkdir(profile, { recursive: true });
-    const dsf = Number(options["device-scale-factor"] ?? "1.3");
-    if (!Number.isFinite(dsf) || dsf <= 0 || dsf > 4) throw new Error("--device-scale-factor는 0 초과 4 이하 수치여야 합니다.");
-    browser = await launchChrome({ chromePath, baseUrl: server.baseUrl, profile, deviceScaleFactor: dsf });
+    const dsf = optionalNumber(options["device-scale-factor"], "--device-scale-factor", { integer: false, minimum: 0.01 });
+    if (dsf != null && dsf > 4) throw new Error("--device-scale-factor는 0 초과 4 이하 수치여야 합니다.");
+    browser = await launchChrome({ chromePath, baseUrl: server.baseUrl, profile, deviceScaleFactor: dsf,
+      windowSize: dsf == null ? null : { width: 1920, height: 1080 } });
     const opened = await openTradeDialog(browser, server.baseUrl);
     const viewport = await pageFacts(browser);
     const environmentObservation = { ...viewport, chromeVersion: browser.version.Browser,
-      cdpDeviceScaleFactor: dsf, cdpDeviceScaleFactorIsOsScale: false,
-      userAttestedDisplay: caseRecord.userAttestedEnvironment,
-      targetViewport: { width: 1920, height: 1080 } };
-    if (viewport.innerWidth !== 1920 || viewport.innerHeight !== 1080) throw new Error(`Chrome viewport가 1920×1080이 아닙니다: ${viewport.innerWidth}×${viewport.innerHeight}`);
-    if (input.displayWidth !== 1920 || input.displayHeight !== 1080 || input.displayScalePercent !== 130) {
-      log.events.push({ at: isoNow(), event: "TARGET_ENVIRONMENT_DIFFERENCE", values: caseRecord.userAttestedEnvironment });
-      console.log(`주의: 사용자가 attested한 display 값이 목표(1920×1080, 130%)와 다릅니다: ${input.displayWidth}×${input.displayHeight}, ${input.displayScalePercent}%`);
-    }
+      cdpDeviceScaleFactor: dsf, cdpDeviceMetricsOverrideApplied: dsf != null,
+      cdpDeviceScaleFactorIsWindowsScale: false, cdpDeviceScaleFactorIsChromeZoom: false,
+      userAttestedEnvironment: caseRecord.userAttestedEnvironment };
+    caseRecord.browserObservedEnvironment = environmentObservation;
+    if (!viewport.innerWidth || !viewport.innerHeight) throw new Error("Chrome의 실제 viewport 값을 읽을 수 없습니다.");
     if (opened.runtimeStatus.available !== true) throw new Error("actual runtime status unavailable");
     await armRecognitionGate(browser);
     const attestation = await promptLine("이 캡처가 freeze 이후 실제 BDO 화면에서 새로 준비된 source임을 확인하면 Y를 입력하세요: ");
