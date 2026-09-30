@@ -10,9 +10,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
 const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_PARENT = "442aef24090a4a738c90fb7cb4b47fd61562087e";
+const EXPECTED_PARENT = "14e30da94d749ab40a2c63a91025a08b02ed9961";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const HARNESS_SUBJECT = "fix: simplify live capture validation";
+const HARNESS_SUBJECT = "test: rebaseline R011 live harness after review UI fix";
 const EVALUATION_POLICY = "trade-review-evaluation-v1";
 const RAW_EVALUATION = "trade-raw-eval-v1";
 const MAPPING_POLICY = "reviewed-trade-dto-mapping-v1";
@@ -705,8 +705,8 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R5 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
-  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R5 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
+  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-B1-D1 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
+  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-B1-D1 harness baseline commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
   if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
