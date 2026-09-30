@@ -5,17 +5,14 @@ import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import readline from "node:readline/promises";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
 const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_PARENT = "b1f34f0d1574b3a2027c0cc6f4ce9f929c1bdafe";
+const EXPECTED_PARENT = "442aef24090a4a738c90fb7cb4b47fd61562087e";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const HARNESS_SUBJECT = "fix: stabilize live capture evidence";
-const CAPTURE_QUEUE_STABLE_MS = 1500;
-const CAPTURE_QUEUE_POLL_MS = 250;
+const HARNESS_SUBJECT = "fix: simplify live capture validation";
 const EVALUATION_POLICY = "trade-review-evaluation-v1";
 const RAW_EVALUATION = "trade-raw-eval-v1";
 const MAPPING_POLICY = "reviewed-trade-dto-mapping-v1";
@@ -42,18 +39,18 @@ function usage() {
 --preflight는 실제 게임 화면을 캡처하지 않고 격리 backend/sidecar, 실제 로컬 OCR runtime/model,
 표시 모드 Chrome, 1920×1080 브라우저 viewport 및 capture 창 열기만 확인합니다.
 
---live에서는 Chrome에서 이 case에 사용할 모든 캡처를 추가한 뒤 터미널에 DONE을 입력해야 합니다.
-DONE 뒤 queue가 안정된 시점의 capture set을 recognition 전에 고정합니다.
+--live가 시작되면 Chrome에서 화면을 연결하고 ROI를 지정한 뒤, 게임을 직접 스크롤하며 필요한 만큼 캡처하세요.
+캡처를 마치면 화면의 ‘로컬 인식 실행’을 누르세요. 프로그램은 자동 스크롤하지 않으며 이후 터미널 입력도 필요하지 않습니다.
 
 --live에서는 사용자가 실제 BDO 화면을 직접 캡처하고 인식 결과의 모든 행/필드를 검수해야 합니다.
 이 도구는 후보 정답을 입력하거나 행을 제외하거나 회차 적용 버튼을 대신 누르지 않습니다.
-화면/원본 파일 해시가 이전 live-validation evidence와 겹치면 INDEPENDENT case로 인정하지 않습니다.
+인식 요청 시작 시점의 캡처 evidence와 저장된 observation export의 source provenance를 비교해 기록합니다.
+이전 R011 evidence와 source/bitmap 해시가 일치하는 캡처는 independent로 분류하지 않습니다.
 
 실제 live 검증은 평소 사용 환경 그대로 실행합니다. Windows 배율이나 Chrome zoom을 바꿀 필요가 없습니다.
 환경 인자를 모르면 생략해도 됩니다. 인자는 사용자가 아는 실제 값을 기록하는 용도이며, 생략 값은 null로 남습니다.
 기존 --display-scale-percent는 의미가 모호한 deprecated alias이며 --windows-scale-percent로 대체되었습니다.
 CDP deviceScaleFactor/browser DPR은 Windows 배율이나 Chrome zoom이 아닙니다. --live의 기본은 native rendering입니다.
-모든 capture를 추가한 뒤 터미널에 DONE을 입력해야 queue를 고정하고 인식을 시작합니다.
 이 harness의 준비 완료는 R011 usability 승인, auto-accept 승인, release/package 승인을 뜻하지 않습니다.\n`;
 }
 
@@ -140,10 +137,7 @@ async function waitFor(predicate, label, timeoutMs = 30000, intervalMs = 150) {
   const started = Date.now();
   let lastError;
   while (!interrupted && Date.now() - started < timeoutMs) {
-    try { const value = await predicate(); if (value) return value; } catch (error) {
-      if (error.code === "CAPTURE_QUEUE_CHANGED_AFTER_FREEZE") throw error;
-      lastError = error;
-    }
+    try { const value = await predicate(); if (value) return value; } catch (error) { lastError = error; }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   if (interrupted) throw new Error("사용자가 중단했습니다.");
@@ -237,6 +231,7 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
     eventCount: 0, lastMethod: null, lastError: null, outstandingRequestId: null, commandTimings: [] };
   const requestMeta = new Map();
   const observationReplies = [];
+  const recognitionRequests = [];
   const targetFailures = [];
   const protocolMessages = [];
   socket.addEventListener("open", () => { observations.opened = true; });
@@ -252,6 +247,10 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
       if (message.method === "Network.requestWillBeSent") {
         const request = message.params.request;
         requestMeta.set(message.params.requestId, { url: request.url, method: request.method });
+        if (request.method === "POST" && /\/api\/recognition\/trade-batch(?:\?|$)/.test(request.url)) {
+          recognitionRequests.push({ requestId: message.params.requestId, url: request.url,
+            method: request.method, observedAt: new Date().toISOString() });
+        }
       } else if (message.method === "Network.responseReceived") {
         const request = requestMeta.get(message.params.requestId);
         if (request?.method === "POST" && /\/api\/recognition\/trade-review-observations\/?$/.test(request.url)) {
@@ -305,7 +304,7 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
     if (result.exceptionDetails) throw new Error(result.result?.description ?? result.exceptionDetails.text);
     return result.result?.value;
   };
-  return { socket, send, evaluate, observations, protocolMessages, observationReplies, targetFailures,
+  return { socket, send, evaluate, observations, protocolMessages, observationReplies, recognitionRequests, targetFailures,
     close: () => { if (socket.readyState < WebSocket.CLOSING) socket.close(); } };
 }
 
@@ -358,6 +357,7 @@ async function launchChrome({ chromePath, baseUrl, profile, deviceScaleFactor, w
       spawnedPid: child.pid, headless, profile, initialTargets: initialTargets.map(summarizeTarget),
       blankTarget: summarizeTarget(blankTarget), blankFacts,
       appTarget: appTarget ? summarizeTarget(appTarget) : null, stderr: () => stderr, observationReplies: page.observationReplies,
+      recognitionRequests: page.recognitionRequests,
       targetFailures: page.targetFailures, diagnostics: page.observations,
       close: async () => { page.close(); await stopChild(child, true); } };
   } catch (error) {
@@ -469,16 +469,6 @@ function installBlobEvidenceRegistryInPage() {
   return { installed: URL.createObjectURL === wrapper, registry: window.__r011BlobEvidenceByUrl };
 }
 
-async function restoreBlobEvidenceWrapper(browser) {
-  return await browser.evaluate(`(()=>{
-    const restore=window.__r011RestoreCreateObjectURL;
-    if(!restore)return true;
-    const restored=restore();
-    window.__r011RestoreCreateObjectURL=null;
-    return restored;
-  })()`);
-}
-
 async function runCaptureBlobEvidenceProbe(browser) {
   const sample = "r011-capture-blob-evidence-probe";
   const expectedSha256 = createHash("sha256").update(sample, "utf8").digest("hex");
@@ -509,53 +499,79 @@ async function runCaptureBlobEvidenceProbe(browser) {
   })()`);
 }
 
-async function armRecognitionGate(browser) {
-  await browser.evaluate(`(()=>{
-    const install=(${installBlobEvidenceRegistryInPage.toString()})();
-    if(!install.installed)throw new Error("CAPTURE_BLOB_EVIDENCE_INSTALL_FAILED");
-    window.__r011SourceSetFrozen=false;
-    window.__r011PrematureRecognitionAttempts=0;
-    window.__r011ExpectedFileCaptures=0;
-    window.__r011ExpectedPasteCaptures=0;
-    window.__r011RecognitionGate=(event)=>{
-      const target=event.target instanceof Element?event.target:null;
-      if(!target?.closest('[data-action="recognize-trade"]')||window.__r011SourceSetFrozen===true)return;
-      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
-      window.__r011PrematureRecognitionAttempts+=1;
-      const status=document.querySelector('[data-role="trade-recognition-status"]');
-      if(status)status.textContent='캡처 추가를 마친 뒤 터미널에 DONE을 입력해야 인식을 시작할 수 있습니다.';
-    };
-    window.__r011CountFileSelection=(event)=>{window.__r011ExpectedFileCaptures+=event.target?.files?.length||0;};
-    window.__r011CountPasteImages=(event)=>{
-      const editable=(node)=>node instanceof Element&&!!node.closest("input,textarea,select,[contenteditable]:not([contenteditable='false']),[role='textbox']");
-      if(!document.querySelector('#trade-capture-dialog')?.open||editable(event.target)||editable(document.activeElement))return;
-      window.__r011ExpectedPasteCaptures+=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&String(item.type||'').toLowerCase().startsWith('image/')).length;
-    };
-    document.addEventListener('click',window.__r011RecognitionGate,true);
-    document.querySelector('#trade-capture-files')?.addEventListener('change',window.__r011CountFileSelection,true);
-    document.addEventListener('paste',window.__r011CountPasteImages,true);
+function installLiveCaptureObserverInPage(installBlobEvidenceRegistry) {
+  const install = installBlobEvidenceRegistry();
+  if (!install.installed) throw new Error("CAPTURE_BLOB_EVIDENCE_INSTALL_FAILED");
+  const listener = (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target?.closest('[data-action="recognize-trade"]') || window.__r011RecognitionStartSnapshotPromise) return;
+    const items = [...document.querySelectorAll(".capture-draft-item")];
+    const pendingRows = items.map((item) => {
+      const heading = item.querySelector("h4")?.textContent || "";
+      const detail = item.querySelector(".capture-draft-details")?.textContent || "";
+      const image = item.querySelector("img");
+      const previewUrl = image?.currentSrc || image?.src || null;
+      const registry = window.__r011BlobEvidenceByUrl;
+      const pending = previewUrl && registry instanceof Map ? registry.get(previewUrl) : null;
+      const match = heading.match(/(\\d+)×(\\d+)/);
+      const sourceType = detail.includes("클립보드") ? "clipboard" : detail.includes("화면") ? "browser-stream"
+        : detail.includes("파일") ? "file" : null;
+      return { captureId: item.dataset.captureId || null, queueStatus: item.dataset.status || null,
+        sourceType, frame: match ? { width: Number(match[1]), height: Number(match[2]) } : null,
+        reencoded: detail.includes("PNG 변환"), pending };
+    });
+    window.__r011RecognitionStartClick = { observedAt: new Date().toISOString(), captureCount: pendingRows.length };
+    window.__r011RecognitionStartSnapshotPromise = Promise.all(pendingRows.map(async (row) => {
+      let evidence = null;
+      let evidenceError = null;
+      try { if (row.pending) evidence = await row.pending; else evidenceError = "CAPTURE_BLOB_EVIDENCE_MISSING"; }
+      catch (error) { evidenceError = error.message || String(error); }
+      return { captureId: row.captureId, queueStatus: row.queueStatus, sourceType: row.sourceType,
+        frame: row.frame, bitmapSha256: evidence?.bitmapSha256 ?? null, bitmapBytes: evidence?.bitmapBytes ?? null,
+        blobType: evidence?.blobType ?? null, reencoded: row.reencoded, evidenceError };
+    })).then((captures) => ({ observedAt: window.__r011RecognitionStartClick.observedAt,
+      captureCount: captures.length, captures }));
+  };
+  document.addEventListener("click", listener, { capture: true, passive: true });
+  window.__r011RecognitionStartClickListener = listener;
+  return { observerInstalled: true, blobEvidenceInstalled: install.installed };
+}
+
+async function restoreLiveCaptureObserver(browser) {
+  return await browser.evaluate(`(()=>{
+    const listener=window.__r011RecognitionStartClickListener;
+    if(listener)document.removeEventListener("click",listener,true);
+    window.__r011RecognitionStartClickListener=null;
+    const restore=window.__r011RestoreCreateObjectURL;
+    const createObjectUrlRestored=restore?restore():URL.createObjectURL===window.__r011OriginalCreateObjectURL;
+    window.__r011RestoreCreateObjectURL=null;
+    return {observerRemoved:!window.__r011RecognitionStartClickListener,createObjectUrlRestored};
   })()`);
 }
 
-async function releaseRecognitionGate(browser) {
+async function runRecognitionInteractionProbe(browser) {
   const result = await browser.evaluate(`(()=>{
-    window.__r011SourceSetFrozen=true;
-    if(window.__r011RecognitionGate){document.removeEventListener('click',window.__r011RecognitionGate,true);window.__r011RecognitionGate=null;}
-    if(window.__r011CountFileSelection){document.querySelector('#trade-capture-files')?.removeEventListener('change',window.__r011CountFileSelection,true);window.__r011CountFileSelection=null;}
-    if(window.__r011CountPasteImages){document.removeEventListener('paste',window.__r011CountPasteImages,true);window.__r011CountPasteImages=null;}
+    const installed=(${installLiveCaptureObserverInPage.toString()})(${installBlobEvidenceRegistryInPage.toString()});
+    const button=document.createElement("button");
+    button.type="button";button.dataset.action="recognize-trade";button.textContent="harness interaction probe";
+    let bubbled=false;
+    button.addEventListener("click",()=>{bubbled=true;});
+    document.body.append(button);
+    const event=new MouseEvent("click",{bubbles:true,cancelable:true});
+    const dispatched=button.dispatchEvent(event);
+    button.remove();
+    const clickObserved=Boolean(window.__r011RecognitionStartClick);
+    document.removeEventListener("click",window.__r011RecognitionStartClickListener,true);
+    window.__r011RecognitionStartClickListener=null;
     const restore=window.__r011RestoreCreateObjectURL;
     const createObjectUrlRestored=restore?restore():false;
     window.__r011RestoreCreateObjectURL=null;
-    return {sourceSetFrozen:window.__r011SourceSetFrozen===true,
-      recognitionGateRemoved:!window.__r011RecognitionGate,
-      createObjectUrlRestored,
-      prematureRecognitionAttempts:window.__r011PrematureRecognitionAttempts||0,
-      expectedFileCaptures:window.__r011ExpectedFileCaptures||0,
-      expectedPasteCaptures:window.__r011ExpectedPasteCaptures||0};
+    return {status:installed.observerInstalled&&installed.blobEvidenceInstalled&&bubbled&&dispatched
+      &&!event.defaultPrevented&&clickObserved&&createObjectUrlRestored?"PASS":"FAIL",
+      observerInstalled:installed.observerInstalled,bubbled,dispatched,defaultPrevented:event.defaultPrevented,
+      clickObserved,createObjectUrlRestored,gameCapturePerformed:false};
   })()`);
-  if (!result.sourceSetFrozen || !result.recognitionGateRemoved || !result.createObjectUrlRestored) {
-    throw new Error(`SOURCE_FREEZE_GATE_RELEASE_INCOMPLETE: ${JSON.stringify(result)}`);
-  }
+  if (result.status !== "PASS") throw new Error(`RECOGNITION_INTERACTION_PROBE_FAILED: ${JSON.stringify(result)}`);
   return result;
 }
 
@@ -570,7 +586,8 @@ async function runPreflight(options) {
   if (!(await stat(chromePath).catch(() => null))?.isFile()) throw new Error(`Chrome 실행 파일이 없습니다: ${chromePath}`);
   if (!(await stat(path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs")).catch(() => null))?.isFile()) throw new Error("R010 evaluator 파일이 없습니다.");
   const workspace = await import("node:fs/promises").then(({ mkdtemp }) => mkdtemp(path.join(tmpdir(), "bdo-r011-preflight-")));
-  const port = await findPort(); let server; let browser; let result; let cdpControls = null; let captureBlobEvidenceProbe = null;
+  const port = await findPort(); let server; let browser; let result; let cdpControls = null;
+  let captureBlobEvidenceProbe = null; let recognitionInteractionProbe = null;
   const deviceScaleFactor = Number(options["device-scale-factor"] ?? "1.3");
   if (!Number.isFinite(deviceScaleFactor) || deviceScaleFactor <= 0 || deviceScaleFactor > 4) throw new Error("--device-scale-factor는 0 초과 4 이하 수치여야 합니다.");
   try {
@@ -594,6 +611,8 @@ async function runPreflight(options) {
       || !captureBlobEvidenceProbe.objectUrlRevoked) {
       throw new Error(`CAPTURE_BLOB_EVIDENCE_PROBE_FAILED: ${JSON.stringify(captureBlobEvidenceProbe)}`);
     }
+    stage = "passive_recognition_interaction_probe";
+    recognitionInteractionProbe = await runRecognitionInteractionProbe(browser);
     const viewport = await pageFacts(browser);
     if (!viewport.appReady || !viewport.url.startsWith(server.baseUrl) || !viewport.innerWidth || !viewport.innerHeight) throw new Error("visible Chrome의 production UI/viewport 확인이 실패했습니다.");
     const mode = deviceScaleFactor;
@@ -610,6 +629,7 @@ async function runPreflight(options) {
         browserLevelWebSocketUsedForPageCommands: false, websocket: browser.diagnostics },
       runtime: ui.runtimeStatus,
       captureBlobEvidenceProbe,
+      recognitionInteractionProbe,
       model: { available: ui.runtimeStatus.available, modelReady: ui.runtimeStatus.modelReady,
         engineId: ui.runtimeStatus.engineId, modelBundleSha256: ui.runtimeStatus.modelBundleSha256 ?? null },
       storageIsolation: { isolatedMainDb: server.mainDb, isolatedRecognitionSidecar: server.sidecar,
@@ -633,19 +653,22 @@ async function runPreflight(options) {
         devToolsActivePort: browser?.activePortPath ?? null, stderrTail: browser?.stderr?.().slice(-6000) ?? null },
       cdpControls,
       captureBlobEvidenceProbe,
+      recognitionInteractionProbe,
       runtime: server?.runtime ?? null,
       storageIsolation: server ? { isolatedMainDb: server.mainDb, isolatedRecognitionSidecar: server.sidecar,
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false } : null };
     await writeFile(path.join(outputDir, "preflight.json"), `${JSON.stringify(failed, null, 2)}\n`, { flag: "wx" }).catch(() => {});
     throw error;
   } finally {
-    if (browser) await restoreBlobEvidenceWrapper(browser).catch(() => false);
+    if (browser) await restoreLiveCaptureObserver(browser).catch(() => false);
     if (browser) await browser.close().catch(() => {});
     if (server?.child) await stopChild(server.child);
     await rm(workspace, { recursive: true, force: true, maxRetries: 5, retryDelay: 1000 });
   }
   console.log(JSON.stringify({ status: result.status, preflight: path.join(outputDir, "preflight.json"),
     gameCapturePerformed: false, independentEvidenceCreated: false, runtime: result.runtime,
+    captureBlobEvidenceProbe: result.captureBlobEvidenceProbe,
+    recognitionInteractionProbe: result.recognitionInteractionProbe,
     chrome: result.chrome, browser: result.browser }, null, 2));
 }
 
@@ -682,8 +705,8 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R4 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
-  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R4 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
+  if (git(["rev-parse", "HEAD^"]) !== EXPECTED_PARENT) throw new Error(`R011-A-R5 parent가 예상 SHA와 다릅니다: ${git(["rev-parse", "HEAD^"])}`);
+  if (git(["log", "-1", "--format=%s"]) !== HARNESS_SUBJECT) throw new Error(`HEAD가 R011-A-R5 harness commit이 아닙니다 (필요 commit 제목: ${HARNESS_SUBJECT}).`);
   if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
@@ -722,6 +745,22 @@ async function loadOrCreateFreeze(runDir, gitState, environment) {
   };
   await writeFile(freezePath, `${JSON.stringify(freeze, null, 2)}\n`, { flag: "wx" });
   return freeze;
+}
+
+async function readPriorR011Cases() {
+  const records = [];
+  async function visit(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) await visit(fullPath);
+      else if (entry.isFile() && entry.name === "case-manifest.json") {
+        const record = await readFile(fullPath, "utf8").then(JSON.parse).catch(() => null);
+        if (record?.task === "R011" && record.caseId) records.push({ ...record, caseManifestPath: fullPath });
+      }
+    }
+  }
+  await visit(R011_ROOT);
+  return records;
 }
 
 async function writeJson(filePath, value) {
@@ -781,11 +820,6 @@ function liveArgs(options) {
     humanTimeoutMs: parseNumber(options["human-timeout-minutes"] ?? "120", "--human-timeout-minutes", { minimum: 1 }) * 60 * 1000 };
 }
 
-async function promptLine(question) {
-  const terminal = readline.createInterface({ input: process.stdin, output: process.stdout });
-  try { return (await terminal.question(question)).trim(); } finally { terminal.close(); }
-}
-
 function sourceRowsFromExport(exportRecord) {
   const semantic = exportRecord?.semantic;
   const observation = semantic?.observation;
@@ -819,11 +853,6 @@ function getQueuedCapturesExpression() {
       const pending=previewUrl&&registry instanceof Map?registry.get(previewUrl):null;
       const match=heading.match(/(\\d+)×(\\d+)/);
       const sourceType=detail.includes('클립보드')?'clipboard':detail.includes('화면')?'browser-stream':detail.includes('파일')?'file':null;
-      if(!pending&&window.__r011SourceSetFrozen===true){
-        return {captureId:item.dataset.captureId||null,queueStatus:item.dataset.status||null,heading,detail,sourceType,
-          frame:match?{width:Number(match[1]),height:Number(match[2])}:null,
-          bitmapSha256:null,bitmapBytes:null,blobType:null,reencoded:detail.includes('PNG 변환')};
-      }
       if(!pending)throw new Error('CAPTURE_BLOB_EVIDENCE_MISSING: '+(item.dataset.captureId||previewUrl||'unknown'));
       const evidence=await pending;
       return {captureId:item.dataset.captureId||null,queueStatus:item.dataset.status||null,heading,detail,sourceType,
@@ -845,99 +874,113 @@ function modeMatches(mode, sourceType) {
     || (mode === "PASTE" && sourceType === "clipboard");
 }
 
-function checkCaptureSet(input, queued, freeze, previousCases) {
-  if (!queued.length || queued.some((item) => !item.captureId || !item.bitmapSha256 || !item.frame || !item.sourceType)) {
-    throw new Error("capture queue에 확인할 수 없는 ID, bitmap hash, source type 또는 frame이 있습니다.");
+function classifyCaptureSources(queued, freeze, priorCases, inputMode) {
+  const knownHashes = new Set(freeze.preFreezeImageHashes || []);
+  const priorExports = priorCases.flatMap((item) => item.sourceCaptures || []);
+  for (const item of priorExports) {
+    if (item.bitmapSha256) knownHashes.add(item.bitmapSha256);
+    if (item.sourceSha256) knownHashes.add(item.sourceSha256);
   }
-  if (queued.some((item) => !modeMatches(input.inputMode, item.sourceType))) throw new Error(`--input-mode=${input.inputMode}와 capture source type이 일치하지 않습니다.`);
-  const priorHashes = new Set(freeze.preFreezeImageHashes || []);
-  for (const item of queued) {
-    if (priorHashes.has(item.bitmapSha256)) throw new Error(`이전 live-validation image evidence와 같은 bitmap SHA가 발견되어 독립 case를 시작하지 않습니다: ${item.bitmapSha256}`);
-  }
-  const priorExports = previousCases.flatMap((item) => item.sourceCaptures || []);
-  for (const item of queued) {
-    const repeated = priorExports.some((prior) => prior.bitmapSha256 === item.bitmapSha256
-      || (prior.sourceSha256 && prior.sourceSha256 === item.sourceSha256));
-    if (repeated) throw new Error(`기존 R011 case와 같은 source/bitmap SHA입니다. 반복 route는 independent denominator에 넣을 수 없습니다: ${item.bitmapSha256}`);
-  }
-  if (new Set(queued.map((item) => item.captureId)).size !== queued.length) throw new Error("captureId가 중복되었습니다.");
-  return queued.map((item, index) => ({ captureOrdinal: index + 1, ...item }));
+  const captures = queued.map((item, index) => {
+    const matchingPriorHashes = [item.bitmapSha256, item.sourceSha256].filter((hash) => hash && knownHashes.has(hash));
+    const modeExpected = item.sourceType ? modeMatches(inputMode, item.sourceType) : null;
+    return { captureOrdinal: index + 1, ...item,
+      matchingPriorHashes: [...new Set(matchingPriorHashes)], modeExpected };
+  });
+  const duplicateCaptures = captures.filter((item) => item.matchingPriorHashes.length > 0);
+  const incomplete = captures.filter((item) => !item.captureId || !item.bitmapSha256 || !item.frame || !item.sourceType);
+  const duplicateCaptureIds = captures.filter((item, index) => captures.findIndex((entry) => entry.captureId === item.captureId) !== index);
+  return { captures, duplicateCaptures, incomplete, duplicateCaptureIds,
+    status: duplicateCaptures.length ? "DUPLICATE_KNOWN_PRIOR_EVIDENCE"
+      : incomplete.length || duplicateCaptureIds.length ? "SOURCE_EVIDENCE_INCOMPLETE"
+        : "NO_KNOWN_PRIOR_HASH_MATCH" };
 }
 
-function captureQueueSignature(captures) {
-  return JSON.stringify(captures.map(({ captureId, bitmapSha256, sourceType, frame }) => ({
-    captureId, bitmapSha256, sourceType, frame: frame ? { width: frame.width, height: frame.height } : null,
-  })));
-}
-
-function queueHasRequiredEvidence(captures, expectedCount = null) {
-  return captures.length > 0 && (expectedCount === null || (expectedCount > 0 && captures.length === expectedCount))
-    && captures.every((item) => item.captureId && item.bitmapSha256
-    && item.sourceType && item.frame?.width > 0 && item.frame?.height > 0);
-}
-
-async function waitForHumanQueue(browser, mode, timeoutMs) {
-  console.log(`\n[${mode}] Chrome에서 이 case에 사용할 모든 캡처를 추가하세요.`);
-  console.log("STREAM은 스크롤 위치를 바꾸며 여러 번 캡처할 수 있고, FILE 여러 장 선택과 PASTE 반복도 가능합니다.");
-  console.log("모두 추가한 뒤 터미널에 DONE을 입력하세요. DONE 전에는 source set을 고정하거나 recognition을 시작하지 않습니다.");
-  let done = false;
-  while (!done) {
-    if (interrupted) throw new Error("사용자가 중단했습니다.");
-    const answer = await promptLine("모든 캡처를 추가했으면 DONE을 입력하세요: ");
-    if (interrupted) throw new Error("사용자가 중단했습니다.");
-    if (answer.toLowerCase() === "done") done = true;
-    else console.log("DONE만 입력할 수 있습니다. 캡처 추가가 끝난 뒤 다시 입력하세요.");
+function compareRecognitionSourceWithExport(startSnapshot, exportCaptures) {
+  if (!Array.isArray(startSnapshot?.captures)) {
+    return { status: "SOURCE_PROVENANCE_UNVERIFIABLE", comparedCaptureCount: 0,
+      reason: "recognition-start queue snapshot unavailable" };
   }
-
-  const startedAt = Date.now();
-  let previousSignature = null;
-  let stableSince = null;
-  let stableConfirmations = 0;
-  let lastSnapshot = [];
-  while (!interrupted && Date.now() - startedAt < timeoutMs) {
-    const snapshot = await queuedCaptures(browser);
-    lastSnapshot = snapshot;
-    const expectedCount = mode === "FILE"
-      ? await browser.evaluate("window.__r011ExpectedFileCaptures||0")
-      : mode === "PASTE" ? await browser.evaluate("window.__r011ExpectedPasteCaptures||0") : null;
-    const signature = queueHasRequiredEvidence(snapshot, expectedCount) ? captureQueueSignature(snapshot) : null;
-    if (signature && signature === previousSignature) {
-      stableConfirmations += 1;
-    } else if (signature) {
-      previousSignature = signature;
-      stableSince = Date.now();
-      stableConfirmations = 1;
-    } else {
-      previousSignature = null;
-      stableSince = null;
-      stableConfirmations = 0;
+  const starts = startSnapshot.captures;
+  const byId = new Map(starts.map((item) => [item.captureId, item]));
+  const mismatches = [];
+  if (!starts.length || !exportCaptures.length) mismatches.push({ field: "captureCount", reason: "no capture provenance available" });
+  if (starts.length !== exportCaptures.length) mismatches.push({ field: "captureCount", start: starts.length, exported: exportCaptures.length });
+  for (const exported of exportCaptures) {
+    const observed = byId.get(exported.captureId);
+    if (!observed) { mismatches.push({ captureId: exported.captureId, field: "captureId", reason: "missing from recognition-start snapshot" }); continue; }
+    for (const field of ["sourceType", "bitmapSha256"]) {
+      if (observed[field] !== exported[field]) mismatches.push({ captureId: exported.captureId, field,
+        recognitionStart: observed[field] ?? null, observationExport: exported[field] ?? null });
     }
-    const stableForMs = stableSince === null ? 0 : Date.now() - stableSince;
-    if (stableConfirmations >= 2 && stableForMs >= CAPTURE_QUEUE_STABLE_MS) {
-      return { captures: snapshot, stableConfirmations, stableForMs, freezeTrigger: "USER_TYPED_DONE",
-        expectedInputCaptureCount: expectedCount };
+    for (const dimension of ["width", "height"]) {
+      if (observed.frame?.[dimension] !== exported.frame?.[dimension]) mismatches.push({ captureId: exported.captureId,
+        field: `frame.${dimension}`, recognitionStart: observed.frame?.[dimension] ?? null,
+        observationExport: exported.frame?.[dimension] ?? null });
     }
-    await new Promise((resolve) => setTimeout(resolve, CAPTURE_QUEUE_POLL_MS));
   }
-  if (interrupted) throw new Error("사용자가 중단했습니다.");
-  throw new Error(`CAPTURE_QUEUE_NOT_STABLE: DONE 뒤 queue가 안정되지 않았습니다 (${lastSnapshot.length}개 관측).`);
+  return { status: mismatches.length ? "SOURCE_PROVENANCE_MISMATCH" : "SOURCE_PROVENANCE_MATCH",
+    comparedCaptureCount: Math.min(starts.length, exportCaptures.length), mismatches };
 }
 
-async function assertFrozenQueueUnchanged(browser, frozenCaptures, phase) {
-  const current = await queuedCaptures(browser);
-  if (captureQueueSignature(current) !== captureQueueSignature(frozenCaptures)) {
-    const error = new Error(`CAPTURE_QUEUE_CHANGED_AFTER_FREEZE (${phase}): recognition source set을 수정하지 않고 case를 중단합니다.`);
-    error.code = "CAPTURE_QUEUE_CHANGED_AFTER_FREEZE";
-    throw error;
+function classifyExportIndependence(exportCaptures, freeze, priorCases, sourceComparison, inputMode) {
+  const evidenceByHash = new Map();
+  const addHash = (hash, ref) => {
+    if (!hash) return;
+    const refs = evidenceByHash.get(hash) || [];
+    refs.push(ref);
+    evidenceByHash.set(hash, refs);
+  };
+  for (const item of freeze.preFreezeImageEvidence || []) addHash(item.sha256, { type: "PRE_R011_IMAGE", path: item.path });
+  for (const prior of priorCases) for (const capture of prior.sourceCaptures || []) {
+    addHash(capture.bitmapSha256, { type: "PRIOR_R011_CAPTURE", caseId: prior.caseId, hashBasis: "bitmapSha256" });
+    addHash(capture.sourceSha256, { type: "PRIOR_R011_CAPTURE", caseId: prior.caseId, hashBasis: "sourceSha256" });
   }
-  return current;
+  const matches = [];
+  for (const capture of exportCaptures) for (const hashBasis of ["bitmapSha256", "sourceSha256"]) {
+    const hash = capture[hashBasis];
+    for (const prior of evidenceByHash.get(hash) || []) matches.push({ captureId: capture.captureId, hashBasis, hash, prior });
+  }
+  const priorCasesWithoutHashes = priorCases.filter((item) => !(item.sourceCaptures || []).some((capture) => capture.bitmapSha256 || capture.sourceSha256))
+    .map((item) => ({ caseId: item.caseId, status: item.status, caseManifestPath: item.caseManifestPath }));
+  const inputModeMismatches = exportCaptures.filter((item) => !modeMatches(inputMode, item.sourceType))
+    .map((item) => ({ captureId: item.captureId, inputMode, sourceType: item.sourceType }));
+  const status = matches.length ? "DUPLICATE_NON_INDEPENDENT"
+    : sourceComparison.status !== "SOURCE_PROVENANCE_MATCH" ? "INDEPENDENCE_UNVERIFIABLE_SOURCE_MISMATCH"
+      : inputModeMismatches.length ? "INDEPENDENCE_UNVERIFIABLE_INPUT_MODE_MISMATCH"
+      : "NO_KNOWN_PRIOR_HASH_MATCH";
+  return { status, independentCandidate: status === "NO_KNOWN_PRIOR_HASH_MATCH", matches,
+    priorCasesWithoutHashes, inputModeMismatches, comparedCaptureCount: exportCaptures.length };
 }
 
-async function waitForRecognition(browser, timeoutMs, frozenCaptures) {
-  console.log("\nsource capture set이 기록되었습니다. 이제 인식 버튼을 직접 누르세요.");
-  console.log("인식이 끝나면 모든 logical row와 6개 필드를 직접 확인·수정하고, 모르는 값은 UNKNOWN으로 표시한 뒤 ‘검수 완료’를 누르세요.");
+async function waitForRecognitionStart(browser, timeoutMs) {
+  console.log(`\nChrome에서 화면 연결 후 ROI를 정하고, 게임을 직접 스크롤하며 필요한 만큼 캡처하세요.`);
+  console.log("캡처가 끝나면 Chrome 화면의 ‘로컬 인식 실행’을 직접 누르세요. 터미널 입력은 필요하지 않습니다.");
+  const request = await waitFor(async () => browser.recognitionRequests[0] || false,
+    "user-triggered local trade recognition request", timeoutMs, 250);
+  let clickSnapshot = null;
+  try {
+    clickSnapshot = await browser.evaluate(`(async()=>window.__r011RecognitionStartSnapshotPromise
+      ?await window.__r011RecognitionStartSnapshotPromise:null)()`);
+  } catch {}
+  let fallbackCaptures = null;
+  if (!clickSnapshot?.captures?.length) {
+    try { fallbackCaptures = await queuedCaptures(browser); }
+    catch (error) { fallbackCaptures = { error: error.message, captures: [] }; }
+  }
+  const sourceSnapshot = clickSnapshot?.captures?.length
+    ? { authority: "PASSIVE_USER_CLICK_QUEUE_SNAPSHOT", ...clickSnapshot }
+    : { authority: "POST_START_DOM_BEST_EFFORT", observedAt: request.observedAt,
+      captures: Array.isArray(fallbackCaptures) ? fallbackCaptures : fallbackCaptures?.captures || [],
+      evidenceError: fallbackCaptures?.error ?? null };
+  const cleanup = await restoreLiveCaptureObserver(browser).catch((error) => ({
+    observerRemoved: false, createObjectUrlRestored: false, error: error.message }));
+  return { request, sourceSnapshot, cleanup };
+}
+
+async function waitForRecognition(browser, timeoutMs) {
+  console.log("\n인식이 끝나면 모든 logical row와 6개 필드를 직접 확인·수정하고, 모르는 값은 UNKNOWN으로 표시한 뒤 ‘검수 완료’를 누르세요.");
   return await waitFor(async () => {
-    await assertFrozenQueueUnchanged(browser, frozenCaptures, "waiting_for_recognition");
     const state = await browser.evaluate(`JSON.stringify({rows:document.querySelectorAll('.trade-review-table tbody tr[data-projection-row-id],.trade-review-table tbody tr[data-capture-id]').length,
       table:Boolean(document.querySelector('.trade-review-table')),recognizeDisabled:document.querySelector('[data-action=recognize-trade]')?.disabled??null,
       queued:Number(document.querySelector('#trade-capture-dialog')?.dataset.queueLength||0)})`).then(JSON.parse);
@@ -945,10 +988,9 @@ async function waitForRecognition(browser, timeoutMs, frozenCaptures) {
   }, "real recognition result/review rows", timeoutMs, 500);
 }
 
-async function waitForObservation(browser, timeoutMs, frozenCaptures) {
+async function waitForObservation(browser, timeoutMs) {
   console.log("검수 완료 후 backend가 observation을 저장하면 export를 자동 보관합니다.");
   return await waitFor(async () => {
-    await assertFrozenQueueUnchanged(browser, frozenCaptures, "waiting_for_observation");
     const reply = [...browser.observationReplies].reverse().find((item) => item.body?.ok === true && item.body?.receipt?.observationId);
     if (reply) return reply;
     const status = await browser.evaluate(`document.querySelector('[data-role=trade-recognition-status]')?.textContent||document.querySelector('#trade-recognition-status')?.textContent||''`);
@@ -1048,6 +1090,8 @@ async function runLive(options) {
       const existing = await readFile(path.join(runDir, "cases", item.name, "case-manifest.json"), "utf8").then(JSON.parse).catch(() => null);
       if (existing) existingCases.push(existing);
     }
+    const priorR011Cases = (await readPriorR011Cases()).filter((item) =>
+      path.resolve(item.caseManifestPath) !== path.resolve(caseManifestPath));
     workspace = await import("node:fs/promises").then(({ mkdtemp }) => mkdtemp(path.join(tmpdir(), "bdo-r011-live-")));
     const port = await findPort();
     server = await startServer({ pythonPath, workspace: path.join(runDir, "session", input.caseId), port });
@@ -1069,43 +1113,52 @@ async function runLive(options) {
     caseRecord.browserObservedEnvironment = environmentObservation;
     if (!viewport.innerWidth || !viewport.innerHeight) throw new Error("Chrome의 실제 viewport 값을 읽을 수 없습니다.");
     if (opened.runtimeStatus.available !== true) throw new Error("actual runtime status unavailable");
-    await armRecognitionGate(browser);
-    const attestation = await promptLine("이 캡처가 freeze 이후 실제 BDO 화면에서 새로 준비된 source임을 확인하면 Y를 입력하세요: ");
-    if (attestation.toLowerCase() !== "y") throw new Error("사용자가 fresh BDO source attestation을 확인하지 않았습니다.");
-    caseRecord.freshGameSourceUserAttested = true;
-    const queueFreeze = await waitForHumanQueue(browser, input.inputMode, timeoutMs);
-    const frozenCaptures = checkCaptureSet(input, queueFreeze.captures, freeze, existingCases);
-    caseRecord.sourceCaptures = frozenCaptures;
-    caseRecord.status = "SOURCE_SET_FROZEN_BEFORE_RECOGNITION";
-    caseRecord.sourceSetFrozenAt = isoNow();
-    caseRecord.sourceSetFreeze = { trigger: queueFreeze.freezeTrigger,
-      stableSnapshotConfirmations: queueFreeze.stableConfirmations, stableForMs: queueFreeze.stableForMs,
-      expectedInputCaptureCount: queueFreeze.expectedInputCaptureCount };
-    caseRecord.independenceBasis = "USER_ATTESTED_FRESH_GAME_CAPTURE_AFTER_FREEZE_AND_CAPTURE_HASH_CHECK";
-    log.events.push({ at: isoNow(), event: "SOURCE_SET_FROZEN", captureCount: frozenCaptures.length,
-      captureIds: frozenCaptures.map((item) => item.captureId), bitmapHashes: frozenCaptures.map((item) => item.bitmapSha256),
-      trigger: queueFreeze.freezeTrigger, stableSnapshotConfirmations: queueFreeze.stableConfirmations,
-      stableForMs: queueFreeze.stableForMs, expectedInputCaptureCount: queueFreeze.expectedInputCaptureCount });
+    const observerInstall = await browser.evaluate(`(${installLiveCaptureObserverInPage.toString()})(${installBlobEvidenceRegistryInPage.toString()})`);
+    if (!observerInstall.observerInstalled || !observerInstall.blobEvidenceInstalled) throw new Error("LIVE_CAPTURE_OBSERVER_INSTALL_FAILED");
+    caseRecord.captureFlow = { type: "USER_CONTROLLED_MANUAL_MULTI_CAPTURE", automaticScroll: false,
+      recognitionTriggeredBy: "USER_RECOGNITION_BUTTON", terminalInputAfterStartup: false };
+    caseRecord.status = "WAITING_FOR_USER_RECOGNITION";
+    log.events.push({ at: isoNow(), event: "CAPTURE_OBSERVER_INSTALLED", passive: true,
+      blobEvidenceInstalled: observerInstall.blobEvidenceInstalled });
     await writeJson(caseManifestPath, caseRecord);
     await writeJson(caseFiles.browserObservationsPath, { schemaVersion: 1, environment: environmentObservation,
       python: { executable: probe.executable, version: probe.version, prefix: probe.prefix }, chrome: browser.version,
       runtime: opened.runtimeStatus, isolatedStorage: { mainDb: server.mainDb, recognitionSidecar: server.sidecar,
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false },
-      sourceSetFrozenAt: caseRecord.sourceSetFrozenAt, sourceSetFreeze: caseRecord.sourceSetFreeze,
-      queuedCaptures: frozenCaptures, observationResponse: null,
+      recognitionStart: null, captureMetadataAtRecognitionStart: null, sourceProvenanceComparison: null,
+      observationResponse: null,
       observationExport: null, preReviewTruthInferred: false });
     await updateRunManifest(runDir, gitState, [...existingCases.map((item) => ({ ...item,
       caseManifestPath: path.join(runDir, "cases", item.caseId, "case-manifest.json") })),
       { ...caseRecord, caseManifestPath }], null);
-    Object.assign(caseRecord.sourceSetFreeze, await releaseRecognitionGate(browser));
+    const recognitionStart = await waitForRecognitionStart(browser, timeoutMs);
+    const sourceClassification = classifyCaptureSources(recognitionStart.sourceSnapshot.captures || [], freeze, priorR011Cases, input.inputMode);
+    caseRecord.recognitionStart = { request: recognitionStart.request, sourceSnapshotAuthority: recognitionStart.sourceSnapshot.authority,
+      sourceSnapshotObservedAt: recognitionStart.sourceSnapshot.observedAt ?? null,
+      captureCount: recognitionStart.sourceSnapshot.captureCount ?? recognitionStart.sourceSnapshot.captures?.length ?? 0,
+      captureIds: sourceClassification.captures.map((item) => item.captureId),
+      observerCleanup: recognitionStart.cleanup };
+    caseRecord.captureMetadataAtRecognitionStart = sourceClassification;
+    caseRecord.captureModeMismatches = sourceClassification.captures.filter((item) => item.modeExpected === false)
+      .map((item) => ({ captureId: item.captureId, inputMode: input.inputMode, sourceType: item.sourceType }));
+    caseRecord.sourceCaptures = sourceClassification.captures;
+    caseRecord.status = "RECOGNITION_STARTED_HUMAN_REVIEW_PENDING";
+    log.events.push({ at: recognitionStart.request.observedAt, event: "RECOGNITION_STARTED",
+      requestId: recognitionStart.request.requestId, captureCount: sourceClassification.captures.length,
+      captureIds: sourceClassification.captures.map((item) => item.captureId), sourceSnapshotAuthority: recognitionStart.sourceSnapshot.authority });
     await writeJson(caseManifestPath, caseRecord);
-    const recognition = await waitForRecognition(browser, timeoutMs, frozenCaptures);
-    await assertFrozenQueueUnchanged(browser, frozenCaptures, "recognition_result_mounted");
+    const browserObservations = { schemaVersion: 1, environment: environmentObservation,
+      python: { executable: probe.executable, version: probe.version, prefix: probe.prefix }, chrome: browser.version,
+      runtime: opened.runtimeStatus, isolatedStorage: { mainDb: server.mainDb, recognitionSidecar: server.sidecar,
+        realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false },
+      recognitionStart: caseRecord.recognitionStart, captureMetadataAtRecognitionStart: sourceClassification,
+      sourceProvenanceComparison: null, observationResponse: null, observationExport: null, preReviewTruthInferred: false };
+    await writeJson(caseFiles.browserObservationsPath, browserObservations);
+    const recognition = await waitForRecognition(browser, timeoutMs);
     caseRecord.status = "RECOGNITION_RESULT_MOUNTED_HUMAN_REVIEW_PENDING";
     caseRecord.recognitionUi = recognition;
     log.events.push({ at: isoNow(), event: "RECOGNITION_RESULT_MOUNTED", reviewRowCount: recognition.rows });
-    const reply = await waitForObservation(browser, timeoutMs, frozenCaptures);
-    await assertFrozenQueueUnchanged(browser, frozenCaptures, "observation_saved");
+    const reply = await waitForObservation(browser, timeoutMs);
     if (reply.status !== 200 || reply.body?.ok !== true) throw new Error(`observation save was not successful: ${JSON.stringify({ status: reply.status, body: reply.body })}`);
     const observationId = reply.body.receipt.observationId;
     caseRecord.observationId = observationId;
@@ -1119,19 +1172,22 @@ async function runLive(options) {
     await writeFile(exportPath, exportBytes, { flag: "wx" });
     const exportRecord = JSON.parse(exportBytes.toString("utf8"));
     const sourceCaptures = sourceRowsFromExport(exportRecord);
-    const mismatch = sourceCaptures.length !== frozenCaptures.length || sourceCaptures.some((saved) => {
-      const prior = frozenCaptures.find((item) => item.captureId === saved.captureId);
-      return !prior || prior.bitmapSha256 !== saved.bitmapSha256 || prior.sourceType !== saved.sourceType
-        || prior.frame?.width !== saved.frame?.width || prior.frame?.height !== saved.frame?.height;
-    });
-    if (mismatch) throw new Error("export capture provenance가 recognition 전 frozen source set과 다릅니다. 자동 수정 없이 case를 보존합니다.");
-    for (const item of sourceCaptures) {
-      if (item.sourceSha256 && freeze.preFreezeImageHashes?.includes(item.sourceSha256)) throw new Error(`export sourceSha256가 freeze 이전 이미지 evidence와 일치합니다: ${item.sourceSha256}`);
-      if (existingCases.some((prior) => prior.sourceCaptures?.some((entry) => entry.sourceSha256 === item.sourceSha256 && item.sourceSha256))) {
-        throw new Error(`export sourceSha256가 이전 R011 case와 일치합니다: ${item.sourceSha256}`);
-      }
-    }
-    caseRecord.sourceCaptures = sourceCaptures.map((item, index) => ({ ...frozenCaptures[index], ...item, captureOrdinal: index + 1 }));
+    const sourceProvenanceComparison = compareRecognitionSourceWithExport(recognitionStart.sourceSnapshot, sourceCaptures);
+    const exportIndependence = classifyExportIndependence(sourceCaptures, freeze, priorR011Cases,
+      sourceProvenanceComparison, input.inputMode);
+    const recognitionStartById = new Map((recognitionStart.sourceSnapshot.captures || []).map((item) => [item.captureId, item]));
+    caseRecord.sourceCaptures = sourceCaptures.map((item, index) => ({
+      ...(recognitionStartById.get(item.captureId) || {}), ...item, captureOrdinal: index + 1,
+    }));
+    caseRecord.sourceProvenanceComparison = sourceProvenanceComparison;
+    caseRecord.sourceIndependence = exportIndependence;
+    caseRecord.independenceBasis = "POST_RECOGNITION_SOURCE_HASH_COMPARISON_WITH_RECORDED_R011_EVIDENCE";
+    caseRecord.cohort = exportIndependence.independentCandidate ? input.cohort : "UNASSIGNED";
+    log.events.push({ at: isoNow(), event: sourceProvenanceComparison.status,
+      comparedCaptureCount: sourceProvenanceComparison.comparedCaptureCount, mismatches: sourceProvenanceComparison.mismatches ?? [] });
+    log.events.push({ at: isoNow(), event: "SOURCE_INDEPENDENCE_CLASSIFIED", status: exportIndependence.status,
+      cohort: caseRecord.cohort, matchedPriorHashes: exportIndependence.matches.length,
+      priorCasesWithoutHashes: exportIndependence.priorCasesWithoutHashes });
     caseRecord.exportPath = path.relative(runDir, exportPath).replaceAll(path.sep, "/");
     caseRecord.exportSha256 = sha256(exportBytes);
     caseRecord.exportBytes = exportBytes.byteLength;
@@ -1147,8 +1203,8 @@ async function runLive(options) {
       rowCounts: { logicalReviewRows: exportRecord.semantic?.observation?.completion?.rows?.length ?? null,
         captureSourceCompleteRows: exportRecord.semantic?.observation?.sourceContext?.recognition?.captureEvidence?.captures?.reduce((sum, item) => sum + item.completeRowCount, 0) ?? null },
       rawExportBytesPreserved: true, preReviewTruthInferred: false };
-    const browserObservations = JSON.parse(await readFile(caseFiles.browserObservationsPath, "utf8"));
     browserObservations.observationResponse = { status: reply.status, receipt: reply.body.receipt };
+    browserObservations.sourceProvenanceComparison = sourceProvenanceComparison;
     browserObservations.observationExport = observationFacts.export;
     browserObservations.captureMetadataFromPersistedExport = caseRecord.sourceCaptures;
     await writeJson(caseFiles.browserObservationsPath, browserObservations);
@@ -1216,7 +1272,7 @@ async function runLive(options) {
     caseRecord.status = caseRecord.sessionStatus === "NEW_COMMIT_READBACK_RELOAD_PASS"
       ? "CASE_RECORDED_BUT_POST_CASE_GATE_FAILED"
       : caseRecord.observationId ? "OBSERVATION_SAVED_CASE_INCOMPLETE_EVIDENCE_PRESERVED"
-        : caseRecord.sourceSetFrozenAt ? "CASE_INCOMPLETE_EVIDENCE_PRESERVED" : "PRECONDITION_FAILED";
+        : caseRecord.recognitionStart ? "CASE_INCOMPLETE_EVIDENCE_PRESERVED" : "PRECONDITION_FAILED";
     caseRecord.failure = { at: isoNow(), message: error.message };
     await writeJson(caseManifestPath, caseRecord).catch(() => {});
     log.events.push({ at: isoNow(), event: "CASE_STOPPED", message: error.message });
@@ -1233,8 +1289,9 @@ async function runLive(options) {
     throw error;
   } finally {
     if (browser) {
-      const restored = await restoreBlobEvidenceWrapper(browser).catch(() => false);
-      caseRecord.createObjectUrlRestoredOnCleanup = restored;
+      const cleanup = await restoreLiveCaptureObserver(browser).catch((error) => ({
+        observerRemoved: false, createObjectUrlRestored: false, error: error.message }));
+      caseRecord.captureObserverCleanup = cleanup;
       await writeJson(caseManifestPath, caseRecord).catch(() => {});
       await browser.close().catch(() => {});
     }
