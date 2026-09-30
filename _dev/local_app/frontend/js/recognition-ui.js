@@ -2,6 +2,9 @@ import { state } from "./state.js";
 import { CaptureError, CaptureQueue, DEFAULT_TRADE_ROI, PreviewRegistry, ScreenCaptureSession, captureFromFile, captureFromPaste, captureLimits, displayedVideoContentRect, isEditableTarget, moveNormalizedRegion, normalizeRegion, resizeNormalizedRegion } from "./capture.js";
 import { getTradeRecognitionRuntime, recognizeTradeBatch } from "./trade-recognition-client.js";
 import { mountTradeRecognitionReview } from "./trade-recognition-review.js";
+import { validateReviewedTradeBatch } from "./domain/reviewed-trade-dto.js";
+import { buildReviewedTradeSessionStage } from "./domain/trade-session-staging.js";
+import { confirmWorkingSessionSnapshot, refreshPersistentState, sendWorkingSessionSnapshot, whenPersistenceIdle } from "./persistence.js";
 
 function captureContext(taskType) {
   const sessionId = state.session?.id;
@@ -67,6 +70,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeObservationJob = null;
   let tradeSavedObservation = null;
   let tradeObservationInFlight = false;
+  let reviewedBatch = null;
+  let reviewedExclusions = new Map();
+  let reviewedBatchRefreshRevision = 0;
+  let sessionCommitJob = null;
+  let sessionCommitInFlight = false;
   let previewResizeObserver;
   const tradeObservationActions = document.createElement("div");
   tradeObservationActions.className = "trade-review-storage-actions";
@@ -76,6 +84,10 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   downloadTradeObservation.type = "button"; downloadTradeObservation.textContent = "검수 자료 내려받기"; downloadTradeObservation.hidden = true;
   tradeObservationActions.append(retryTradeObservation, downloadTradeObservation);
   tradeRecognitionStatus.after(tradeObservationActions);
+  const sessionApplyPanel = document.createElement("section");
+  sessionApplyPanel.className = "trade-review-session-apply";
+  sessionApplyPanel.hidden = true;
+  tradeObservationActions.after(sessionApplyPanel);
 
   const setTradeStorageStatus = (message, { retry = false, download = false } = {}) => {
     tradeRecognitionStatus.textContent = message;
@@ -83,6 +95,180 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     downloadTradeObservation.hidden = !download;
     updateRecognitionControls();
   };
+  const cloneFrozen = (value) => {
+    const copy = JSON.parse(JSON.stringify(value));
+    const freeze = (item) => { if (item && typeof item === "object" && !Object.isFrozen(item)) { Object.freeze(item); Object.values(item).forEach(freeze); } return item; };
+    return freeze(copy);
+  };
+  const renderSessionApplyPanel = () => {
+    sessionApplyPanel.replaceChildren();
+    const saved = tradeSavedObservation;
+    if (!saved) { sessionApplyPanel.hidden = true; return; }
+    sessionApplyPanel.hidden = false;
+    const title = document.createElement("h3"); title.textContent = "검수한 물교를 회차에 반영";
+    const status = document.createElement("p"); status.dataset.role = "session-apply-status";
+    const retry = document.createElement("button"); retry.type = "button"; retry.dataset.action = "retry-session-commit";
+    const checkAgain = document.createElement("button"); checkAgain.type = "button"; checkAgain.dataset.action = "retry-session-readback";
+    const reset = document.createElement("button"); reset.type = "button"; reset.dataset.action = "cancel-session-stage"; reset.textContent = "적용 준비 취소";
+    const commit = document.createElement("button"); commit.type = "button"; commit.dataset.action = "commit-session-stage"; commit.textContent = "이 내용으로 회차 저장";
+    const controls = document.createElement("div"); controls.className = "trade-review-session-controls";
+    const newButton = document.createElement("button"); newButton.type = "button"; newButton.dataset.action = "apply-reviewed-new"; newButton.textContent = "새 회차로 적용";
+    const appendButton = document.createElement("button"); appendButton.type = "button"; appendButton.dataset.action = "apply-reviewed-append"; appendButton.textContent = "현재 회차에 추가";
+    const batch = reviewedBatch;
+    let message = "저장된 검수 자료를 확인하는 중입니다.";
+    if (batch) {
+      if (batch.batchErrors?.length) message = `최종 DTO를 만들 수 없어 회차 적용을 막았습니다: ${batch.batchErrors.map((item) => typeof item === "string" ? item : (item.code ?? item.detail ?? JSON.stringify(item))).join(", ")}`;
+      else if (batch.status === "NOT_READY") message = `보류 ${batch.heldRows.length}행이 남아 있습니다. 해당 행을 직접 제외하거나 검수 자료를 다시 확인하세요.`;
+      else if (batch.summary.outputRowCount === 0) message = "적용할 물교 행이 없습니다.";
+      else message = `검수 ${batch.summary.reviewedRowCount}행 · 최종 목록 ${batch.summary.outputRowCount}행 · 명시 제외 ${batch.summary.explicitlyExcludedRowCount}행 · 중복 통합 ${batch.coverage.duplicateCollapsedRowCount}행`;
+    }
+    if (sessionCommitJob?.status === "READY") message = `${sessionCommitJob.mode === "NEW" ? "새 회차" : "현재 회차에 추가"} 준비 완료 · 추가 ${sessionCommitJob.stage.summary.appendedRowCount}행 · 기존 중복 제외 ${sessionCommitJob.stage.summary.existingDuplicateSkippedCount}행`;
+    else if (sessionCommitJob) message = `회차 적용 상태: ${sessionCommitJob.status}`;
+    status.textContent = message;
+    const decisionRows = batch && !batch.batchErrors?.length
+      ? [...(batch.heldRows || []).map((row) => ({ ...row, excluded: false })), ...(batch.excludedRows || []).map((row) => ({ ...row, excluded: true }))] : [];
+    if (decisionRows.length) {
+      const heldTitle = document.createElement("p"); heldTitle.textContent = "보류 행은 직접 선택한 경우에만 최종 목록에서 제외됩니다. 이미 선택한 제외도 여기서 취소할 수 있습니다.";
+      sessionApplyPanel.append(title, status, heldTitle);
+      for (const row of decisionRows) {
+        const label = document.createElement("label"); label.className = "trade-review-held-exclusion";
+        const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = reviewedExclusions.has(row.projectionRowId) || row.excluded;
+        checkbox.dataset.projectionRowId = row.projectionRowId;
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) reviewedExclusions.set(row.projectionRowId, { projectionRowId: row.projectionRowId, action: "EXCLUDE_FROM_FINAL_DTO", reason: "USER_EXPLICIT_EXCLUSION" });
+          else reviewedExclusions.delete(row.projectionRowId);
+          void refreshReviewedBatch();
+        });
+        const reasonText = (row.heldReasons || []).map((item) => item.code).join(", ") || "확인 필요";
+        const values = row.humanFinalValues || {};
+        const summary = [values.island, values.fromItem, values.toItem, values.reqAmount, values.count, values.yield].map((value) => value ?? "모름").join(" · ");
+        label.append(checkbox, document.createTextNode(` 최종 회차에서 제외 · ${reasonText} · ${summary}`));
+        sessionApplyPanel.append(label);
+      }
+    } else sessionApplyPanel.append(title, status);
+    const ready = batch?.status === "READY" && !(batch.batchErrors?.length) && batch.summary.outputRowCount > 0 && !sessionCommitJob;
+    newButton.disabled = !ready || sessionCommitInFlight || window.__bdoScheduleRuntime?.pending;
+    appendButton.disabled = !ready || !state.workingSession || sessionCommitInFlight || window.__bdoScheduleRuntime?.pending;
+    const actionButtons = [newButton, appendButton];
+    controls.append(...actionButtons);
+    commit.hidden = sessionCommitJob?.status !== "READY";
+    commit.disabled = sessionCommitInFlight || window.__bdoScheduleRuntime?.pending;
+    if (sessionCommitJob?.status === "COMMIT_RESPONSE_UNKNOWN") { retry.hidden = false; retry.textContent = "회차 저장 재시도"; }
+    else retry.hidden = true;
+    if (sessionCommitJob?.status === "COMMIT_CONFIRMED_READBACK_PENDING") { checkAgain.hidden = false; checkAgain.textContent = "저장 상태 다시 확인"; }
+    else checkAgain.hidden = true;
+    reset.hidden = !sessionCommitJob || !["READY", "STALE", "FAILED", "APPLIED", "NO_CHANGE"].includes(sessionCommitJob.status);
+    sessionApplyPanel.append(controls, commit, retry, checkAgain, reset);
+  };
+  const refreshReviewedBatch = async () => {
+    const saved = tradeSavedObservation;
+    if (!saved?.observationId || !saved.receipt || !saved.expectedReview) return;
+    const refreshRevision = ++reviewedBatchRefreshRevision;
+    try {
+      const response = await fetch(`/api/recognition/trade-review-observations/${saved.observationId}`, { credentials: "same-origin", cache: "no-store" });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || body?.ok !== true || !body.observation) throw new Error("저장된 검수 자료를 읽지 못했습니다.");
+      const observation = body.observation;
+      if (observation.observationId !== saved.observationId || observation.completion?.recognitionBatchId !== saved.batchId) throw new Error("저장된 검수 자료의 식별 정보가 다릅니다.");
+      const nextBatch = validateReviewedTradeBatch({ storedObservation: observation, evidenceReceipt: saved.receipt,
+        expectedReview: saved.expectedReview, exclusions: [...reviewedExclusions.values()], mappingPolicyVersion: "reviewed-trade-dto-mapping-v1" });
+      if (refreshRevision !== reviewedBatchRefreshRevision) return;
+      reviewedBatch = nextBatch;
+    } catch (error) {
+      if (refreshRevision !== reviewedBatchRefreshRevision) return;
+      reviewedBatch = { status: "NOT_READY", batchErrors: [{ code: "OBSERVATION_READ_FAILED", detail: error.message }], summary: { reviewedRowCount: 0, outputRowCount: 0, explicitlyExcludedRowCount: 0 }, heldRows: [], rows: [] };
+    }
+    renderSessionApplyPanel();
+  };
+  const updateSessionApplyStatus = (message) => {
+    const target = sessionApplyPanel.querySelector("[data-role='session-apply-status']");
+    if (target) target.textContent = message;
+  };
+  const restoreCommitAfterReadback = async (job) => {
+    job.status = "COMMIT_CONFIRMED_READBACK_PENDING";
+    renderSessionApplyPanel();
+    try {
+      await confirmWorkingSessionSnapshot({ expectedSession: job.stage.stagedSession, expectedSessionRevision: job.expectedSessionRevision });
+      job.status = "APPLIED";
+      window.__bdoScheduleRuntime?.setExternalSessionMutationPending(false);
+      window.__bdoRenderAll?.();
+      renderSessionApplyPanel();
+      updateSessionApplyStatus("저장된 회차를 다시 읽어 확인하고 화면에 적용했습니다. 검수 evidence는 변경하지 않았습니다.");
+    } catch (error) {
+      if (error.readbackMismatch) {
+        job.status = "FAILED";
+        window.__bdoScheduleRuntime?.setExternalSessionMutationPending(false);
+        updateSessionApplyStatus("서버 회차가 준비한 내용과 달라 로컬에 적용하지 않았습니다. 최신 회차를 다시 확인하세요.");
+      } else {
+        job.status = "COMMIT_CONFIRMED_READBACK_PENDING";
+        updateSessionApplyStatus("회차 저장은 확인됐지만 다시 읽기가 끝나지 않았습니다. 저장 상태 다시 확인을 누르세요.");
+      }
+      renderSessionApplyPanel();
+    }
+  };
+  const sendStagedCommit = async (retry = false) => {
+    const job = sessionCommitJob;
+    if (!job || sessionCommitInFlight || (retry ? job.status !== "COMMIT_RESPONSE_UNKNOWN" : job.status !== "READY")) return;
+    if (!retry && window.__bdoScheduleRuntime?.pending) { updateSessionApplyStatus("먼저 대기 중인 완료 저장을 해결하세요."); return; }
+    sessionCommitInFlight = true;
+    job.status = "COMMIT_PENDING";
+    window.__bdoScheduleRuntime?.setExternalSessionMutationPending(true);
+    renderSessionApplyPanel();
+    try {
+      await sendWorkingSessionSnapshot(job.stage.request);
+      await restoreCommitAfterReadback(job);
+    } catch (error) {
+      if (error.status === 409) {
+        if (retry) await restoreCommitAfterReadback(job);
+        else {
+          job.status = "STALE";
+          window.__bdoScheduleRuntime?.setExternalSessionMutationPending(false);
+          updateSessionApplyStatus("다른 변경으로 저장 기준이 오래되어 적용하지 않았습니다. 최신 상태를 다시 읽고 새로 준비하세요.");
+          renderSessionApplyPanel();
+        }
+      } else {
+        job.status = "COMMIT_RESPONSE_UNKNOWN";
+        updateSessionApplyStatus("저장 응답을 확인하지 못했습니다. 같은 요청 ID와 내용으로 재시도하세요.");
+        renderSessionApplyPanel();
+      }
+    } finally { sessionCommitInFlight = false; renderSessionApplyPanel(); }
+  };
+  const createSessionStage = async (mode) => {
+    if (sessionCommitInFlight || sessionCommitJob) return;
+    if (window.__bdoScheduleRuntime?.pending) { updateSessionApplyStatus("먼저 대기 중인 완료 저장을 해결하세요."); return; }
+    if (reviewedBatch?.status !== "READY" || reviewedBatch.summary.outputRowCount === 0) return;
+    try {
+      await whenPersistenceIdle();
+      if (window.__bdoScheduleRuntime?.pending) throw new Error("먼저 대기 중인 완료 저장을 해결하세요.");
+      await refreshPersistentState({ restoreSession: false });
+      if (mode === "NEW" && state.workingSession && !window.confirm("현재 회차를 검수한 물교 목록으로 교체합니다. 계속할까요?")) return;
+      const mutationId = crypto.randomUUID();
+      const newSessionId = mode === "NEW" ? crypto.randomUUID() : null;
+      const stage = buildReviewedTradeSessionStage({ mode, validatedBatch: reviewedBatch, currentWorkingSession: state.workingSession,
+        localSession: state.session, settings: state.settings, baseRevision: state.revision, sessionRevision: state.sessionRevision,
+        mutationId, newSessionId });
+      if (stage.status === "NO_CHANGE") {
+        sessionCommitJob = { status: "NO_CHANGE", stage, mode };
+        updateSessionApplyStatus("현재 회차에 이미 같은 물교가 있어 추가할 행이 없습니다.");
+      } else if (stage.status !== "READY") {
+        sessionCommitJob = { status: "FAILED", stage, mode };
+        updateSessionApplyStatus(`회차 적용을 준비하지 않았습니다: ${stage.reasons.join(", ")}`);
+      } else sessionCommitJob = { status: "READY", stage, mode, expectedSessionRevision: stage.precondition.baseRevision + 1 };
+      renderSessionApplyPanel();
+    } catch (error) { updateSessionApplyStatus(error.message || "회차 적용을 준비하지 못했습니다."); }
+  };
+  sessionApplyPanel.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-action]")?.dataset.action;
+    if (action === "apply-reviewed-new") void createSessionStage("NEW");
+    else if (action === "apply-reviewed-append") void createSessionStage("APPEND");
+    else if (action === "commit-session-stage") void sendStagedCommit(false);
+    else if (action === "retry-session-commit") void sendStagedCommit(true);
+    else if (action === "retry-session-readback" && sessionCommitJob?.status === "COMMIT_CONFIRMED_READBACK_PENDING") void restoreCommitAfterReadback(sessionCommitJob);
+    else if (action === "cancel-session-stage" && sessionCommitJob && !sessionCommitInFlight
+      && !["COMMIT_PENDING", "COMMIT_RESPONSE_UNKNOWN", "COMMIT_CONFIRMED_READBACK_PENDING"].includes(sessionCommitJob.status)) {
+      sessionCommitJob = null; renderSessionApplyPanel();
+    }
+  });
   const downloadPendingObservation = async () => {
     if (tradeObservationJob?.receipt?.observationId) {
       try {
@@ -128,7 +314,17 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         return;
       }
       job.receipt = body.receipt;
-      tradeSavedObservation = { observationId: body.receipt.observationId, batchId: job.payload.completion.recognitionBatchId };
+      const completion = job.payload.completion;
+      const expectedReview = { observationId: body.receipt.observationId, mutationId: job.payload.mutationId,
+        recognitionBatchId: completion.recognitionBatchId, projectionHash: completion.projectionHash,
+        registryVersion: completion.registryVersion, correctionVersion: completion.correctionVersion,
+        reviewRevision: completion.reviewRevision, confirmationRevision: job.payload.confirmationRevision };
+      tradeSavedObservation = cloneFrozen({ observationId: body.receipt.observationId, batchId: completion.recognitionBatchId,
+        receipt: body.receipt, expectedReview });
+      reviewedBatch = null;
+      reviewedExclusions = new Map();
+      renderSessionApplyPanel();
+      void refreshReviewedBatch();
       setTradeStorageStatus("검수 내용이 로컬 evidence 저장소에 기록됐습니다. 회차 목록에는 적용되지 않았습니다.", { download: true });
       await postSelectedTradeCrops(job);
     } catch {

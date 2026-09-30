@@ -10,6 +10,8 @@ let draggedSortie = null;
 let completionStore = async () => { throw new Error("완료 재고 저장기가 초기화되지 않았습니다."); };
 let scheduleStatus = () => {};
 let pendingCompletion = null;
+let externalSessionMutationPending = false;
+const sessionMutationPending = () => pendingCompletion || (externalSessionMutationPending ? true : null);
 
 function showToast(message) { scheduleStatus(message, "info"); }
 function openModal() { window.__bdoOpenBriefing?.(); }
@@ -54,7 +56,7 @@ function findUnknownStockTrades(trades) {
 
 function generateSchedule(appState, setStatus) {
   scheduleStatus = setStatus;
-  if (pendingCompletion) { showToast("완료 저장을 먼저 확인하세요."); return false; }
+  if (sessionMutationPending()) { showToast("완료 저장을 먼저 확인하세요."); return false; }
   ensureSessionContext(appState);
   if (appState.session.scannedTrades === null) { showToast("먼저 회차 물교 JSON을 적용하세요."); return false; }
   syncLegacyState(appState);
@@ -82,7 +84,7 @@ function wrapCompletion(original) {
     const schedule = mode === "speed" ? sortiesSpeed : sortiesBalance;
     const trade = schedule?.[si]?.trades?.[ti];
     if (!trade || trade.completed) return;
-    if (pendingCompletion) {
+    if (sessionMutationPending()) {
       showToast("이전 완료의 재고 저장이 대기 중입니다. 재시도 버튼을 사용하세요.");
       return;
     }
@@ -137,7 +139,7 @@ function installCompletionAdapters(store, appState, setStatus) {
   window.completeTrade = wrapCompletion(originalTrade);
   window.completeWaypoint = function(btn, mode, si, ti) {
     const waypoint = (mode === "speed" ? sortiesSpeed : sortiesBalance)?.[si]?.trades?.[ti];
-    if (!waypoint || waypoint.completed || pendingCompletion) return;
+    if (!waypoint || waypoint.completed || sessionMutationPending()) return;
     const before = Object.fromEntries(Object.entries(inventory).map(([name, row]) => [name, row.stock]));
     window.__bdoCompletionInvocationObserver?.("completeWaypoint");
     originalWaypoint.call(this, btn, mode, si, ti);
@@ -198,14 +200,17 @@ function restoreWorkingSession(appState, payload) {
 for (const name of ["routeDrop", "sortieDrop", "adjustTradeCount", "confirmWaypoint", "removeWaypoint"]) {
   const original = window[name];
   window[name] = function(...args) {
-    if (pendingCompletion) { showToast("완료 저장을 먼저 확인하세요."); return; }
+    if (sessionMutationPending()) { showToast("완료 저장을 먼저 확인하세요."); return; }
     const result = original.apply(this, args);
     window.dispatchEvent(new CustomEvent("bdo:session-changed"));
     return result;
   };
 }
 
-window.__bdoScheduleRuntime = { syncLegacyState, generateSchedule, snapshotWorkingSession, restoreWorkingSession, installCompletionAdapters, retryCompletion: persistPendingCompletion, get pending() { return pendingCompletion; } };
+window.__bdoScheduleRuntime = { syncLegacyState, generateSchedule, snapshotWorkingSession, restoreWorkingSession, installCompletionAdapters,
+  retryCompletion: persistPendingCompletion,
+  setExternalSessionMutationPending(value) { externalSessionMutationPending = value === true; },
+  get pending() { return sessionMutationPending(); } };
 window.renderTrades = renderTrades;
 window.saveInventoryState = saveInventoryState;
 window.saveScannedTradesSilent = saveScannedTradesSilent;

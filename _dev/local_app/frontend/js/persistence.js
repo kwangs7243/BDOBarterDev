@@ -67,6 +67,30 @@ export function saveWorkingSession() {
   return enqueueMutation((envelope) => api.saveWorkingSession({ ...envelope, session }));
 }
 
+export function sendWorkingSessionSnapshot(request) {
+  if (!request || typeof request !== "object" || !request.session || typeof request.mutationId !== "string"
+      || !Number.isSafeInteger(request.baseRevision)) throw new TypeError("검수 회차 저장 요청이 올바르지 않습니다.");
+  return enqueue(() => api.saveWorkingSession(request));
+}
+
+export async function confirmWorkingSessionSnapshot({ expectedSession, expectedSessionRevision } = {}) {
+  const snapshot = await api.bootstrap();
+  const same = (a, b) => JSON.stringify(sort(a)) === JSON.stringify(sort(b));
+  const sort = (value) => Array.isArray(value) ? value.map(sort)
+    : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sort(value[key])])) : value;
+  if (!same(snapshot.workingSession, expectedSession) || snapshot.sessionRevision !== expectedSessionRevision
+      || !Number.isSafeInteger(snapshot.revision) || snapshot.revision < expectedSessionRevision) {
+    const error = new Error("저장된 회차가 요청한 내용과 다릅니다. 현재 회차를 다시 불러 확인하세요.");
+    error.code = "WORKING_SESSION_READBACK_MISMATCH";
+    error.committed = true;
+    error.readbackMismatch = true;
+    throw error;
+  }
+  applyBootstrap(snapshot);
+  runtime().restoreWorkingSession(state, snapshot.workingSession);
+  return snapshot;
+}
+
 export async function resetWorkingSession() {
   await enqueueMutation((envelope) => api.resetWorkingSession(envelope));
   runtime().restoreWorkingSession(state, null);
