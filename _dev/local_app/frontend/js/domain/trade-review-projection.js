@@ -272,10 +272,13 @@ function identityFieldProjection({ key, field, registrySnapshot, terms, pool, sc
   if (exactMatches.length) {
     matches = exactMatches;
     matchStatus = "exact";
-  } else if (key !== "island") {
-    const result = getSafeUniqueItemMatch(normalization.compact, eligible.map((term) => term.text));
+  } else {
+    const matchTarget = key === "island" ? normalization.normalized : normalization.compact;
+    const result = getSafeUniqueItemMatch(matchTarget, eligible.map((term) => term.text));
     if (result.status === "exact") {
-      matches = eligible.filter((term) => term.text === result.value);
+      // Ask the V1 helper per identity so its whitespace-insensitive exact
+      // semantics cannot hide a second legacy or curated identity.
+      matches = eligible.filter((term) => getSafeUniqueItemMatch(matchTarget, [term.text]).status === "exact");
       matchStatus = "exact";
     } else if (result.status === "corrected") {
       matches = eligible.filter((term) => term.text === result.value);

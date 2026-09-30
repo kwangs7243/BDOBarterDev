@@ -16,6 +16,8 @@ const catalog = emptyCatalog();
 catalog.masterData["1"] = ["보리", "고대 잎", "초원 씨앗", "초원씨앗"];
 catalog.masterData["2"] = ["고대 목걸이", "금빛 목걸이", "푸른 결정", "푸른결정", "바다의 보석"];
 catalog.masterData["3"] = ["푸른 결정"];
+catalog.masterData["6"] = ["tier six output"];
+catalog.masterData["7"] = ["tier seven output"];
 catalog.islands = ["하코번 섬", "일리야", "아지르 섬", "아지르섬"];
 catalog.t6Islands = ["하코번 섬", "하코번"];
 catalog.t7Islands = ["일리야 섬"];
@@ -144,7 +146,8 @@ const row2 = projection.rows[1];
 assert.equal(row2.fields.toItem.status, "AMBIGUOUS", "whitespace-normalized collision does not use first match");
 assert.equal(row2.fields.toItem.candidate, null);
 assert.equal(row2.fields.toItem.alternatives.length, 3, "same raw in multiple tiers and whitespace collision are preserved");
-assert.equal(row2.fields.island.status, "MATCHED", "island names are only trimmed, not whitespace-normalized");
+assert.equal(row2.fields.island.status, "MATCHED", "the exact island candidate remains preferred before safe correction");
+assert.equal(row2.fields.island.candidate.value, "아지르 섬", "exact island identity wins before bounded correction");
 assert.equal(row2.fields.reqAmount.candidate, null, "missing reqAmount receives no default");
 assert.equal(row2.fields.reqAmount.status, "UNMATCHED");
 assert.equal(row2.fields.count.status, "AMBIGUOUS", "multiple numeric groups are not arbitrarily selected");
@@ -256,6 +259,78 @@ assert.equal(separateNearNames.every((name) => name.stableId === null), true);
 const nearNameRow = makeRow("near-name", 1, { island: "하코번", fromItem: "unknown", reqAmount: null, toItem: sourceCatalog.masterData["6"][0], count: null, yield: null });
 const nearNameProjection = buildTradeReviewProjection({ draftRows: [nearNameRow], registrySnapshot: legacyRegistry, correctionPolicyVersion: "r003-correction-v1" });
 assert.equal(nearNameProjection.rows[0].fields.island.candidate.value, "하코번", "exact near-name token is not promoted to its suffixed neighbor");
+
+const makeIslandRegistry = ({ general = [], tier6 = [], tier7 = [], baseCatalog = catalog, curatedMappings = null, revision = "island-test" } = {}) => {
+  const islandCatalog = structuredClone(baseCatalog);
+  islandCatalog.islands = general;
+  islandCatalog.t6Islands = tier6;
+  islandCatalog.t7Islands = tier7;
+  const islandSha256 = createHash("sha256").update(JSON.stringify(islandCatalog)).digest("hex");
+  return adaptLegacyCatalog(islandCatalog, { sourceRevision: revision, sourceSha256: islandSha256, curatedMappings });
+};
+const projectIsland = (registry, { island, tier = 2, captureId = "island-case" }) => {
+  const output = catalog.masterData[String(tier)][0];
+  return buildTradeReviewProjection({
+    draftRows: [makeRow(captureId, 1, { island, fromItem: "보리", reqAmount: null, toItem: output, count: null, yield: null })],
+    registrySnapshot: registry, correctionPolicyVersion: "r003-correction-v1",
+  }).rows[0].fields.island;
+};
+
+// Whitespace-equivalent matching uses the V1 helper but does not promote the name to an alias.
+const whitespaceRegistry = makeIslandRegistry({ general: ["아지르 섬"], revision: "island-whitespace" });
+const whitespaceIsland = projectIsland(whitespaceRegistry, { island: "아지르섬", captureId: "island-whitespace" });
+assert.equal(whitespaceIsland.status, "MATCHED");
+assert.equal(whitespaceIsland.candidate.value, "아지르 섬");
+assert.equal(whitespaceIsland.correctionReason.some((reason) => reason.code === "EXACT_MATCH"), true);
+assert.equal(whitespaceIsland.candidate.nameSource, "LEGACY_NAME");
+assert.equal(whitespaceIsland.rawEvidence.rawText, "아지르섬");
+assert.equal(whitespaceIsland.rawEvidence.normalizedText, "아지르섬");
+
+// A single bounded typo is corrected; multiple safe candidates remain explicitly ambiguous.
+const oneTypoRegistry = makeIslandRegistry({ general: ["가나다라나"], revision: "island-one-typo" });
+const oneTypo = projectIsland(oneTypoRegistry, { island: "가나다라마", captureId: "island-one-typo" });
+assert.equal(oneTypo.status, "MATCHED");
+assert.equal(oneTypo.candidate.value, "가나다라나");
+assert.equal(oneTypo.correctionReason.some((reason) => reason.code === "BOUNDED_UNIQUE_MATCH"), true);
+assert.equal(oneTypo.riskReasons.some((risk) => risk.code === "BOUNDED_UNIQUE_MATCH"), true);
+assert.equal(oneTypo.rawEvidence.rawText, "가나다라마");
+const twoTypoRegistry = makeIslandRegistry({ general: ["가나다라나", "가나다라바"], revision: "island-two-typos" });
+const twoTypo = projectIsland(twoTypoRegistry, { island: "가나다라마", captureId: "island-two-typos" });
+assert.equal(twoTypo.status, "AMBIGUOUS");
+assert.equal(twoTypo.candidate, null);
+assert.equal(twoTypo.alternatives.length, 2);
+assert.equal(twoTypo.shownValue, "가나다라마");
+
+// Tier-specific candidate pools allow bounded matches only within their own scope.
+for (const tier of [6, 7]) {
+  const key = tier === 6 ? "tier6" : "tier7";
+  const scoped = makeIslandRegistry({ [key]: ["가나다라나"], revision: `island-${key}` });
+  const output = catalog.masterData[String(tier)][0];
+  const scopedRow = makeRow(`island-${key}`, 1, { island: "가나다라마", fromItem: "unused", reqAmount: null, toItem: output, count: null, yield: null });
+  const scopedResult = buildTradeReviewProjection({ draftRows: [scopedRow], registrySnapshot: scoped, correctionPolicyVersion: "r003-correction-v1" }).rows[0].fields.island;
+  assert.equal(scopedResult.status, "MATCHED", `${key} allows a safe correction within scope`);
+  assert.equal(scopedResult.correctionReason.some((reason) => reason.code === "BOUNDED_UNIQUE_MATCH"), true);
+
+  const leakage = makeIslandRegistry({ general: ["가나다라나"], revision: `island-${key}-leak` });
+  const leakageRow = makeRow(`island-${key}-leak`, 1, { island: "가나다라마", fromItem: "unused", reqAmount: null, toItem: output, count: null, yield: null });
+  const leakageResult = buildTradeReviewProjection({ draftRows: [leakageRow], registrySnapshot: leakage, correctionPolicyVersion: "r003-correction-v1" }).rows[0].fields.island;
+  assert.equal(leakageResult.status, "UNMATCHED", `${key} never borrows a candidate from GENERAL_ISLANDS`);
+}
+
+// Explicitly curated same-stableId island names collapse to one identity after normalized matching.
+const sameIslandIdentity = {
+  schemaVersion: 1, mappingRevision: "same-island-identity-v1",
+  entities: [{
+    stableId: "curated-island-1", kind: "ISLAND", canonicalName: "대표 섬", status: "VERIFIED",
+    legacyNames: [ref("가나다라나", "/t6Islands/0"), ref("가나다 라나", "/t6Islands/1")],
+    displayNames: [], aliases: [], provenance: { evidenceRefs: ["test"], note: null }, replacedBy: null,
+  }],
+};
+const sameIslandRegistry = makeIslandRegistry({ tier6: ["가나다라나", "가나다 라나"], curatedMappings: sameIslandIdentity, revision: "same-island-identity" });
+const sameIslandRow = makeRow("same-island-identity", 1, { island: "가나다라 나", fromItem: "unused", reqAmount: null, toItem: catalog.masterData["6"][0], count: null, yield: null });
+const sameIslandResult = buildTradeReviewProjection({ draftRows: [sameIslandRow], registrySnapshot: sameIslandRegistry, correctionPolicyVersion: "r003-correction-v1" }).rows[0].fields.island;
+assert.equal(sameIslandResult.status, "MATCHED");
+assert.equal(sameIslandResult.candidate.stableId, "curated-island-1");
 
 // Curated same-entity names collapse identity ambiguity; different IDs remain ambiguous.
 const sameIdMapping = {
