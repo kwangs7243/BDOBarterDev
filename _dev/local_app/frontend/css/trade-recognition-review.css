@@ -21,6 +21,18 @@
 .trade-review-unknown input{margin:0}
 .trade-review-badge{display:inline-block;border:1px solid #526173;border-radius:999px;padding:.08rem .38rem;font-size:.67rem;color:#d1d5db;vertical-align:middle}
 .trade-review-badge.is-warning{border-color:#c17b24;background:#3a2a13;color:#fde68a}
+.trade-review-badge.is-conflict,.trade-review-conflict-badge{border-color:#dc2626;background:#451a1a;color:#fecaca}
+.trade-review-source-badge{display:inline-block;border:1px solid #256d85;border-radius:999px;padding:.1rem .4rem;margin:.15rem 0;background:#12313d;color:#bae6fd;font-size:.68rem}
+.trade-review-conflict-badge{display:inline-block;border:1px solid #dc2626;border-radius:999px;padding:.1rem .4rem;margin:.15rem 0;font-size:.68rem;font-weight:700}
+.trade-review-source-details,.trade-review-source-member{margin:.25rem 0;padding:.3rem;border:1px solid #46566a;border-radius:4px;white-space:normal}
+.trade-review-source-details>summary,.trade-review-source-member>summary{cursor:pointer;color:#bae6fd}
+.trade-review-source-member h4{margin:.25rem 0;font-size:.72rem;color:#e2e8f0}
+.trade-review-source-member p,.trade-review-source-fields{font-size:.66rem;overflow-wrap:anywhere}
+.trade-review-source-fields{padding-left:1rem}
+.trade-review-source-fields li{margin:.2rem 0}
+.trade-review-member-crop-button{display:block;margin:.15rem 0;font-size:.64rem}
+.trade-review-conflict-title{display:block;margin-top:.35rem;color:#fecaca}
+.trade-review-conflict-alternatives{padding-left:1rem;color:#fecaca}
 .trade-review-risk-summary{margin:.25rem 0;color:#fde68a;font-size:.68rem;line-height:1.35;white-space:normal}
 .trade-review-field[data-state=warning],.trade-review-field[data-state=master-disagreement]{background:#352718}
 .trade-review-field[data-state=edited]{background:#132f3c}

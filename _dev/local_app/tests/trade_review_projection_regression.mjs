@@ -220,7 +220,7 @@ delete missingSource.draftRows[0].captureId;
 assert.throws(() => buildTradeReviewProjection(missingSource), /captureId or positive ordinal/);
 assert.throws(() => buildTradeReviewProjection({ ...input, correctionPolicyVersion: " " }), /correctionPolicyVersion/);
 assert.throws(() => buildTradeReviewProjection({ ...input, registrySnapshot: null }), /registrySnapshot is invalid/);
-assert.throws(() => buildTradeReviewProjection({ ...input, reconciliation: {} }), /reconciliation must be null/);
+assert.throws(() => buildTradeReviewProjection({ ...input, reconciliation: {} }), /PRELIMINARY/);
 const invalidRawNumeric = makeRow("invalid-raw-number", 1, {
   island: "아지르 섬", fromItem: "보리", reqAmount: "필요 수량: 3개", toItem: "고대 목걸이", count: "0회", yield: "4",
 }, { reqAmount: { ...fieldsFor({ reqAmount: "필요 수량: 3개" }).reqAmount, rawNumericCandidate: 0 } });

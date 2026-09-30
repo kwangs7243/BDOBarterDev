@@ -1,10 +1,12 @@
 import { adaptLegacyCatalog, registrySnapshotSha256 } from "./domain/trade-master-registry.js";
+import { buildTradeBatchReconciliation } from "./domain/trade-batch-reconciliation.js";
 import { buildTradeReviewProjection } from "./domain/trade-review-projection.js";
 
 const FIELD_KEYS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
 const FIELD_LABELS = Object.freeze({ island: "섬", fromItem: "소모품", reqAmount: "필요 수량", toItem: "획득품", count: "남은 교환 횟수", yield: "수율" });
 const NUMERIC_MINIMUM = Object.freeze({ reqAmount: 1, count: 0, yield: 1 });
 const CORRECTION_POLICY_VERSION = "trade-review-correction-v1";
+const RECONCILIATION_POLICY_VERSION = "trade-batch-reconciliation-v1";
 const RISK_LABELS = Object.freeze({
   NUMERIC_COMPLETENESS_UNVERIFIED: "숫자가 잘리지 않았는지 확인해 주세요.",
   NUMERIC_MISSING_OR_INVALID: "숫자 후보를 확인할 수 없습니다.",
@@ -187,13 +189,22 @@ async function createFieldCrop({ row, field, captures }) {
 export async function mountTradeRecognitionReview({ root, recognitionResult, captures, reviewRevision, getCurrentRevision, onComplete, onClear } = {}) {
   if (!(root instanceof Element) || !recognitionResult || !Array.isArray(captures)) throw new TypeError("review mount requires a root, recognition result, and captures");
   const registrySnapshot = await loadRegistry();
+  const preliminary = buildTradeBatchReconciliation({
+    captures: recognitionResult.captures,
+    draftRows: recognitionResult.draftRows,
+    policyVersion: RECONCILIATION_POLICY_VERSION,
+  });
   const projection = buildTradeReviewProjection({
     draftRows: recognitionResult.draftRows,
-    reconciliation: null,
+    reconciliation: preliminary,
     registrySnapshot,
     correctionPolicyVersion: CORRECTION_POLICY_VERSION,
   });
-  if (projection.rows.length !== recognitionResult.draftRows.length) throw new Error("projection did not preserve every complete row");
+  if (projection.reconciliation.sourceRows.length !== recognitionResult.draftRows.length
+      || projection.reconciliation.sourceToLogical.length !== recognitionResult.draftRows.length
+      || new Set(projection.reconciliation.sourceToLogical.map((entry) => entry.sourceRowId)).size !== recognitionResult.draftRows.length) {
+    throw new Error("reconciliation did not account for every complete source row exactly once");
+  }
 
   let destroyed = false;
   let completed = false;
@@ -243,13 +254,16 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
   const body = document.createElement("tbody");
 
   const editorRefs = [];
+  const sourceCount = projection.reconciliation.sourceRows.length;
+  const mergedGroupCount = projection.reconciliation.groups.filter((group) => group.memberSourceRowIds.length > 1).length;
+  const conflictGroupCount = projection.reconciliation.groups.filter((group) => group.status === "CONFLICT").length;
   const updateSummary = () => {
     const edits = rowStates.flatMap(({ row, fields }) => FIELD_KEYS.filter((key) => fields[key].touched && !fields[key].unknown
       && !sameSemanticValue(key, row.fields[key].shownValue, fields[key].value)));
     const unknowns = rowStates.flatMap(({ fields }) => FIELD_KEYS.filter((key) => fields[key].unknown));
     const risks = rowStates.flatMap(({ row }) => FIELD_KEYS.filter((key) => row.fields[key].riskReasons?.length
       || ["AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"].includes(row.fields[key].status)));
-    summary.textContent = `로컬 인식 초안 · ${recognitionResult.draftRows.length}행 · 이미지 ${recognitionResult.captures.length}장${edgeSegments.length ? ` · 경계 후보 ${edgeSegments.length}행 제외` : ""} · 목록 미적용 · 전체 행 ${rowStates.length} · 전체 필드 ${rowStates.length * 6} · 확인 권장 ${risks.length} · 수정 ${edits.length} · 모름 ${unknowns.length} · 경계 ${edgeSegments.length}`;
+    summary.textContent = `로컬 인식 초안 · ${sourceCount}행 · 이미지 ${recognitionResult.captures.length}장${edgeSegments.length ? ` · 경계 후보 ${edgeSegments.length}행 제외` : ""} · 목록 미적용 · 인식 source COMPLETE ${sourceCount}행 · 검수 logical ${rowStates.length}행 · 겹침 통합 ${mergedGroupCount}그룹 · 충돌 ${conflictGroupCount}그룹 · 전체 행 ${rowStates.length} · 전체 필드 ${rowStates.length * 6} · 확인 권장 ${risks.length} · 수정 ${edits.length} · 모름 ${unknowns.length} · 경계 ${edgeSegments.length}`;
     completeButton.disabled = completed || !confirmBox.checked || editorRefs.some((reference) => !reference.state.unknown && reference.state.invalid);
   };
 
@@ -257,6 +271,7 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
     const tr = document.createElement("tr");
     tr.dataset.captureId = row.captureId ?? "";
     tr.dataset.ordinal = String(row.ordinal ?? rowIndex + 1);
+    tr.dataset.reconciliationStatus = row.reconciliationStatus ?? "UNMERGED";
     tr.append(make("th", "trade-review-row-number", String(rowIndex + 1)));
     FIELD_KEYS.forEach((key) => {
       const projected = row.fields[key];
@@ -285,8 +300,9 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
       unknown.setAttribute("aria-label", `행 ${rowIndex + 1} ${FIELD_LABELS[key]} 모름으로 표시`);
       const unknownText = make("span", "", "모름");
       unknownLabel.append(unknown, unknownText);
-      const badgeText = disagreement ? "이름 비교 필요" : risky ? "확인 권장" : "후보";
-      const badge = make("span", `trade-review-badge${risky ? " is-warning" : ""}`, badgeText);
+      const reconciliationConflict = reasons.some((reason) => reason?.code === "RECONCILIATION_CONFLICT");
+      const badgeText = reconciliationConflict ? "겹침 충돌 · 확인 필요" : disagreement ? "이름 비교 필요" : risky ? "확인 권장" : "후보";
+      const badge = make("span", `trade-review-badge${risky ? " is-warning" : ""}${reconciliationConflict ? " is-conflict" : ""}`, badgeText);
       const riskSummary = risky ? make("p", "trade-review-risk-summary", reasons.map(riskText).join(" ") || `상태: ${projected.status}`) : null;
       if (state.invalid) validation.textContent = Object.hasOwn(NUMERIC_MINIMUM, key)
         ? `정수 ${NUMERIC_MINIMUM[key]} 이상을 입력하거나 모름을 선택하세요.` : "값을 입력하거나 모름을 선택하세요.";
@@ -306,6 +322,17 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
       addEvidence("화면 후보", projected.candidate?.value ?? projected.shownValue);
       addEvidence("보정 근거", projected.correctionReason?.map((reason) => reason.messageKo ?? reason.code).join(" · "));
       addEvidence("위험 사유", reasons.map(riskText).join(" · "));
+      if (projected.alternatives?.length) {
+        const alternatives = make("ul", "trade-review-conflict-alternatives");
+        projected.alternatives.forEach((alternative) => {
+          const sourceLabels = alternative.sourceRowIds.map((sourceRowId) => {
+            const member = row.reconciliationMembers?.find((item) => item.projectionRowId === sourceRowId);
+            return member ? `${member.captureId} · 원본 ${member.ordinal}행` : sourceRowId;
+          }).join(", ");
+          alternatives.append(make("li", "", `${sourceLabels}: ${formatValue(alternative.value)}`));
+        });
+        detail.append(make("strong", "trade-review-conflict-title", "겹친 캡처의 후보 값"), alternatives);
+      }
       if (disagreement) {
         const compare = make("div", "trade-review-master-compare");
         compare.append(make("p", "", `화면/검수 후보: ${formatValue(projected.candidate?.value ?? projected.shownValue)}`));
@@ -370,8 +397,50 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
       tr.append(td);
       editorRefs.push({ key, row, state, input, unknown, validation });
     });
-    const rowStatus = make("td", "trade-review-row-status", "인식 초안 · 검토 필요 · 검수 대기");
+    const memberCount = row.reconciliationMembers?.length ?? 1;
+    const rowStatus = make("td", "trade-review-row-status", `인식 초안 · 검토 필요 · 검수 대기${memberCount > 1 ? ` · 겹침 ${memberCount}개 출처 통합` : ""}${row.reconciliationStatus === "CONFLICT" ? " · 겹침 충돌" : ""}`);
     rowStatus.setAttribute("aria-label", `행 ${rowIndex + 1} 검수 대기`);
+    if (memberCount > 1) rowStatus.append(make("span", "trade-review-source-badge", `겹침 ${memberCount}개 출처 통합`));
+    if (row.reconciliationStatus === "CONFLICT") rowStatus.append(make("span", "trade-review-conflict-badge", "겹침 충돌"));
+    if (memberCount > 1) {
+      const sourceDetails = make("details", "trade-review-source-details");
+      sourceDetails.append(make("summary", "", "모든 원본 행과 후보 보기"));
+      for (const member of row.reconciliationMembers) {
+        const sourceProjection = projection.reconciliation.sourceProjectionEvidence.find((item) => item.projectionRowId === member.projectionRowId)
+          ?? (member.projectionRowId === row.projectionRowId ? row : null);
+        const section = make("section", "trade-review-source-member");
+        section.append(make("h4", "", `캡처 ${member.captureId} · 원본 ${member.ordinal}행`));
+        section.append(make("p", "", `원본 위치: ${JSON.stringify(member.rowBox ?? "기록 없음")} · sourceRefs: ${JSON.stringify(member.sourceRefs)}`));
+        const sourceFields = make("ul", "trade-review-source-fields");
+        for (const key of FIELD_KEYS) {
+          const sourceField = sourceProjection?.fields?.[key];
+          const candidateText = sourceField?.candidate?.value ?? sourceField?.shownValue;
+          const risk = (sourceField?.riskReasons ?? []).map(riskText).join(" · ");
+          const rawText = sourceField?.rawEvidence?.rawText;
+          const line = make("li", "", `${FIELD_LABELS[key]}: 후보 ${formatValue(candidateText)} · 원문 ${formatValue(rawText)}${risk ? ` · ${risk}` : ""}`);
+          if (sourceField && member.rowBox && captures.some((capture) => capture.metadata.captureId === member.captureId)) {
+            const cropButton = make("button", "trade-review-member-crop-button", "이 출처 원본 보기");
+            cropButton.type = "button";
+            const cropImage = make("img", "trade-review-crop trade-review-member-crop");
+            cropImage.alt = `캡처 ${member.captureId} 원본 ${member.ordinal}행 ${FIELD_LABELS[key]}`;
+            cropImage.hidden = true;
+            cropButton.addEventListener("click", async () => {
+              cropButton.disabled = true;
+              try {
+                const blob = await createFieldCrop({ row: sourceProjection, field: sourceField, captures });
+                if (!blob || destroyed) return;
+                const url = URL.createObjectURL(blob); objectUrls.add(url); cropImage.src = url; cropImage.hidden = false;
+              } catch { /* Original capture pixels may no longer be available. */ }
+              finally { cropButton.disabled = false; }
+            });
+            line.append(cropButton, cropImage);
+          }
+          sourceFields.append(line);
+        }
+        section.append(sourceFields); sourceDetails.append(section);
+      }
+      rowStatus.append(sourceDetails);
+    }
     tr.append(rowStatus);
     body.append(tr);
   });

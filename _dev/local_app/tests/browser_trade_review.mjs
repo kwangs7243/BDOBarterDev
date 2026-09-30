@@ -24,24 +24,36 @@ class FakeRuntime:
     def status(self): return {"available": True, "modelReady": True, "reason": None, "engineId": "r005-test-only"}
     def recognize(self, batch_id, captures):
         rows=[]
-        for ordinal, capture in enumerate(captures, 1):
-            fields={}
-            values={"island":"달래나루", "fromItem":"갈퀴 꽃 씨앗 주머니x", "reqAmount":"10", "toItem":"괴생물 촉수", "count":"0", "yield":"48"}
-            if ordinal == 2: values["reqAmount"] = None
-            for index, key in enumerate(FIELD_KEYS):
-                raw=values[key]
-                fields[key]={"value":None,"rawText":raw,"normalizedText":raw,"rawNumericCandidate":48 if key == "yield" else (0 if key == "count" else None),
-                    "status":"EMPTY_OCR" if raw is None else ("FIELD_CLIPPED" if key == "yield" else "RAW_OCR_CANDIDATE"),
-                    "reasonCodes":["EMPTY_OCR"] if raw is None else (["FIELD_CLIPPED"] if key == "yield" else []),
-                    "readerEvidence":{"readerId":"test-only","geometry":{"box":{"x":index*10,"y":4,"width":8,"height":8}}}}
-            rows.append({"captureId":capture["captureId"],"ordinal":ordinal,"rowBox":{"x":0,"y":0,"width":80,"height":60},
-                "rowCropHash":hashlib.sha256(f"row-{ordinal}".encode()).hexdigest(),"sourceRefs":[{"captureId":capture["captureId"],"ordinal":ordinal}],
-                "fields":fields,"status":"DRAFT_UNVERIFIED","automationDecision":"REVIEW"})
-        captures_out=[{"captureId":c["captureId"],"batchId":c["metadata"]["batchId"],"captureOrdinal":index+1,"imageHash":hashlib.sha256(c["imageBytes"]).hexdigest(),"imageDimensions":{"width":100,"height":80},"detectedCandidateCount":1,"completeRowCount":1,"edgeSegmentCount":0} for index,c in enumerate(captures)]
-        captures_out[0]["detectedCandidateCount"]=2; captures_out[0]["edgeSegmentCount"]=1
+        row_values=[
+            [
+                {"island":"달래나루","fromItem":"갈퀴 꽃 씨앗 주머니x","reqAmount":"10","toItem":"괴생물 촉수","count":"0","yield":"48"},
+                {"island":"해모 섬","fromItem":"갈퀴 꽃 씨앗 주머니x","reqAmount":None,"toItem":"괴생물 촉수","count":"0","yield":"48"},
+                {"island":"그란디하","fromItem":"갈퀴 꽃 씨앗 주머니x","reqAmount":"10","toItem":"괴생물 촉수","count":"0","yield":"48"},
+            ],
+            [
+                {"island":"해모 섬","fromItem":"갈퀴 꽃 씨앗 주머니x","reqAmount":None,"toItem":"괴생물 촉수","count":"0","yield":"48"},
+                {"island":"그란디하","fromItem":"갈퀴 꽃 씨앗 주머니x","reqAmount":"10","toItem":"괴생물 촉수","count":"1","yield":"148"},
+                {"island":"깊은 밤의 항구","fromItem":"갈퀴 꽃 씨앗 주머니x","reqAmount":"10","toItem":"괴생물 촉수","count":"0","yield":"48"},
+            ],
+        ]
+        for capture_index,capture in enumerate(captures):
+            for ordinal,values in enumerate(row_values[capture_index],1):
+                fields={}
+                for index,key in enumerate(FIELD_KEYS):
+                    raw=values[key]
+                    numeric=int(raw) if key in ("reqAmount","count","yield") and raw is not None else None
+                    fields[key]={"value":None,"rawText":raw,"normalizedText":raw,"rawNumericCandidate":numeric,
+                        "status":"EMPTY_OCR" if raw is None else ("FIELD_CLIPPED" if key == "yield" else "RAW_OCR_CANDIDATE"),
+                        "reasonCodes":["EMPTY_OCR"] if raw is None else (["FIELD_CLIPPED"] if key == "yield" else []),
+                        "readerEvidence":{"readerId":"test-only","geometry":{"box":{"x":index*10,"y":4,"width":8,"height":8}}}}
+                rows.append({"captureId":capture["captureId"],"ordinal":ordinal,"rowBox":{"x":0,"y":(ordinal-1)*20,"width":80,"height":20},
+                    "rowCropHash":hashlib.sha256(f"{capture['captureId']}-{ordinal}".encode()).hexdigest(),"sourceRefs":[{"captureId":capture["captureId"],"ordinal":ordinal}],
+                    "fields":fields,"status":"DRAFT_UNVERIFIED","automationDecision":"REVIEW"})
+        captures_out=[{"captureId":c["captureId"],"batchId":c["metadata"]["batchId"],"captureOrdinal":index+1,"imageHash":hashlib.sha256(c["imageBytes"]).hexdigest(),"imageDimensions":{"width":100,"height":80},"detectedCandidateCount":3,"completeRowCount":3,"edgeSegmentCount":0} for index,c in enumerate(captures)]
+        captures_out[0]["detectedCandidateCount"]=4; captures_out[0]["edgeSegmentCount"]=1
         return {"captures":captures_out,"draftRows":rows,
             "edgeSegments":[{"captureId":captures[0]["captureId"],"rowBox":{"x":0,"y":0,"width":80,"height":20},"boundarySide":"bottom","classification":"EDGE_SEGMENT_UNCERTAIN","reasonCodes":["ROW_BOUNDARY_CONTACT"]}],
-            "metrics":{"boundaryPolicy":"edge-segments-evidence-only-v1","detectedCandidateCount":len(captures)+1,"completeRowCount":len(captures),"edgeSegmentCount":1,"draftRowCount":len(captures)},
+            "metrics":{"boundaryPolicy":"edge-segments-evidence-only-v1","detectedCandidateCount":3*len(captures)+1,"completeRowCount":3*len(captures),"edgeSegmentCount":1,"draftRowCount":len(rows)},
             "runtime":{"available":True,"engineId":"r005-test-only"}}
 app=create_app(r'${database}', testing=True)
 fake=FakeRuntime(); app.extensions["trade_batch_runtime"]=fake
@@ -112,9 +124,18 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='2'"), "two captures queued");
   const tradeListBefore = await evaluate("document.querySelector('#trade-list-root').textContent");
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-table tbody tr[data-capture-id]').length===2"), "all-row review projection");
-  assert.equal(await evaluate("document.querySelectorAll('.trade-review-table tbody tr[data-capture-id]').length"), 2);
-  assert.equal(await evaluate("document.querySelectorAll('.trade-review-input').length"), 12, "two rows expose all six editable values");
+  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-table tbody tr[data-capture-id]').length===4"), "all logical review rows");
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-table tbody tr[data-capture-id]').length"), 4);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-input').length"), 24, "four logical rows expose all six editable values");
+  const reconciliationSummary = await evaluate("document.querySelector('.trade-review-summary').textContent");
+  assert.match(reconciliationSummary, /source COMPLETE 6행/);
+  assert.match(reconciliationSummary, /logical 4행/);
+  assert.match(reconciliationSummary, /겹침 통합 2그룹/);
+  assert.match(reconciliationSummary, /충돌 1그룹/);
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-conflict-badge').length"), 1, "conflict row is visibly labelled");
+  assert.equal(await evaluate("document.querySelector('[aria-label=\"행 3 수율\"]').value"), "", "48/148 conflict is not prefilled");
+  assert.equal(await evaluate("document.querySelector('.trade-review-table').textContent.includes('48')&&document.querySelector('.trade-review-table').textContent.includes('148')"), true, "both conflict alternatives are visible");
+  assert.equal(await evaluate("document.querySelectorAll('.trade-review-source-details').length"), 2, "all merged source evidence remains reachable");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 획득품\"]').value"), "괴생물 촉수", "R003 candidate prefilled");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 소모품\"]').value"), "갈퀴 꽃 씨앗 주머니", "bounded correction candidate prefilled");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 남은 교환 횟수\"]').value"), "0", "zero remains an editable nonempty value");
@@ -132,7 +153,11 @@ try {
   await evaluate("document.querySelectorAll('.trade-review-crop-button')[6].click()");
   await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-crop:not([hidden])').length===2"), "second capture crop");
   const secondCrop = await evaluate(`(()=>{const image=document.querySelectorAll('.trade-review-crop:not([hidden])')[1];const canvas=document.createElement('canvas');canvas.width=1;canvas.height=1;const context=canvas.getContext('2d');context.drawImage(image,0,0,1,1);return [...context.getImageData(0,0,1,1).data].slice(0,3)})()`);
-  assert.ok(secondCrop[2] > secondCrop[0] * 2, `second row should use its matching blue capture, got ${secondCrop}`);
+  assert.ok(secondCrop[0] > secondCrop[2] * 2, `representative crop should remain the first capture, got ${secondCrop}`);
+  await evaluate("document.querySelectorAll('.trade-review-source-details')[0].open=true;document.querySelectorAll('.trade-review-source-details')[0].querySelectorAll('.trade-review-member-crop-button')[6].click()");
+  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-member-crop:not([hidden])').length===1"), "alternate source crop preview");
+  const alternateCrop = await evaluate(`(()=>{const image=document.querySelector('.trade-review-member-crop:not([hidden])');const canvas=document.createElement('canvas');canvas.width=1;canvas.height=1;const context=canvas.getContext('2d');context.drawImage(image,0,0,1,1);return [...context.getImageData(0,0,1,1).data].slice(0,3)})()`);
+  assert.ok(alternateCrop[2] > alternateCrop[0] * 2, `alternate source should use its own blue capture, got ${alternateCrop}`);
 
   await evaluate(`(()=>{const input=document.querySelector('[aria-label="행 1 섬"]');input.value='달래나루 수정';input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
   const editedSummary = await evaluate("document.querySelector('.trade-review-summary').textContent");
@@ -143,9 +168,13 @@ try {
   await evaluate("document.querySelector('[aria-label=\"표시된 모든 행과 경계 경고를 확인했습니다.\"]').click()");
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), true, "blank non-unknown fields block completion");
   await evaluate("document.querySelector('[aria-label=\"행 2 필요 수량 모름으로 표시\"]').click()");
-  assert.equal(await evaluate("document.querySelector('.trade-review-summary').textContent.includes('모름 1')"), true);
+  await evaluate("(()=>{const input=document.querySelector('[aria-label=\"행 3 수율\"]');input.value='148';input.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), true, "other conflict remains blocked until explicitly resolved");
+  await evaluate("document.querySelector('[aria-label=\"행 3 남은 교환 횟수 모름으로 표시\"]').click()");
+  assert.equal(await evaluate("document.querySelector('.trade-review-summary').textContent.includes('모름 2')"), true);
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 2 필요 수량\"]').disabled"), true);
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 2 필요 수량\"]').value"), "", "unknown preserves the blank evidence state");
+  assert.equal(await evaluate("document.querySelector('[aria-label=\"행 3 남은 교환 횟수\"]').disabled"), true, "conflicting count can be explicitly marked unknown");
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), false, "explicit unknown allows review completion");
   const writesBeforeCompletion = await (await fetch(`${baseUrl}__test__/requests`)).json();
   assert.equal(writesBeforeCompletion.filter((item) => item.method === "POST" && item.path.includes("trade-review-observations")).length, 0, "completion is the first persistence boundary");
@@ -157,7 +186,7 @@ try {
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 섬\"]').value"), "달래나루 수정", "pending edit persists across close/reopen");
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), false);
   await evaluate("(()=>{window.__r005ButtonClicks=0;window.__r005Errors=[];window.addEventListener('error',event=>window.__r005Errors.push(event.message));document.querySelector('.trade-review-complete').addEventListener('click',()=>window.__r005ButtonClicks++,true)})()");
-  await evaluate(`(()=>{window.__observationBodies=[];window.__parentFailures=['503','offline'];window.__lostObservationResponse=false;window.__cropAttempts=[];window.__cropFailureUsed=false;const original=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input.url;if(url.includes('/trade-review-observations')&&init.method==='POST'&&!url.includes('/crops')){window.__observationBodies.push(init.body);if(window.__rejectNextObservation){window.__rejectNextObservation=false;return new Response(JSON.stringify({ok:false,error:{code:'invalid_contract',message:'invalid_contract',retryable:false}}),{status:422,headers:{'Content-Type':'application/json'}})}const failure=window.__parentFailures.shift();if(failure==='503')return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}});if(failure==='offline')throw new TypeError('simulated offline');const response=await original(input,init);if(!window.__lostObservationResponse){window.__lostObservationResponse=true;throw new TypeError('simulated response loss after server commit')}return response}if(url.includes('/trade-review-observations')&&url.includes('/crops')&&init.method==='POST'){const metadata=JSON.parse(init.body.get('metadata'));window.__cropAttempts.push(metadata);if(!window.__cropFailureUsed){window.__cropFailureUsed=true;return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary crop outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}})}}return original(input,init)}})()`);
+  await evaluate(`(()=>{window.__observationReceipt=null;window.__observationBodies=[];window.__parentFailures=['503','offline'];window.__lostObservationResponse=false;window.__cropAttempts=[];window.__cropFailureUsed=false;const original=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input.url;if(url.includes('/trade-review-observations')&&init.method==='POST'&&!url.includes('/crops')){window.__observationBodies.push(init.body);if(window.__rejectNextObservation){window.__rejectNextObservation=false;return new Response(JSON.stringify({ok:false,error:{code:'invalid_contract',message:'invalid_contract',retryable:false}}),{status:422,headers:{'Content-Type':'application/json'}})}const failure=window.__parentFailures.shift();if(failure==='503')return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}});if(failure==='offline')throw new TypeError('simulated offline');const response=await original(input,init);window.__observationReceipt=await response.clone().json();if(!window.__lostObservationResponse){window.__lostObservationResponse=true;throw new TypeError('simulated response loss after server commit')}return response}if(url.includes('/trade-review-observations')&&url.includes('/crops')&&init.method==='POST'){const metadata=JSON.parse(init.body.get('metadata'));window.__cropAttempts.push(metadata);if(!window.__cropFailureUsed){window.__cropFailureUsed=true;return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary crop outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}})}}return original(input,init)}})()`);
   await evaluate("(()=>{const button=document.querySelector('.trade-review-complete');button.click();button.click()})()");
   await waitFor(async () => evaluate("!document.querySelector('.trade-review-storage-actions button:first-child').hidden"), "retry after committed response loss");
   assert.equal((await (await fetch(`${baseUrl}__test__/requests`)).json()).filter((item) => item.method === "POST" && item.path === "/api/recognition/trade-review-observations").length, 0, "synthetic 503 does not reach the server");
@@ -168,6 +197,27 @@ try {
   await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').click()");
   await waitFor(async () => evaluate("!document.querySelector('.trade-review-storage-actions button:first-child').hidden"), "retry after committed response loss");
   assert.equal((await (await fetch(`${baseUrl}__test__/observation-count`)).json()).count, 1, "first observation is committed before response loss");
+  const observationReceipt = await evaluate("JSON.stringify(window.__observationReceipt)").then(JSON.parse);
+  assert.equal(observationReceipt.ok, true);
+  const storedResponse = await fetch(`${baseUrl}api/recognition/trade-review-observations/${observationReceipt.receipt.observationId}`);
+  assert.equal(storedResponse.status, 200, "reconciled observation is readable from the unchanged R006 endpoint");
+  const stored = (await storedResponse.json()).observation;
+  const storedProjection = stored.sourceContext.projection.snapshot;
+  assert.equal(storedProjection.reconciliation.sourceRows.length, 6);
+  assert.equal(storedProjection.reconciliation.captureOrder.length, 2);
+  assert.deepEqual(storedProjection.reconciliation.sourceRows.reduce((counts, row) => { counts[row.captureId] = (counts[row.captureId] || 0) + 1; return counts; }, {}),
+    { [storedProjection.reconciliation.captureOrder[0].captureId]: 3, [storedProjection.reconciliation.captureOrder[1].captureId]: 3 });
+  assert.equal(stored.completion.rows.length, 4);
+  assert.equal(stored.completion.summary.fieldCount, 24);
+  assert.equal(storedProjection.reconciliation.sourceProjectionEvidence.length, 4);
+  const conflictProjectionRow = storedProjection.rows.find((row) => row.reconciliationStatus === "CONFLICT");
+  assert.deepEqual(conflictProjectionRow.fields.yield.alternatives.map((item) => item.value), [48, 148]);
+  const exportResponse = await fetch(`${baseUrl}api/recognition/trade-review-observations/${observationReceipt.receipt.observationId}/export`);
+  assert.equal(exportResponse.status, 200, "reconciled observation export uses the unchanged R006 endpoint");
+  const exportedObservation = await exportResponse.json();
+  assert.equal(exportedObservation.schemaVersion, 1);
+  assert.equal(exportedObservation.semantic.observation.sourceContext.projection.snapshot.reconciliation.sourceRows.length, 6);
+  assert.equal(exportedObservation.semantic.dataset.fields.length, 24, "export contains logical human fields, not multiplied source truths");
   await evaluate("document.querySelector('[data-close-trade-capture]').click()");
   await evaluate("document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').open"), "reopen while persistence retry is pending");
@@ -182,13 +232,17 @@ try {
   const payload = await evaluate("JSON.stringify(window.__r005Payload)").then(JSON.parse);
   assert.equal(payload.schemaVersion, 1);
   assert.equal(payload.reviewMode, "REVIEW_FIRST");
-  assert.equal(payload.rows.length, 2);
+  assert.equal(payload.rows.length, 4);
+  assert.equal(payload.summary.fieldCount, 24);
   assert.equal(payload.edgeSegments.length, 1);
-  assert.equal(payload.summary.unknownFieldCount, 1);
+  assert.equal(payload.summary.unknownFieldCount, 2);
   assert.equal(payload.rows[0].fields.find(field=>field.field==='island').verificationMethod, "USER_EDITED");
   assert.equal(payload.rows[0].fields.find(field=>field.field==='count').verificationMethod, "USER_BATCH_CONFIRMED_UNCHANGED");
   assert.equal(payload.rows[0].fields.find(field=>field.field==='count').finalValue, 0);
+  assert.equal(payload.rows[1].fields.find(field=>field.field==='toItem').verificationMethod, "USER_BATCH_CONFIRMED_UNCHANGED", "merged exact row has one human confirmation");
   assert.equal(payload.rows[1].fields.find(field=>field.field==='reqAmount').verificationMethod, "USER_MARKED_UNKNOWN");
+  assert.equal(payload.rows[2].fields.find(field=>field.field==='yield').verificationMethod, "USER_EDITED", "yield conflict requires explicit user value");
+  assert.equal(payload.rows[2].fields.find(field=>field.field==='count').verificationMethod, "USER_MARKED_UNKNOWN", "count conflict can be explicitly unknown");
   assert.equal(await evaluate("Object.isFrozen(window.__r005Payload)&&Object.isFrozen(window.__r005Payload.rows)&&Object.isFrozen(window.__r005Payload.rows[0].fields[0])"), true, "completion payload is deeply frozen");
   assert.equal(await evaluate("document.querySelector('.trade-review-message').textContent"), "검수를 완료했습니다. 아직 현재 회차에는 적용하지 않았습니다.");
   assert.equal(await evaluate("document.body.textContent.includes('현재 회차에 적용 완료')"), false);
@@ -214,8 +268,9 @@ try {
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true, "queue mutation clears the stale review state");
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "1", "clear keeps the mutated queue");
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-input').length===6"), "review for queue mutation check");
+  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-input').length===18"), "review for queue mutation check");
   await evaluate(`(()=>{window.__rejectNextObservation=true;window.__downloads=[];const create=URL.createObjectURL.bind(URL);URL.createObjectURL=blob=>{const url=create(blob);if(blob instanceof Blob)blob.text().then(text=>window.__downloads.push({text}));return url};HTMLAnchorElement.prototype.click=function(){window.__downloads.push({name:this.download,href:this.href})}})()`);
+  await evaluate("document.querySelector('[aria-label=\"행 2 필요 수량 모름으로 표시\"]').click()");
   await evaluate("document.querySelector('[aria-label=\"표시된 모든 행과 경계 경고를 확인했습니다.\"]').click()");
   await evaluate("document.querySelector('.trade-review-complete').click()");
   await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('invalid_contract')"), "nonretryable observation rejection");

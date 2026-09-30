@@ -1,5 +1,6 @@
 import { getSafeUniqueItemMatch } from "./trade-import.js";
 import { registrySnapshotSha256, validateRegistrySnapshot } from "./trade-master-registry.js";
+import { reconcileTradeProjectionRows } from "./trade-batch-reconciliation.js";
 
 const FIELD_KEYS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
 const FIELD_LABELS = Object.freeze({
@@ -527,7 +528,9 @@ function projectRow(rowInfo, registrySnapshot, terms, masterVersion) {
 }
 
 export function buildTradeReviewProjection({ draftRows, reconciliation = null, registrySnapshot, correctionPolicyVersion } = {}) {
-  if (reconciliation !== null) throw new TypeError("reconciliation must be null in R003");
+  if (reconciliation !== null && (reconciliation?.phase !== "PRELIMINARY" || reconciliation?.schemaVersion !== 1)) {
+    throw new TypeError("reconciliation must be a validated PRELIMINARY topology");
+  }
   const validation = validateRegistrySnapshot(registrySnapshot);
   if (!validation.ok) throw new TypeError(`registrySnapshot is invalid: ${validation.errors.join("; ")}`);
   if (!nonempty(correctionPolicyVersion)) throw new TypeError("correctionPolicyVersion must be a nonempty string");
@@ -535,8 +538,26 @@ export function buildTradeReviewProjection({ draftRows, reconciliation = null, r
   const masterSnapshotSha256 = registrySnapshotSha256(registrySnapshot);
   const masterVersion = registrySnapshot.registryVersion;
   const terms = createIdentityTerms(registrySnapshot);
+  const sourceProjectionRows = inputRows.map((rowInfo) => projectRow(rowInfo, registrySnapshot, terms, masterVersion));
+  if (reconciliation === null) {
+    const base = {
+      schemaVersion: 1,
+      reviewMode: "REVIEW_FIRST",
+      correctionVersion: correctionPolicyVersion,
+      correctionPolicyVersion,
+      masterVersion,
+      masterRevision: registrySnapshot.registryVersion,
+      masterSourceRevision: registrySnapshot.source.revision,
+      masterSnapshotSha256,
+      reconciliation: null,
+      rows: sourceProjectionRows,
+    };
+    const projectionHash = registrySnapshotSha256(base);
+    return deepFreeze({ ...base, projectionHash });
+  }
+  const finalized = reconcileTradeProjectionRows({ projectionRows: sourceProjectionRows, reconciliation });
   const base = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     reviewMode: "REVIEW_FIRST",
     correctionVersion: correctionPolicyVersion,
     correctionPolicyVersion,
@@ -544,8 +565,8 @@ export function buildTradeReviewProjection({ draftRows, reconciliation = null, r
     masterRevision: registrySnapshot.registryVersion,
     masterSourceRevision: registrySnapshot.source.revision,
     masterSnapshotSha256,
-    reconciliation: null,
-    rows: inputRows.map((rowInfo) => projectRow(rowInfo, registrySnapshot, terms, masterVersion)),
+    reconciliation: finalized.reconciliation,
+    rows: finalized.rows,
   };
   const projectionHash = registrySnapshotSha256(base);
   return deepFreeze({ ...base, projectionHash });
