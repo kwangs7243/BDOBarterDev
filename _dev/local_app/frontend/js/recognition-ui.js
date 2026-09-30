@@ -64,7 +64,125 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeReviewController = null;
   let tradeReviewGeneration = 0;
   let tradeReviewForResult = null;
+  let tradeObservationJob = null;
+  let tradeSavedObservation = null;
+  let tradeObservationInFlight = false;
   let previewResizeObserver;
+  const tradeObservationActions = document.createElement("div");
+  tradeObservationActions.className = "trade-review-storage-actions";
+  const retryTradeObservation = document.createElement("button");
+  retryTradeObservation.type = "button"; retryTradeObservation.textContent = "저장 재시도"; retryTradeObservation.hidden = true;
+  const downloadTradeObservation = document.createElement("button");
+  downloadTradeObservation.type = "button"; downloadTradeObservation.textContent = "검수 자료 내려받기"; downloadTradeObservation.hidden = true;
+  tradeObservationActions.append(retryTradeObservation, downloadTradeObservation);
+  tradeRecognitionStatus.after(tradeObservationActions);
+
+  const setTradeStorageStatus = (message, { retry = false, download = false } = {}) => {
+    tradeRecognitionStatus.textContent = message;
+    retryTradeObservation.hidden = !retry;
+    downloadTradeObservation.hidden = !download;
+    updateRecognitionControls();
+  };
+  const downloadPendingObservation = async () => {
+    if (tradeObservationJob?.receipt?.observationId) {
+      try {
+        const response = await fetch(`/api/recognition/trade-review-observations/${tradeObservationJob.receipt.observationId}/export`, { credentials: "same-origin", cache: "no-store" });
+        if (!response.ok) throw new Error("export failed");
+        const blob = await response.blob(); const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
+        anchor.href = url; anchor.download = `trade-review-${tradeObservationJob.receipt.observationId}.json`; anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+      } catch { setTradeStorageStatus("서버 export를 내려받지 못했습니다. 저장된 검수 자료는 보존되어 있습니다.", { download: true }); }
+      return;
+    }
+    if (!tradeObservationJob && tradeSavedObservation) {
+      try {
+        const response = await fetch(`/api/recognition/trade-review-observations/${tradeSavedObservation.observationId}/export`, { credentials: "same-origin", cache: "no-store" });
+        if (!response.ok) throw new Error("export failed");
+        const blob = await response.blob(); const url = URL.createObjectURL(blob); const anchor = document.createElement("a");
+        anchor.href = url; anchor.download = `trade-review-${tradeSavedObservation.observationId}.json`; anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 0);
+      } catch { setTradeStorageStatus("저장된 검수 자료 export를 내려받지 못했습니다.", { download: true }); }
+      return;
+    }
+    if (tradeObservationJob) {
+      const blob = new Blob([tradeObservationJob.body], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a"); anchor.href = url; anchor.download = `trade-review-${tradeObservationJob.payload.completion.recognitionBatchId}.json`;
+      anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+  };
+  downloadTradeObservation.addEventListener("click", downloadPendingObservation);
+  const postTradeObservation = async () => {
+    const job = tradeObservationJob;
+    if (!job || tradeObservationInFlight || job.receipt) return;
+    tradeObservationInFlight = true;
+    setTradeStorageStatus("검수 자료를 저장하고 있습니다…");
+    try {
+      const response = await fetch("/api/recognition/trade-review-observations", { method: "POST", credentials: "same-origin", cache: "no-store",
+        headers: { "Content-Type": "application/json; charset=utf-8" }, body: job.body });
+      const body = await response.json().catch(() => null);
+      if (!response.ok || body?.ok !== true || !body.receipt) {
+        const retryable = response.status >= 500 && body?.error?.retryable === true;
+        const explain = body?.error?.message || `저장 요청이 거부되었습니다 (${response.status}).`;
+        setTradeStorageStatus(`${explain} 검수 내용은 현재 화면에 보존되어 있습니다.`, { retry: retryable, download: true });
+        return;
+      }
+      job.receipt = body.receipt;
+      tradeSavedObservation = { observationId: body.receipt.observationId, batchId: job.payload.completion.recognitionBatchId };
+      setTradeStorageStatus("검수 내용이 로컬 evidence 저장소에 기록됐습니다. 회차 목록에는 적용되지 않았습니다.", { download: true });
+      await postSelectedTradeCrops(job);
+    } catch {
+      setTradeStorageStatus("저장 응답을 확인하지 못했습니다. 같은 요청 ID와 내용으로 재시도하거나 자료를 내려받으세요.", { retry: true, download: true });
+    } finally {
+      tradeObservationInFlight = false;
+      updateRecognitionControls();
+    }
+  };
+  const postSelectedTradeCrops = async (job) => {
+    try {
+      if (!job.crops) job.crops = await job.createSelectedCrops();
+      else if (job.crops.some((item) => item.entry.selected && item.entry.geometry && !item.blob && !item.receipt)) {
+        const regenerated = await job.createSelectedCrops();
+        const byKey = new Map(regenerated.map((item) => [`${item.entry.projectionRowId}\0${item.entry.field}`, item]));
+        for (const item of job.crops) if (!item.blob && !item.receipt) item.blob = byKey.get(`${item.entry.projectionRowId}\0${item.entry.field}`)?.blob ?? null;
+      }
+      let failed = false;
+      let nonRetryable = false;
+      for (const item of job.crops) {
+        if (!item.entry.selected || !item.entry.geometry || item.receipt) continue;
+        if (!item.blob) { failed = true; continue; }
+        if (!item.metadata) item.metadata = { version: 1, cropMutationId: crypto.randomUUID(), projectionRowId: item.entry.projectionRowId,
+          field: item.entry.field, sha256: await sha256Blob(item.blob), width: item.entry.geometry.width, height: item.entry.geometry.height };
+        const form = new FormData(); form.append("metadata", JSON.stringify(item.metadata)); form.append("image", item.blob, "review-crop.png");
+        try {
+          const response = await fetch(`/api/recognition/trade-review-observations/${job.receipt.observationId}/crops`, { method: "POST", credentials: "same-origin", cache: "no-store", body: form });
+          const body = await response.json().catch(() => null);
+          if (!response.ok || body?.ok !== true) { failed = true; nonRetryable ||= [409, 413, 422].includes(response.status); item.error = body?.error?.message || `crop ${response.status}`; }
+          else item.receipt = body.receipt;
+        } catch { failed = true; }
+      }
+      if (failed) {
+        setTradeStorageStatus(nonRetryable
+          ? "검수 내용은 저장됐지만 일부 원본 영역이 거부되었습니다. 같은 검수 자료를 내려받아 오류를 확인하세요."
+          : "검수 내용은 저장됐지만 일부 원본 영역은 아직 연결되지 않았습니다. 이미지 저장을 재시도할 수 있습니다.",
+        { retry: !nonRetryable, download: true });
+      } else {
+        tradeObservationJob = null;
+        setTradeStorageStatus("검수와 선택된 원본 영역 저장이 완료됐습니다. 회차 목록에는 적용되지 않았습니다.", { download: true });
+      }
+    } catch {
+      setTradeStorageStatus("검수 내용은 저장됐지만 원본 영역을 만들지 못했습니다. 같은 선택 영역 저장을 재시도할 수 있습니다.", { retry: true, download: true });
+    }
+  };
+  retryTradeObservation.addEventListener("click", () => {
+    if (!tradeObservationJob) return;
+    if (tradeObservationJob.receipt) void postSelectedTradeCrops(tradeObservationJob);
+    else void postTradeObservation();
+  });
+  async function sha256Blob(blob) {
+    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+    return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+  }
 
   const previewContent = () => displayedVideoContentRect(tradePreview, tradePreviewStage);
   const renderTradeRoi = () => {
@@ -109,7 +227,24 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       captures: [...tradeQueue.items],
       reviewRevision: tradeRecognitionResultRevision,
       getCurrentRevision: () => tradeQueueRevision,
-      onComplete: () => { tradeRecognitionStatus.textContent = "검수를 완료했습니다. 목록에는 적용되지 않았습니다."; },
+      onComplete: (completion, storage) => {
+        if (tradeObservationJob) {
+          setTradeStorageStatus("앞선 검수 자료의 저장/재시도가 끝난 뒤 새 검수를 완료할 수 있습니다.", { retry: true, download: true });
+          return;
+        }
+        try {
+          const body = JSON.stringify(storage.observation);
+          const byteLength = new TextEncoder().encode(body).byteLength;
+          tradeObservationJob = { payload: storage.observation, body, createSelectedCrops: storage.createSelectedCrops, receipt: null, crops: null };
+          if (byteLength > 8 * 1024 * 1024) {
+            setTradeStorageStatus("검수 JSON이 8 MiB 제한을 넘었습니다. 자동 분할하지 않았습니다. 자료를 내려받으세요.", { download: true });
+            return;
+          }
+          void postTradeObservation();
+        } catch {
+          setTradeStorageStatus("검수 저장 자료를 준비하지 못했습니다. 화면에서 내용을 확인한 뒤 JSON을 내려받으세요.", { download: true });
+        }
+      },
       onClear: () => {
         tradeRecognitionResult = null;
         tradeRecognitionResultRevision = null;
@@ -143,7 +278,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     });
   };
   const updateRecognitionControls = () => {
-    tradeRecognitionButton.disabled = tradeRecognitionPending || !tradeRuntimeAvailable || tradeQueue.length === 0;
+    tradeRecognitionButton.disabled = tradeRecognitionPending || Boolean(tradeObservationJob) || !tradeRuntimeAvailable || tradeQueue.length === 0;
     tradeRecognitionButton.textContent = tradeRecognitionPending ? "로컬 인식 중…" : "로컬 인식 실행";
     tradeRecognitionButton.setAttribute("aria-busy", String(tradeRecognitionPending));
     tradeRecognitionRegion.setAttribute("aria-busy", String(tradeRecognitionPending));
@@ -440,7 +575,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
   document.addEventListener("paste", onPaste);
 
-  window.addEventListener("beforeunload", () => {
+  window.addEventListener("beforeunload", (event) => {
+    if (tradeObservationJob || tradeObservationInFlight) {
+      event.preventDefault();
+      event.returnValue = "저장되지 않은 검수 자료가 있습니다.";
+    }
     screenSession.disconnectScreen("beforeunload");
     tradePreviews.clear();
     tradeQueue.clear();

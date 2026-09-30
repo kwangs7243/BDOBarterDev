@@ -14,6 +14,8 @@ const database = join(profile, "isolated.sqlite3");
 const port = new URL(baseUrl).port || "18773";
 const pythonCode = `
 from flask import jsonify, request
+import hashlib
+import sqlite3
 from local_app.backend.app import create_app
 from local_app.backend.services.trade_batch_runtime import TradeBatchRuntimeError
 
@@ -33,9 +35,9 @@ class FakeRuntime:
                     "reasonCodes":["EMPTY_OCR"] if raw is None else (["FIELD_CLIPPED"] if key == "yield" else []),
                     "readerEvidence":{"readerId":"test-only","geometry":{"box":{"x":index*10,"y":4,"width":8,"height":8}}}}
             rows.append({"captureId":capture["captureId"],"ordinal":ordinal,"rowBox":{"x":0,"y":0,"width":80,"height":60},
-                "rowCropHash":f"row-{ordinal}","sourceRefs":[{"captureId":capture["captureId"],"ordinal":ordinal}],
+                "rowCropHash":hashlib.sha256(f"row-{ordinal}".encode()).hexdigest(),"sourceRefs":[{"captureId":capture["captureId"],"ordinal":ordinal}],
                 "fields":fields,"status":"DRAFT_UNVERIFIED","automationDecision":"REVIEW"})
-        captures_out=[{"captureId":c["captureId"],"detectedCandidateCount":1,"completeRowCount":1,"edgeSegmentCount":0} for c in captures]
+        captures_out=[{"captureId":c["captureId"],"batchId":c["metadata"]["batchId"],"captureOrdinal":index+1,"imageHash":hashlib.sha256(c["imageBytes"]).hexdigest(),"imageDimensions":{"width":100,"height":80},"detectedCandidateCount":1,"completeRowCount":1,"edgeSegmentCount":0} for index,c in enumerate(captures)]
         captures_out[0]["detectedCandidateCount"]=2; captures_out[0]["edgeSegmentCount"]=1
         return {"captures":captures_out,"draftRows":rows,
             "edgeSegments":[{"captureId":captures[0]["captureId"],"rowBox":{"x":0,"y":0,"width":80,"height":20},"boundarySide":"bottom","classification":"EDGE_SEGMENT_UNCERTAIN","reasonCodes":["ROW_BOUNDARY_CONTACT"]}],
@@ -54,6 +56,10 @@ def db_probe():
     return jsonify({"databaseExists":Path(r'${database}').exists(),"appDbPath":str(Path(r'${database}').resolve())})
 @app.get("/__test__/requests")
 def request_probe(): return jsonify(requests)
+@app.get("/__test__/observation-count")
+def observation_count():
+    path=r'${database}'.replace('isolated.sqlite3','recognition/recognition.sqlite3')
+    with sqlite3.connect(path) as db: return jsonify({"count":db.execute("SELECT count(*) FROM trade_review_observation").fetchone()[0]})
 app.run(host="127.0.0.1",port=${Number(port)},use_reloader=False,threaded=True)
 `;
 let server; let chrome; let socket; let send;
@@ -141,6 +147,8 @@ try {
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 2 필요 수량\"]').disabled"), true);
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 2 필요 수량\"]').value"), "", "unknown preserves the blank evidence state");
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), false, "explicit unknown allows review completion");
+  const writesBeforeCompletion = await (await fetch(`${baseUrl}__test__/requests`)).json();
+  assert.equal(writesBeforeCompletion.filter((item) => item.method === "POST" && item.path.includes("trade-review-observations")).length, 0, "completion is the first persistence boundary");
   await evaluate(`(()=>{window.__r005Payload=null;window.__r005CompletionEvents=0;window.addEventListener('bdo:trade-review-completed',event=>{window.__r005CompletionEvents++;window.__r005Payload=event.detail;});})()`);
   await evaluate("document.querySelector('[data-close-trade-capture]').click()");
   await waitFor(async () => evaluate("!document.querySelector('#trade-capture-dialog').open"), "dialog close");
@@ -149,7 +157,26 @@ try {
   assert.equal(await evaluate("document.querySelector('[aria-label=\"행 1 섬\"]').value"), "달래나루 수정", "pending edit persists across close/reopen");
   assert.equal(await evaluate("document.querySelector('.trade-review-complete').disabled"), false);
   await evaluate("(()=>{window.__r005ButtonClicks=0;window.__r005Errors=[];window.addEventListener('error',event=>window.__r005Errors.push(event.message));document.querySelector('.trade-review-complete').addEventListener('click',()=>window.__r005ButtonClicks++,true)})()");
-  await evaluate("document.querySelector('.trade-review-complete').click()");
+  await evaluate(`(()=>{window.__observationBodies=[];window.__parentFailures=['503','offline'];window.__lostObservationResponse=false;window.__cropAttempts=[];window.__cropFailureUsed=false;const original=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input.url;if(url.includes('/trade-review-observations')&&init.method==='POST'&&!url.includes('/crops')){window.__observationBodies.push(init.body);if(window.__rejectNextObservation){window.__rejectNextObservation=false;return new Response(JSON.stringify({ok:false,error:{code:'invalid_contract',message:'invalid_contract',retryable:false}}),{status:422,headers:{'Content-Type':'application/json'}})}const failure=window.__parentFailures.shift();if(failure==='503')return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}});if(failure==='offline')throw new TypeError('simulated offline');const response=await original(input,init);if(!window.__lostObservationResponse){window.__lostObservationResponse=true;throw new TypeError('simulated response loss after server commit')}return response}if(url.includes('/trade-review-observations')&&url.includes('/crops')&&init.method==='POST'){const metadata=JSON.parse(init.body.get('metadata'));window.__cropAttempts.push(metadata);if(!window.__cropFailureUsed){window.__cropFailureUsed=true;return new Response(JSON.stringify({ok:false,error:{code:'temporary',message:'temporary crop outage',retryable:true}}),{status:503,headers:{'Content-Type':'application/json'}})}}return original(input,init)}})()`);
+  await evaluate("(()=>{const button=document.querySelector('.trade-review-complete');button.click();button.click()})()");
+  await waitFor(async () => evaluate("!document.querySelector('.trade-review-storage-actions button:first-child').hidden"), "retry after committed response loss");
+  assert.equal((await (await fetch(`${baseUrl}__test__/requests`)).json()).filter((item) => item.method === "POST" && item.path === "/api/recognition/trade-review-observations").length, 0, "synthetic 503 does not reach the server");
+  assert.equal(await evaluate("window.__r005CompletionEvents"), 1, "double click emits only one completion event");
+  await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('같은 요청 ID')"), "offline retry state");
+  assert.equal((await (await fetch(`${baseUrl}__test__/requests`)).json()).filter((item) => item.method === "POST" && item.path === "/api/recognition/trade-review-observations").length, 0, "offline attempt does not reach the server");
+  await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').click()");
+  await waitFor(async () => evaluate("!document.querySelector('.trade-review-storage-actions button:first-child').hidden"), "retry after committed response loss");
+  assert.equal((await (await fetch(`${baseUrl}__test__/observation-count`)).json()).count, 1, "first observation is committed before response loss");
+  await evaluate("document.querySelector('[data-close-trade-capture]').click()");
+  await evaluate("document.querySelector('#open-trade-capture').click()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').open"), "reopen while persistence retry is pending");
+  await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('원본 영역은 아직 연결되지 않았습니다')"), "partial crop retry state");
+  assert.equal(await evaluate("window.__observationBodies.length"), 4, "503, offline, response-loss, and replay attempts reuse one observation job");
+  assert.equal(await evaluate("window.__observationBodies.slice(0,4).every(body=>body===window.__observationBodies[0])"), true, "every parent retry reuses identical serialized bytes and mutation ID");
+  const partialCropAttempts = await evaluate("JSON.stringify(window.__cropAttempts.map(item=>item.cropMutationId))").then(JSON.parse);
+  assert.ok(partialCropAttempts.length >= 2, "selected crops were attempted");
   await new Promise((resolveWait) => setTimeout(resolveWait, 500));
   assert.equal(await evaluate("window.__r005CompletionEvents===1"), true, await evaluate("JSON.stringify({message:document.querySelector('.trade-review-message').textContent,disabled:document.querySelector('.trade-review-complete').disabled,checked:document.querySelector('[aria-label=\"표시된 모든 행과 경계 경고를 확인했습니다.\"]').checked,eventCount:window.__r005CompletionEvents,clicks:window.__r005ButtonClicks,errors:window.__r005Errors,summary:document.querySelector('.trade-review-summary').textContent})"));
   const payload = await evaluate("JSON.stringify(window.__r005Payload)").then(JSON.parse);
@@ -174,22 +201,42 @@ try {
   assert.equal(viewport.footerVisible, true, JSON.stringify(viewport));
   assert.equal(viewport.reviewScrollable, true);
 
-  await evaluate("document.querySelector('[data-action=clear-trade-recognition-result]').click()");
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true, "clear removes review state");
-  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "2", "clear keeps queued captures");
+  await evaluate("document.querySelector('.capture-draft-item button').click()");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "1", "queue can change while the immutable crop job remains pending");
+  assert.equal(await evaluate("!document.querySelector('.trade-review-storage-actions button:first-child').hidden"), true, "queue mutation preserves the pending crop retry");
+  await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('저장')&&document.querySelector('[data-role=trade-recognition-status]').textContent.includes('완료')"), "partial crop retry completion");
+  const cropMutationIds = await evaluate("JSON.stringify(window.__cropAttempts.map(item=>item.cropMutationId))").then(JSON.parse);
+  const cropCounts = cropMutationIds.reduce((counts,id)=>counts.set(id,(counts.get(id)||0)+1),new Map());
+  assert.equal([...cropCounts.values()].filter(count=>count===2).length, 1, "only the crop that failed is retried");
+  assert.equal([...cropCounts.values()].filter(count=>count===1).length, cropCounts.size-1, "successful crop uploads are not repeated");
+
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true, "queue mutation clears the stale review state");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "1", "clear keeps the mutated queue");
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-input').length===12"), "review for queue mutation check");
+  await waitFor(async () => evaluate("document.querySelectorAll('.trade-review-input').length===6"), "review for queue mutation check");
+  await evaluate(`(()=>{window.__rejectNextObservation=true;window.__downloads=[];const create=URL.createObjectURL.bind(URL);URL.createObjectURL=blob=>{const url=create(blob);if(blob instanceof Blob)blob.text().then(text=>window.__downloads.push({text}));return url};HTMLAnchorElement.prototype.click=function(){window.__downloads.push({name:this.download,href:this.href})}})()`);
+  await evaluate("document.querySelector('[aria-label=\"표시된 모든 행과 경계 경고를 확인했습니다.\"]').click()");
+  await evaluate("document.querySelector('.trade-review-complete').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('invalid_contract')"), "nonretryable observation rejection");
+  assert.equal(await evaluate("document.querySelector('.trade-review-storage-actions button:first-child').hidden"), true, "nonretryable rejection does not offer retry");
+  assert.equal(await evaluate("document.querySelector('.trade-review-storage-actions button:last-child').hidden"), false, "nonretryable rejection offers local export");
+  await evaluate("document.querySelector('.trade-review-storage-actions button:last-child').click()");
+  await waitFor(async () => evaluate("window.__downloads.some(item=>item.text&&item.text.includes('sourceContext'))"), "download rejected observation payload");
+  assert.equal(await evaluate("window.__downloads.some(item=>item.name&&item.name.startsWith('trade-review-'))"), true, "download has a review JSON filename");
   await evaluate("document.querySelector('.capture-draft-item button').click()");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden"), true, "queue mutation invalidates review and edits");
   assert.equal(await evaluate("document.querySelectorAll('.trade-review-input').length"), 0);
-  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "1");
-  assert.equal(await evaluate("window.__r005CompletionEvents"), 1, "queue mutation cannot emit another completion");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "0");
+  assert.equal(await evaluate("window.__r005CompletionEvents"), 2, "queue mutation cannot emit another completion");
   assert.deepEqual(await (await fetch(`${baseUrl}api/bootstrap`)).json(), bootstrapBefore);
   assert.equal(await evaluate("document.querySelector('#trade-list-root').textContent"), sessionTextBefore);
   const requests = await (await fetch(`${baseUrl}__test__/requests`)).json();
-  const forbiddenWrites = requests.filter((item) => ["POST", "PUT", "PATCH", "DELETE"].includes(item.method)
-    && (item.path.startsWith("/api/working-session") || /review|observation/i.test(item.path)));
-  assert.deepEqual(forbiddenWrites, [], "review flow sends no session or evidence persistence request");
+  const sessionWrites = requests.filter((item) => ["POST", "PUT", "PATCH", "DELETE"].includes(item.method) && item.path.startsWith("/api/working-session"));
+  const observationPosts = requests.filter((item) => item.method === "POST" && item.path === "/api/recognition/trade-review-observations");
+  assert.deepEqual(sessionWrites, [], "review persistence never writes session state");
+  assert.equal(observationPosts.length, 2, "synthetic failures never persist and same-body replay creates one observation");
+  assert.equal((await (await fetch(`${baseUrl}__test__/observation-count`)).json()).count, 1, "idempotent retry retains one immutable observation");
   const testDb = await (await fetch(`${baseUrl}__test__/db`)).json();
   assert.equal(testDb.databaseExists, true);
   assert.ok(testDb.appDbPath.startsWith(profile), "only the temporary test DB was accessed");

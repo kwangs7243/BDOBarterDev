@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import uuid
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 from werkzeug.exceptions import BadRequest, RequestEntityTooLarge
 
 from ..recognition_contracts import (
@@ -14,6 +14,10 @@ from ..recognition_contracts import (
     validate_capture_payload,
     validate_config_update,
     validate_feedback_payload,
+    validate_trade_review_observation,
+    validate_trade_crop_metadata,
+    MAX_TRADE_OBSERVATION_BYTES,
+    MAX_TRADE_CROP_BYTES,
 )
 from ..recognition_store import (
     ConfigConflictError,
@@ -22,6 +26,9 @@ from ..recognition_store import (
     RecognitionStoreError,
     RunNotFoundError,
     sha256_bytes,
+    _ArtifactBudgetExceeded,
+    EvidenceIntegrityError,
+    CropLinkConflictError,
 )
 from ..services.trade_batch_runtime import (
     MAX_BATCH_BYTES, MAX_CAPTURES, TradeBatchRuntimeError,
@@ -54,6 +61,22 @@ def _json_body() -> dict:
     return parse_json(raw, max_bytes=MAX_JSON_BYTES, label="request body")
 
 
+def _trade_observation_body() -> dict:
+    if request.mimetype != "application/json":
+        raise RecognitionContractError("unsupported_media_type", "Content-Type must be application/json.", 415)
+    if request.headers.get("Content-Encoding", "identity").lower() not in {"", "identity"}:
+        raise RecognitionContractError("unsupported_media_type", "Compressed JSON is not supported.", 415)
+    charset = request.mimetype_params.get("charset")
+    if charset and charset.lower().replace("_", "-") not in {"utf-8", "utf8"}:
+        raise RecognitionContractError("unsupported_media_type", "JSON must use UTF-8.", 415)
+    if request.content_length is not None and request.content_length > MAX_TRADE_OBSERVATION_BYTES:
+        raise RecognitionContractError("request_too_large", "The observation exceeds 8 MiB.", 413)
+    raw = request.stream.read(MAX_TRADE_OBSERVATION_BYTES + 1)
+    if len(raw) > MAX_TRADE_OBSERVATION_BYTES:
+        raise RecognitionContractError("request_too_large", "The observation exceeds 8 MiB.", 413)
+    return parse_json(raw, max_bytes=MAX_TRADE_OBSERVATION_BYTES, label="observation")
+
+
 @recognition_api.errorhandler(RecognitionContractError)
 def handle_recognition_contract_error(error: RecognitionContractError):
     return _error(error.code, str(error), error.status)
@@ -71,14 +94,20 @@ def handle_recognition_too_large(_error_value):
 
 @recognition_api.errorhandler(RecognitionStoreError)
 def handle_recognition_store_error(error: RecognitionStoreError):
+    if isinstance(error, EvidenceIntegrityError):
+        return _error("evidence_integrity_error", "Stored evidence failed integrity verification.", 500)
     if isinstance(error, ConfigConflictError):
         return _error("config_conflict", "Recognition configuration changed; reload it before retrying.", 409)
+    if isinstance(error, CropLinkConflictError):
+        return _error("crop_link_conflict", "This review field already has a different crop attached.", 409)
     if isinstance(error, MutationConflictError):
         return _error("idempotency_conflict", "The request ID was already used with different content.", 409)
     if isinstance(error, RunNotFoundError):
         return _error("recognition_not_found", "The recognition run is unavailable.", 404)
     if isinstance(error, ProfileUnavailableError):
         return _error("profile_unavailable", "The requested profile version is unavailable.", 422)
+    if isinstance(error, _ArtifactBudgetExceeded):
+        return _error("evidence_budget_exceeded", "Evidence storage is full. Export or explicitly clean up evidence before retrying.", 507)
     return _error("evidence_store_unavailable", "Recognition evidence could not be stored.", 503, retryable=True)
 
 
@@ -125,6 +154,74 @@ def post_warehouse_capture():
 @recognition_api.post("/trade")
 def post_trade_capture():
     return _capture("trade")
+
+
+TRADE_OBSERVATION_PREFIX = "/trade-review-observations"
+
+
+@recognition_api.post(TRADE_OBSERVATION_PREFIX)
+def post_trade_review_observation():
+    payload = validate_trade_review_observation(_trade_observation_body())
+    receipt, duplicate = _store().create_trade_review_observation(payload)
+    status = 200 if duplicate else 201
+    response = jsonify({"ok": True, "receipt": {**receipt, "duplicate": duplicate}})
+    response.headers["Cache-Control"] = "no-store"
+    return response, status
+
+
+@recognition_api.get(TRADE_OBSERVATION_PREFIX + "/<observation_id>")
+def get_trade_review_observation(observation_id: str):
+    observation = _store().get_trade_review_observation(observation_id)
+    if observation is None: return _error("observation_not_found", "The observation is unavailable.", 404)
+    response = jsonify({"ok": True, "observation": observation,
+                        "cropEvidence": _store().get_trade_review_crop_evidence(observation_id)})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@recognition_api.get(TRADE_OBSERVATION_PREFIX + "/<observation_id>/export")
+def export_trade_review_observation(observation_id: str):
+    exported = _store().export_trade_review_observation(observation_id)
+    if exported is None: return _error("observation_not_found", "The observation is unavailable.", 404)
+    body = json.dumps(exported, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    if len(body) > 32 * 1024 * 1024: return _error("export_too_large", "The observation export exceeds 32 MiB.", 413)
+    return Response(body, mimetype="application/json; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="trade-review-{observation_id}.json"', "Cache-Control": "no-store"})
+
+
+@recognition_api.post(TRADE_OBSERVATION_PREFIX + "/<observation_id>/crops")
+def post_trade_review_crop(observation_id: str):
+    if request.headers.get("Content-Encoding", "identity").lower() not in {"", "identity"}:
+        return _error("unsupported_media_type", "Compressed crop uploads are not supported.", 415)
+    if request.mimetype != "multipart/form-data": return _error("unsupported_media_type", "Crop upload must use multipart/form-data.", 415)
+    if set(request.form.keys()) != {"metadata"} or len(request.form.getlist("metadata")) != 1 or set(request.files.keys()) != {"image"} or len(request.files.getlist("image")) != 1:
+        return _error("invalid_crop_parts", "Exactly one metadata field and one image part are required.", 422)
+    raw_metadata = request.form.getlist("metadata")[0]
+    metadata = parse_json(raw_metadata, max_bytes=4096, label="crop metadata")
+    upload = request.files.getlist("image")[0]
+    data = upload.stream.read(MAX_TRADE_CROP_BYTES + 1)
+    validated = validate_trade_crop_metadata(metadata, data)
+    if (upload.content_type or "").lower() != "image/png": return _error("invalid_crop", "Crop content type must be image/png.", 422)
+    receipt, duplicate = _store().attach_trade_review_crop(observation_id, validated, data)
+    response = jsonify({"ok": True, "receipt": {**receipt, "duplicate": duplicate}})
+    response.headers["Cache-Control"] = "no-store"
+    return response, 200 if duplicate else 201
+
+
+@recognition_api.get(TRADE_OBSERVATION_PREFIX + "/<observation_id>/export/crops/<digest>")
+def get_trade_review_crop(observation_id: str, digest: str):
+    import re
+    if not re.fullmatch(r"[0-9a-f]{64}", digest): return _error("crop_not_found", "The crop is unavailable.", 404)
+    evidence = _store().get_trade_review_crop_evidence(observation_id)
+    item = next((entry for entry in evidence if entry.get("artifactSha256") == digest), None)
+    if item is None: return _error("crop_not_found", "The crop is unavailable.", 404)
+    if item["availability"] == "EXPIRED": return _error("crop_expired", "The crop retention period has ended.", 410)
+    if item["availability"] != "AVAILABLE": return _error("crop_not_found", "The crop is unavailable.", 404)
+    path = _store().artifact_root / f"{digest}.png"
+    try: data = path.read_bytes()
+    except OSError: return _error("crop_not_found", "The crop is unavailable.", 404)
+    if sha256_bytes(data) != digest: return _error("evidence_integrity_error", "Stored evidence failed integrity verification.", 500)
+    return Response(data, mimetype="image/png", headers={"Content-Disposition": f'attachment; filename="{digest}.png"', "Cache-Control": "no-store"})
 
 
 @recognition_api.get("/trade-runtime")

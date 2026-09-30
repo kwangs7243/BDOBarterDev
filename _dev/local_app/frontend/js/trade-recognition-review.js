@@ -1,4 +1,4 @@
-import { adaptLegacyCatalog } from "./domain/trade-master-registry.js";
+import { adaptLegacyCatalog, registrySnapshotSha256 } from "./domain/trade-master-registry.js";
 import { buildTradeReviewProjection } from "./domain/trade-review-projection.js";
 
 const FIELD_KEYS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
@@ -98,6 +98,66 @@ function cropBox(field) {
   if (!box || !["x", "y", "width", "height"].every((key) => Number.isFinite(box[key]))) return null;
   if (box.x < 0 || box.y < 0 || box.width <= 0 || box.height <= 0) return null;
   return box;
+}
+
+function captureGeometry(row, field, captures) {
+  const capture = captures.find((item) => item?.metadata?.captureId === row.captureId);
+  const box = field?.rawEvidence?.readerEvidence?.geometry?.box;
+  const rowBox = row.rowBox;
+  if (!capture || !box || !rowBox) return null;
+  const values = [box.x, box.y, box.width, box.height, rowBox.x, rowBox.y, rowBox.width, rowBox.height];
+  if (!values.every(Number.isSafeInteger) || box.x < 0 || box.y < 0 || box.width < 1 || box.height < 1
+      || rowBox.x < 0 || rowBox.y < 0 || rowBox.width < 1 || rowBox.height < 1
+      || box.x + box.width > rowBox.width || box.y + box.height > rowBox.height) return null;
+  const x = rowBox.x + box.x; const y = rowBox.y + box.y;
+  const width = box.width; const height = box.height;
+  if (width > 1024 || height > 256 || width * height > 262144) return null;
+  if (x + width > capture.metadata.frame.width || y + height > capture.metadata.frame.height) return null;
+  return { source: "CAPTURE_BITMAP_PIXELS", captureId: row.captureId, x, y, width, height };
+}
+
+function makeCropPlan(projection, completion, captures) {
+  const entries = [];
+  for (const reviewed of completion.rows) {
+    const row = projection.rows.find((item) => item.projectionRowId === reviewed.projectionRowId);
+    if (!row) continue;
+    for (const key of FIELD_KEYS) {
+      const projected = row.fields[key];
+      const reviewedField = reviewed.fields.find((field) => field.field === key);
+      const risky = Boolean(projected.riskReasons?.length) || ["AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"].includes(projected.status);
+      const reasons = [];
+      if (reviewedField?.verificationMethod === "USER_MARKED_UNKNOWN") reasons.push("USER_MARKED_UNKNOWN");
+      else if (reviewedField?.verificationMethod === "USER_EDITED") reasons.push("USER_EDITED");
+      if (risky) reasons.push("RISKY_FIELD");
+      const selected = reasons.length > 0;
+      const geometry = captureGeometry(row, projected, captures);
+      entries.push({ projectionRowId: row.projectionRowId, field: key, selected, selectionReasons: reasons,
+        geometry, readerCropHash: projected.rawEvidence?.readerEvidence?.cropHash ?? null,
+        skipReason: !selected ? "NOT_SELECTED" : geometry ? null : "GEOMETRY_UNAVAILABLE" });
+    }
+  }
+  return { policy: "C2_REVIEW_VALUE_SUBSET_V1", entries };
+}
+
+function buildStorageSource({ recognitionResult, captures, registrySnapshot, projection }) {
+  const sourceCaptures = captures.map((capture) => ({
+    captureId: capture.metadata.captureId, metadata: cloneJson(capture.metadata),
+    bitmapSha256: capture.sha256 ?? null, sourceSha256: capture.sourceSha256 ?? null,
+    bitmapBytes: capture.bytes, sourceBytes: capture.sourceBytes, reencoded: capture.reencoded === true,
+  }));
+  const runtime = recognitionResult.runtime ?? {};
+  return {
+    version: 1, authority: "CLIENT_ATTESTED", gameVersion: null,
+    registry: { sourceRevision: registrySnapshot.source.revision, sourceSha256: registrySnapshot.source.sha256,
+      snapshotSha256: registrySnapshotSha256(registrySnapshot), snapshot: cloneJson(registrySnapshot), hashBasis: "JS_REGISTRY_SORTED_JSON_V1" },
+    projection: { snapshot: cloneJson(projection), hashBasis: "JS_REGISTRY_SORTED_JSON_V1" },
+    recognition: { resultVersion: 1,
+      runtime: { engineId: runtime.engineId ?? null, modelBundleSha256: runtime.modelBundleSha256 ?? null, workerVersion: runtime.workerVersion ?? null },
+      boundaryPolicy: recognitionResult.metrics?.boundaryPolicy ?? null,
+      captureEvidence: { captures: cloneJson(recognitionResult.captures), edgeSegments: cloneJson(recognitionResult.edgeSegments) },
+      geometryProfile: { revision: null, sha256: null, availability: "NOT_EXPOSED_BY_API" } },
+    captures: sourceCaptures,
+  };
 }
 
 async function createFieldCrop({ row, field, captures }) {
@@ -429,12 +489,33 @@ export async function mountTradeRecognitionReview({ root, recognitionResult, cap
         edgeSegmentCount: edgeSegments.length,
       },
     });
+    const cropPlan = makeCropPlan(projection, payload, captures);
+    const sourceContext = buildStorageSource({ recognitionResult, captures, registrySnapshot, projection });
+    const storageEnvelope = freezePayload({ schemaVersion: 1, mutationId: crypto.randomUUID(),
+      createdAt: new Date().toISOString().replace(/\.(\d{3})Z$/, ".$1Z"), confirmationRevision: 1,
+      supersedesObservationId: null, completion: payload, sourceContext, cropPlan });
     completed = true;
     completeButton.disabled = true;
     confirmBox.disabled = true;
     editorRefs.forEach(({ input, unknown }) => { input.disabled = true; unknown.disabled = true; });
     message.textContent = "검수를 완료했습니다. 아직 현재 회차에는 적용하지 않았습니다.";
-    onComplete?.(payload);
+    try {
+      const createSelectedCrops = async () => {
+        const blobs = [];
+        for (const entry of cropPlan.entries) {
+          if (!entry.selected || !entry.geometry) continue;
+          const row = projection.rows.find((candidate) => candidate.projectionRowId === entry.projectionRowId);
+          const field = row?.fields[entry.field];
+          const blob = row && field ? await createFieldCrop({ row, field, captures }) : null;
+          blobs.push({ entry, blob });
+        }
+        return blobs;
+      };
+      onComplete?.(payload, { observation: storageEnvelope, createSelectedCrops });
+    } catch (error) {
+      // Persistence preparation is secondary to the established R005 completion event.
+      console.error("trade review persistence preparation failed", error);
+    }
     window.dispatchEvent(new CustomEvent("bdo:trade-review-completed", { detail: payload }));
     updateSummary();
   });
