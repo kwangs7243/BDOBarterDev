@@ -130,7 +130,7 @@ try {
   const queueBatchIds = await evaluate("JSON.stringify([...document.querySelectorAll('.capture-draft-item')].map(item=>item.dataset.batchId))").then(JSON.parse);
   const beforeRecognition = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-result]').hidden===false"), "recognition draft result");
+  await waitFor(async () => evaluate("(() => { const region=document.querySelector('[data-role=trade-recognition-result]'); const summary=region?.querySelector('.trade-review-summary'); return region?.hidden===false && Boolean(summary) && summary.textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용'); })()"), "recognition review summary");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-recognition-result]').textContent.includes('로컬 인식 초안 · 2행 · 이미지 2장 · 경계 후보 1행 제외 · 목록 미적용')"), true);
   assert.deepEqual(await evaluate("JSON.stringify([...document.querySelectorAll('.trade-recognition-table thead th')].map(cell=>cell.textContent))").then(JSON.parse),
     ["행", "섬", "소모품", "필요 수량", "획득품", "남은 교환 횟수", "수율", "상태"]);
