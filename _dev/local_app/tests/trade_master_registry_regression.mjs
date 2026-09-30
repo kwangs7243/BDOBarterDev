@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 import {
   adaptLegacyCatalog,
   registrySnapshotSha256,
@@ -11,6 +12,17 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const digest = (text) => createHash("sha256").update(text).digest("hex");
+const productionModulePath = resolve(root, "local_app/frontend/js/domain/trade-master-registry.js");
+const productionModuleSource = await readFile(productionModulePath, "utf8");
+assert.doesNotMatch(productionModuleSource, /node:|from\s*["'](?:fs|path|crypto)(?:\/|["'])|\brequire\s*\(|\bBuffer\.|\bprocess\./, "production module must not use Node-only dependencies");
+assert.doesNotMatch(productionModuleSource, /\b(?:window|document|localStorage|sessionStorage|fetch)\b/, "production module must stay free of browser I/O side effects");
+const sha256FromSource = runInNewContext(`${productionModuleSource.replace(/^export\s+/gm, "")}\nsha256`, { TextEncoder });
+assert.equal(sha256FromSource(""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+assert.equal(sha256FromSource("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+const unicodeHashInput = "한국어 이름 😀";
+assert.equal(sha256FromSource(unicodeHashInput), digest(unicodeHashInput), "Korean, spaces, and surrogate-pair Unicode match Node SHA-256");
+const publicExports = [...productionModuleSource.matchAll(/^export\s+function\s+(\w+)/gm)].map((match) => match[1]).sort();
+assert.deepEqual(publicExports, ["adaptLegacyCatalog", "registrySnapshotSha256", "validateRegistrySnapshot"].sort());
 const sourceSha256 = "a".repeat(64);
 const options = { sourceRevision: "r002-regression-v1", sourceSha256 };
 const emptyCatalog = () => ({
@@ -136,6 +148,8 @@ const real = adaptLegacyCatalog(sourceCatalog, {
   sourceSha256: digest(sourceBytes),
   curatedMappings: null,
 });
+assert.equal(real.registryVersion, "registry-v1:945c2783ef60038074414c11747152bb17f2a9032c4e19c7a1832996bac762da");
+assert.equal(registrySnapshotSha256(real), "e7b6b9e19db555c4549199ad71a98e7d34802f77151b3bddb0fef65a8d6e4ee4");
 const sourceOccurrences = real.legacyNames.reduce((sum, name) => sum + name.occurrences.length, 0);
 assert.equal(sourceOccurrences, 241);
 assert.equal(real.entities.length, 0);
