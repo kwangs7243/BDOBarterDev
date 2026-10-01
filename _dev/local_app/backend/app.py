@@ -13,8 +13,10 @@ from .api.maintenance import maintenance_api
 from .api.state import api
 from .api.session import session_api
 from .api.recognition import recognition_api
+from .api.master import master_api
 from .contracts import ContractError
 from .recognition_store import RecognitionStore, RecognitionStoreError, default_recognition_database_path
+from .master_store import MasterStore, MasterStoreError, default_master_database_path
 from .services.trade_batch_runtime import TradeBatchRuntime
 from .storage import MutationConflict, RevisionConflict, Storage, default_database_path, load_catalog
 
@@ -27,7 +29,8 @@ MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 128 * 1024
 
 
 def create_app(database_path: str | Path | None = None, *, reference_path: str | Path | None = None,
-               recognition_database_path: str | Path | None = None, testing: bool = False) -> Flask:
+               recognition_database_path: str | Path | None = None, master_database_path: str | Path | None = None,
+               testing: bool = False) -> Flask:
     root = Path(__file__).resolve().parents[1]
     frontend = root / "frontend"
     catalog, order = load_catalog(Path(reference_path) if reference_path else None)
@@ -39,6 +42,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
     app.extensions["bdo_storage"] = store
     recognition_store = None
     recognition_store_error = None
+    sidecar_path = None
     try:
         if recognition_database_path is not None:
             sidecar_path = Path(recognition_database_path).resolve()
@@ -56,6 +60,25 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         recognition_store_error = type(error).__name__
     app.extensions["recognition_store"] = recognition_store
     app.extensions["recognition_store_error"] = recognition_store_error
+    master_store = None
+    master_store_error = None
+    try:
+        if master_database_path is not None:
+            master_path = Path(master_database_path).resolve()
+        elif testing:
+            master_path = db_path.resolve().parent / "master" / "master.sqlite3"
+        else:
+            master_path = default_master_database_path().resolve()
+        if master_path == db_path.resolve() or (sidecar_path is not None and master_path == sidecar_path):
+            master_store_error = "DatabasePathMustBeSeparate"
+        else:
+            master_store = MasterStore(master_path)
+            master_store.initialize()
+    except (OSError, MasterStoreError, sqlite3.Error, RuntimeError) as error:
+        master_store = None
+        master_store_error = type(error).__name__
+    app.extensions["master_store"] = master_store
+    app.extensions["master_store_error"] = master_store_error
     app.extensions["trade_batch_runtime"] = TradeBatchRuntime()
     mutation_condition = threading.Condition()
     app.extensions["bdo_mutation_condition"] = mutation_condition
@@ -66,6 +89,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
     app.register_blueprint(scan_api)
     app.register_blueprint(maintenance_api)
     app.register_blueprint(recognition_api)
+    app.register_blueprint(master_api)
 
     @app.before_request
     def restrict_to_local_origin():
@@ -76,9 +100,11 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         if host not in allowed_hosts:
             return jsonify({"ok": False, "error": {"code": "invalid_host", "message": "Only the local application host is accepted."}}), 400
         recognition_request = request.path == "/api/recognition" or request.path.startswith("/api/recognition/")
+        master_request = request.path == "/api/master" or request.path.startswith("/api/master/")
+        master_mutation = master_request and request.method in {"POST", "PUT", "PATCH", "DELETE"}
         session_mutation = request.path.startswith("/api/working-session") and request.method in {"PATCH", "PUT", "POST", "DELETE"}
         recognition_mutation = recognition_request and request.method in {"PATCH", "PUT", "POST", "DELETE"}
-        if recognition_request and request.method == "OPTIONS":
+        if (recognition_request or master_request) and request.method == "OPTIONS":
             return jsonify({"ok": False, "error": {"code": "cors_preflight_denied", "message": "Cross-origin preflight is not accepted."}}), 403
         origin = request.headers.get("Origin")
         if origin:
@@ -87,7 +113,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
                 allowed_origins.add(origin)
             if origin not in allowed_origins:
                 return jsonify({"ok": False, "error": {"code": "invalid_origin", "message": "Cross-origin requests are not accepted."}}), 403
-        if recognition_mutation or session_mutation:
+        if recognition_mutation or session_mutation or master_mutation:
             expected_origin = f"http://{host}"
             if origin is None:
                 return jsonify({"ok": False, "error": {"code": "origin_required", "message": "A same-origin request is required."}}), 403
@@ -99,7 +125,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         legacy_mutation = request.method in {"PATCH", "PUT", "POST", "DELETE"} and (request.path in {
             "/api/inventory", "/api/inventory/order", "/api/settings", "/api/warehouse-scan"
         } or request.path.startswith(("/api/working-session", "/api/schedule-slots/")))
-        if recognition_request or legacy_mutation:
+        if recognition_request or legacy_mutation or master_mutation:
             with mutation_condition:
                 state = app.extensions["bdo_mutation_state"]
                 if state["stopping"]:

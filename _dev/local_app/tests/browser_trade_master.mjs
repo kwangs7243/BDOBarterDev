@@ -21,8 +21,9 @@ const python = process.env.PYTHON ?? "python";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const profile = await mkdtemp(join(tmpdir(), "bdo-arch-m2-master-"));
 const database = join(profile, "isolated.sqlite3");
+const masterDatabase = join(profile, "master", "master.sqlite3");
 const port = Number(new URL(baseUrl).port || 18791);
-const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=${port}, use_reloader=False, threaded=True)`;
+const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', master_database_path=r'${masterDatabase}', testing=True).run(host='127.0.0.1', port=${port}, use_reloader=False, threaded=True)`;
 let server;
 let chrome;
 let socket;
@@ -154,7 +155,7 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy') === 'false'"), "app bootstrap");
   const beforeRuntime = await fetch(`${baseUrl}api/bootstrap`).then((response) => response.json());
   const beforeStorage = await evaluate("JSON.stringify({local:Object.keys(localStorage),session:Object.keys(sessionStorage)})").then(JSON.parse);
-  await evaluate("window.__masterApiRequests=[]; window.__masterOriginalFetch=window.fetch; window.fetch=(input,init)=>{const url=new URL(typeof input==='string'?input:input.url,location.href);if(url.pathname.startsWith('/api/'))window.__masterApiRequests.push({url:url.pathname,method:init?.method??'GET'});return window.__masterOriginalFetch(input,init)}");
+  await evaluate("window.__masterApiRequests=[]; window.__masterOriginalFetch=window.fetch.bind(window); window.__simulateLostPublishOnce=false;window.__simulateReadbackFailureOnce=false;window.__simulateStaleOnce=false;window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input.url,location.href);const method=init?.method??'GET';let body=null;if(init?.body){try{body=JSON.parse(init.body)}catch{}}if(url.pathname.startsWith('/api/'))window.__masterApiRequests.push({url:url.pathname,method,body});if(url.pathname==='/api/master/publish'&&window.__simulateStaleOnce){window.__simulateStaleOnce=false;return new Response(JSON.stringify({ok:false,error:{code:'master_revision_conflict',message:'stale'}}),{status:409,headers:{'Content-Type':'application/json'}})}if(url.pathname==='/api/master/active'&&window.__simulateReadbackFailureOnce){window.__simulateReadbackFailureOnce=false;return new Response(JSON.stringify({ok:false}),{status:503,headers:{'Content-Type':'application/json'}})}if(url.pathname==='/api/master/publish'&&window.__simulateLostPublishOnce){window.__simulateLostPublishOnce=false;await window.__masterOriginalFetch(input,init);throw new TypeError('simulated response loss')}return window.__masterOriginalFetch(input,init)}");
 
   await evaluate("document.querySelector('#open-trade-master').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]')?.textContent === '241'"), "production catalog preview");
@@ -168,10 +169,10 @@ try {
   const filterCounts = await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const count=(kind)=>{d.querySelector(`[data-master-filter=${kind}]`).click();return d.querySelectorAll('[data-master-list] [role=option]').length};const item=count('ITEM'),island=count('ISLAND');d.querySelector('[data-master-filter=ALL]').click();return {item,island,all:d.querySelectorAll('[data-master-list] [role=option]').length}})()");
   assert.ok(filterCounts.item > 0 && filterCounts.island > 0);
   assert.equal(filterCounts.item + filterCounts.island, 230);
-  const firstRawName = await evaluate("document.querySelector('#trade-master-dialog .trade-master-list-name').textContent");
+  const firstRawName = await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1'));if(!row)throw new Error('tier 1 legacy record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()");
   await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const s=d.querySelector('[data-master-search]');s.value=${JSON.stringify(firstRawName.slice(0, 2))};s.dispatchEvent(new Event('input',{bubbles:true}))})()`);
   assert.ok(await evaluate("document.querySelectorAll('#trade-master-dialog [data-master-list] [role=option]').length") > 0);
-  await evaluate("document.querySelector('#trade-master-dialog [data-master-search]').value='';document.querySelector('#trade-master-dialog [data-master-search]').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#trade-master-dialog [data-master-list] [role=option]').click()");
+  await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const s=d.querySelector('[data-master-search]');s.value='';s.dispatchEvent(new Event('input',{bubbles:true}));const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-name').textContent===${JSON.stringify(firstRawName)});row.click()})()`);
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"stableId\"]').textContent"), "미발급");
   const selectedRawName = await evaluate("document.querySelector('#trade-master-dialog .trade-master-editor-title h3').textContent");
   const masterPayload = "<script>window.__masterXss=true</script> & \"따옴표\"";
@@ -182,7 +183,7 @@ try {
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog .trade-master-review-action button').disabled"), false);
   await evaluate("document.querySelector('#trade-master-dialog .trade-master-review-action button').click()");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog .trade-master-review-state').dataset.state"), "DRAFT_REVIEWED_PENDING_SAVE");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').disabled"), true);
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').disabled"), false);
   await evaluate("document.querySelector('#trade-master-dialog [data-master-close]').click()");
   await evaluate("document.querySelector('#open-trade-master').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog').open"), "production dialog reopen");
@@ -192,19 +193,93 @@ try {
   assert.equal(await evaluate("window.__masterXss === true"), false);
   const afterRuntime = await fetch(`${baseUrl}api/bootstrap`).then((response) => response.json());
   assert.deepEqual(afterRuntime, beforeRuntime, "editing a Master draft does not change the active app/session");
-  assert.deepEqual(await evaluate("window.__masterApiRequests"), [], "Master preview does not call application APIs");
+  assert.deepEqual(await evaluate("window.__masterApiRequests.filter(x=>x.url.includes('/proposal')||x.url.includes('/publish'))"), [], "draft edits do not publish before explicit save");
   const afterStorage = await evaluate("JSON.stringify({local:Object.keys(localStorage),session:Object.keys(sessionStorage)})").then(JSON.parse);
   assert.deepEqual(afterStorage, beforeStorage);
   assert.equal([...afterStorage.local, ...afterStorage.session].some((key) => /master/i.test(key)), false);
 
+  await evaluate("window.__simulateLostPublishOnce=true;document.querySelector('#trade-master-dialog [data-master-save]').click()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('응답이 불확실')"), "ambiguous publish response");
+  await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('저장 완료')"), "first owner-confirmed publish");
+  const firstStored = await fetch(`${baseUrl}api/master/active`).then((response) => response.json());
+  assert.equal(firstStored.bundle.entities.length, 1);
+  assert.equal(firstStored.bundle.unresolvedLegacyNames.length, 229);
+  assert.equal(firstStored.bundle.entities[0].canonicalName, masterPayload);
+  assert.match(firstStored.bundle.entities[0].stableId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.equal(firstStored.bundle.entities[0].legacyNames[0].occurrences.length > 0, true);
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]').textContent"), "241");
+  const firstPublishBodies = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').map(x=>x.body)");
+  assert.equal(firstPublishBodies.length, 2);
+  assert.equal(firstPublishBodies[0].mutationId, firstPublishBodies[1].mutationId);
+  assert.equal(firstPublishBodies[0].bundle.registryVersion, firstPublishBodies[1].bundle.registryVersion);
+  assert.equal(firstPublishBodies[0].bundle.contentHash, firstPublishBodies[1].bundle.contentHash);
+  assert.equal(firstPublishBodies[0].bundle.entities[0].stableId, firstPublishBodies[1].bundle.entities[0].stableId);
+  assert.deepEqual(await fetch(`${baseUrl}api/bootstrap`).then((response) => response.json()), beforeRuntime,
+    "Master publish leaves the active app/session bootstrap unchanged");
+
   await evaluate("window.__m2ReloadMarker=true");
   await send("Page.reload", { ignoreCache: true });
   await waitFor(async () => evaluate("!window.__m2ReloadMarker && document.querySelector('#app-content')?.getAttribute('aria-busy') === 'false'"), "new app document reload");
-  await evaluate("window.__masterApiRequests=[];window.__masterOriginalFetch=window.fetch;window.fetch=(input,init)=>{const url=new URL(typeof input==='string'?input:input.url,location.href);if(url.pathname.startsWith('/api/'))window.__masterApiRequests.push({url:url.pathname,method:init?.method??'GET'});return window.__masterOriginalFetch(input,init)}");
+  await evaluate("window.__masterApiRequests=[]; window.__masterOriginalFetch=window.fetch.bind(window); window.__simulateLostPublishOnce=false;window.__simulateReadbackFailureOnce=false;window.__simulateStaleOnce=false;window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input.url,location.href);const method=init?.method??'GET';let body=null;if(init?.body){try{body=JSON.parse(init.body)}catch{}}if(url.pathname.startsWith('/api/'))window.__masterApiRequests.push({url:url.pathname,method,body});if(url.pathname==='/api/master/publish'&&window.__simulateStaleOnce){window.__simulateStaleOnce=false;return new Response(JSON.stringify({ok:false,error:{code:'master_revision_conflict',message:'stale'}}),{status:409,headers:{'Content-Type':'application/json'}})}if(url.pathname==='/api/master/active'&&window.__simulateReadbackFailureOnce){window.__simulateReadbackFailureOnce=false;return new Response(JSON.stringify({ok:false}),{status:503,headers:{'Content-Type':'application/json'}})}if(url.pathname==='/api/master/publish'&&window.__simulateLostPublishOnce){window.__simulateLostPublishOnce=false;await window.__masterOriginalFetch(input,init);throw new TypeError('simulated response loss')}return window.__masterOriginalFetch(input,init)}");
   await evaluate("document.querySelector('#open-trade-master').click()");
-  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]')?.textContent === '241'"), "preview after reload");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-unsaved]').textContent"), "저장되지 않은 초안은 없습니다. 창을 닫았다 다시 열면 유지되지만 새로고침하면 사라집니다.");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"Canonical 이름 초안\"]').value"), selectedRawName, "reload clears in-memory draft and restores the source preview");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]')?.textContent === '241'"), "persisted Master after reload");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=names]').textContent"), "230");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=unresolved]').textContent"), "229");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"stableId\"]').textContent"), firstStored.bundle.entities[0].stableId);
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"Canonical 이름 초안\"]').value"), masterPayload, "reload reads persisted curation rather than the legacy seed");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-export]').disabled"), false);
+
+  const secondRawName = await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1')&&x.querySelector('.trade-master-list-name').textContent!==${JSON.stringify(firstRawName)});if(!row)throw new Error('second tier 1 legacy record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()`);
+  await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const input=d.querySelector('[aria-label=\"Canonical 이름 초안\"]');input.value='두 번째 검수 품목';input.dispatchEvent(new Event('input',{bubbles:true}))})()");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').disabled"), true,
+    "unreviewed edits cannot be saved");
+  const publishesBeforeReview = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').length");
+  await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
+  assert.equal(await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').length"), publishesBeforeReview,
+    "an unreviewed draft creates no publish request");
+  await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');d.querySelector('.trade-master-review-action button').click();window.__simulateLostPublishOnce=true;d.querySelector('[data-master-save]').click()})()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('응답이 불확실')"), "incremental publish response loss");
+  await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('저장 완료')"), "incremental second publish");
+  const afterSecond = await fetch(`${baseUrl}api/master/active`).then((response) => response.json());
+  assert.equal(afterSecond.bundle.entities.length, 2);
+  assert.equal(afterSecond.bundle.unresolvedLegacyNames.length, 228);
+  assert.ok(afterSecond.bundle.entities.some((entity) => entity.stableId === firstStored.bundle.entities[0].stableId));
+  assert.equal(afterSecond.storeRevision, 2, "the ambiguous retry activates only once");
+  const secondPublishBodies = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').slice(-2).map(x=>x.body)");
+  assert.equal(secondPublishBodies.length, 2);
+  assert.equal(secondPublishBodies[0].mutationId, secondPublishBodies[1].mutationId);
+  assert.equal(secondPublishBodies[0].bundle.registryVersion, secondPublishBodies[1].bundle.registryVersion);
+  assert.equal(secondPublishBodies[0].bundle.contentHash, secondPublishBodies[1].bundle.contentHash);
+
+  const linkedRawName = await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const excluded=new Set([${JSON.stringify(firstRawName)},${JSON.stringify(secondRawName)}]);const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1')&&!excluded.has(x.querySelector('.trade-master-list-name').textContent));if(!row)throw new Error('linkable tier 1 record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()`);
+  await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const mode=d.querySelector('[aria-label=\"저장 연결 방식 초안\"]');mode.value='LINK_EXISTING';mode.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog .trade-master-review-action button').disabled"), true,
+    "linking cannot be confirmed before the owner chooses an existing entity");
+  await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const target=d.querySelector('[aria-label="연결할 기존 entity 초안"]');target.value=${JSON.stringify(firstStored.bundle.entities[0].stableId)};target.dispatchEvent(new Event('change',{bubbles:true}));d.querySelector('.trade-master-review-action button').click();window.__simulateReadbackFailureOnce=true;d.querySelector('[data-master-save]').click()})()`);
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('최종 확인에 실패')"), "publish success with simulated readback failure");
+  const publishesBeforeReadbackRetry = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').length");
+  await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('저장 완료')"), "readback-only retry");
+  const afterLink = await fetch(`${baseUrl}api/master/active`).then((response) => response.json());
+  assert.equal(afterLink.bundle.entities.length, 2, "linking does not create another entity");
+  assert.equal(afterLink.bundle.unresolvedLegacyNames.length, 227);
+  const linkedEntity = afterLink.bundle.entities.find((entity) => entity.stableId === firstStored.bundle.entities[0].stableId);
+  const linkedRecord = linkedEntity.legacyNames.find((record) => record.rawName === linkedRawName);
+  assert.ok(linkedRecord);
+  assert.ok(afterLink.bundle.compatibilityMappings.some((mapping) => mapping.stableId === linkedEntity.stableId && mapping.legacyNameKeys.includes(linkedRecord.legacyNameKey)));
+  assert.equal(afterLink.storeRevision, 3);
+  assert.equal(await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').length"), publishesBeforeReadbackRetry,
+    "readback retry does not publish a second time");
+
+  await evaluate("window.__simulateStaleOnce=true");
+  await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.dataset.masterKey.startsWith('legacy:')&&x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1'));row.click();const input=d.querySelector('[aria-label=\"Canonical 이름 초안\"]');input.value='stale client draft';input.dispatchEvent(new Event('input',{bubbles:true}));d.querySelector('.trade-master-review-action button').click();d.querySelector('[data-master-save]').click()})()");
+  await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('Master가 변경되었습니다')"), "stale publish conflict");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').disabled"), true);
+  assert.equal((await fetch(`${baseUrl}api/master/active`).then((response) => response.json())).storeRevision, 3,
+    "stale client does not alter active Master");
+  await evaluate("window.__masterApiRequests=[]");
 
   const fakeDialog = await evaluate(`(async()=>{const template=document.querySelector('#trade-master-dialog');const dialog=template.cloneNode(true);dialog.id='trade-master-dialog-fixture';document.body.append(dialog);const {initTradeMasterUI}=await import('/assets/js/trade-master-ui.js');window.__fakeMasterUi=initTradeMasterUI({dialog,openButton:null,loadMasterPreview:async()=>window.__fakeMasterPreview,saveMaster:null});return true})()`);
   assert.equal(fakeDialog, true);
@@ -227,7 +302,7 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog-error [data-master-error]:not([hidden])')?.textContent.includes('synthetic catalog unavailable')"), "in-dialog loader error");
   assert.equal(await evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy') === 'false'"), true, "Master preview failure does not fail app bootstrap");
   assert.equal(await evaluate("window.__masterApiRequests.length"), 0);
-  console.log("PASS browser_trade_master: production preview 241/230/0, filters/search, draft memory lifecycle, synthetic stable IDs, safe text, no save/API/runtime mutation, loader error isolation");
+  console.log("PASS browser_trade_master: isolated first/incremental publish, reload persistence, explicit link, same-mutation retry, readback-only retry, stale conflict, M2 synthetic isolation, safe text");
 } finally {
   if (socket && socket.readyState === WebSocket.OPEN) socket.close();
   await stopChild(chrome);

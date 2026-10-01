@@ -1,5 +1,6 @@
 import { adaptLegacyCatalog } from "./domain/trade-master-registry.js";
 import {
+  createMasterBundleV2,
   adaptRegistrySnapshotV1ToMasterBundleV2,
   validateMasterBundleV2,
 } from "./domain/trade-master-bundle.js";
@@ -24,7 +25,7 @@ function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
-async function loadProductionPreview() {
+async function loadLegacySeed() {
   const response = await fetch("/assets/data/trade-catalog.json", {
     credentials: "same-origin",
     cache: "no-cache",
@@ -47,6 +48,87 @@ async function loadProductionPreview() {
   });
 }
 
+async function loadProductionPreview() {
+  try {
+    const response = await fetch("/api/master/active", { credentials: "same-origin", cache: "no-store" });
+    if (!response.ok) throw new Error(`Master 저장소 응답 ${response.status}`);
+    const active = await response.json();
+    if (active.ok !== true) throw new Error("Master 저장소 상태를 확인할 수 없습니다.");
+    if (active.bundle) return { bundle: active.bundle, activeRegistryVersion: active.activeRegistryVersion,
+      storeRevision: active.storeRevision, persistenceAvailable: true };
+    return { bundle: await loadLegacySeed(), activeRegistryVersion: null, storeRevision: active.storeRevision,
+      persistenceAvailable: true };
+  } catch (error) {
+    const bundle = await loadLegacySeed();
+    return { bundle, activeRegistryVersion: null, storeRevision: null, persistenceAvailable: false,
+      storageError: error?.message ?? "Master 저장소 연결 실패" };
+  }
+}
+
+async function postJson(path, payload) {
+  let response;
+  try {
+    response = await fetch(path, { method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  } catch (error) {
+    throw Object.assign(new Error("저장 요청 응답을 받지 못했습니다. 같은 요청으로 다시 시도할 수 있습니다."), { cause: error, networkAmbiguous: path.endsWith("/publish") });
+  }
+  const body = await response.json().catch(() => null);
+  if (!response.ok || body?.ok !== true) {
+    const code = body?.error?.code ?? "master_request_failed";
+    const messages = {
+      master_revision_conflict: "Master가 변경되었습니다. 다시 불러와 검수해 주세요.",
+      master_mutation_conflict: "같은 저장 요청 ID에 다른 내용이 연결되어 저장을 중단했습니다.",
+      master_store_unavailable: "Master 저장소를 사용할 수 없습니다.",
+      approval_required: "명시적인 owner 확인이 필요합니다.",
+      proposal_mismatch: "저장 후보와 검토한 proposal이 일치하지 않습니다.",
+    };
+    throw Object.assign(new Error(messages[code] ?? `Master 저장 요청 실패 (${response.status})`), {
+      status: response.status, code, retryable: response.status >= 500,
+    });
+  }
+  return body;
+}
+
+async function saveProductionMaster(candidate, expectedRegistryVersion, pending) {
+  if (pending.receipt) {
+    const activeResponse = await fetch("/api/master/active", { credentials: "same-origin", cache: "no-store" });
+    if (!activeResponse.ok) throw Object.assign(new Error("저장 응답을 받았지만 최종 확인에 실패했습니다."), { readbackOnly: true });
+    const active = await activeResponse.json();
+    if (active.activeRegistryVersion !== pending.receipt.registryVersion
+        || active.bundle?.contentHash !== pending.receipt.contentHash) {
+      throw Object.assign(new Error("저장 응답을 받았지만 최종 확인에 실패했습니다."), { readbackOnly: true });
+    }
+    return { bundle: active.bundle, activeRegistryVersion: active.activeRegistryVersion,
+      storeRevision: active.storeRevision, receipt: pending.receipt };
+  }
+  if (!pending.proposal) {
+    const proposed = await postJson("/api/master/proposal", {
+      version: 1, expectedRegistryVersion, bundle: candidate,
+    });
+    const proposal = proposed.proposal;
+    if (!proposal || proposal.expectedRegistryVersion !== expectedRegistryVersion
+        || proposal.registryVersion !== candidate.registryVersion || proposal.contentHash !== candidate.contentHash
+        || typeof proposal.proposalHash !== "string") {
+      throw new Error("서버 proposal receipt가 저장 후보와 일치하지 않습니다.");
+    }
+    pending.proposal = proposal;
+  }
+  if (!pending.mutationId) pending.mutationId = globalThis.crypto.randomUUID();
+  const published = await postJson("/api/master/publish", {
+    version: 1, mutationId: pending.mutationId, expectedRegistryVersion, ownerApproved: true,
+    proposalHash: pending.proposal.proposalHash, bundle: candidate,
+  });
+  const receipt = { ...published };
+  delete receipt.ok;
+  if (receipt.registryVersion !== candidate.registryVersion || receipt.contentHash !== candidate.contentHash
+      || receipt.mutationId !== pending.mutationId) {
+    throw new Error("publish receipt가 저장 후보와 일치하지 않습니다.");
+  }
+  pending.receipt = receipt;
+  return saveProductionMaster(candidate, expectedRegistryVersion, pending);
+}
+
 function itemKind(legacyKind) {
   return legacyKind === "ISLAND" ? "ISLAND" : "ITEM";
 }
@@ -65,7 +147,7 @@ function sourceRecords(bundle) {
   return records.map(({ record, entity }) => {
     const legacyKind = record?.legacyKind ?? (entity?.kind === "ISLAND" ? "ISLAND" : "MASTER_ITEM");
     const rawName = record?.rawName ?? entity?.canonicalName ?? entity?.stableId ?? "이름 미지정 entity";
-    const key = entity ? `entity:${entity.stableId}` : `legacy:${record.legacyNameKey}`;
+    const key = entity ? `entity:${entity.stableId}:${record?.legacyNameKey ?? "unlinked"}` : `legacy:${record.legacyNameKey}`;
     return {
       key,
       record,
@@ -94,6 +176,8 @@ function initialDraft(item) {
     targetStatus: entity?.status ?? "LEGACY_UNVERIFIED",
     ownerNote: entity?.provenance?.note ?? "",
     ownerConfirmed: false,
+    resolutionMode: item.entity ? "" : "NEW_ENTITY",
+    linkStableId: "",
   };
 }
 
@@ -127,7 +211,7 @@ function setSummary(root, bundle, items) {
     names: namesCount,
     verified: bundle.entities.filter((entity) => entity.status === "VERIFIED_CURATED").length,
     unresolved: bundle.unresolvedLegacyNames.length,
-    saved: 0,
+    saved: bundle.entities.length,
   };
   for (const [key, value] of Object.entries(values)) {
     const target = root.querySelector(`[data-master-summary="${key}"]`);
@@ -135,7 +219,114 @@ function setSummary(root, bundle, items) {
   }
 }
 
+function provenanceWithNote(previous, note) {
+  const provenance = clone(previous ?? {});
+  if (note) provenance.note = note;
+  else delete provenance.note;
+  return provenance;
+}
+
+function nameEntry(text, status, provenance = {}) {
+  return { text, status, provenance: clone(provenance) };
+}
+
+function updateEntityFromDraft(entity, item, draft, baseline) {
+  if (draft.canonicalName !== baseline.canonicalName) entity.canonicalName = draft.canonicalName;
+  if (draft.displayName !== baseline.displayName) {
+    const previous = entity.displayNames[0] ?? null;
+    const rest = entity.displayNames.slice(previous ? 1 : 0);
+    entity.displayNames = draft.displayName
+      ? [nameEntry(draft.displayName, draft.targetStatus, previous?.provenance ?? {}), ...rest]
+      : rest;
+  }
+  if (JSON.stringify(draft.aliases) !== JSON.stringify(baseline.aliases)) {
+    const previousByText = new Map(entity.aliases.map((entry) => [entry.text, entry]));
+    entity.aliases = draft.aliases.map((text) => {
+      const previous = previousByText.get(text);
+      return nameEntry(text, previous?.status ?? draft.targetStatus, previous?.provenance ?? {});
+    });
+  }
+  if (draft.tier !== baseline.tier) entity.tier = item.kind === "ITEM" && draft.tier ? Number(draft.tier) : null;
+  if (draft.category !== baseline.category) entity.category = item.legacyKind === "SPECIAL_ITEM"
+    ? SPECIAL_CATEGORY : item.kind === "ITEM" && draft.category ? draft.category : null;
+  if (draft.targetStatus !== baseline.targetStatus) entity.status = draft.targetStatus;
+  if (draft.ownerNote !== baseline.ownerNote) entity.provenance = provenanceWithNote(entity.provenance, draft.ownerNote);
+}
+
+function buildCandidate(base, reviewed, { createId = () => globalThis.crypto.randomUUID(), createdAt = new Date().toISOString() } = {}) {
+  const entities = clone(base.entities);
+  const mappings = clone(base.compatibilityMappings);
+  const unresolved = clone(base.unresolvedLegacyNames);
+  for (const { item, draft, baseline } of reviewed) {
+    if (item.entity) {
+      const entity = entities.find((entry) => entry.stableId === item.entity.stableId);
+      if (!entity) throw new Error("선택한 저장 entity가 현재 Master에서 사라졌습니다.");
+      updateEntityFromDraft(entity, item, draft, baseline);
+      continue;
+    }
+    const recordIndex = unresolved.findIndex((entry) => entry.legacyNameKey === item.record?.legacyNameKey);
+    if (recordIndex < 0) throw new Error("검토할 unresolved legacy source를 찾을 수 없습니다.");
+    const sourceRecord = unresolved[recordIndex];
+    const { reason: _reason, ...legacyRecord } = sourceRecord;
+    if (draft.resolutionMode === "LINK_EXISTING") {
+      const target = entities.find((entry) => entry.stableId === draft.linkStableId);
+      if (!target || target.kind !== item.kind) throw new Error("같은 종류의 연결 대상 entity를 선택해 주세요.");
+      if (item.legacyKind === "MASTER_ITEM" && target.tier !== item.tier) throw new Error("원본 tier와 같은 entity만 연결할 수 있습니다.");
+      if (item.legacyKind === "SPECIAL_ITEM" && target.category !== SPECIAL_CATEGORY) throw new Error("특수 품목 category가 호환되는 entity만 연결할 수 있습니다.");
+      const baseline = getBaselineForDraft(item);
+      updateEntityFromDraft(target, item, draft, baseline);
+      const addedRecord = { ...legacyRecord, authorityStatus: target.status === "VERIFIED_CURATED" ? "VERIFIED_CURATED" : "LEGACY_UNVERIFIED" };
+      target.legacyNames.push(addedRecord);
+      unresolved.splice(recordIndex, 1);
+      const mapping = mappings.find((entry) => entry.stableId === target.stableId);
+      if (mapping) {
+        mapping.legacyNameKeys = [...new Set([...mapping.legacyNameKeys, addedRecord.legacyNameKey])].sort();
+        mapping.sourceLocators = [...new Set([...mapping.sourceLocators, ...addedRecord.occurrences.map((entry) => entry.locator)])].sort();
+      } else {
+        mappings.push({ stableId: target.stableId, legacyNameKeys: [addedRecord.legacyNameKey],
+          sourceLocators: addedRecord.occurrences.map((entry) => entry.locator).sort() });
+      }
+      continue;
+    }
+    if (draft.resolutionMode !== "NEW_ENTITY") throw new Error("새 entity 또는 기존 entity 연결 방식을 명시해 주세요.");
+    const stableId = createId();
+    const status = draft.targetStatus;
+    const namesStatus = status === "VERIFIED_CURATED" && draft.ownerConfirmed ? "VERIFIED_CURATED" : "LEGACY_UNVERIFIED";
+    const entity = {
+      stableId, kind: item.kind, canonicalName: draft.canonicalName,
+      displayNames: draft.displayName ? [nameEntry(draft.displayName, namesStatus, { source: "owner-curation" })] : [],
+      aliases: draft.aliases.map((text) => nameEntry(text, namesStatus, { source: "owner-curation" })),
+      legacyNames: [{ ...legacyRecord, authorityStatus: status }],
+      tier: item.kind === "ITEM" ? (draft.tier ? Number(draft.tier) : null) : null,
+      category: item.kind === "ITEM" ? (item.legacyKind === "SPECIAL_ITEM" ? SPECIAL_CATEGORY : draft.category || null) : null,
+      status, provenance: draft.ownerNote ? { note: draft.ownerNote } : {}, replacedBy: null,
+    };
+    entities.push(entity);
+    mappings.push({ stableId, legacyNameKeys: [legacyRecord.legacyNameKey],
+      sourceLocators: legacyRecord.occurrences.map((entry) => entry.locator).sort() });
+    unresolved.splice(recordIndex, 1);
+  }
+  return createMasterBundleV2({ createdAt, entities, compatibilityMappings: mappings,
+    unresolvedLegacyNames: unresolved, sourceRevisions: clone(base.sourceRevisions), provenance: clone(base.provenance) });
+}
+
+function getBaselineForDraft(item) {
+  const entity = item.entity;
+  return {
+    canonicalName: entity?.canonicalName ?? item.rawName,
+    displayName: entity?.displayNames?.[0]?.text ?? "",
+    aliases: (entity?.aliases ?? []).map((alias) => alias.text),
+    tier: item.kind === "ITEM" ? String(item.tier ?? "") : "",
+    category: item.category ?? "",
+    targetStatus: entity?.status ?? "LEGACY_UNVERIFIED",
+    ownerNote: entity?.provenance?.note ?? "",
+  };
+}
+
 function verifiedDraftProblem(item, draft) {
+  if (!item.entity && draft.resolutionMode === "LINK_EXISTING" && !draft.linkStableId) {
+    return "기존 entity 연결 대상을 직접 선택해야 합니다.";
+  }
   if (draft.targetStatus !== "VERIFIED_CURATED") return "";
   if (!draft.canonicalName.trim()) return "검증 목표에는 Canonical 이름이 필요합니다.";
   if (item.kind === "ITEM") {
@@ -148,8 +339,8 @@ function verifiedDraftProblem(item, draft) {
 }
 
 export function initTradeMasterUI({
-  loadMasterPreview = loadProductionPreview,
-  saveMaster = null,
+  loadMasterPreview = undefined,
+  saveMaster = undefined,
   dialog = document.querySelector("#trade-master-dialog"),
   openButton = document.querySelector("#open-trade-master"),
 } = {}) {
@@ -160,12 +351,32 @@ export function initTradeMasterUI({
   const errorBox = dialog.querySelector("[data-master-error]");
   const unsavedLabel = dialog.querySelector("[data-master-unsaved]");
   const saveButton = dialog.querySelector("[data-master-save]");
-  const state = { bundle: null, items: [], drafts: new Map(), selectedKey: null, filter: "ALL", loadPromise: null };
-
-  if (saveButton) {
-    saveButton.disabled = true;
-    saveButton.title = "저장 기능은 다음 단계에서 활성화됩니다.";
+  const productionLoader = loadMasterPreview ?? loadProductionPreview;
+  const productionSaver = saveMaster === undefined ? saveProductionMaster : saveMaster;
+  const state = { bundle: null, items: [], drafts: new Map(), selectedKey: null, filter: "ALL", loadPromise: null,
+    activeRegistryVersion: null, storeRevision: null, persistenceAvailable: false, storageError: "", saveInProgress: false,
+    pendingSave: null, saveBlocked: false };
+  const safety = dialog.querySelector(".trade-master-safety");
+  if (safety) {
+    safety.querySelector("strong")?.replaceChildren(document.createTextNode("현재 Master 검수 · 저장은 다음 인식부터 반영"));
+    safety.querySelector("span")?.replaceChildren(document.createTextNode("저장된 immutable Master만 이 화면에 적용됩니다. 현재 인식 결과와 회차에는 반영되지 않습니다."));
   }
+  const storageNote = dialog.querySelector(".trade-master-storage-note");
+  if (storageNote) storageNote.textContent = "Master 저장소 연결 상태를 확인하는 중입니다.";
+  const header = dialog.querySelector(".trade-master-header");
+  const activeLabel = element("p", "trade-master-active", "저장된 Master 상태 확인 전");
+  activeLabel.dataset.masterActive = "";
+  header?.append(activeLabel);
+  const footer = dialog.querySelector(".trade-master-footer");
+  const exportButton = element("button", "", "현재 Master 내보내기");
+  exportButton.type = "button";
+  exportButton.dataset.masterExport = "";
+  exportButton.disabled = true;
+  footer?.prepend(exportButton);
+  const saveStatus = element("p", "trade-master-save-status", "");
+  saveStatus.dataset.masterSaveStatus = "";
+  footer?.append(saveStatus);
+  if (saveButton) saveButton.disabled = true;
 
   function getDraft(item) {
     if (!state.drafts.has(item.key)) {
@@ -180,6 +391,32 @@ export function initTradeMasterUI({
     unsavedLabel.textContent = changed
       ? `저장되지 않은 초안 ${changed}개 · 창을 닫았다 다시 열면 유지되지만 새로고침하면 사라집니다.`
       : "저장되지 않은 초안은 없습니다. 창을 닫았다 다시 열면 유지되지만 새로고침하면 사라집니다.";
+  }
+
+  function updateSaveState() {
+    if (!saveButton) return;
+    const changed = [...state.drafts.values()].filter((draft) => draft.status !== "UNTOUCHED");
+    const allReviewed = changed.length > 0 && changed.every((draft) => draft.status === "DRAFT_REVIEWED_PENDING_SAVE");
+    const pendingRetry = Boolean(state.pendingSave && !state.saveBlocked);
+    saveButton.disabled = state.saveInProgress || !state.persistenceAvailable || typeof productionSaver !== "function"
+      || (!pendingRetry && (!allReviewed || state.saveBlocked));
+    saveButton.textContent = state.pendingSave?.receipt ? "저장 상태 다시 확인"
+      : state.pendingSave ? "같은 저장 요청 다시 시도" : "검수한 마스터 저장";
+    saveButton.title = !state.persistenceAvailable ? "Master 저장소를 사용할 수 없습니다."
+      : !allReviewed && !pendingRetry ? "수정한 초안을 먼저 확인해 주세요." : "확인된 초안만 immutable Master로 저장합니다.";
+    if (!state.persistenceAvailable) saveStatus.textContent = state.storageError
+      ? `Master 저장소를 사용할 수 없습니다: ${state.storageError}` : "Master 저장소를 사용할 수 없습니다.";
+    else if (changed.some((draft) => draft.status === "DRAFT_EDITED")) saveStatus.textContent = "수정한 초안을 먼저 확인해 주세요.";
+    exportButton.disabled = !state.persistenceAvailable || !state.activeRegistryVersion;
+    activeLabel.textContent = state.activeRegistryVersion
+      ? `현재 저장된 Master · revision ${state.storeRevision} · ${state.activeRegistryVersion} · entity ${state.bundle?.entities.length ?? 0}개 · 미해결 ${state.bundle?.unresolvedLegacyNames.length ?? 0}개`
+      : state.persistenceAvailable ? `아직 저장된 curated Master가 없습니다 · revision ${state.storeRevision ?? 0} · legacy 미리보기 사용 중`
+        : "저장된 Master를 확인할 수 없습니다 · legacy 미리보기는 읽을 수 있지만 저장은 비활성입니다.";
+    if (storageNote) storageNote.textContent = state.persistenceAvailable
+      ? "저장 시 owner 확인한 초안만 새 immutable Master version으로 기록됩니다. 인식과 현재 회차에는 적용되지 않습니다."
+      : "Master 저장소를 사용할 수 없습니다. legacy 미리보기만 표시하며 저장은 비활성입니다.";
+    dialog.querySelector('[data-master-summary="saved"]')?.parentElement?.querySelector("span")
+      ?.replaceChildren(document.createTextNode("저장된 entity"));
   }
 
   function updateList() {
@@ -239,6 +476,34 @@ export function initTradeMasterUI({
     fields.append(labelField("legacy kind", element("output", "trade-master-readonly", item.legacyKind)));
     const tierSource = item.legacyKind === "MASTER_ITEM" ? `원본 tier ${item.tier}` : "원본 tier 비적용";
     fields.append(labelField("원본 tier / category", element("output", "trade-master-readonly", `${tierSource} · ${item.category ?? "일반"}`)));
+
+    let resolutionMode;
+    let linkTarget;
+    if (!item.entity) {
+      resolutionMode = element("select");
+      resolutionMode.setAttribute("aria-label", "저장 연결 방식 초안");
+      for (const [value, label] of [["NEW_ENTITY", "새 항목으로 저장"], ["LINK_EXISTING", "기존 항목에 연결"]]) {
+        const option = element("option", "", label); option.value = value; resolutionMode.append(option);
+      }
+      resolutionMode.value = draft.resolutionMode;
+      fields.append(labelField("저장할 identity 방식", resolutionMode, { hint: "문자열 유사도로 자동 연결하지 않습니다." }));
+      linkTarget = element("select");
+      linkTarget.setAttribute("aria-label", "연결할 기존 entity 초안");
+      const blank = element("option", "", "연결할 기존 entity를 직접 선택"); blank.value = ""; linkTarget.append(blank);
+      const compatible = state.bundle.entities.filter((entity) => {
+        if (entity.kind !== item.kind) return false;
+        if (item.legacyKind === "MASTER_ITEM") return entity.tier === item.tier;
+        if (item.legacyKind === "SPECIAL_ITEM") return entity.category === SPECIAL_CATEGORY;
+        return true;
+      });
+      for (const entity of compatible) {
+        const option = element("option", "", `${entity.canonicalName ?? "이름 미지정"} · ${entity.tier ? `Tier ${entity.tier} · ` : ""}${entity.stableId}`);
+        option.value = entity.stableId; linkTarget.append(option);
+      }
+      linkTarget.value = draft.linkStableId;
+      linkTarget.hidden = draft.resolutionMode !== "LINK_EXISTING";
+      fields.append(labelField("기존 entity 선택", linkTarget, { hint: compatible.length ? "종류·tier/category 호환 대상만 표시합니다." : "호환되는 기존 entity가 없습니다." }));
+    }
 
     const canonical = element("input");
     canonical.type = "text";
@@ -373,15 +638,17 @@ export function initTradeMasterUI({
     }
 
     function updateDraft(key, value) {
+      if (state.pendingSave) return;
       draftRecord.value[key] = value;
       draftRecord.status = sameDraft(draftRecord.value, draftRecord.baseline) ? "UNTOUCHED" : "DRAFT_EDITED";
       validation.textContent = verifiedDraftProblem(item, draftRecord.value);
-      reviewButton.disabled = draftRecord.value.targetStatus === "VERIFIED_CURATED" && Boolean(validation.textContent);
+      reviewButton.disabled = Boolean(validation.textContent);
       reviewState.textContent = draftRecord.status === "DRAFT_EDITED" ? "수정 중" : "미검토";
       reviewState.dataset.state = draftRecord.status;
       reviewButton.textContent = "이 초안을 확인했습니다";
       updateUnsaved();
       updateList();
+      updateSaveState();
     }
 
     const bindInput = (node, key, convert = (value) => value) => node.addEventListener("input", () => updateDraft(key, convert(node.value)));
@@ -391,6 +658,11 @@ export function initTradeMasterUI({
     bindInput(categoryControl, "category");
     bindInput(statusSelect, "targetStatus");
     bindInput(note, "ownerNote");
+    resolutionMode?.addEventListener("change", () => {
+      updateDraft("resolutionMode", resolutionMode.value);
+      linkTarget.hidden = resolutionMode.value !== "LINK_EXISTING";
+    });
+    linkTarget?.addEventListener("change", () => updateDraft("linkStableId", linkTarget.value));
     ownerConfirm.addEventListener("change", () => updateDraft("ownerConfirmed", ownerConfirm.checked));
     const addAlias = () => {
       const value = aliasInput.value;
@@ -418,10 +690,14 @@ export function initTradeMasterUI({
       validation.textContent = "";
       updateUnsaved();
       updateList();
+      updateSaveState();
     });
     renderAliases();
     validation.textContent = verifiedDraftProblem(item, draft);
-    reviewButton.disabled = draft.targetStatus === "VERIFIED_CURATED" && Boolean(validation.textContent);
+    reviewButton.disabled = Boolean(validation.textContent);
+    if (state.pendingSave || state.saveBlocked) {
+      editor.querySelectorAll("input, select, textarea, button").forEach((control) => { control.disabled = true; });
+    }
   }
 
   function showLoadError(error) {
@@ -438,12 +714,20 @@ export function initTradeMasterUI({
   async function load() {
     if (state.bundle) return state.bundle;
     if (!state.loadPromise) {
-      state.loadPromise = Promise.resolve().then(loadMasterPreview).then((bundle) => {
+      state.loadPromise = Promise.resolve().then(productionLoader).then((loaded) => {
+        const stateResult = loaded && typeof loaded === "object" && Object.hasOwn(loaded, "bundle")
+          ? loaded : { bundle: loaded, persistenceAvailable: typeof productionSaver === "function" };
+        const bundle = stateResult.bundle;
         const validation = validateMasterBundleV2(bundle);
         if (!validation.ok) throw new Error(`Master bundle 검증 실패: ${validation.errors.join("; ")}`);
         state.bundle = bundle;
+        state.persistenceAvailable = stateResult.persistenceAvailable === true;
+        state.storageError = stateResult.storageError ?? "";
+        state.activeRegistryVersion = stateResult.activeRegistryVersion ?? null;
+        state.storeRevision = stateResult.storeRevision ?? null;
         state.items = sourceRecords(bundle);
         setSummary(dialog, bundle, state.items);
+        updateSaveState();
         updateUnsaved();
         if (errorBox) { errorBox.hidden = true; errorBox.replaceChildren(); }
         updateList();
@@ -472,9 +756,102 @@ export function initTradeMasterUI({
     if (dialog.open) dialog.close();
   }
 
+  async function saveReviewedDrafts() {
+    if (state.saveInProgress || !state.persistenceAvailable || typeof productionSaver !== "function") return;
+    let pending = state.pendingSave;
+    if (!pending) {
+      const changed = [...state.drafts.entries()].filter(([, draft]) => draft.status !== "UNTOUCHED");
+      if (!changed.length || changed.some(([, draft]) => draft.status !== "DRAFT_REVIEWED_PENDING_SAVE")) {
+        saveStatus.textContent = "수정한 초안을 먼저 확인해 주세요.";
+        updateSaveState();
+        return;
+      }
+      const reviewed = changed.map(([key, draft]) => {
+        const item = state.items.find((entry) => entry.key === key);
+        if (!item) throw new Error("검토 대상 Master 항목을 찾을 수 없습니다.");
+        if (!item.entity && draft.value.resolutionMode === "LINK_EXISTING" && !draft.value.linkStableId) {
+          throw new Error("기존 entity 연결을 선택한 경우 연결 대상을 지정해야 합니다.");
+        }
+        const problem = verifiedDraftProblem(item, draft.value);
+        if (problem) throw new Error(problem);
+        return { item, draft: clone(draft.value), baseline: clone(draft.baseline) };
+      });
+      try {
+        const candidate = buildCandidate(state.bundle, reviewed);
+        const result = validateMasterBundleV2(candidate);
+        if (!result.ok) throw new Error(`저장 후보 검증 실패: ${result.errors.join("; ")}`);
+        pending = { candidate, expectedRegistryVersion: state.activeRegistryVersion, reviewedKeys: reviewed.map(({ item }) => item.legacyNameKey ?? item.stableId) };
+        state.pendingSave = pending;
+      } catch (error) {
+        saveStatus.textContent = error?.message ?? "저장 후보를 만들 수 없습니다.";
+        return;
+      }
+    }
+    state.saveInProgress = true;
+    saveStatus.textContent = pending.receipt ? "저장 상태를 다시 확인하고 있습니다." : "검토 초안을 저장하고 확인하는 중입니다.";
+    updateSaveState();
+    try {
+      const result = await productionSaver(pending.candidate, pending.expectedRegistryVersion, pending);
+      const { bundle, activeRegistryVersion, storeRevision, receipt } = result ?? {};
+      const validation = validateMasterBundleV2(bundle);
+      if (!validation.ok || activeRegistryVersion !== receipt?.registryVersion || bundle.contentHash !== receipt?.contentHash) {
+        throw Object.assign(new Error("저장 응답을 받았지만 최종 확인에 실패했습니다."), { readbackOnly: true });
+      }
+      const oldItem = state.items.find((entry) => entry.key === state.selectedKey);
+      const resolvedEntity = oldItem?.legacyNameKey
+        ? bundle.entities.find((entity) => entity.legacyNames.some((record) => record.legacyNameKey === oldItem.legacyNameKey))
+        : null;
+      state.bundle = bundle;
+      state.activeRegistryVersion = activeRegistryVersion;
+      state.storeRevision = storeRevision;
+      state.items = sourceRecords(bundle);
+      state.selectedKey = resolvedEntity
+        ? state.items.find((item) => item.stableId === resolvedEntity.stableId && item.legacyNameKey === oldItem.legacyNameKey)?.key
+        : state.selectedKey;
+      if (!state.items.some((item) => item.key === state.selectedKey)) state.selectedKey = state.items[0]?.key ?? null;
+      state.drafts.clear();
+      state.pendingSave = null;
+      state.saveBlocked = false;
+      setSummary(dialog, bundle, state.items);
+      updateUnsaved();
+      updateList();
+      const selected = state.items.find((item) => item.key === state.selectedKey);
+      if (selected) renderEditor(selected);
+      saveStatus.textContent = `저장 완료 · revision ${storeRevision} · ${activeRegistryVersion}`;
+      updateSaveState();
+    } catch (error) {
+      const stale = error?.code === "master_revision_conflict" || error?.code === "master_mutation_conflict";
+      state.saveBlocked = stale;
+      if (error?.networkAmbiguous || error?.readbackOnly || error?.retryable) {
+        saveStatus.textContent = error?.readbackOnly
+          ? "저장 응답을 받았지만 최종 확인에 실패했습니다. 버튼을 눌러 저장 상태만 다시 확인하세요."
+          : "저장 응답이 불확실합니다. 같은 저장 요청으로 다시 시도하세요.";
+      } else {
+        if (!state.pendingSave?.receipt && !state.pendingSave?.mutationId) state.pendingSave = null;
+        saveStatus.textContent = error?.message ?? "Master 저장에 실패했습니다.";
+      }
+      const selected = state.items.find((item) => item.key === state.selectedKey);
+      if (selected) renderEditor(selected);
+      updateSaveState();
+    } finally {
+      state.saveInProgress = false;
+      updateSaveState();
+    }
+  }
+
   openButton?.addEventListener("click", open);
   dialog.querySelectorAll("[data-master-close]").forEach((button) => button.addEventListener("click", close));
   search?.addEventListener("input", updateList);
+  saveButton?.addEventListener("click", () => { void saveReviewedDrafts(); });
+  exportButton.addEventListener("click", () => {
+    if (!state.activeRegistryVersion || exportButton.disabled) return;
+    const anchor = element("a");
+    anchor.href = `/api/master/bundles/${encodeURIComponent(state.activeRegistryVersion)}/export`;
+    anchor.download = `master-${state.activeRegistryVersion.replaceAll(":", "-")}.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+  });
   dialog.querySelectorAll("[data-master-filter]").forEach((button) => button.addEventListener("click", () => {
     state.filter = button.dataset.masterFilter;
     dialog.querySelectorAll("[data-master-filter]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
