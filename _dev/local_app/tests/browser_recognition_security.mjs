@@ -7,26 +7,31 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const baseUrl = "http://127.0.0.1:18765/";
+const baseUrl = "http://127.0.0.1:18774/";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const python = process.env.PYTHON ?? "python";
 const profile = await mkdtemp(join(tmpdir(), "bdo-recognition-browser-"));
 const mainDatabase = join(profile, "main.sqlite3");
 const sidecarDatabase = join(profile, "recognition", "recognition.sqlite3");
 const isolatedLocalAppData = join(profile, "local-app-data");
-const pythonCode = `from local_app.backend.app import create_app; create_app(r'${mainDatabase}', recognition_database_path=r'${sidecarDatabase}', testing=False).run(host='127.0.0.1', port=18765, use_reloader=False, threaded=True)`;
+// Keep production origin enforcement active on the isolated test server's own port.
+const pythonCode = `import local_app.backend.app as application; application.PORT=18774; application.create_app(r'${mainDatabase}', recognition_database_path=r'${sidecarDatabase}', testing=False).run(host='127.0.0.1', port=18774, use_reloader=False, threaded=True)`;
 let serverProcess;
 let chrome;
 let socket;
 let attacker;
 try {
-  serverProcess = spawn(python, ["-c", pythonCode], {
+  serverProcess = spawn(python, ["-B", "-c", pythonCode], {
     cwd: root,
     stdio: "ignore",
     windowsHide: true,
     env: { ...process.env, LOCALAPPDATA: isolatedLocalAppData },
   });
-  await waitFor(async () => { try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "isolated T002 server");
+  serverProcess.once("error", error => { serverProcess.startupError = error; });
+  await waitFor(async () => {
+    if (serverProcess.startupError) throw serverProcess.startupError;
+    if (serverProcess.exitCode !== null) throw new Error(`Isolated security server exited: ${serverProcess.exitCode}`);
+    try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "isolated T002 server");
 
   chrome = spawn(chromePath, ["--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking", "--remote-debugging-port=0", "--remote-allow-origins=*", `--user-data-dir=${join(profile, "chrome-profile")}`, "about:blank"], { stdio: "ignore", windowsHide: true });
   const activePortPath = join(profile, "chrome-profile", "DevToolsActivePort");
@@ -58,6 +63,14 @@ try {
   };
   await send("Page.enable");
   await send("Runtime.enable");
+  await waitFor(async () => {
+    try {
+      return await evaluate(`location.origin === ${JSON.stringify(new URL(baseUrl).origin)} && document.readyState === 'complete'`);
+    } catch (error) {
+      if (/context.*destroyed|Cannot find context/i.test(error.message)) return false;
+      throw error;
+    }
+  }, "same-origin application page");
 
   const sameOriginSave = await evaluate(`(async()=>{const initial=await fetch('/api/recognition/config').then(r=>r.json());const flags=Object.fromEntries(Object.keys(initial.config.flags).map(k=>[k,false]));const response=await fetch('/api/recognition/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:1,expectedConfigRevision:initial.config.configRevision,flags,profiles:[]})});return {status:response.status,body:await response.json()}})()`);
   if (sameOriginSave.status !== 200 || sameOriginSave.body.config.configRevision !== 1) throw new Error(`same-origin config save failed: ${JSON.stringify(sameOriginSave)}`);

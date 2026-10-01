@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,7 +42,7 @@ try {
     const id = ++nextId; pending.set(id, { resolve: resolveMessage, reject }); socket.send(JSON.stringify({ id, method, params }));
   });
   const evaluate = async (expression) => {
-    const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+    const result = await send("Runtime.evaluate", { expression: "(()=>eval("+JSON.stringify(expression)+"))()", awaitPromise: true, returnByValue: true });
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text);
     return result.result?.value;
   };
@@ -144,6 +144,52 @@ try {
   const savedManual = afterMasterApply.inventory.find(item => item.programName === correctionItem).stock;
   if (savedManual === null || savedManual !== correctionTotals.total) throw new Error(`manual correction quantities did not reach inventory: item=${correctionItem} expected=${correctionTotals.total} saved=${savedManual}`);
   console.log(JSON.stringify({ ok: true, browser: "Chrome headless", upload: "tracked fixtures: barter_only.png and mixed.png", manualCorrectionSlots: masterReview.rows.length, slotPreviews: "all rendered", incompleteApplyBlocked: true, correctionsAppliedInSingleInventoryMutation: true, correctionItem: correctionItem, correctionQuantity: correctionTotals.total, customTier4Order: reviewTier4, reviewRows: reviewedNames.length, applyCancelledWithoutWrite: true, staleRevisionRequiredReconfirmation: true, failedSaveKeptReviewAndDatabaseUnchanged: true, committedWriteRecoveredAfterRefreshError: true, applyChangedPatchStocksOnly: true, targetsOrderSettingsPreserved: true, temporaryDatabase: true }, null, 2));
+
+  // Feedback declarations are synthetic user actions on the unchanged oracle fixture, not new truth labels.
+  const feedbackImage = await readFile(reviewFixture);
+  const oracle = JSON.parse(await readFile(resolve(root,"local_app/tests/fixtures/recognition-v2/warehouse-mixed.expected.json"),"utf8"));
+  const { createHash } = await import('node:crypto');
+  if (createHash('sha256').update(feedbackImage).digest('hex') !== oracle.sourceImageHash) throw Error('feedback fixture hash differs from immutable oracle');
+  await evaluate(`(async()=>{const bytes=Uint8Array.from(atob(${JSON.stringify(feedbackImage.toString('base64'))}),c=>c.charCodeAt(0));const file=new File([bytes],'mixed.png',{type:'image/png'});const form=new FormData();form.append('image',file);const response=await fetch('/api/warehouse-scan',{method:'POST',body:form});if(!response.ok)throw Error('scan failed');const result=await response.json();window.__feedbackScan=result;const {openPatchReview}=await import('/assets/js/patch-review.js');openPatchReview(result.patch,result.report,{imageFile:file,setStatus:()=>{},onApplied:()=>{window.__feedbackApplied=true}})})()`);
+  const originalReport = await evaluate("JSON.stringify(window.__feedbackScan.report)");
+  const slots = JSON.parse(originalReport).slots;
+  for (const slot of slots.filter(s=>s.decision==='MATCH')) {
+    const expected = oracle.slots.find(s=>s.slot===slot.slot);
+    if (slot.finalItem!==expected.item.programName || slot.quantity.value!==expected.quantity.value) throw Error('MATCH reading differs from existing oracle');
+  }
+  if (!await evaluate("document.querySelectorAll('.patch-confirmed-row').length>=4 && document.querySelectorAll('.patch-correction-row').length>0 && [...document.querySelectorAll('.patch-item-check')].every(s=>JSON.stringify([...s.options].map(o=>o.value))===JSON.stringify(['unchecked','item_only','quantity_only','both_match','both_different']))")) throw Error('editable groups/four-way agreement controls missing');
+  await waitFor(async()=>await evaluate("[...document.querySelectorAll('[data-slot-preview]')].every(c=>c.getContext('2d').getImageData(0,0,120,120).data.some(x=>x))"),'all feedback slot previews');
+  await evaluate("(()=>{const rows=[...document.querySelectorAll('.patch-confirmed-row')],names=rows.map(r=>r.querySelector('.patch-correction-item').value);rows.slice(0,4).forEach((r,i)=>{const item=r.querySelector('.patch-correction-item'),q=r.querySelector('.patch-correction-quantity'),check=r.querySelector('.patch-item-check');if(i>=2){item.value=names.find(n=>n!==item.value);item.dispatchEvent(new Event('input'));}if(i===1||i===3){q.value=Number(q.value)+1;q.dispatchEvent(new Event('input'));}check.value=['both_match','item_only','quantity_only','both_different'][i];check.dispatchEvent(new Event('change'));});[...document.querySelectorAll('.patch-correction-row')].forEach((r,i)=>{if(i){r.querySelector('.patch-correction-exclude').click();return;}const slot=window.__feedbackScan.report.slots.find(s=>s.slot===r.dataset.slot),item=r.querySelector('.patch-correction-item'),q=r.querySelector('.patch-correction-quantity'),check=r.querySelector('.patch-item-check');item.value=names.find(n=>n!==(slot.finalItem??slot.bestCandidate));item.dispatchEvent(new Event('input'));q.value=Number.isSafeInteger(slot.quantity?.value)?slot.quantity.value:0;q.dispatchEvent(new Event('input'));check.value=Number.isSafeInteger(slot.quantity?.value)?'quantity_only':'both_different';check.dispatchEvent(new Event('change'));});})()");
+  if (!await evaluate("!document.querySelector('.patch-review-footer [data-action=apply]').disabled")) throw Error('valid agreement edits blocked');
+  await evaluate("const s=document.querySelector('.patch-confirmed-row .patch-item-check');s.value='both_different';s.dispatchEvent(new Event('change'))");
+  if (!await evaluate("document.querySelector('.patch-review-footer [data-action=apply]').disabled")) throw Error('contradictory agreement not blocked');
+  await evaluate("const s=document.querySelector('.patch-confirmed-row .patch-item-check');s.value='both_match';s.dispatchEvent(new Event('change'))");
+  if (await evaluate("JSON.stringify(window.__feedbackScan.report)") !== originalReport) throw Error('editing replaced raw scanner evidence');
+  const feedbackBefore = await bootstrap();
+  await evaluate("window.__feedbackWrites=[];const original=window.fetch;window.fetch=(url,options)=>{if(String(url)==='/api/inventory'&&options?.method==='PATCH')window.__feedbackWrites.push(JSON.parse(options.body));return original(url,options)};document.querySelector('.patch-review-footer [data-action=apply]').click()");
+  await waitFor(async()=>await evaluate('window.__feedbackApplied===true'),'feedback single apply');
+  const bodies = await evaluate('window.__feedbackWrites');
+  if (bodies.length!==1 || bodies[0].feedback.version!==2 || !['both_match','item_only','quantity_only','both_different'].every(a=>bodies[0].feedback.rows.some(r=>r.agreement===a))) throw Error('single v2 feedback write missing agreement lineage');
+  if ((await bootstrap()).revision !== feedbackBefore.revision+1) throw Error('feedback revision did not advance exactly once');
+  const exported = await fetch(`${baseUrl}api/warehouse-dataset`);
+  if (!exported.ok) throw Error('feedback export failed');
+  const zipPath=join(profile,'feedback.zip');await writeFile(zipPath,Buffer.from(await exported.arrayBuffer()));
+  const {isDeepStrictEqual:equal}=await import('node:util');
+  const scanId=bodies[0].feedback.scanId;
+  const check=spawnSync(python,['-B','-c',"import json,zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); rows=[json.loads(x) for x in z.read('samples.jsonl').splitlines()]; print(json.dumps([r for r in rows if r['scanId']==sys.argv[2]],ensure_ascii=True))",zipPath,scanId],{encoding:'utf8',cwd:root,windowsHide:true});
+  if (check.status!==0) throw Error(check.stderr);
+  const samples=JSON.parse(check.stdout);
+  if (samples.length!==slots.length) throw Error('export lost source slots');
+  for (const sample of samples) {
+    const raw=slots.find(s=>s.slot===sample.modelOutput.slot);
+    if (!equal(sample.modelOutput,raw)) throw Error('export replaced original reading');
+    const user=bodies[0].feedback.rows.find(r=>r.slot===raw.slot);
+    if(!user){if(sample.humanFeedback.length)throw Error('non-target source promoted to truth');continue;}
+    if (sample.humanFeedback.length!==1 || !equal(sample.humanFeedback[0].user,user)) throw Error('export feedback lineage mismatch');
+    const label=sample.humanFeedback[0];
+    if (label.verifiedItemLabel!==(!user.excluded&&user.agreement!=='unchecked') || label.verifiedQuantityLabel!==(!user.excluded&&user.agreement!=='unchecked')) throw Error('unchecked/excluded prediction promoted to truth');
+  }
+  console.log('warehouse_feedback_v2: PASS · oracle fixture unchanged, editable groups, four agreements, contradiction block, previews, one write, raw/export lineage');
 
   async function uploadAndScan(viaDrop = false, imagePath = fixture) {
     const queuedBefore = Number(await evaluate("document.querySelector('#warehouse-scan-dialog')?.dataset.queueLength ?? 0"));

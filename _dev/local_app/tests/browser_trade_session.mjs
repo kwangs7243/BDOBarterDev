@@ -36,12 +36,43 @@ try {
     if (message.id && pending.has(message.id)) { const { resolve: resolveCall, reject } = pending.get(message.id); pending.delete(message.id); message.error ? reject(new Error(message.error.message)) : resolveCall(message.result); }
   });
   const send = (method, params = {}) => new Promise((resolveCall, reject) => { const id = ++nextId; pending.set(id, { resolve: resolveCall, reject }); socket.send(JSON.stringify({ id, method, params })); });
-  const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result?.value; };
+  const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression: "(()=>eval("+JSON.stringify(expression)+"))()", awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result?.value; };
   await send("Page.enable"); await send("Runtime.enable");
   await waitFor(async () => (await evaluate("document.querySelectorAll('.inventory-row').length")) === 70, "SPEC-002 UI and trade panel");
   const seed = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"), "utf8"))[0];
   const second = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"), "utf8"))[1];
   const encodedSeed = JSON.stringify(JSON.stringify([seed]));
+  const idle = () => evaluate("import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle())");
+  const inputRows = rows => evaluate(`document.querySelector('#trade-json-input').value=${JSON.stringify(JSON.stringify(rows))};document.querySelector('#apply-new-session').click()`);
+  const closeReview = async () => {
+    await evaluate("document.querySelector('.trade-import-review[open] .patch-review-footer button').click()");
+    await waitFor(async () => await evaluate("!document.querySelector('.trade-import-review')"), "closed review removed before next import");
+  };
+  await evaluate("document.querySelector('#open-json-import').click();document.querySelector('#trade-json-input').value='';document.querySelector('#apply-new-session').click()");
+  if (!await evaluate("document.querySelector('#json-import-dialog').open && document.querySelector('#trade-import-status').textContent.includes('JSON 파싱 실패') && document.querySelectorAll('.trade-row').length===0")) throw Error("empty import lost correction dialog or changed session");
+  await evaluate("document.querySelector('#json-import-dialog [data-close-dialog]').click()");
+  await inputRows([{...seed,toItem:'완전 미인식 품목'}]);
+  if (!await evaluate("document.querySelector('.trade-import-review[open]') && !document.querySelector('.trade-import-review[open] .trade-review-include').checked")) throw Error("rejected-only default exclusion missing");
+  await closeReview();
+  if (await evaluate("import('/assets/js/state.js').then(({state})=>state.session.scannedTrades)") !== null) throw Error("cancel changed empty session");
+  await inputRows([{...seed,toItem:'완전 미인식 품목'}]);
+  await evaluate(`const d=document.querySelector('.trade-import-review[open]');const f=d.querySelector('[data-field=toItem]');f.value=${JSON.stringify(seed.toItem)};f.dispatchEvent(new Event('input'));d.querySelector('.trade-review-include').click();d.querySelector('[data-action=apply]').click()`);
+  await waitFor(async () => await evaluate("!document.querySelector('.trade-import-review') && document.querySelectorAll('.trade-row').length===1"), "rejected-only repair");
+  await idle();
+  const reviewedBefore = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify(state.session.scannedTrades))");
+  const third = JSON.parse(await readFile(resolve(root,"local_app/tests/fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"),"utf8"))[2];
+  const mixed = [seed,{...second,yield:0},{...third,toItem:'품목 확인 불가'}];
+  await inputRows(mixed);
+  if (!await evaluate("document.querySelectorAll('.trade-import-review[open] .trade-review-include').length===2 && [...document.querySelectorAll('.trade-import-review[open] .trade-review-include')].every(n=>!n.checked)")) throw Error("mixed default exclusion missing");
+  await closeReview();
+  if (await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify(state.session.scannedTrades))") !== reviewedBefore) throw Error("cancel changed prior session");
+  await inputRows(mixed);
+  await evaluate("const d=document.querySelector('.trade-import-review[open]');d.querySelector('.trade-review-include').click();const f=d.querySelector('[data-field=yield]');f.value='1.5';f.dispatchEvent(new Event('input'));d.querySelector('[data-action=apply]').click()");
+  if (!await evaluate("document.querySelector('.trade-import-review[open] [role=alert]').textContent.includes('정수')") || await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify(state.session.scannedTrades))") !== reviewedBefore) throw Error("invalid correction escaped validation");
+  await evaluate("const d=document.querySelector('.trade-import-review[open]');const f=d.querySelector('[data-field=yield]');f.value='2';f.dispatchEvent(new Event('input'));d.querySelector('[data-action=apply]').click()");
+  await waitFor(async () => await evaluate("!document.querySelector('.trade-import-review') && document.querySelectorAll('.trade-row').length===2"), "selected repair and unselected exclusion");
+  await idle();
+
   const initialDefault = await evaluate("fetch('/api/bootstrap').then(r=>r.json()).then(snapshot=>JSON.stringify(snapshot.settings.parley))");
   await evaluate(`document.querySelector('#trade-json-input').value=${encodedSeed}; document.querySelector('#apply-new-session').click()`);
   await waitFor(async () => (await evaluate("document.querySelectorAll('.trade-row').length")) === 1, "new session row");
@@ -53,13 +84,17 @@ try {
   if (JSON.parse(afterMalformed).count !== 1 || JSON.parse(afterMalformed).parley !== 7777 || !JSON.parse(afterMalformed).status.includes("JSON 파싱 실패")) throw new Error(`malformed input changed the current session: ${afterMalformed}`);
 
   await evaluate(`document.querySelector('#trade-json-input').value=${encodedSeed}; document.querySelector('#append-current-trades').click()`);
-  await evaluate("document.querySelector('.trade-import-review button').click()");
+  await evaluate("document.querySelector('.trade-import-review[open] .patch-review-footer button').click()");
   const afterDuplicate = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify({count:state.session.scannedTrades.length,status:document.querySelector('#trade-import-status').textContent}))");
   if (JSON.parse(afterDuplicate).count !== 1 || !JSON.parse(afterDuplicate).status.includes("중복")) throw new Error(`duplicate append contract changed: ${afterDuplicate}`);
 
+  await idle();
+  const beforeConflict = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify(state.session.scannedTrades))");
   const conflict = { ...seed, fromItem: second.fromItem };
   await evaluate(`document.querySelector('#trade-json-input').value=${JSON.stringify(JSON.stringify([conflict]))}; document.querySelector('#append-current-trades').click()`);
-  await evaluate("document.querySelector('.trade-import-review button').click()");
+  await evaluate("const d=document.querySelector('.trade-import-review[open]');d.querySelector('.trade-review-include').click();d.querySelector('[data-action=apply]').click()");
+  if (!await evaluate("document.querySelector('.trade-import-review[open] [role=alert]').textContent.includes('충돌')") || await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify(state.session.scannedTrades))") !== beforeConflict) throw Error("selected conflict must stay held without mutating session");
+  await closeReview();
   const afterConflict = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify({count:state.session.scannedTrades.length,status:document.querySelector('#trade-import-status').textContent}))");
   if (JSON.parse(afterConflict).count !== 1 || !JSON.parse(afterConflict).status.includes("충돌")) throw new Error(`conflicting append was not held: ${afterConflict}`);
 
@@ -77,6 +112,14 @@ try {
   const rowFlags = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify({yield:state.session.scannedTrades[0].yield,disabled:state.session.scannedTrades[0].disabled,deleted:state.session.scannedTrades[0].deleted}))");
   if (JSON.stringify(JSON.parse(rowFlags)) !== JSON.stringify({ yield: 7, disabled: true, deleted: true })) throw new Error(`row yield/disabled/deleted state mismatch: ${rowFlags}`);
 
+  await idle();
+  await evaluate("document.querySelector('.trade-row button').click();document.querySelector('.trade-row input[type=checkbox]').click()");
+  if (!await evaluate("import('/assets/js/state.js').then(({state})=>!state.session.scannedTrades[0].deleted&&!state.session.scannedTrades[0].disabled)")) throw Error("restore must reactivate prior state");
+  await evaluate("document.querySelector('#toggle-all-trades').click()");
+  if (!await evaluate("import('/assets/js/state.js').then(({state})=>state.session.scannedTrades.every(t=>t.disabled))")) throw Error("toggle-all did not disable rows");
+  await evaluate("document.querySelector('#toggle-all-trades').click()");
+  if (!await evaluate("import('/assets/js/state.js').then(({state})=>state.session.scannedTrades.every(t=>!t.disabled))")) throw Error("toggle-all did not restore rows");
+  await evaluate("document.querySelector('.trade-row input[type=checkbox]').click();document.querySelector('.trade-row button').click()");
   const settingAfter = await evaluate("fetch('/api/bootstrap').then(r=>r.json()).then(snapshot=>JSON.stringify(snapshot.settings.parley))");
   if (settingAfter !== initialDefault) throw new Error(`current parley changed durable defaults: ${initialDefault} -> ${settingAfter}`);
   await evaluate("import('/assets/js/persistence.js').then(({whenPersistenceIdle})=>whenPersistenceIdle())");
@@ -101,7 +144,7 @@ try {
   try { chrome?.kill(); } catch {}
   try { server?.kill(); } catch {}
   await delay(300);
-  if (profile.startsWith(tmpdir())) await rm(profile, { recursive: true, force: true });
+  if (profile.startsWith(tmpdir())) await rm(profile, { recursive: true, force: true, maxRetries: 8, retryDelay: 250 }).catch(error=>console.warn('Temporary Chrome profile cleanup: '+error.message));
 }
 
 async function waitFor(predicate, label, timeout = 20000) {

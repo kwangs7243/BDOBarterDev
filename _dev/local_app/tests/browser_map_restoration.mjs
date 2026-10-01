@@ -10,7 +10,7 @@ const port = 18772;
 const baseUrl = `http://127.0.0.1:${port}/`;
 const pythonPath = process.env.BDO_TEST_PYTHON ?? process.env.PYTHON ?? "python";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const evidenceDir = join(root, "specs", "007-feature-restoration", "evidence");
+const evidenceDir = join(root, "recognition-local", "current-regressions", "map");
 const profile = await mkdtemp(join(tmpdir(), "bdo-map-restoration-"));
 const database = join(profile, "isolated-map.sqlite3");
 const pythonPrelude = process.env.BDO_EXTRA_SITE_PACKAGES
@@ -295,5 +295,17 @@ async function readViewerPanels() { const body=await (await fetch(`${baseUrl}api
 async function pythonRuntimeSummary() { const { spawnSync }=await import("node:child_process");const p=spawnSync(pythonPath,["-c","import sys,importlib.util;print(sys.version.split()[0]);print('Pillow='+str(bool(importlib.util.find_spec('PIL'))))"],{encoding:"utf8",cwd:root,windowsHide:true});return p.status===0?p.stdout.trim().replace(/\r/g,"").split("\n"):p.error?.message??p.stderr; }
 async function portIsBusy() { try { return (await fetch(`${baseUrl}api/health`,{signal:AbortSignal.timeout(500)})).ok; } catch { return false; } }
 async function waitFor(predicate,label,timeout=20000) { const until=Date.now()+timeout;while(Date.now()<until){const result=await predicate();if(result)return result;await delay(120);}throw new Error(`Timed out waiting for ${label}`); }
-async function reloadPage(label) { const marker=crypto.randomUUID();await evaluate(`window.__mapReloadMarker=${JSON.stringify(marker)}`);await send("Page.reload",{ignoreCache:true});await waitFor(async()=>await evaluate(`window.__mapReloadMarker!==${JSON.stringify(marker)}&&document.readyState==='complete'&&document.querySelectorAll('.inventory-row').length===70&&document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'`),label,30000); }
+async function reloadPage(label) {
+  const marker=crypto.randomUUID();
+  await evaluate(`window.__mapReloadMarker=${JSON.stringify(marker)}`);
+  await send("Page.reload",{ignoreCache:true});
+  await waitFor(async()=>{
+    try {
+      return await evaluate(`window.__mapReloadMarker!==${JSON.stringify(marker)}&&document.readyState==='complete'&&document.querySelectorAll('.inventory-row').length===70&&document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'`);
+    } catch(error) {
+      if(/Inspected target navigated or closed|Execution context was destroyed|Cannot find context/.test(error.message))return false;
+      throw error;
+    }
+  },label,30000);
+}
 async function stopServer() { if(!server)return;const child=server;server=null;child.kill();await Promise.race([new Promise(resolveExit=>child.once("exit",resolveExit)),delay(5000)]); }

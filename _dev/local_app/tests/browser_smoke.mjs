@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 import { setTimeout as delay } from "node:timers/promises";
 
 const baseUrl = process.env.BDO_TEST_URL ?? "http://127.0.0.1:18767/";
@@ -11,7 +13,7 @@ const database = join(profile, "isolated.sqlite3");
 const extraSitePackages = process.env.BDO_EXTRA_SITE_PACKAGES;
 const pythonPrelude = extraSitePackages ? `import sys; p=${JSON.stringify(extraSitePackages)}; sys.path.remove(p); sys.path.append(p); ` : "";
 const pythonCode = `${pythonPrelude}from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=18767, use_reloader=False, threaded=True)`;
-let server = spawn(process.env.PYTHON ?? "python", ["-c", pythonCode], { stdio: "ignore", windowsHide: true });
+let server = spawn(process.env.PYTHON ?? "python", ["-c", pythonCode], { cwd: root, stdio: "ignore", windowsHide: true });
 let chrome;
 let socket;
 try {
@@ -80,7 +82,7 @@ try {
   const restored = await evaluate(`({stock:[...document.querySelectorAll('input')].find(x=>x.getAttribute('aria-label')===${encodedName}+' 현재 재고')?.value,rule:document.querySelector('#tier-rule-1')?.value,speed:document.querySelector('#ship-speed')?.value,parley:document.querySelector('#parley-budget')?.value,clustering:document.querySelector('#durable-tune-useClustering')?.value,nav:document.querySelector('#nav-coords')?.value,zoom:document.querySelector('#viewer-zoom')?.value,slot:document.querySelectorAll('#map-root .preset-card')[0]?.textContent,base:document.querySelectorAll('#map-root .preset-card')[3]?.textContent,order:[...document.querySelectorAll('.tier-section')[0].querySelectorAll('.inventory-row')].map(r=>r.dataset.name),panelLeft:document.querySelector('[aria-label="mainPanel left"]')?.value,zoomStyle:getComputedStyle(document.body).zoom})`);
   if (JSON.stringify(restored.order) !== JSON.stringify(expectedTierOrder) || restored.stock !== "37" || restored.rule !== "27" || restored.speed !== "172" || restored.parley !== "1500002" || restored.clustering !== "20002" || restored.zoom !== "130" || restored.panelLeft !== "17" || restored.zoomStyle !== "1.3" || !restored.nav.includes("111") || !restored.slot.includes("1개 경로") || !restored.base.includes("1개 좌표")) throw new Error(`reloaded UI state mismatch: ${JSON.stringify(restored)}`);
   await new Promise((resolve) => { if (server.exitCode !== null) resolve(); else { server.once("exit", resolve); server.kill(); } });
-  server = spawn(process.env.PYTHON ?? "python", ["-c", pythonCode], { stdio: "ignore", windowsHide: true });
+  server = spawn(process.env.PYTHON ?? "python", ["-c", pythonCode], { cwd: root, stdio: "ignore", windowsHide: true });
   await waitFor(async () => { try { return (await fetch(baseUrl + "api/health")).ok; } catch { return false; } }, "server process restart against same temporary SQLite");
   await evaluate("window.__beforeReloadMarker = true");
   await send("Page.reload", { ignoreCache: true });
