@@ -1,68 +1,63 @@
-# BDO 물교 개발 안내 — SPEC-007 기능 회복
+# BDO 물교 도우미 — 현재 V2
 
-기존 SPEC-006 동결 기록: [docs/FROZEN_VERSION.md](docs/FROZEN_VERSION.md). 현재 SPEC-007 저장 계약은 [spec](specs/007-feature-restoration/spec.md), 기능 분류 근거는 [감사표](specs/007-feature-restoration/audit-report.md)를 따른다. 구현·실행 파일 교체·데이터 보존 결과와 미검증 항목은 [완료 보고서](specs/007-feature-restoration/validation-report.md)에 기록했다.
-사용자 실행 파일은 상위 폴더의 app/BDO 물교 실행.exe이며 실행하기.cmd가 이를 실행한다.
+검은사막 물교 화면을 로컬 인식하고, 사용자가 모든 행의 여섯 필드를 검수한 뒤 회차에 적용하는 Windows localhost 앱이다. 수동 JSON 입력, 창고 인식, 배차와 경로 계산도 제공한다. 구현은 `local_app/` 하나를 기준으로 한다.
 
-## 구조
+## 개발 실행 (PowerShell)
 
-- local_app: Flask/Waitress, 브라우저 UI, launcher, PyInstaller 설정과 SPEC-001~007 테스트
-- tools/warehouse_patch, reference: 보호된 창고 scanner·템플릿·품목·아이콘
-- specs: SPEC-000~007 및 SPEC-100 역사
-- tests, fixtures, test_results: 원본 HTML 회귀·입력·기존 결과
-- reports/freeze-20260926: 정리 전후 실행 로그·해시·패키지 감사
-- BDO_물교_v1.0.html, inputs: 수정 금지 비교 원본
-- archive/spec100-original-data: 제품에서 사용하지 않는 원본 PNG와 정답 JSON
-- review-packages: 이전 검토 ZIP, 제품 배포 대상 아님
-
-과거 문서의 저장소 루트 상대경로는 이제 _dev를 기준으로 읽는다. 이전 루트 README는 docs/README-before-freeze.md에 그대로 보존했다. 기존 AGENTS.md의 HTML 단일 배포/루트 규칙은 이번 사용자의 명시적인 패키지 동결 지시로 대체되며 보호 알고리즘 규칙은 유지된다.
-
-## 개발 실행
-
-아래 명령은 _dev를 작업 디렉터리로 사용한다. 실제 사용자 DB 대신 반드시 격리 LOCALAPPDATA를 지정한다.
+저장소의 `_dev`에서 실행한다. uv와 설치된 Python 3.14가 필요하다.
 
 ```powershell
-$env:LOCALAPPDATA = Join-Path $env:TEMP ('BDOBarterDev-' + [guid]::NewGuid().ToString('N'))
-python -m local_app.launcher
+uv venv recognition-local/r006-env-recovery/venv314 --python 3.14
+$env:PYTHON = "$PWD\recognition-local\r006-env-recovery\venv314\Scripts\python.exe"
+uv pip install --python $env:PYTHON -r local_app/pyproject.toml --extra test
+$env:PYTHONDONTWRITEBYTECODE = '1'
+& $env:PYTHON -B -m local_app.launcher
 ```
 
-의존성 계약은 local_app/pyproject.toml을 따른다. 테스트/빌드에는 호환 Python 3.11 이상과 실제 Pillow·NumPy가 필요하다. 가짜 Pillow 또는 다른 Python 버전의 바이너리 강제 사용은 금지한다.
+이미 검증된 환경이 있으면 생성·설치를 반복하지 않고 `PYTHON`만 지정한다. 앱 주소는 **http://localhost:18765/**. 실제 데이터는 `%LOCALAPPDATA%/BDOBarter` 아래에 저장된다. 테스트는 임시 SQLite와 별도 sidecar만 사용한다.
 
-## 검증
+로컬 OCR은 별도 Python/ONNX 모델을 요구한다. 현재 설치 경로는 `recognition-local/envs/t010b1-ocr/Scripts/python.exe`와 `recognition-local/models/t010b1/official_models/korean_PP-OCRv5_mobile_rec_onnx`다. 다른 설치에서는 `BDO_TRADE_OCR_PYTHON`, `BDO_TRADE_OCR_MODEL_DIR`를 지정한다. 모델/전용 OCR 환경 배포와 새 PC 설치 검증은 R012의 미완료 항목이다. 위 pyproject 설치만으로 OCR 모델까지 설치되지는 않는다.
+
+## 실사 검증
 
 ```powershell
-python -m compileall -q local_app
-python -m unittest discover -s local_app/tests -v
-node local_app/tests/equivalence/verify-migration.mjs
-node local_app/tests/trade_import_regression.mjs
-$env:PYTHON = (Get-Command python).Source
-node local_app/tests/browser_smoke.mjs
-node local_app/tests/browser_warehouse_scan.mjs
-node local_app/tests/browser_trade_session.mjs
-node local_app/tests/browser_scheduler.mjs
-node local_app/tests/browser_restoration.mjs
-node local_app/tests/browser_map_restoration.mjs
+node local_app/tests/browser_trade_review_live.mjs --help
+node local_app/tests/browser_trade_review_live.mjs --preflight
+node local_app/tests/browser_trade_review_live.mjs --live --run-dir "$PWD\recognition-local\live-validation\r011\new-independent-run" --case-id fresh-stream-01 --input-mode STREAM --cohort INDEPENDENT
 ```
 
-Chrome 테스트는 Google Chrome과 WebSocket을 지원하는 Node가 필요하다. 기본값은 C:\Program Files\Google\Chrome\Application\chrome.exe이며 BDO_CHROME으로 변경 가능하다. 기본 실행은 임시 DB를 만든다. BDO_TEST_URL을 지정하면 대상 서버를 수정하므로 실제 사용자 앱을 대상으로 실행하지 않는다.
+실사는 새 source/run/case를 사용한다. 열린 Chrome에서 직접 화면 공유→ROI→캡처→로컬 인식→전 행 검수→증거 저장→새 회차 적용을 수행한다. 평소 Windows 배율/Chrome zoom을 그대로 사용하며, 재사용 화면을 independent로 부르지 않는다. 검수 창에서 원문·후보·위험·출처를 확인할 수 있다. preflight는 실제 게임 캡처를 소비하지 않는다.
 
-원본 HTML 필수 회귀는 다음 9종이다. 각각 node tests/<이름>.js --json-out <새 결과 경로>로 실행한다.
-
-- regression_core, followup_regression, regression_modes
-- inventory_completion_diagnostics, tier7_completion_regression, completion_no_hold_regression
-- tier7_threshold_diagnostics, scenario_matrix, scheduler_preservation_regression
-
-scenario_matrix의 unexpectedReserveViolations는 0이어야 한다. 이 전체 행렬은 몇 분 이상 걸릴 수 있다. scanner 실제 API·직접 convert·review/apply·충돌·임시 파일 정리는 Python/Chrome SPEC-003 테스트에서 검증한다. 오래된 tests/warehouse_patch_regression.py의 main은 이전 HTML 해시를 고정하므로 현재 SPEC-000 기준과 불일치한다. 기대값을 바꾸지 않았고, 동결 검증에서는 그 파일의 두 evaluate_fixture 함수를 그대로 호출하여 고정 정답을 별도로 확인했다.
-
-## 패키지 빌드
+## 검증과 패키지
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1 -Python '<호환 Python 실행기>'
+& $env:PYTHON -B -m pytest local_app/tests/backend -p no:cacheprovider
+node local_app/tests/trade_review_evaluation_regression.mjs
+node local_app/tests/reviewed_trade_dto_regression.mjs
+node local_app/tests/trade_session_staging_regression.mjs
+node local_app/tests/browser_trade_review.mjs
+node local_app/tests/browser_trade_review_session.mjs
+node local_app/tests/browser_trade_batch_recognition.mjs
 ```
 
-기존 PyInstaller onedir 설정을 사용한다. package extra의 PyInstaller가 설치되어 있어야 한다. 출력은 **상위 루트 app**이며 재빌드 시 기존 app을 교체하므로 실행 중인 앱을 먼저 종료한다. 빌드 작업 파일은 별도의 Temp 폴더에 생성한다. 최종 배포에는 Python 설치가 필요 없다.
+현재 core suite는 다음 목록이다. 삭제한 복원 mega-test의 고유 검사는 아래 JSON 회차·배차·창고·회차 제어 검사로 이식했다.
 
-## 보호 및 연구 상태
+- Backend: `tests/backend/` 전체와 `tests/test_launcher.py`. real Pillow, 임시 Main DB/sidecar만 사용한다.
+- Domain (13 entrypoints): `capture_input_regression`, `reviewed_trade_dto_regression`, `screen_capture_regression`, `trade_batch_reconciliation_regression`, `trade_catalog_audit_regression`, `trade_domain_contract`, `trade_import_regression`, `trade_master_registry_regression`, `trade_recognition_client`, `trade_review_evaluation_regression`, `trade_review_projection_regression`, `trade_roi_capture_regression`, `trade_session_staging_regression`.
+- Browser (14 entrypoints): `browser_capture_input`, `browser_map_restoration`, `browser_recognition_security`, `browser_scheduler`, `browser_screen_capture`, `browser_session_controls`, `browser_smoke`, `browser_trade_batch_recognition`, `browser_trade_review`, `browser_trade_review_persistence`, `browser_trade_review_session`, `browser_trade_roi_capture`, `browser_trade_session`, `browser_warehouse_scan`.
+- Live harness: `browser_trade_review_live --help/--preflight`. 실제 게임 capture는 별도 owner 실사다.
 
-원본 HTML, warehouse_patch.py, reference, fixture, processParsedTrades 및 scheduler/completion 보호 본문과 테스트 기대값을 임의 수정하지 않는다. 현재 API/DB schema 2 계약은 [SPEC-007](specs/007-feature-restoration/spec.md)을 따른다. 단일 회차와 슬롯 5개를 영구 설정과 분리하고 완료 재고·회차는 원자적으로 저장한다. 타이머는 복원하지 않는다. 변경 전후 SHA-256과 같은 입력 회귀로 확인한다.
+모든 JS entrypoint는 `local_app/tests/<이름>.mjs`다. domain 검사는 저장소 root에서 `node _dev/local_app/tests/<이름>.mjs`, browser 검사는 `_dev`에서 `node local_app/tests/<이름>.mjs`로 실행한다. 고정 임시 서버 포트를 공유하는 browser 검사는 순차 실행한다. 내부 앱 배율 130%의 기존 main panel overflow는 roadmap의 별도 미해결 항목이며, 설정 저장 검사는 유지한다.
 
-SPEC-100은 **ABANDONED / DEFERRED_INDEFINITELY**다. [ABANDONED.md](specs/100-barter-screenshot/ABANDONED.md)부터 읽고, 재도전은 별도 승인된 새 experiment로만 시작한다. 보존 문서의 과거 실행 명령·PENDING 상태는 현재 지시가 아니다.
+브라우저 테스트는 `PYTHON`의 절대 경로와 설치된 Chrome을 사용한다. 배포 빌드 환경에 `pyproject.toml`의 `package` extra를 설치한 뒤 `local_app/packaging/build.ps1 -Python $env:PYTHON`을 실행한다. 산출물은 `local_app/dist/app/`이다. 이 recipe의 존재는 packaged OCR/릴리스 승인을 뜻하지 않는다.
+
+## 파일 경계
+
+- `local_app/backend`, `frontend`, `recognition_data`: 현재 앱과 인식 계약/데이터.
+- `reference/barter_items.json`, `reference/icons`, `tools/warehouse_patch`: 현재 창고 인식의 직접 runtime dependency. 삭제하면 스캔이 깨진다.
+- `local_app/tests/fixtures`: 현재 회귀가 읽는 입력/정답. 과거 캡처를 재사용하는 테스트는 known replay이며 independent 평가가 아니다.
+- `tools/recognition_benchmark.py`, `recognition_dataset.py`, `local_app/tools`: 현재 인식 회귀/데이터 검증 및 live 평가 도구. `trade_*experiment.py` 일부는 실제 worker가 import하므로 이름만 보고 제거하지 않는다.
+- `specs/008-capture-recognition-v2`: [제품 계약](specs/008-capture-recognition-v2/CURRENT-PRODUCT-CONTRACT.md), 결정, 남은 로드맵, 승인 기준.
+- `recognition-local/`: Git 제외 환경·모델·실사 evidence·로컬 결과. 실사 승인 전 증거를 임의 삭제하지 않는다. cache 안에도 재생 evidence가 있으므로 이름만 보고 지우지 않는다.
+
+옛 구현과 배포물은 Git history 및 `pre-root-cleanup-20261001-0338` 태그에서 복구한다. 테스트의 frozen JSON expected는 삭제 전 V1 실행 결과로 생성했고 현재 코드 출력으로 덮어쓰지 않는다.

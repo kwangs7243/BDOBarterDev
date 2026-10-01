@@ -15,7 +15,7 @@ const sitePackages = process.env.BDO_EXTRA_SITE_PACKAGES;
 const pythonPrelude = sitePackages ? `import sys; p=${JSON.stringify(sitePackages)}; sys.path.remove(p); sys.path.append(p); ` : "";
 const pythonCode = `${pythonPrelude}from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=18768, use_reloader=False, threaded=True)`;
 let server = spawn(python, ["-c", pythonCode], { stdio: "ignore", windowsHide: true, cwd: root });
-let chrome; let socket; let referenceSocket;
+let chrome; let socket;
 try {
   await waitFor(async () => { try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "isolated local server");
   chrome = spawn(chromePath, ["--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking", "--remote-debugging-port=0", "--remote-allow-origins=*", `--user-data-dir=${join(profile, "chrome-profile")}`, "about:blank"], { stdio: "ignore", windowsHide: true });
@@ -45,24 +45,14 @@ try {
 
   const summaryExpression = `const pack=xs=>xs.map(s=>({parleyUsed:s.parleyUsed,totalTime:s.totalTime,startWeight:s.startWeight,returnTime:s.returnTime,returnOver:s.returnOver,reqItems:s.reqItems,trades:s.trades.map(t=>({island:t.island,fromClean:t.fromClean,toClean:t.toClean,execC:t.execC,reqA:t.reqA,mult:t.mult,afterW:t.afterW,estT:t.estT,over:t.over,toTier:t.toTier,fromTier:t.fromTier,isCoin:t.isCoin,isSpec:t.isSpec,isRandomCoin:t.isRandomCoin,score:t.score,lack:t.lack}))}));`;
   const appResult = await evaluate(`import('/assets/js/state.js').then(({state})=>{${summaryExpression}return JSON.stringify({speed:pack(state.session.schedule.speed),balance:pack(state.session.schedule.balance)})})`);
-  const referencePath = resolve(root, "BDO_물교_v1.0.html").replaceAll("\\", "/");
-  const referenceResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(`file:///${referencePath}`)}`, { method: "PUT" });
-  if (!referenceResponse.ok) throw new Error(`reference browser target failed: ${referenceResponse.status}`);
-  const referenceTarget = await referenceResponse.json(); referenceSocket = new WebSocket(referenceTarget.webSocketDebuggerUrl);
-  await Promise.race([new Promise((ok, fail) => { referenceSocket.addEventListener("open", ok, { once: true }); referenceSocket.addEventListener("error", fail, { once: true }); }), delay(10000).then(() => { throw new Error("reference DevTools connection timed out"); })]);
-  const referencePending = new Map(); let referenceId = 0;
-  const referenceSend = (method, params = {}) => new Promise((ok, fail) => { const id = ++referenceId; referencePending.set(id, { ok, fail }); referenceSocket.send(JSON.stringify({ id, method, params })); });
-  referenceSocket.addEventListener("message", (event) => { const message = JSON.parse(event.data); if (message.method === "Page.javascriptDialogOpening") referenceSend("Page.handleJavaScriptDialog", { accept: true }).catch(() => {}); if (message.id && referencePending.has(message.id)) { const item = referencePending.get(message.id); referencePending.delete(message.id); message.error ? item.fail(new Error(message.error.message)) : item.ok(message.result); } });
-  const referenceEvaluate = async (expression) => { const result = await referenceSend("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result?.value; };
-  await referenceSend("Page.enable"); await referenceSend("Runtime.enable");
-  await waitFor(async () => (await referenceEvaluate("typeof runAlgorithmAllModes==='function' && typeof buildSorties==='function'")) === true, "reference algorithm loaded");
-  const referenceResult = await referenceEvaluate(`(()=>{inventory={};for(let tier=1;tier<=5;tier++){for(const item of masterData[tier])inventory[item.name]={stock:0,target:tier<=4?80:5}}inventory['갈퀴 꽃 씨앗 주머니'].stock=100;tierRules={1:20,2:20,3:20,4:20,5:2};scannedTrades=[{island:'베이루와 섬',fromItem:'갈퀴 꽃 씨앗 주머니',toItem:'괴생물 촉수',reqAmount:1,count:3,yield:3,deleted:false,disabled:false}];APP_CONFIG.ALLOW_OCEAN='inner';document.getElementById('normalWeight').value=14379;document.getElementById('maxWeight').value=24445;document.getElementById('maxParley').value=1500000;document.getElementById('parleyPerTrade').value=10973;document.getElementById('parleyCrow').value=15962;runAlgorithmAllModes(true);${summaryExpression}return JSON.stringify({speed:pack(sortiesSpeed),balance:pack(sortiesBalance)})})()`);
+  const baseline = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtures/scheduler-expected.json"), "utf8"));
+  const referenceResult = JSON.stringify(baseline.scenarios.initial);
   if (appResult !== referenceResult) throw new Error(`same-input reference result mismatch. app=${appResult} reference=${referenceResult}`);
 
   async function compareScenario(mode, trade, label) {
     const encodedTrade = JSON.stringify(JSON.stringify(Array.isArray(trade) ? trade : [trade]));
     const app = await evaluate(`import('/assets/js/state.js').then(({state})=>{state.settings.ship.mode=${JSON.stringify(mode)};if(state.session.config)state.session.config.ship.mode=${JSON.stringify(mode)};state.session.scannedTrades=JSON.parse(${encodedTrade});state.session.schedule=null;state.session.remainingParley=1500000;if(${JSON.stringify(label)}==='tier-7 scenario')state.inventory.find(i=>i.programName==='정체불명의 암석').stock=100;window.__bdoScheduleRuntime.generateSchedule(state,()=>{});${summaryExpression}return JSON.stringify({speed:pack(state.session.schedule.speed),balance:pack(state.session.schedule.balance)})})`);
-    const referenceValue = await referenceEvaluate(`(()=>{inventory={};for(let tier=1;tier<=5;tier++){for(const item of masterData[tier])inventory[item.name]={stock:0,target:tier<=4?80:5}}inventory['갈퀴 꽃 씨앗 주머니'].stock=100;if(${JSON.stringify(label)}==='tier-7 scenario')inventory['정체불명의 암석'].stock=100;tierRules={1:20,2:20,3:20,4:20,5:2};scannedTrades=JSON.parse(${encodedTrade});APP_CONFIG.ALLOW_OCEAN=${JSON.stringify(mode)};document.getElementById('normalWeight').value=14379;document.getElementById('maxWeight').value=24445;document.getElementById('maxParley').value=1500000;document.getElementById('parleyPerTrade').value=10973;document.getElementById('parleyCrow').value=15962;runAlgorithmAllModes(true);${summaryExpression}return JSON.stringify({speed:pack(sortiesSpeed),balance:pack(sortiesBalance)})})()`);
+    const referenceValue = JSON.stringify(baseline.scenarios[label]);
     const result = JSON.parse(app);
     if (app !== referenceValue) throw new Error(`${label} same-input output mismatch. app=${app} reference=${referenceValue}`);
     if (result.speed.length + result.balance.length === 0) throw new Error(`${label} produced no comparable sorties.`);
@@ -125,7 +115,7 @@ try {
   if (!Array.isArray(JSON.parse(reload).session) || JSON.parse(reload).from !== conflictResult.source || JSON.parse(reload).to !== conflictResult.target) throw new Error(`session/persistent reload boundary incorrect: ${reload}`);
   console.log(JSON.stringify({ ok: true, browser: "Chrome headless", sameInputReferenceOutputExact: true, comparedScenarios: ["inner trade", "crow coin", "tier 7"], scheduleGenerated: generatedState, timerToggle: true, manualRouteReorder: true, manualCountAdjustment: true, waypointAddedAndCompletedWithMaterialPatch: true, completionResult: JSON.parse(sessionResult), lostResponseRetryUsedSameRequest: true, duplicateCompletionBlocked: true, inventoryUpdatedOnce: true, completionInvocationCounts: { waypoint: 1, tradeAfterResponseLossAndDuplicateClick: 1, tradeAfter409Rebase: conflictResult.calls }, actual409RebasedDelta: { source: conflictResult.source, target: conflictResult.target }, sessionRestoredOnReload: true, persistentInventorySurvivedReload: true, temporaryDatabase: true }, null, 2));
 } finally {
-  try { referenceSocket?.close(); } catch {} try { socket?.close(); } catch {} try { chrome?.kill(); } catch {} try { server?.kill(); } catch {}
+  try { } catch {} try { socket?.close(); } catch {} try { chrome?.kill(); } catch {} try { server?.kill(); } catch {}
   await delay(300); if (profile.startsWith(tmpdir())) await rm(profile, { recursive: true, force: true });
 }
 

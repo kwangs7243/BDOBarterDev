@@ -609,7 +609,7 @@ def run_trade_ocr_candidate(manifest_path: str | Path, selection_path: str | Pat
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=ROOT / "tests" / "fixtures" / "recognition-v2" / "manifest.json")
+    parser.add_argument("--manifest", type=Path, default=ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2" / "manifest.json")
     parser.add_argument("--selection", type=Path, default=ROOT / "local_app" / "recognition_data" / "trade-t010b1-experiment.json")
     parser.add_argument("--t010a2-artifact", type=Path, default=ROOT / "recognition-local" / "results" / "trade-candidate-t010a2.json")
     parser.add_argument("--t010a-selection", type=Path, default=ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json")

@@ -4,3 +4,9 @@
 *.json text eol=lf
 *.md text eol=lf
 VERSION text eol=lf
+
+# These fixture/resource contracts hash raw bytes; preserve checkout bytes.
+local_app/tests/fixtures/**/*.json -text whitespace=cr-at-eol
+local_app/recognition_data/profiles.json -text whitespace=cr-at-eol
+local_app/recognition_data/model-manifest.json -text whitespace=cr-at-eol
+reference/barter_items.json -text whitespace=cr-at-eol

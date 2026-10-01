@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "verifiedAt": "2026-09-24",
   "programSource": {
-    "file": "../BDO_물교_v1.0.html",
+    "historicalFile": "BDO_물교_v1.0.html",
+    "archiveTag": "pre-root-cleanup-20261001-0338",
     "sha256": "b5f29bfec3c3ebbd4257a42c1e311c28ce8e38d78dfb7a55279bd455a59e6598",
     "masterDataTiers": [
       1,

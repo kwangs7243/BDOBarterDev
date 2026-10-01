@@ -1,9 +1,0 @@
-file:///D:/BDOBarterDev/_dev/local_app/tests/browser_smoke.mjs:33
-  const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.text); return result.result?.value; };
-                                                                                                                                                                                      ^
-
-Error: Uncaught
-    at evaluate (file:///D:/BDOBarterDev/_dev/local_app/tests/browser_smoke.mjs:33:183)
-    at async file:///D:/BDOBarterDev/_dev/local_app/tests/browser_smoke.mjs:78:20
-
-Node.js v24.18.1

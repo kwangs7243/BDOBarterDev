@@ -2,7 +2,7 @@
 
 상태: **SPEC008R_CURRENT_PRODUCT_CONTRACT_ESTABLISHED** — 목표 계약 확정, 구현·출시 완료 아님.
 
-작성 기준: 2026-09-30, `v2`의 `66c45e4328ecd2c3de034527b37e6e3109038db8`. 구현 root는 `_dev`. 실제 SPEC directory는 `_dev/specs/008-capture-recognition-v2`다. 이 문서가 유일한 **현재 목표 제품 계약**이며 [결정 목록](DECISION-REGISTER.md)은 그 근거와 변경 범위를, [로드맵](CURRENT-ROADMAP.md)은 구현 순서를 관리한다.
+현재 구현 root는 `_dev/local_app`. 이 문서는 제품 목표와 보호 계약을 정의하며 완료 이력은 Git history에서 확인한다.
 
 ## Product Summary
 
@@ -30,41 +30,11 @@
 
 V1의 유용한 이름 보정과 기존 입력 흐름은 유지할 가치가 있다. 그러나 V1 출력이 언제나 정답인 것은 아니다. 실제 자료에서는 이름 오류를 복구했지만 잘린 수율 숫자를 통과시키고 빠진 필요 수량을 1로 채운 사례가 있었다. 기준 품목명과 게임 표시명이 다를 수도 있다. V2는 원본 관찰, 보정 후보, 사용자 확인, 프로그램 내부 품목 식별자를 구분한다. 게임 표기가 기준 자료와 다르면 바로 OCR 오류로 단정하지 않고 별도의 ‘기준 자료 불일치’로 남긴다. 기준 자료의 수정은 검수 한 번으로 자동 실행하지 않는다. 기존 수동·JSON 입력은 V2 문제 때도 사용할 수 있게 남긴다.
 
-## 1. Authority / precedence
+## 1. Authority와 현재 구현
 
-| 구분 | 권위와 적용 |
-|---|---|
-| Current behavior authority | 실제 production code와 existing tests/contracts. 이 문서의 미래형 계약을 현재 실행 기능으로 읽지 않는다. 코드와 테스트가 충돌하면 결함으로 조사하며 문서로 실행 사실을 덮지 않는다. |
-| Target product authority | **이 문서** + [active decision register](DECISION-REGISTER.md). Register는 독립된 두 번째 제품 정본이 아니며 이 문서의 결정 ID와 근거를 색인한다. 둘이 충돌하면 구현 중단 후 계약을 정정한다. |
-| Execution authority | [CURRENT-ROADMAP.md](CURRENT-ROADMAP.md)의 단 하나의 ACTIVE_NEXT. 다음 구현 요청을 받기 전 구현하지 않는다. |
-| Historical rationale | [spec.md](spec.md), [plan.md](plan.md), [tasks.md](tasks.md), 나머지 원설계와 T010P3* 기록. 당시 사실·가설·보호 invariant의 근거다. 아래 **명시적 amendment**에 한해 새 목표가 우선한다. |
+현재 실행 사실은 `local_app` 코드와 테스트, 제품 목표는 이 문서와 결정 목록, 남은 실행 순서는 CURRENT-ROADMAP을 기준으로 한다. 옛 설계·migration 보고서는 Git history에서 조회한다.
 
-과거 `current-state.md`의 Git 부재·캡처 미구현, `trade-v1-preservation.md`의 ROI 미구현 등은 당시 snapshot이다. 지금도 미구현이라고 인용하지 않는다. `baseline-manifest.json`은 V1 재현 hash 기준이지 오늘의 전 코드 목록이 아니다. FR 번호와 T000~T014 history는 보존한다. 새 문서의 확정은 생산 활성화·DB migration·자동수락 승인이 아니다.
-
-### 명시적 amendments
-
-1. **Trade review**: 원 `spec.md`/`trade-design.md`의 예외행 중심 검토와 E1의 미해결 필드만 검토하는 목표 대신, 모든 COMPLETE 행·모든 필드를 표시하고 편집 가능하게 한다. Warehouse의 REVIEW 슬롯 중심 정책은 바꾸지 않는다.
-2. **Candidate vs automatic**: `trade-design.md`의 여섯 필드 안전성 선행 조건과 E1 qualifier는 무인 수락에 적용한다. 이를 review candidate 생성을 막는 조건으로 쓰는 것은 superseded다. 후보는 unknown과 위험을 포함할 수 있으며 final DTO가 아니다.
-3. **Correction authority**: `trade-v1-preservation.md`와 E1의 영구 V1 단일 권위 목표를 V2 interface 소유로 전환한다. V1 수동/JSON 동작·회귀는 보존한다. 기존 helper 재사용은 허용하지만 V1 accepted를 truth/자동수락으로 승격하지 않는다.
-4. **Numeric defaults**: legacy `reqAmount || 1`, `count || 0` 동작은 호환 경로에 남긴다. 새 recognition/review 경로의 unknown을 채우는 수단으로 사용하지 않는다.
-5. **Plan**: 미구현 `T010P3E2`는 **SUPERSEDED_PENDING_PRODUCT_REALIGNMENT**. E1 E2→E3→E4→E5 순서를 그대로 실행하지 않는다. E1 safety 개념은 위험 표시/향후 무인 정책으로 재사용한다. `T010P3D4-S1`은 **ON_HOLD**다.
-6. **Product gate**: raw OCR exact는 진단 지표. 사용자 수정 부담과 검수 후 DTO 성공을 우선한다. Review-first 실사용 gate와 future auto gate를 분리한다.
-
-## 2. 현재 동작과 증거의 한계
-
-아래는 위 HEAD에서 읽은 코드·기존 evidence의 사실이다. 이번 문서 작업에서 OCR/DB/브라우저를 실행한 결과가 아니다.
-
-| 영역 | 현재 확인된 상태 |
-|---|---|
-| Capture/UI | `local_app/frontend/js/recognition-ui.js`: 화면 연결, 이동/크기 조절 ROI, 순서 있는 queue, 파일/paste, 삭제/재시도와 로컬 batch 요청. 현재 결과 표는 raw/normalized 값과 상태를 표시하는 읽기용 초안이다. 신규 all-row correction review 편집·확정 workflow는 없음. |
-| API contract | `trade-recognition-client.js`: `/api/recognition/trade-runtime`, `/api/recognition/trade-batch`; `DRAFT_UNVERIFIED`, `production=false`, `HIGH=0`, `importerIntegration=false`, `value=null` 강제. COMPLETE row와 fields 없는 `EDGE_SEGMENT_UNCERTAIN` 분리. |
-| V1 import | `domain/trade-import.js`: bounded unique item matching(유사도 0.75), tier 제한, tier0→1 원문 보존, 일부 island force match, req fallback1/count fallback0. 중복 판정은 island/toItem/fromItem으로 숫자 충돌을 충분히 표현하지 않음. |
-| 기존 검토/세션 | `trade-import-review.js`는 JSON 제외행만 편집/재검증. `trade-ui.js`는 review 중 session 변경 감지 후 메모리 수정과 이벤트 저장. 새 recognition 결과를 여기로 자동 전달하지 않음. |
-| Persistence | `persistence.js`의 `saveWorkingSession()`은 현재 state snapshot을 저장. `enqueueMutation()` 호출마다 mutationId 생성. `api.js`/`backend/session_contracts.py`의 version1 snapshot·revision 계약 존재. 후보를 DB-first로 저장하는 `saveWorkingSessionSnapshot(candidate)`는 현행 export가 아님. |
-| Master | `local_app/frontend/data/trade-catalog.json`: 이름 배열/단계/특수 품목/섬 목록. stable identity·개별 display name 검증·출처·이력 Registry는 아직 없음. 목록에 있다는 사실은 게임 표기 검증을 뜻하지 않음. |
-| Live D2 | 2 captures, 11 COMPLETE rows, 66 fields; 사용자가 35 오류 표시,31 unchanged 확인. 3 edge는 draft 제외. 이것은 선택한 두 화면의 human-reviewed evidence이며 넓은 일반화 자료가 아님. |
-| E0 | 실제 V1 offline 호출: 3 accepted/8 held, accepted3 모두 yield 오답(48/2/5 vs148/123/151). 텍스트13개 복구, count label11개 parse, req fallback10. production bridge의 실제 자동 적용 사고라고 주장하지 않음. |
-| D3/D4/E1 | N2 req/yield 각각10/11은 진단 후보 수치. D4 91행 구조 측정 후보3개 모두94.42%로95% 미달. E1 all11 HOLD/safe0/wrong-safe0은 설계 prototype 결과. production 정확도 해결·성공 판정이 아님. |
+현재 file/paste/stream 캡처, 로컬 draft, versioned Registry adapter, V2 correction, source/logical reconciliation, 전 행 편집과 명시 검수 완료, sidecar observation/export, reviewed DTO와 staged NEW session, 버전 평가가 구현되어 있다. dedicated review 창은 원문·후보·출처와 여러 행을 표시한다. R011 최종 independent usability 및 R012 release는 미완료다. 기존 수동 JSON/창고/배차 흐름은 유지한다.
 
 ## 3. 정상 흐름과 책임
 
@@ -106,11 +76,11 @@ Logical envelopes는 버전을 갖는다. `RecognitionDraft` → `ReconciledRows
 
 Batch 확인은 표시된 projection revision/hash와 전체 COMPLETE row ID 집합에 묶는다. 필터로 숨긴 행·검토하지 않은 페이지·capture 변경·재인식·master/correction revision 변경을 그대로 unchanged truth로 확정하지 않는다. lazy render는 가능하지만 모든 행을 확인할 수 있고 미확인 행 수를 드러내야 한다. 확인 후 편집은 새 review revision을 만들며 종전 evidence를 덮지 않는다. 앱은 눈으로 실제 확인했는지 추정하지 않고 사용자의 명시적 batch declaration을 기록한다.
 
-`EDGE_SEGMENT_UNCERTAIN`/partial/누락 가능성은 출처와 경계 위치를 가진 별도 안내로 남긴다. 행 숫자를 부풀리는 six-field OCR을 하지 않는다. 추가 캡처로 해결되거나 사용자가 미완성 범위를 인지할 때까지 ‘전체 목록 완료’라고 표시하지 않는다. UNKNOWN 행을 draft에 남기거나 최종 회차에서 명시적으로 제외하는 상세 UX는 Product Owner Decision Surface에서 결정한다. 어느 경우에도 조용한 누락과 강제 기본값은 금지다.
+`EDGE_SEGMENT_UNCERTAIN`/partial/누락 가능성은 출처와 경계 위치를 가진 별도 안내로 남긴다. 행 숫자를 부풀리는 six-field OCR을 하지 않는다. 추가 캡처로 해결되거나 사용자가 미완성 범위를 인지할 때까지 ‘전체 목록 완료’라고 표시하지 않는다. UNKNOWN 행은 검수 evidence에 남고, 유효 DTO에 포함할 수 없는 행은 사용자의 명시 제외 결정 없이는 조용히 제거하지 않는다. 어느 경우에도 조용한 누락과 강제 기본값은 금지다.
 
-## 5. Master Registry — design only
+## 5. Master Registry
 
-Registry는 program identity와 game display observation을 분리한다. 직렬화 기본안은 UTF-8 versioned JSON bundle `{schemaVersion, registryVersion, sourceRevision, entities, compatibilityMappings}`다. 이번에는 JSON 생성/교체하지 않는다. 실행 시 immutable snapshot 한 버전을 참조하고, bundle hash를 correction/evidence에 기록한다. item과 island는 분리된 entity kind를 사용한다.
+Registry는 program identity와 game display observation을 분리한다. 직렬화 기본안은 UTF-8 versioned JSON bundle `{schemaVersion, registryVersion, sourceRevision, entities, compatibilityMappings}`다. legacy adapter는 목록을 교체하지 않으며 stableId는 curated mapping에서만 받는다. 실행 시 immutable snapshot 한 버전을 참조하고, bundle hash를 correction/evidence에 기록한다. item과 island는 분리된 entity kind를 사용한다.
 
 | 개념 필드 | 논리 계약 |
 |---|---|
@@ -139,7 +109,7 @@ Review observation은 evidence이고 Master update는 별도 promotion/curation�
 | B: V2 interface + V1 helper 점진 재사용 | 기존 검증된 matcher를 활용하고 adapter 단위 교체/회귀 가능 | 후보·risk·대안·Registry 버전을 V2가 소유, manual과 numeric safety 분리 | **선택** |
 | C: 전면 독립 rewrite | 새 구현·기존 호환 회귀 비용 큼 | 장기 자유도는 크나 현재13 text 복구 evidence를 버릴 이유 없음 | 보류 |
 
-`buildTradeReviewProjection({draftRows, reconciliation, registrySnapshot, correctionPolicyVersion})`는 설계상 순수 함수다. 출력은 원본 row/source 순서, 여섯 후보, alternatives, status(`MATCHED/AMBIGUOUS/UNMATCHED/MASTER_DISAGREEMENT/OPEN_WORLD`), risk/reason, correctionVersion/masterVersion/hash를 포함한다. API/DB/session side effect가 없다. recognition producer와 분리된 JS domain layer가 새 public contract를 소유한다. Python에 병렬 fuzzy master authority를 만들지 않는다.
+`buildTradeReviewProjection({draftRows, reconciliation, registrySnapshot, correctionPolicyVersion})`는 순수 함수다. 출력은 원본 row/source 순서, 여섯 후보, alternatives, status(`MATCHED/AMBIGUOUS/UNMATCHED/MASTER_DISAGREEMENT/OPEN_WORLD`), risk/reason, correctionVersion/masterVersion/hash를 포함한다. API/DB/session side effect가 없다. recognition producer와 분리된 JS domain layer가 새 public contract를 소유한다. Python에 병렬 fuzzy master authority를 만들지 않는다.
 
 재사용: whitespace/format 정규화의 유효 부분, stage/tier prefix 처리, 기존 `getSafeUniqueItemMatch`의 유일·bounded 매칭, tier 제약, item 분류와 duplicate/conflict의 호환 개념. V1 helper 결과도 대안·전후값·정규화 단계·policy version을 붙인다. 정규화 collision이면 first-match를 신뢰하지 않고 ambiguity로 올린다. 기존 0.75 규칙을 이 문서에서 낮추지 않는다.
 
@@ -165,9 +135,9 @@ Field observation 필수 논리 항목:
 
 Unchanged/edited/unknown은 별도 strata로 평가한다. `SYSTEM_PREDICTION_UNREVIEWED`는 training/evaluation truth 금지. USER_MARKED_UNKNOWN도 값의 정답 분모에서는 제외하되 unknown 수·율을 보고한다. Master disagreement는 화면 관찰 truth와 program identity mapping truth를 별도로 보존한다. Review 완료 후 DTO validation이 실패해도 유효한 human observation은 남을 수 있다; session 성공 증거와 혼동하지 않는다.
 
-저장은 기존 recognition sidecar/evidence store 경계를 활용하는 후속 과제다. main schemaVersion=3은 그대로 보호한다. 현 sidecar와 main 저장은 단일 transaction이 아니므로 evidence 성공 후 session 실패/재시도 상태를 구분한다. 같은 review revision의 동일 observation ID 재저장은 멱등, 다른 payload는 conflict. 증거 저장이 실패하면 완료를 가장하지 않고 검수 입력을 유지해 재시도한다.
+저장은 recognition sidecar/evidence store 경계를 사용한다. main schemaVersion=3은 그대로 보호한다. 현 sidecar와 main 저장은 단일 transaction이 아니므로 evidence 성공 후 session 실패/재시도 상태를 구분한다. 같은 review revision의 동일 observation ID 재저장은 멱등, 다른 payload는 conflict. 증거 저장이 실패하면 완료를 가장하지 않고 검수 입력을 유지해 재시도한다.
 
-보관: [feedback-dataset.md](feedback-dataset.md)의 새 artifact+metadata **200 MiB budget**, 미검수 debug 자료 **30일 정리 정책**, 검증 crop 보호, debug 기본 off를 유지한다. 정책에 따른 정리는 명시적으로 실행하며 verified evidence를 용량 확보용으로 무단 삭제하지 않는다. 예산 초과 시 사용자에게 저장 제한/내보내기 필요를 알린다. production full screenshot 무제한 저장 금지. 필요한 crop/hash/provenance를 유지하고 export manifest로 재현한다. main DB의 기존 BLOB·사용자 백업을 이 정책으로 청소하지 않는다.
+보관: 새 artifact+metadata **200 MiB budget**, 미검수 debug 자료 **30일 정리 정책**, 검증 crop 보호, debug 기본 off를 유지한다. 정책에 따른 정리는 명시적으로 실행하며 verified evidence를 용량 확보용으로 무단 삭제하지 않는다. 예산 초과 시 사용자에게 저장 제한/내보내기 필요를 알린다. production full screenshot 무제한 저장 금지. 필요한 crop/hash/provenance를 유지하고 export manifest로 재현한다. main DB의 기존 BLOB·사용자 백업을 이 정책으로 청소하지 않는다.
 
 ```text
 Production review observations → versioned evaluation dataset
@@ -216,56 +186,6 @@ Final flow: **reviewed values → V2 mapping → six-field validation → duplic
 
 Review-first **실제 사용 검증 진입**: COMPLETE 전 행·전 필드 표시/편집, 후보 prefill, 위험과 경계 경고, 명시적 완료, 확인된 값만 DTO 사용, evidence 저장/실패 안내, silent default 없음, 기존 session/browser output 연결. 이 gate는 자동 SAFE_ACCEPT 전 필드 달성을 요구하지 않는다. 실제 사용 검증 통과와 패키지 배포는 별도 후속 gate다.
 
-Future unattended gate는 8절 지표와 기존 [confidence-policy.md](confidence-policy.md), [benchmark-plan.md](benchmark-plan.md), [release-strategy.md](release-strategy.md)의 독립 검증을 유지한다. 현재 HIGH=0/production=false를 문서만으로 해제하지 않는다.
+Future unattended gate는 8절 지표와 [현재 승인 기준](ACCEPTANCE.md)의 독립 검증을 유지한다. 현재 HIGH=0/production=false를 문서만으로 해제하지 않는다.
 
 반드시 보존: six-field 의미, count=남은 교환 횟수, unknown/default 구분, V1/manual/JSON fallback, scheduler/routing/완료 semantics, user DB migration 없음, main schema3, local/offline recognition, Gemini/OpenAI/remote OCR 없음, full screenshot 무제한 보관 금지, human label/prediction 구분. Warehouse tier1–4/56종·tier5 제외·inventory safety는 그대로이며 Trade 정책으로 다시 설계하지 않는다. capture frame과 fidelity 구분(clipboard 원본 source fidelity unknown), PNG lossless 의미, explicit capture/no game input도 유지한다.
-
-## 11. Product Owner Decision Surface
-
-아래는 문서 확정을 막는 충돌이 아니라 해당 UI 구현 전에 선택할 실제 제품 옵션이다. R001의 read-only audit은 기다릴 필요가 없다.
-
-| 사용자 결정 | 권장안 / 대안 / 결정 시점 |
-|---|---|
-| 위험 강조 수준 | 한국어 이유 badge+필드 테두리, 모든 값 표시 권장. 펼친 상세를 기본으로 할지 선택; R005 전. |
-| 전체 확인 UX | 미확인 행 수와 ‘전체 행을 확인했습니다’ 선언 후 검수 완료 권장. 행별 확인도 추가할지 선택; R005 전. |
-| unknown 행 처리 | draft 유지+추가 캡처 우선, 명시 제외 선택 제공 권장. unknown 포함 batch 전체 보류 vs 확인된 subset 제출은 R008 전 owner 선택. 어느 경우도 silently drop 금지. |
-| Master disagreement 표시 | ‘화면 표기 / 프로그램 이름’ 병렬 표시 권장. 사용자에게 mapping 선택을 어느 단계에서 요청할지 R005/R008 전. |
-| 검수 부담 vs 자동화 | 처음 REVIEW-FIRST 고정. 향후 숨김/자동 적용을 원하는지 independent live 결과를 본 뒤 결정; 지금 자동 전환하지 않음. |
-
-기술 기본 결정: immutable versioned JSON Registry, 관찰과 master 분리, hash/provenance chain, 순수 JS V2 correction(B), row/field metric 분모, source ID 기반 멱등 저장, schema3 보존. storage index/serialization 세부와 test architecture는 해당 좁은 과제에서 기술 판단한다. Master authority·truth·session 계약 변경은 Sol 검토, 제품 계약 또는 장기 migration 변경은 Astra 재검토한다.
-
-## Appendix A — SPEC drift matrix
-
-| 항목 | Original SPEC intent | Current implementation/evidence | New current contract | Status |
-|---|---|---|---|---|
-| capture | file/paste/stream와 품질 계약 | ROI/queue/batch 연결 존재, live2 captures | 보존, source fidelity와 누락 안내 | RETAIN |
-| trade recognition | local six-field safe DTO로 연결 | raw draft만, value=null/미적용 | 보정 후보→전 행 검수→DTO | AMENDED |
-| V1 correction | 기존 JS 단일 canonical authority | text13 복구, 숫자 오수락3 offline | 호환 기준+설계 reference; V2 interface 소유 | AMENDED |
-| numeric defaults | recognition unknown 기본값 금지 | manual req1/count0 존재 | manual 보존, recognition/review 제조 금지 | CLARIFIED |
-| review UX | 예외행 중심 | JSON 제외행 검토 + 인식 읽기 표 | 모든 COMPLETE/모든 필드 editable | AMENDED_TRADE_ONLY |
-| feedback data | prediction/truth 분리·sidecar | warehouse store와 local human evidence | versioned review observations→개선 loop | EXTEND |
-| master/catalog | static catalog 활용 | 이름 배열, 게임 표기 권위 미확인 | stable IDs/display/alias/provenance+curation | NEW_DESIGN |
-| multi-capture merge | T011 overlap+conflict | queue/API 있음, semantic merge 미통합 | exact6 merge/source union/numeric conflict | RETAIN_UNIMPLEMENTED |
-| session output | staged persistence 설계 | JSON 경로 state 변경 후 저장, recognition 연결 없음 | verified DTO→DB-first staged bridge→browser | RETAIN_TARGET |
-| auto apply | false auto0/coverage/live gate | E1 all-HOLD prototype | review readiness와 분리, all-HOLD 불통과 | REPOSITION |
-| release gate | live/package/rollback | 신규 review-first E2E 미검증 | review-first live 후 package, auto는 별도 | CLARIFIED |
-
-## Appendix B — 읽은 자료와 추적성
-
-원설계 전체 읽기: [spec](spec.md), [current-state](current-state.md), [plan](plan.md), [capture-design](capture-design.md), [warehouse-design](warehouse-design.md), [trade-design](trade-design.md), [confidence-policy](confidence-policy.md), [feedback-dataset](feedback-dataset.md), [benchmark-plan](benchmark-plan.md), [migration-rollback](migration-rollback.md), [release-strategy](release-strategy.md), [tasks](tasks.md), [validation-report](validation-report.md), [baseline-manifest](baseline-manifest.json), 추가 [trade-v1-preservation](trade-v1-preservation.md). 원문 history/FR/task numbering 유지.
-
-Current code 읽기: `local_app/frontend/js/domain/trade-import.js`, `trade-ui.js`, `trade-import-review.js`, `recognition-ui.js`, `trade-recognition-client.js`, `persistence.js`, `api.js`, `local_app/backend/session_contracts.py`, `local_app/frontend/data/trade-catalog.json`(모두 `_dev` 기준). 기존 regression 파일의 존재/보호 계약을 대조했으며 이번에는 production 테스트를 재실행하지 않았다.
-
-최근 evidence는 `_dev/recognition-local/live-validation/` 아래 **로컬 ignored 자료**다. fresh clone에서 존재를 요구하지 않는다. 여기 기록한 요약/해시는 추적 anchor이며 개인 이미지/라벨을 새로 Git에 넣지 않는다. 해당 hash 원본이 없으면 수치 재실행은 NOT_REPRODUCED로 보고해야 한다.
-
-| Evidence | 이번 읽기 기준 SHA-256(raw bytes) |
-|---|---|
-| `t010p3d2/human-review-result.json` (README/analysis도 읽음) | `2aa2d3fe0cd15ed7740d2de505e22075a0cb371119644cff314ce82c2502b375` |
-| `t010p3d3/formal-report.json` (architecture도 읽음) | `ab224363158d995867a1ca18dee43bd02d7045b8a76614905a076baa3a437eda` |
-| `t010p3d4/fromitem-profile-selection-blocker.json` | `d2675e98e9173eb4f9d9534137c4000e9239334edf60d9ea47c793c2960c09c4` |
-| `t010p3e0/architecture-decision.md` | `4eb76212e2f9403f1d22b6fa69603b9a28941e873f9baa085894826bc02dcd65` |
-| `t010p3e1/architecture-decision.md` | `c8d44d6f69346e9156033d81c5408d9ed376bc17c86d49e977e63028e9be6c79` |
-| `t010p3e1/implementation-plan.md` | `03d7c6402220846ef65f295341ea8fe3bc50ac62e9744a14249ddeebbd9535440` |
-| current `trade-catalog.json` | `8183b03e6aa0ee354142cf9720b401494bec365e528632f3c0c84ec11b46b4b3` |
-
-이번 documentation audit 범위: 3 신규 문서+2 notice, target/behavior/history 분리, E2 supersession/D4 hold, review/master/truth/auto 경계, task gate/경로/link/원문 보존, Git diff와 local evidence byte 보존. Main/user DB를 읽지 않는다. 실제 게임 표기 전수 검증, independent accuracy, 새 review UX, staged persistence는 아직 미검증이다.

@@ -30,8 +30,8 @@ from recognition_benchmark import (  # noqa: E402
 from warehouse_patch import convert as convert_r0  # noqa: E402
 
 
-MANIFEST = ROOT / "tests" / "fixtures" / "recognition-v2" / "manifest.json"
-FIXTURE_ROOT = ROOT / "fixtures" / "warehouse_patch"
+MANIFEST = ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2" / "manifest.json"
+FIXTURE_ROOT = ROOT / "local_app" / "tests" / "fixtures" / "warehouse_patch"
 REFERENCE = ROOT / "reference" / "barter_items.json"
 TEMPLATES = ROOT / "tools" / "warehouse_patch" / "quantity_templates.npz"
 PROFILE_PATH = ROOT / "local_app" / "recognition_data" / "profiles.json"

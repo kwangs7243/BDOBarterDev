@@ -9,7 +9,7 @@
   },
   "resources": {
     "r0SourceSha256": "aa72ed5763c76a030ab4c8ffbc00fb23bf8ed4c391f9d1de8659395d76579fe8",
-    "catalogSha256": "e6e9786b1a8f671650dca9feb33b6137029620f5e17ccb2dcdf0957722028d9c",
+    "catalogSha256": "5b173f688a4eadab15109cd3a65191e8c37d9dc547c6952842c8f70650fc276f",
     "iconBundle": {
       "count": 70,
       "logicalSha256": "c18c20621276f0abb6a6e12636bfcf2aaf84ea8a6fe56a93c24dd3f4dde667f2",
@@ -367,7 +367,7 @@
       ]
     },
     "quantityTemplatesSha256": "2c247ba93a49c65fff739ebc92d836bd752bf7e7afe3fe45941bf7b6b977a302",
-    "profileSha256": "c24c9e1cdb0ff40a23d3ef6d8ed69ea7ef80be03e978bd14e5506402625ce779",
+    "profileSha256": "9d8b256238e99c138ef9645edeac40ee2128d5152236f9a5f5438522aea91eae",
     "anchorLogicalSha256": "a250b93ec523dfce4be30053ec5f3d53e1292048d2808f799424e85332d62706",
     "parameterSha256": "7ab78eb3217e9f648b84abef9756d0c82b18e50ba2f1933a6b5e7fe7949685f2",
     "parameters": {
@@ -495,7 +495,7 @@
     "measurementCodeSha256": "8b89378d44c095c61ae3f781728904aaaaebe7e833e5d6947023f3d338e872ea",
     "datasetHashes": {
       "fixtureManifestSha256": "96ddb32a8b78d67a036aec1d124171553e20ca62a2f69129bbf2540da8e72db5",
-      "profileSha256": "c24c9e1cdb0ff40a23d3ef6d8ed69ea7ef80be03e978bd14e5506402625ce779",
+      "profileSha256": "9d8b256238e99c138ef9645edeac40ee2128d5152236f9a5f5438522aea91eae",
       "anchorLogicalSha256": "a250b93ec523dfce4be30053ec5f3d53e1292048d2808f799424e85332d62706"
     },
     "policyHash": null,

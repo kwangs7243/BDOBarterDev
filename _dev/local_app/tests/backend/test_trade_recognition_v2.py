@@ -26,7 +26,7 @@ from local_app.tools.trade_recognition_experiments import (  # noqa: E402
 class TradeRecognitionV2Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture_root = ROOT / "tests" / "fixtures" / "recognition-v2"
+        cls.fixture_root = ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2"
         cls.manifest = json.loads((cls.fixture_root / "manifest.json").read_text(encoding="utf-8"))
         cls.experiment = json.loads((ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json").read_text(encoding="utf-8"))
         cls.experiment_v2 = json.loads((ROOT / "local_app" / "recognition_data" / "trade-t010a2-experiment.json").read_text(encoding="utf-8"))
@@ -138,12 +138,17 @@ class TradeRecognitionV2Tests(unittest.TestCase):
                             for _, lanes, errors in results), "finite sweep must retain valid candidates")
 
     def test_original_t010a_benchmark_semantic_hash_is_reproducible(self):
-        fixture_root = ROOT / "tests" / "fixtures" / "recognition-v2"
+        fixture_root = ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2"
         artifact = run_trade_candidate(
             fixture_root / "manifest.json",
             ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json", runs=10)
         payload = {key: value for key, value in artifact.items() if key not in {"timing", "semanticHash"}}
         payload["baseCommit"] = self.experiment_v2["baselineT010ACommit"]
+        relocation = json.loads((ROOT / "local_app/tests/fixtures/resource-relocation.json").read_text(encoding="utf-8"))
+        # Guard current bytes before comparing with the immutable pre-relocation result.
+        for key, hashes in relocation["resources"].items():
+            self.assertEqual(payload["resourceHashes"][key], hashes["after"])
+            payload["resourceHashes"][key] = hashes["before"]
         self.assertEqual(canonical_hash(payload), self.experiment_v2["baselineT010ASemanticHash"])
 
     def test_trade_integer_domain_rejects_bool_float_negative_and_zero_minima(self):

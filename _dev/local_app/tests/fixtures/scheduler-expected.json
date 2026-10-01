@@ -1,0 +1,263 @@
+{
+  "basis": "pre-root-cleanup-20261001-0338 V1 execution",
+  "scenarios": {
+    "initial": {
+      "speed": [
+        {
+          "parleyUsed": 32919,
+          "totalTime": 4.208871829377151,
+          "startWeight": 300,
+          "returnTime": 2.1044359146885756,
+          "returnOver": false,
+          "reqItems": {
+            "갈퀴 꽃 씨앗 주머니": {
+              "count": 3,
+              "isBase": false,
+              "tier": 1
+            }
+          },
+          "trades": [
+            {
+              "island": "베이루와 섬",
+              "fromClean": "갈퀴 꽃 씨앗 주머니",
+              "toClean": "괴생물 촉수",
+              "execC": 3,
+              "reqA": 1,
+              "mult": 3,
+              "afterW": 3600,
+              "estT": 2.1044359146885756,
+              "over": false,
+              "toTier": 2,
+              "fromTier": 1,
+              "isCoin": false,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 522000,
+              "lack": 80
+            }
+          ]
+        }
+      ],
+      "balance": [
+        {
+          "parleyUsed": 32919,
+          "totalTime": 4.208871829377151,
+          "startWeight": 300,
+          "returnTime": 2.1044359146885756,
+          "returnOver": false,
+          "reqItems": {
+            "갈퀴 꽃 씨앗 주머니": {
+              "count": 3,
+              "isBase": false,
+              "tier": 1
+            }
+          },
+          "trades": [
+            {
+              "island": "베이루와 섬",
+              "fromClean": "갈퀴 꽃 씨앗 주머니",
+              "toClean": "괴생물 촉수",
+              "execC": 3,
+              "reqA": 1,
+              "mult": 3,
+              "afterW": 3600,
+              "estT": 2.1044359146885756,
+              "over": false,
+              "toTier": 2,
+              "fromTier": 1,
+              "isCoin": false,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 522000,
+              "lack": 80
+            }
+          ]
+        }
+      ]
+    },
+    "crow-coin scenario": {
+      "speed": [
+        {
+          "parleyUsed": 15962,
+          "totalTime": 12.454695755689178,
+          "startWeight": 100,
+          "returnTime": 6.227347877844589,
+          "returnOver": false,
+          "reqItems": {
+            "갈퀴 꽃 씨앗 주머니": {
+              "count": 1,
+              "isBase": false,
+              "tier": 1
+            }
+          },
+          "trades": [
+            {
+              "island": "까마귀의 둥지",
+              "fromClean": "갈퀴 꽃 씨앗 주머니",
+              "toClean": "까마귀 주화",
+              "execC": 1,
+              "reqA": 1,
+              "mult": 1,
+              "afterW": 0,
+              "estT": 6.227347877844589,
+              "over": false,
+              "toTier": "coin",
+              "fromTier": 1,
+              "isCoin": true,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 30002,
+              "lack": 99
+            }
+          ]
+        }
+      ],
+      "balance": [
+        {
+          "parleyUsed": 15962,
+          "totalTime": 12.454695755689178,
+          "startWeight": 100,
+          "returnTime": 6.227347877844589,
+          "returnOver": false,
+          "reqItems": {
+            "갈퀴 꽃 씨앗 주머니": {
+              "count": 1,
+              "isBase": false,
+              "tier": 1
+            }
+          },
+          "trades": [
+            {
+              "island": "까마귀의 둥지",
+              "fromClean": "갈퀴 꽃 씨앗 주머니",
+              "toClean": "까마귀 주화",
+              "execC": 1,
+              "reqA": 1,
+              "mult": 1,
+              "afterW": 0,
+              "estT": 6.227347877844589,
+              "over": false,
+              "toTier": "coin",
+              "fromTier": 1,
+              "isCoin": true,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 30002,
+              "lack": 99
+            }
+          ]
+        }
+      ]
+    },
+    "tier-7 scenario": {
+      "speed": [
+        {
+          "parleyUsed": 21946,
+          "totalTime": 41.93189697726193,
+          "startWeight": 1000,
+          "returnTime": 4.00242573506441,
+          "returnOver": false,
+          "reqItems": {
+            "정체불명의 암석": {
+              "count": 1,
+              "isBase": false,
+              "tier": 5
+            }
+          },
+          "trades": [
+            {
+              "island": "하코번 섬",
+              "fromClean": "정체불명의 암석",
+              "toClean": "발렌시아 모래 방패",
+              "execC": 1,
+              "reqA": 1,
+              "mult": 1,
+              "afterW": 2000,
+              "estT": 16.994748832779887,
+              "over": false,
+              "toTier": 6,
+              "fromTier": 5,
+              "isCoin": false,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 999999,
+              "lack": 99
+            },
+            {
+              "island": "올비아 해안",
+              "fromClean": "발렌시아 모래 방패",
+              "toClean": "최고급 하이델산 포도주",
+              "execC": 1,
+              "reqA": 1,
+              "mult": 1,
+              "afterW": 2000,
+              "estT": 20.93472240941764,
+              "over": false,
+              "toTier": 7,
+              "fromTier": 6,
+              "isCoin": false,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 999999,
+              "lack": 99
+            }
+          ]
+        }
+      ],
+      "balance": [
+        {
+          "parleyUsed": 21946,
+          "totalTime": 41.93189697726193,
+          "startWeight": 1000,
+          "returnTime": 4.00242573506441,
+          "returnOver": false,
+          "reqItems": {
+            "정체불명의 암석": {
+              "count": 1,
+              "isBase": false,
+              "tier": 5
+            }
+          },
+          "trades": [
+            {
+              "island": "하코번 섬",
+              "fromClean": "정체불명의 암석",
+              "toClean": "발렌시아 모래 방패",
+              "execC": 1,
+              "reqA": 1,
+              "mult": 1,
+              "afterW": 2000,
+              "estT": 16.994748832779887,
+              "over": false,
+              "toTier": 6,
+              "fromTier": 5,
+              "isCoin": false,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 999999,
+              "lack": 99
+            },
+            {
+              "island": "올비아 해안",
+              "fromClean": "발렌시아 모래 방패",
+              "toClean": "최고급 하이델산 포도주",
+              "execC": 1,
+              "reqA": 1,
+              "mult": 1,
+              "afterW": 2000,
+              "estT": 20.93472240941764,
+              "over": false,
+              "toTier": 7,
+              "fromTier": 6,
+              "isCoin": false,
+              "isSpec": false,
+              "isRandomCoin": false,
+              "score": 999999,
+              "lack": 99
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

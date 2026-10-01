@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 REPO = ROOT.parent
 PROFILE_PATH = ROOT / "local_app" / "recognition_data" / "profiles.json"
 ANCHOR_PATH = ROOT / "local_app" / "recognition_data" / "anchors.npz"
-FIXTURE_DIR = ROOT / "fixtures" / "warehouse_patch"
+FIXTURE_DIR = ROOT / "local_app" / "tests" / "fixtures" / "warehouse_patch"
 OUTPUT_PATH = ROOT / "local_app" / "recognition_data" / "t005a1_measurements.json"
 
 

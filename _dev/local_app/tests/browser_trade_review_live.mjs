@@ -16,10 +16,7 @@ const EVALUATION_POLICY = "trade-review-evaluation-v1";
 const RAW_EVALUATION = "trade-raw-eval-v1";
 const MAPPING_POLICY = "reviewed-trade-dto-mapping-v1";
 const FIELDS = ["island", "fromItem", "reqAmount", "toItem", "count", "yield"];
-const PROTECTED_DIRTY = new Set([
-  "_dev/local_app/.venv/Lib/site-packages/__pycache__/_virtualenv.cpython-312.pyc",
-  "마스터.png",
-]);
+const PROTECTED_DIRTY = new Set();
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
 let interrupted = false;
 process.on("SIGINT", () => { interrupted = true; process.stderr.write("\n중단 요청을 받았습니다. 현재까지의 case 기록을 보존하고 종료합니다.\n"); });

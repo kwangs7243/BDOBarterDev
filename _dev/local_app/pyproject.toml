@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bdo-barter-local-app"
 version = "0.1.0"
-description = "SPEC-001 localhost and persistent storage foundation for BDO Barter"
+description = "Local BDO Barter application with review-first trade recognition"
 requires-python = ">=3.11"
 dependencies = [
   "Flask>=3.0,<4",
@@ -15,6 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = ["pytest>=8"]
 package = ["pyinstaller>=6.10,<7"]
 
 [tool.setuptools.packages.find]

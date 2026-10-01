@@ -34,7 +34,7 @@ from local_app.backend.services.warehouse_recognition import run_r0_shadow  # no
 from PIL import Image, ImageDraw  # noqa: E402
 
 
-MANIFEST_PATH = ROOT / "tests" / "fixtures" / "recognition-v2" / "manifest.json"
+MANIFEST_PATH = ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2" / "manifest.json"
 MODEL_MANIFEST_PATH = ROOT / "local_app" / "recognition_data" / "model-manifest.json"
 DEFAULT_FEEDBACK = ROOT / "recognition-local" / "legacy-feedback-v7" / "samples.jsonl"
 DEFAULT_OUT = ROOT / "recognition-local" / "results" / "warehouse-r0-evidence.json"

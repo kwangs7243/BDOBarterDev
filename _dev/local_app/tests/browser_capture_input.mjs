@@ -11,7 +11,7 @@ const python = process.env.PYTHON ?? "python";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const profile = await mkdtemp(join(tmpdir(), "bdo-t003-capture-browser-"));
 const database = join(profile, "isolated.sqlite3");
-const fixture = resolve(root, "fixtures/warehouse_patch/barter_only.png");
+const fixture = resolve(root, "local_app/tests/fixtures/warehouse_patch/barter_only.png");
 const port = new URL(baseUrl).port || "18768";
 const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=${Number(port)}, use_reloader=False, threaded=True)`;
 let server;

@@ -49,7 +49,7 @@ class WarehouseScanApiTests(unittest.TestCase):
     def test_real_fixture_api_matches_direct_convert_and_keeps_only_safe_patch(self):
         for filename in ("barter_only.png", "mixed.png"):
             with self.subTest(filename=filename):
-                path = ROOT / "fixtures" / "warehouse_patch" / filename
+                path = ROOT / "local_app" / "tests" / "fixtures" / "warehouse_patch" / filename
                 expected_patch, expected_report = convert(path, REFERENCE, TEMPLATES)
                 response = self.scan(filename, path.read_bytes())
                 self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
@@ -102,7 +102,7 @@ class WarehouseScanApiTests(unittest.TestCase):
             {"decision": "DUPLICATE_ITEM_DETECTED", "finalItem": other_names[2]},
         ]}
         expected = {"type": "master_inventory_patch", "version": 1, "items": {match_name: 7}}
-        fixture = (ROOT / "fixtures/warehouse_patch/barter_only.png").read_bytes()
+        fixture = (ROOT / "local_app/tests/fixtures/warehouse_patch/barter_only.png").read_bytes()
         with patch.object(warehouse_scan, "convert", return_value=(expected, report)):
             response = self.scan("confirmed.png", fixture)
         self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
@@ -151,7 +151,7 @@ class WarehouseScanApiTests(unittest.TestCase):
             self.assertTrue(image_path.exists())
             raise RuntimeError("test scanner failure")
         with patch.object(warehouse_scan, "convert", side_effect=fail_convert):
-            scanner_failure = self.scan("valid.png", (ROOT / "fixtures/warehouse_patch/barter_only.png").read_bytes())
+            scanner_failure = self.scan("valid.png", (ROOT / "local_app/tests/fixtures/warehouse_patch/barter_only.png").read_bytes())
         self.assertEqual(scanner_failure.status_code, 503)
         self.assertEqual(scanner_failure.get_json()["error"]["code"], "scanner_processing_failed")
         self.assertEqual(len(path_seen), 1)
@@ -163,7 +163,7 @@ class WarehouseScanApiTests(unittest.TestCase):
     def test_concurrent_scan_is_rejected_without_creating_a_second_temp_file(self):
         entered = threading.Event()
         release = threading.Event()
-        fixture = (ROOT / "fixtures/warehouse_patch/barter_only.png").read_bytes()
+        fixture = (ROOT / "local_app/tests/fixtures/warehouse_patch/barter_only.png").read_bytes()
         def slow_convert(_image_path, _reference, _templates):
             entered.set()
             release.wait(timeout=5)

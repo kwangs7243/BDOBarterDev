@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import runpy
 import sqlite3
 import sys
 import tempfile
@@ -29,7 +28,7 @@ from recognition_benchmark import (  # noqa: E402
 from recognition_dataset import export_legacy_feedback, export_to_directory  # noqa: E402
 
 
-MANIFEST_PATH = ROOT / "tests" / "fixtures" / "recognition-v2" / "manifest.json"
+MANIFEST_PATH = ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2" / "manifest.json"
 
 
 def _png(color=(30, 50, 70)) -> bytes:
@@ -106,7 +105,7 @@ class RecognitionBenchmarkTests(unittest.TestCase):
         self.assertEqual(trade["catalogAudit"]["reconciliationStatus"], "UNRESOLVED")
         self.assertEqual(len(trade["captures"]), 16)
 
-        old = runpy.run_path(str(ROOT / "tests" / "warehouse_patch_regression.py"))
+        old = json.loads((ROOT / "local_app/tests/fixtures/warehouse-oracle.json").read_text(encoding="utf-8"))
         fixtures = {record["fixtureId"]: record for record in manifest["fixtures"]}
         expected_ids = {
             "barter-only": (old["DEDICATED_IDS"], old["DEDICATED_QTY"]),

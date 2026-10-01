@@ -39,8 +39,8 @@ try {
   const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result?.value; };
   await send("Page.enable"); await send("Runtime.enable");
   await waitFor(async () => (await evaluate("document.querySelectorAll('.inventory-row').length")) === 70, "SPEC-002 UI and trade panel");
-  const seed = JSON.parse(await readFile(resolve(root, "fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"), "utf8"))[0];
-  const second = JSON.parse(await readFile(resolve(root, "fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"), "utf8"))[1];
+  const seed = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"), "utf8"))[0];
+  const second = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtures/KNOWN_CORRECT_SPECIAL_IMPORT_4.json"), "utf8"))[1];
   const encodedSeed = JSON.stringify(JSON.stringify([seed]));
   const initialDefault = await evaluate("fetch('/api/bootstrap').then(r=>r.json()).then(snapshot=>JSON.stringify(snapshot.settings.parley))");
   await evaluate(`document.querySelector('#trade-json-input').value=${encodedSeed}; document.querySelector('#apply-new-session').click()`);

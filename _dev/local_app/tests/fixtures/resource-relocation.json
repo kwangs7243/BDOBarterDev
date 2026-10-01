@@ -1,0 +1,13 @@
+{
+  "basis": "Only fixture locations and resource provenance changed; pre-cleanup V1 expected semantic hash remains fixed.",
+  "resources": {
+    "manifest": {
+      "before": "96ddb32a8b78d67a036aec1d124171553e20ca62a2f69129bbf2540da8e72db5",
+      "after": "7d538c877ea4ef678b5f14213b6444530515e4cc52728fe9e166d4d6f96032c9"
+    },
+    "warehouseIconManifestRawSha256": {
+      "before": "cef0d7209484c2cf49496373bc522f854bc0dc22e157fc9321d4e0126491bb78",
+      "after": "6cbe6db953a9dddb6966db03ee5686aa6e94a0b1b8c626b571529a6a421aa0e9"
+    }
+  }
+}

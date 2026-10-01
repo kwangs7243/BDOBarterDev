@@ -4,6 +4,11 @@ from pathlib import Path
 
 ROOT = Path(SPECPATH).resolve().parents[1]
 datas = [
+    (str(ROOT / "local_app" / "recognition_data"), "local_app/recognition_data"),
+    (str(ROOT / "local_app" / "tools" / "trade_batch_worker.py"), "local_app/tools"),
+    (str(ROOT / "local_app" / "tools" / "trade_batch_draft_experiment.py"), "local_app/tools"),
+    (str(ROOT / "local_app" / "tools" / "trade_ocr_experiment.py"), "local_app/tools"),
+    (str(ROOT / "local_app" / "tools" / "trade_recognition_experiments.py"), "local_app/tools"),
     (str(ROOT / "local_app" / "frontend"), "local_app/frontend"),
     (str(ROOT / "reference" / "barter_items.json"), "reference"),
     (str(ROOT / "reference" / "icons"), "reference/icons"),

@@ -18,7 +18,7 @@ from local_app.backend.services.capture_normalization import (
 ROOT = Path(__file__).resolve().parents[3]
 PROFILE_PATH = ROOT / "local_app" / "recognition_data" / "profiles.json"
 ANCHOR_PATH = ROOT / "local_app" / "recognition_data" / "anchors.npz"
-FIXTURE_ROOT = ROOT / "fixtures" / "warehouse_patch"
+FIXTURE_ROOT = ROOT / "local_app" / "tests" / "fixtures" / "warehouse_patch"
 
 
 class CaptureNormalizationTests(unittest.TestCase):

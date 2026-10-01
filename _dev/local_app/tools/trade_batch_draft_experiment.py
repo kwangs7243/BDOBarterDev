@@ -733,7 +733,7 @@ def load_archive_captures(manifest_path: Path) -> tuple[list[dict[str, Any]], di
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=ROOT / "tests" / "fixtures" / "recognition-v2" / "manifest.json")
+    parser.add_argument("--manifest", type=Path, default=ROOT / "local_app" / "tests" / "fixtures" / "recognition-v2" / "manifest.json")
     parser.add_argument("--captures-json", type=Path,
                         help="UTF-8 JSON list of {captureId,batchId,imagePath[,imageHash]} records")
     parser.add_argument("--selection", type=Path, default=ROOT / "local_app" / "recognition_data" / "trade-t010p3a-experiment.json")

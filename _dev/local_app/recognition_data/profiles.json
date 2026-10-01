@@ -14,11 +14,11 @@
       },
       "referenceFixtures": [
         {
-          "path": "_dev/fixtures/warehouse_patch/barter_only.png",
+          "path": "_dev/local_app/tests/fixtures/warehouse_patch/barter_only.png",
           "sha256": "cc1745d5e3f57315f7344ca26eb428c0e81b8d3251a2be049d75e29ba7da506d"
         },
         {
-          "path": "_dev/fixtures/warehouse_patch/mixed.png",
+          "path": "_dev/local_app/tests/fixtures/warehouse_patch/mixed.png",
           "sha256": "49f5ba07ac216a69daeffc22fe7389c62f9073419b73fae66b916ce5df4d7742"
         }
       ],
