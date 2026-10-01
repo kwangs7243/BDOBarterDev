@@ -8,6 +8,7 @@ import { initRecognitionUI } from "./recognition-ui.js";
 import { openPatchReview } from "./patch-review.js";
 import { initTradeSessionUI, renderTradeList } from "./trade-ui.js";
 import { initScheduleUI, syncScheduleState } from "./schedule-ui.js";
+import { initTradeMasterUI } from "./trade-master-ui.js";
 
 const status = document.querySelector("#runtime-status");
 const content = document.querySelector("#app-content");
@@ -28,6 +29,7 @@ function renderAll() {
 const warehouseCaptureUI = initWarehouseScanUI({ setStatus, onPatch: (patch, report, imageFile) => openPatchReview(patch, report, { setStatus, onApplied: renderAll, imageFile }) });
 initRecognitionUI({ warehouseCaptureUI });
 initScheduleUI(setStatus);
+initTradeMasterUI();
 window.__bdoRenderTradeList = renderTradeList;
 window.__bdoRenderAll = renderAll;
 window.addEventListener("bdo:trade-list-changed", renderTradeList);
