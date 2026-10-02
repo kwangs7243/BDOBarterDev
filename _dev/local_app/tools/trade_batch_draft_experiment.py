@@ -6,11 +6,9 @@ import argparse
 import hashlib
 import html
 import json
-import re
 import statistics
 import sys
 import time
-import unicodedata
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -29,6 +27,10 @@ from local_app.backend.services.trade_recognition import (  # noqa: E402
 from local_app.tools.trade_ocr_experiment import (  # noqa: E402
     MODEL_NAME, _load_reader, recognize_one,
 )
+from local_app.tools.trade_ocr_adapter import (  # noqa: E402
+    normalize_trade_ocr_compat_text, parse_trade_numeric_raw,
+    read_trade_ocr_field, to_legacy_trade_draft_field,
+)
 from local_app.tools.trade_recognition_experiments import (  # noqa: E402
     infer_trade_numeric_field_v2,
 )
@@ -43,17 +45,12 @@ def _json(path: Path) -> Any:
 
 
 def _normalized_text(raw: str | None) -> str | None:
-    return unicodedata.normalize("NFKC", raw).strip() if raw is not None else None
+    return normalize_trade_ocr_compat_text(raw)
 
 
 def _strict_integer(raw: str | None) -> tuple[int | None, str]:
-    if raw is None:
-        return None, "OCR_ERROR"
-    if raw == "":
-        return None, "EMPTY_OCR"
-    if re.fullmatch(r"[0-9]+", raw) is None:
-        return None, "INVALID_NUMERIC_TOKEN"
-    return int(raw), "NUMERIC_OCR_CANDIDATE"
+    parsed = parse_trade_numeric_raw("count", raw)
+    return parsed["numericCandidate"], parsed["numericParseStatus"]
 
 
 def _lane_crop(row_crop: Image.Image, lane: dict[str, float]) -> tuple[Image.Image | None, dict[str, Any]]:
@@ -312,54 +309,22 @@ def measure_geometry_candidates(captures: list[dict[str, Any]], base_lanes: dict
 def _field_record(field: str, crop: Image.Image | None, geometry: dict[str, Any],
                   numeric_parameters: dict[str, Any], reader: Any) -> dict[str, Any]:
     if crop is None or not geometry.get("valid"):
-        return {"rawText": None, "normalizedText": None, "ocrScore": None, "rawNumericCandidate": None,
-                "value": None, "status": "GEOMETRY_ABSTAIN", "cropHash": None,
-                "readerEvidence": {"geometry": geometry}, "reasonCodes": ["LANE_INVALID"]}
+        return to_legacy_trade_draft_field(read_trade_ocr_field(
+            field=field, crop=crop, geometry=geometry, reader=reader,
+            visual_evidence=None, numeric_structure=None,
+        ))
     visual = _visual_evidence(crop, field, numeric_parameters, geometry.get("box"))
     boundary = {"top": False, "bottom": False}
-    output = None
-    error_type = None
-    try:
-        output = recognize_one(reader, crop)
-        raw, score = output.get("rawText"), output.get("ocrScore")
-    except Exception as error:
-        raw, score, error_type = None, None, type(error).__name__
-    parse, parse_status = _strict_integer(raw) if field in NUMERIC_FIELDS else (None, None)
-    if error_type:
-        status, reasons = "OCR_ERROR", ["OCR_INFERENCE_ERROR"]
-    elif field in NUMERIC_FIELDS:
-        numeric = infer_trade_numeric_field_v2(crop, field, boundary,
-                                               {"componentPlausibility": numeric_parameters})
-        contact = numeric["readerEvidence"]["plausibleTokenBoundaryContact"]
-        if any(contact.values()):
-            status, reasons = "FIELD_CLIPPED", ["TOKEN_BOUNDARY_CONTACT"]
-        elif raw in (None, ""):
-            status, reasons = ("OCR_ERROR", ["OCR_OUTPUT_NULL"]) if raw is None else ("EMPTY_OCR", ["OCR_EMPTY"])
-        elif parse is not None:
-            status, reasons = "NUMERIC_OCR_CANDIDATE", ["STRICT_ASCII_INTEGER_TOKEN"]
-        else:
-            status, reasons = "UNREADABLE", [parse_status]
-    elif raw in (None, ""):
-        status, reasons = ("OCR_ERROR", ["OCR_OUTPUT_NULL"]) if raw is None else ("EMPTY_OCR", ["OCR_EMPTY"])
-    else:
-        status, reasons = "RAW_OCR_CANDIDATE", ["RAW_TEXT_UNVERIFIED"]
-    reader_evidence: dict[str, Any] = {
-        "readerId": "paddle-korean-ppocrv5-mobile-onnx-cpu-v1", "geometry": geometry,
-        "visual": visual, "normalization": "Unicode NFKC and outer whitespace trim; rawText preserved",
-        "candidateStatusOnly": True,
-    }
+    numeric_structure = None
     if field in NUMERIC_FIELDS:
-        numeric = infer_trade_numeric_field_v2(crop, field, boundary,
-                                               {"componentPlausibility": numeric_parameters})
-        reader_evidence["numericStructure"] = numeric["readerEvidence"]
-        reader_evidence["rawNumericParseEvidence"] = {"strictAsciiInteger": parse is not None,
-                                                        "parseStatus": parse_status,
-                                                        "observedCountRange1To10": (1 <= parse <= 10) if field == "count" and parse is not None else None}
-    if error_type:
-        reader_evidence["errorType"] = error_type
-    return {"rawText": raw, "normalizedText": _normalized_text(raw), "ocrScore": score,
-            "rawNumericCandidate": parse, "value": None, "status": status,
-            "cropHash": visual["cropHash"], "readerEvidence": reader_evidence, "reasonCodes": reasons}
+        numeric_structure = infer_trade_numeric_field_v2(
+            crop, field, boundary, {"componentPlausibility": numeric_parameters}
+        )["readerEvidence"]
+    adapter_result = read_trade_ocr_field(
+        field=field, crop=crop, geometry=geometry, reader=reader,
+        visual_evidence=visual, numeric_structure=numeric_structure,
+    )
+    return to_legacy_trade_draft_field(adapter_result)
 
 
 def _semantic_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
