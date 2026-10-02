@@ -95,6 +95,15 @@ function sha256(text) {
   return state.map((word) => word.toString(16).padStart(8,"0")).join("");
 }
 function hash(value) { return sha256(canonicalStringify(value)); }
+export function hashRawEvidenceSnapshot2(snapshot) {
+  const cloned = cloneJson(snapshot, "RawEvidenceSnapshot2");
+  exactKeys(cloned, ["schemaVersion", "recognitionBatchId", "captures", "sourceRows", "edgeSegments"], "RawEvidenceSnapshot2");
+  if (cloned.schemaVersion !== 2 || typeof cloned.recognitionBatchId !== "string" || !cloned.recognitionBatchId
+      || !Array.isArray(cloned.captures) || !Array.isArray(cloned.sourceRows) || !Array.isArray(cloned.edgeSegments)) {
+    fail("RawEvidenceSnapshot2 is invalid");
+  }
+  return hash(cloned);
+}
 function hashShape(value, label) { if (typeof value !== "string" || !SHA256.test(value)) fail(`${label} must be lowercase SHA-256`); }
 function timestamp(value, label) { if (typeof value !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z$/.test(value) || !Number.isFinite(Date.parse(value))) fail(`${label} must be a UTC RFC3339 timestamp`); }
 function validText(value, label) { if (typeof value !== "string" || !value || value.length > 128 || !validUnicode(value)) fail(`${label} must be nonempty text`); }

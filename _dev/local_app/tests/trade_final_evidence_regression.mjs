@@ -11,6 +11,7 @@ import {
   buildFinalProjection3,
   buildFinalReviewCompletion,
   buildFinalReviewObservationRequest,
+  hashRawEvidenceSnapshot2,
 } from "../frontend/js/domain/trade-final-evidence.js";
 
 const here=dirname(fileURLToPath(import.meta.url));
@@ -55,7 +56,11 @@ assert.deepEqual(completion,expectedCompletion,"Completion3 must match the contr
 assert.deepEqual(request.projection,expectedProjection);
 assert.deepEqual(request.completion,expectedCompletion);
 assert.equal(request.cropPlan.schemaVersion,3);
-assert.equal(Object.keys(await import("../frontend/js/domain/trade-final-evidence.js")).length,3,"domain module must expose only its three contract builders");
+assert.equal(Object.keys(await import("../frontend/js/domain/trade-final-evidence.js")).length,4,"domain module exposes the three contract builders and shared RawEvidenceSnapshot2 hash helper");
+const rawSnapshotForHash = structuredClone(sourceContext.rawEvidence.snapshot);
+assert.match(hashRawEvidenceSnapshot2(rawSnapshotForHash), /^[0-9a-f]{64}$/);
+assert.equal(hashRawEvidenceSnapshot2(rawSnapshotForHash), createHash("sha256").update(canonical(rawSnapshotForHash)).digest("hex"),
+  "RawEvidenceSnapshot2 hash reuses the E1 canonical JSON basis");
 
 const before=JSON.stringify({projection:projectionInput(),completion:completionInput(projection),sourceContext});
 const again=buildFixture();
