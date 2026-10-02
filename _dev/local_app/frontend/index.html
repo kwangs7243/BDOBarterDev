@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/assets/css/patch-review.css">
   <link rel="stylesheet" href="/assets/css/trade-session.css">
   <link rel="stylesheet" href="/assets/css/trade-master.css">
+  <link rel="stylesheet" href="/assets/css/trade-final-review.css">
   <link rel="stylesheet" href="/assets/css/schedule.css">
   <link rel="stylesheet" href="/assets/css/nautical-theme.css">
 </head>
@@ -96,6 +97,11 @@
     <div class="dialog-titlebar"><h2 id="trade-review-title">물교 인식 결과 검수</h2><button type="button" data-close-trade-review aria-label="검수 창 닫기">×</button></div>
     <div class="trade-review-workspace" data-role="trade-review-workspace" hidden></div>
     <div class="trade-review-window-actions"><button type="button" data-action="return-trade-capture">캡처 화면으로 돌아가기</button></div>
+  </dialog>
+
+  <dialog id="trade-final-review-dialog" class="trade-final-review-dialog" aria-labelledby="trade-final-review-title">
+    <div class="trade-final-review-dialog-heading"><h2 id="trade-final-review-title">물교 결과 확인</h2><button type="button" data-action="close" aria-label="검수 닫기">닫기</button></div>
+    <div data-role="trade-final-review-root"></div>
   </dialog>
 
   <dialog id="trade-master-dialog" class="app-dialog trade-master-dialog" aria-labelledby="trade-master-title">
