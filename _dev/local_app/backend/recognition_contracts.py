@@ -47,12 +47,15 @@ def _reject_constant(_value: str) -> None:
     raise ValueError("non-finite JSON number")
 
 
-def parse_json(raw: str | bytes, *, max_bytes: int, label: str) -> dict[str, Any]:
+def parse_json(raw: str | bytes, *, max_bytes: int, label: str, reject_negative_zero: bool = False) -> dict[str, Any]:
     encoded = raw.encode("utf-8") if isinstance(raw, str) else raw
     if len(encoded) > max_bytes:
         raise RecognitionContractError("metadata_too_large", f"{label} exceeds the allowed size.", 413)
     try:
-        value = json.loads(encoded.decode("utf-8"), object_pairs_hook=_object, parse_constant=_reject_constant)
+        def parse_integer(token: str):
+            if reject_negative_zero and token == "-0": raise ValueError("negative zero is not allowed")
+            return int(token)
+        value = json.loads(encoded.decode("utf-8"), object_pairs_hook=_object, parse_constant=_reject_constant, parse_int=parse_integer)
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
         raise RecognitionContractError("invalid_json", f"{label} must be valid UTF-8 JSON.", 400) from None
     if not isinstance(value, dict):
@@ -525,9 +528,375 @@ def validate_trade_crop_metadata(value: dict[str, Any], png_bytes: bytes) -> dic
             if chunk == b"IEND": break
         image = Image.open(BytesIO(png_bytes))
         if image.format != "PNG" or getattr(image, "n_frames", 1) != 1 or image.size != (value["width"], value["height"]): _trade_fail("Only plain, single-frame PNG crops are accepted.")
-        image.verify()
     except (UnidentifiedImageError, OSError, ValueError): _trade_fail("The crop is not a valid PNG image.")
     return value
+
+
+def validate_trade_crop_metadata_v3(value: dict[str, Any], png_bytes: bytes, crop_ref: dict[str, Any]) -> dict[str, Any]:
+    import hashlib
+    expected = {"schemaVersion", "cropMutationId", "projectionRowId", "field", "cropRefId", "sha256", "pixelSha256", "width", "height"}
+    _keys(value, expected)
+    if type(value["schemaVersion"]) is not int or value["schemaVersion"] != 3 or _uuid(value["cropMutationId"], "cropMutationId") != value["cropMutationId"]: _trade_fail()
+    if not isinstance(value["projectionRowId"], str) or value["field"] not in TRADE_FIELDS or value["cropRefId"] != crop_ref["cropRefId"]: _trade_fail()
+    if len(png_bytes) > MAX_TRADE_CROP_BYTES: raise RecognitionContractError("crop_too_large", "The crop exceeds the allowed size.", 413)
+    if not _v3_sha(value["sha256"]) or hashlib.sha256(png_bytes).hexdigest() != value["sha256"] or value["pixelSha256"] != crop_ref["pixelSha256"]: _trade_fail("Crop hashes do not match their source binding.")
+    width, height = crop_ref["box"]["width"], crop_ref["box"]["height"]
+    if type(value["width"]) is not int or type(value["height"]) is not int or (value["width"], value["height"]) != (width, height): _trade_fail("Crop dimensions do not match the source geometry.")
+    if not (1 <= width <= 1024 and 1 <= height <= 256 and width * height <= 262144): _trade_fail()
+    try:
+        if not png_bytes.startswith(b"\x89PNG\r\n\x1a\n"): _trade_fail("Crop must be a PNG image.")
+        offset = 8
+        while offset + 12 <= len(png_bytes):
+            length = int.from_bytes(png_bytes[offset:offset+4], "big")
+            chunk = png_bytes[offset+4:offset+8]
+            if offset + 12 + length > len(png_bytes): _trade_fail("The PNG crop is truncated.")
+            if chunk in {b"tEXt", b"iTXt", b"zTXt", b"eXIf"}: _trade_fail("PNG text and EXIF metadata are not accepted.")
+            offset += 12 + length
+            if chunk == b"IEND": break
+        image = Image.open(BytesIO(png_bytes))
+        if image.format != "PNG" or getattr(image, "n_frames", 1) != 1 or image.size != (width, height): _trade_fail("Only plain, single-frame PNG crops are accepted.")
+        image.load()
+        if "A" in image.getbands() and image.getchannel("A").getextrema() != (255, 255): _trade_fail("Transparent crop pixels are not accepted.")
+        pixel_hash = hashlib.sha256(image.convert("RGB").tobytes()).hexdigest()
+    except (UnidentifiedImageError, OSError, ValueError): _trade_fail("The crop is not a valid PNG image.")
+    if pixel_hash != value["pixelSha256"]: _trade_fail("Decoded crop pixels do not match their pixel hash.")
+    return value
+
+
+def validate_crop_truth_label_request(value: dict[str, Any], observation: dict[str, Any], *, artifact_present: bool) -> dict[str, Any]:
+    required = {"schemaVersion", "mutationId", "sourceRowId", "field", "cropRefId", "labelRevision", "supersedesLabelId", "labelStatus", "value", "provenance", "createdAt"}
+    _keys(value, required, {"artifact"})
+    if type(value["schemaVersion"]) is not int or value["schemaVersion"] != 1 or _uuid(value["mutationId"], "mutationId") != value["mutationId"]: _trade_fail()
+    if not isinstance(value["sourceRowId"], str) or not value["sourceRowId"] or value["field"] not in TRADE_FIELDS or not isinstance(value["cropRefId"], str): _trade_fail()
+    _integer(value["labelRevision"], "labelRevision", minimum=1)
+    if value["supersedesLabelId"] is not None and _uuid(value["supersedesLabelId"], "supersedesLabelId") != value["supersedesLabelId"]: _trade_fail()
+    if value["labelStatus"] not in {"KNOWN", "UNKNOWN", "DISPUTED"}: _trade_fail()
+    numeric=value["field"] in {"reqAmount","count","yield"}
+    val=value["value"]
+    if value["labelStatus"]=="KNOWN":
+        if val is None or numeric and (type(val) is not int or val < (0 if value["field"]=="count" else 1)) or not numeric and not isinstance(val,str): _trade_fail()
+    elif val is not None: _trade_fail()
+    provenance=value["provenance"]
+    _keys(provenance,{"method","labelerRole","sourceFamilyId","cohort","splitManifestHash","sourceOrigin","independentOfOperationalReview","note"})
+    if provenance["method"]!="HUMAN_CROP_VERIFIED" or provenance["labelerRole"]!="PRODUCT_OWNER" or provenance["cohort"] not in {"DEVELOPMENT","INDEPENDENT"} or provenance["sourceOrigin"] not in {"FRESH_CAPTURE","ARCHIVED_CAPTURE"} or type(provenance["independentOfOperationalReview"]) is not bool: _trade_fail()
+    if not isinstance(provenance["sourceFamilyId"],str) or not provenance["sourceFamilyId"] or provenance["splitManifestHash"] is not None and not _v3_sha(provenance["splitManifestHash"]) or provenance["note"] is not None and not isinstance(provenance["note"],str): _trade_fail()
+    _utc_timestamp(value["createdAt"])
+    raw=observation["sourceContext"]["rawEvidence"]["snapshot"]
+    source=next((row for row in raw["sourceRows"] if row["sourceRowId"]==value["sourceRowId"]),None)
+    ref=next((crop for row in raw["sourceRows"] for field in row["fields"] for crop in field["cropRefs"] if crop["cropRefId"]==value["cropRefId"]),None)
+    if source is None or ref is None or ref["sourceRowId"]!=source["sourceRowId"] or ref["field"]!=value["field"]: _trade_fail("Truth label must bind to a source row crop.")
+    if ref["pngArtifactSha256"] is None and ("artifact" not in value or not artifact_present): _trade_fail("A new PNG artifact is required for this truth label.")
+    artifact=value.get("artifact")
+    if artifact is not None:
+        _keys(artifact,{"sha256","pixelSha256","width","height"})
+        if not _v3_sha(artifact["sha256"]) or ref["pngArtifactSha256"] is not None and artifact["sha256"]!=ref["pngArtifactSha256"] or artifact["pixelSha256"]!=ref["pixelSha256"] or artifact["width"]!=ref["box"]["width"] or artifact["height"]!=ref["box"]["height"]: _trade_fail()
+    return value
+
+
+def _v3_hash(value: Any) -> str:
+    import hashlib
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8", errors="strict")).hexdigest()
+
+
+def _v3_sha(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
+
+
+def _v3_json_walk(value: Any, *, depth: int = 0, budget: list[int] | None = None) -> None:
+    if budget is None: budget=[250_000]
+    budget[0]-=1
+    if budget[0]<0 or depth>32: _trade_fail("The v3 observation exceeds structural limits.")
+    if type(value) is float: _trade_fail("Floating point values are not permitted in evidence v3.")
+    if isinstance(value,str):
+        try: encoded=value.encode("utf-8",errors="strict")
+        except UnicodeEncodeError: _trade_fail("Text must be valid Unicode.")
+        if len(encoded)>8192: _trade_fail("A v3 text value exceeds its limit.")
+    elif isinstance(value,dict):
+        if len(value)>256: _trade_fail("A v3 object exceeds its key limit.")
+        for key,item in value.items():
+            if not isinstance(key,str) or key.lower() in {"imagebytes","base64","dataurl","blob","bytes","filepath"}: _trade_fail("Evidence JSON cannot contain image bytes or local paths.")
+            _v3_json_walk(key,depth=depth+1,budget=budget);_v3_json_walk(item,depth=depth+1,budget=budget)
+    elif isinstance(value,list):
+        if len(value)>6000: _trade_fail("A v3 array exceeds its limit.")
+        for item in value: _v3_json_walk(item,depth=depth+1,budget=budget)
+    elif value is None or type(value) in (bool,int):
+        if type(value) is int and abs(value)>MAX_SAFE_INTEGER: _trade_fail("An integer exceeds the safe range.")
+    else: _trade_fail()
+
+
+def validate_final_review_observation(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate the immutable FINAL_CORRECTED_RESULT observation v3 envelope.
+
+    This intentionally does not treat retained candidates or batch confirmation as truth.
+    """
+    request_keys = {"schemaVersion", "reviewMode", "mutationId", "createdAt", "confirmationRevision",
+                    "supersedesObservationId", "projection", "completion", "sourceContext", "cropPlan"}
+    _keys(payload, request_keys)
+    _v3_json_walk(payload)
+    if type(payload["schemaVersion"]) is not int or payload["schemaVersion"] != 3 or payload["reviewMode"] != "FINAL_CORRECTED_RESULT": _trade_fail("Observation v3 mode/version is invalid.")
+    if _uuid(payload["mutationId"], "mutationId") != payload["mutationId"] or type(payload["confirmationRevision"]) is not int or payload["confirmationRevision"] != 1: _trade_fail()
+    if payload["supersedesObservationId"] is not None and _uuid(payload["supersedesObservationId"], "supersedesObservationId") != payload["supersedesObservationId"]: _trade_fail()
+    _utc_timestamp(payload["createdAt"])
+    projection, completion, context, crop_plan = (payload[k] for k in ("projection", "completion", "sourceContext", "cropPlan"))
+    if not all(isinstance(item, dict) for item in (projection, completion, context, crop_plan)): _trade_fail()
+    projection_keys = {"schemaVersion", "reviewMode", "recognitionBatchId", "rawEvidenceHash", "masterBinding", "correctionVersion", "reconciliation", "pixelAvailability", "rows", "edgeWorkItems", "hashBasis", "projectionHash"}
+    completion_keys = {"schemaVersion", "reviewMode", "recognitionBatchId", "projectionHash", "masterBinding", "correctionVersion", "reviewRevision", "rows", "workItems", "batchConfirmation"}
+    _keys(projection, projection_keys); _keys(completion, completion_keys)
+    if projection["schemaVersion"] != 3 or type(projection["schemaVersion"]) is not int or projection["reviewMode"] != "FINAL_CORRECTED_RESULT" or projection["hashBasis"] != "TRADE_FINAL_PROJECTION_JSON_V3": _trade_fail()
+    if completion["schemaVersion"] != 3 or type(completion["schemaVersion"]) is not int or completion["reviewMode"] != "FINAL_CORRECTED_RESULT": _trade_fail()
+    if projection["recognitionBatchId"] != completion["recognitionBatchId"] or projection["correctionVersion"] != completion["correctionVersion"] or projection["projectionHash"] != completion["projectionHash"]: _trade_fail("Projection and completion bindings disagree.")
+    review_revision = _integer(completion["reviewRevision"], "reviewRevision")
+    binding_keys = {"masterSchemaVersion", "registryVersion", "contentHash", "hashBasis"}
+    binding = projection["masterBinding"]
+    _keys(binding, binding_keys)
+    if binding.get("masterSchemaVersion") != 2 or type(binding.get("masterSchemaVersion")) is not int or binding.get("hashBasis") != "MASTER_CANONICAL_JSON_V2" or not isinstance(binding.get("registryVersion"), str) or not _v3_sha(binding.get("contentHash")): _trade_fail("Master Bundle binding is invalid.")
+    if not _same_trade_json(binding, completion.get("masterBinding")): _trade_fail("Master bindings disagree.")
+    try:
+        from .master_store import validate_master_bundle
+        master_bundle = validate_master_bundle(context.get("masterBundle", {}).get("snapshot"))
+    except Exception:
+        _trade_fail("Pinned Master Bundle is invalid.")
+    if master_bundle.get("registryVersion") != binding["registryVersion"] or master_bundle.get("contentHash") != binding["contentHash"]: _trade_fail("Pinned Master Bundle does not match its binding.")
+    if projection.get("rawEvidenceHash") != context.get("rawEvidence", {}).get("rawEvidenceHash") or not _v3_sha(projection.get("rawEvidenceHash")): _trade_fail()
+    raw = context.get("rawEvidence")
+    _keys(context, {"schemaVersion", "authority", "rawEvidence", "masterBundle", "audit"})
+    if context["schemaVersion"] != 3 or context["authority"] != "CLIENT_ATTESTED": _trade_fail()
+    _keys(raw, {"hashBasis", "rawEvidenceHash", "snapshot"})
+    if raw["hashBasis"] != "TRADE_RAW_EVIDENCE_JSON_V2" or _v3_hash(raw["snapshot"]) != raw["rawEvidenceHash"]: _trade_fail("Raw evidence hash mismatch.")
+    _keys(context["masterBundle"], {"binding", "snapshot"})
+    if not _same_trade_json(context["masterBundle"]["binding"], binding): _trade_fail()
+    audit = context["audit"]
+    _keys(audit, {"recognitionStartedAt", "recognitionFinishedAt", "latencyMs", "gameVersion"})
+    for key in ("recognitionStartedAt", "recognitionFinishedAt"):
+        if audit[key] is not None: _utc_timestamp(audit[key])
+    if audit["latencyMs"] is not None: _integer(audit["latencyMs"], "latencyMs")
+    if audit["gameVersion"] is not None and not isinstance(audit["gameVersion"], str): _trade_fail()
+
+    snapshot = raw["snapshot"]
+    _keys(snapshot, {"schemaVersion", "recognitionBatchId", "captures", "sourceRows", "edgeSegments"})
+    if snapshot["schemaVersion"] != 2 or type(snapshot["schemaVersion"]) is not int or snapshot["recognitionBatchId"] != projection["recognitionBatchId"]: _trade_fail()
+    captures, source_rows, edges = snapshot["captures"], snapshot["sourceRows"], snapshot["edgeSegments"]
+    if not isinstance(captures, list) or not isinstance(source_rows, list) or not isinstance(edges, list) or len(captures) > 100 or len(source_rows) > 1000 or len(edges) > 200: _trade_fail()
+    capture_ids, source_by_id, crops = [], {}, {}
+    capture_keys = {"captureId", "captureOrdinal", "imageSha256", "bitmapSha256", "sourceType", "frame", "sourceFidelity", "reencoded", "completeRowCount"}
+    for idx, cap in enumerate(captures, 1):
+        if not isinstance(cap, dict): _trade_fail()
+        _keys(cap, capture_keys)
+        if not isinstance(cap["captureId"], str) or not cap["captureId"] or len(cap["captureId"]) > MAX_ID_LENGTH or cap["captureId"] in capture_ids or type(cap["captureOrdinal"]) is not int or cap["captureOrdinal"] != idx or not _v3_sha(cap["imageSha256"]) or not _v3_sha(cap["bitmapSha256"]): _trade_fail()
+        if cap["sourceType"] not in {"FILE", "CLIPBOARD", "STREAM"} or type(cap["reencoded"]) is not bool: _trade_fail()
+        _keys(cap["frame"], {"width", "height"}); _integer(cap["frame"]["width"], "frame.width", minimum=1); _integer(cap["frame"]["height"], "frame.height", minimum=1)
+        if cap["frame"]["width"]*cap["frame"]["height"]>MAX_IMAGE_PIXELS: _trade_fail()
+        _keys(cap["sourceFidelity"], {"sourceWidth", "sourceHeight", "rescaled", "evidence"})
+        fidelity=cap["sourceFidelity"]
+        if fidelity["sourceWidth"] is not None: _integer(fidelity["sourceWidth"],"sourceWidth",minimum=1)
+        if fidelity["sourceHeight"] is not None: _integer(fidelity["sourceHeight"],"sourceHeight",minimum=1)
+        if fidelity["rescaled"] is not None and type(fidelity["rescaled"]) is not bool or not isinstance(fidelity["evidence"],str) or not fidelity["evidence"]: _trade_fail()
+        if fidelity["evidence"]=="unknown" and (fidelity["sourceWidth"] is not None or fidelity["sourceHeight"] is not None or fidelity["rescaled"] is not None): _trade_fail()
+        capture_ids.append(cap["captureId"])
+    row_keys = {"sourceRowId", "captureId", "ordinal", "rowBox", "fields"}
+    field_keys = {"field", "rawText", "rawNumeric", "readerStatus", "confidence", "cropRefs"}
+    crop_keys = {"cropRefId", "sourceRowId", "captureId", "field", "bitmapSha256", "frame", "coordinateSpace", "box", "pixelHashBasis", "pixelSha256", "pngArtifactSha256"}
+    for row in source_rows:
+        if not isinstance(row, dict): _trade_fail()
+        _keys(row, row_keys)
+        sid = row["sourceRowId"]
+        if not isinstance(sid, str) or not sid or sid in source_by_id or sid in capture_ids or row["captureId"] not in capture_ids: _trade_fail()
+        source_by_id[sid] = row
+        _integer(row["ordinal"], "ordinal")
+        if row["rowBox"] is not None:
+            _keys(row["rowBox"],{"x","y","width","height"})
+            for key in ("x","y"): _integer(row["rowBox"][key],key)
+            for key in ("width","height"): _integer(row["rowBox"][key],key,minimum=1)
+            cap=next(c for c in captures if c["captureId"]==row["captureId"])
+            if row["rowBox"]["x"]+row["rowBox"]["width"]>cap["frame"]["width"] or row["rowBox"]["y"]+row["rowBox"]["height"]>cap["frame"]["height"]: _trade_fail()
+        fields = row["fields"]
+        if not isinstance(fields, list) or len(fields) != 6 or [x.get("field") for x in fields if isinstance(x, dict)] != list(TRADE_FIELDS): _trade_fail()
+        for field in fields:
+            _keys(field, field_keys)
+            if field["rawText"] is not None and not isinstance(field["rawText"], str): _trade_fail()
+            if field["rawNumeric"] is not None: _integer(field["rawNumeric"], "rawNumeric", minimum=0)
+            if not isinstance(field["readerStatus"], str) or not field["readerStatus"] or field["confidence"] is not None and not isinstance(field["confidence"], str): _trade_fail()
+            if not isinstance(field["cropRefs"], list): _trade_fail()
+            for crop in field["cropRefs"]:
+                _keys(crop, crop_keys)
+                if crop["sourceRowId"] != sid or crop["captureId"] != row["captureId"] or crop["field"] != field["field"] or crop["coordinateSpace"] != "CAPTURE_BITMAP_PIXELS" or crop["pixelHashBasis"] != "RGB8_ROW_MAJOR_V1" or not _v3_sha(crop["bitmapSha256"]) or not _v3_sha(crop["pixelSha256"]): _trade_fail()
+                if crop["pngArtifactSha256"] is not None and not _v3_sha(crop["pngArtifactSha256"]): _trade_fail()
+                if crop["cropRefId"] in crops: _trade_fail()
+                _keys(crop["frame"], {"width", "height"}); _integer(crop["frame"]["width"], "crop frame width", minimum=1); _integer(crop["frame"]["height"], "crop frame height", minimum=1)
+                _keys(crop["box"], {"x", "y", "width", "height"})
+                for coordinate in ("x", "y"): _integer(crop["box"][coordinate], coordinate)
+                for dimension in ("width", "height"): _integer(crop["box"][dimension], dimension, minimum=1)
+                cap = next(c for c in captures if c["captureId"] == crop["captureId"])
+                if crop["frame"] != cap["frame"] or crop["box"]["x"] + crop["box"]["width"] > cap["frame"]["width"] or crop["box"]["y"] + crop["box"]["height"] > cap["frame"]["height"]: _trade_fail("CropRef geometry is outside its capture frame.")
+                crops[crop["cropRefId"]] = crop
+    edge_ids=set()
+    for edge in edges:
+        _keys(edge,{"edgeId","captureId","ordinal","reason","rowBox","sourceRefs"})
+        if not isinstance(edge["edgeId"],str) or not edge["edgeId"] or edge["edgeId"] in edge_ids or edge["edgeId"] in capture_ids or edge["captureId"] not in capture_ids or not isinstance(edge["reason"],str) or not edge["reason"] or not isinstance(edge["sourceRefs"],list): _trade_fail()
+        edge_ids.add(edge["edgeId"]); _integer(edge["ordinal"],"edge ordinal")
+    if edge_ids & set(source_by_id): _trade_fail()
+    for edge in edges:
+        for ref in edge["sourceRefs"]:
+            _keys(ref,{"sourceRowId","captureId","ordinal"})
+            if ref["sourceRowId"] not in source_by_id and ref["sourceRowId"] not in edge_ids: _trade_fail()
+            if ref["sourceRowId"] in source_by_id and (ref["captureId"]!=source_by_id[ref["sourceRowId"]]["captureId"] or ref["ordinal"]!=source_by_id[ref["sourceRowId"]]["ordinal"]): _trade_fail()
+    if any(cap["completeRowCount"] != sum(1 for row in source_rows if row["captureId"] == cap["captureId"]) for cap in captures): _trade_fail("Capture source row counts disagree with the raw ledger.")
+    source_order=[(capture_ids.index(row["captureId"]),row["ordinal"]) for row in source_rows]
+    if source_order!=sorted(source_order) or len(source_order)!=len(set(source_order)): _trade_fail("Raw source rows must preserve capture and ordinal order.")
+    ledger = projection["reconciliation"]
+    _keys(ledger, {"schemaVersion", "policyVersion", "captureOrder", "sourceRows", "groups", "sourceToLogical", "findings"})
+    if ledger["schemaVersion"] != 2 or type(ledger["schemaVersion"]) is not int or ledger["captureOrder"] != capture_ids: _trade_fail()
+    ledger_rows = ledger["sourceRows"]
+    if not isinstance(ledger_rows, list) or len(ledger_rows) != len(source_rows): _trade_fail()
+    ledger_source_ids=[]
+    for index, item in enumerate(ledger_rows):
+        _keys(item, {"sourceRowId", "captureId", "ordinal", "projectionSourceIndex"})
+        sid=item["sourceRowId"]
+        if sid not in source_by_id or item["captureId"] != source_by_id[sid]["captureId"] or item["ordinal"] != source_by_id[sid]["ordinal"] or item["projectionSourceIndex"] != index: _trade_fail()
+        ledger_source_ids.append(sid)
+    if ledger_source_ids != [x["sourceRowId"] for x in source_rows]: _trade_fail()
+    rows=projection["rows"]
+    if not isinstance(rows,list) or not isinstance(completion["rows"],list) or len(rows)!=len(completion["rows"]): _trade_fail()
+    row_ids=[]; mapped=[]
+    group_map={}
+    group_ids=set()
+    for group in ledger["groups"]:
+        _keys(group,{"groupId","status","memberSourceRowIds","representativeSourceRowId","logicalRowId","memberEvidence"})
+        members=group["memberSourceRowIds"]
+        if not isinstance(members,list) or not members or group["status"] not in {"SINGLE","EXACT_OVERLAP","CONFLICT"} or group["representativeSourceRowId"]!=members[0] or any(s not in source_by_id for s in members) or group["groupId"] in group_ids: _trade_fail()
+        group_ids.add(group["groupId"])
+        if members!=sorted(members,key=lambda sid:(capture_ids.index(source_by_id[sid]["captureId"]),source_by_id[sid]["ordinal"])): _trade_fail("Reconciliation members must preserve source order.")
+        if len(members)==1 and group["memberEvidence"]!=[] or len(members)>1 and (not isinstance(group["memberEvidence"],list) or len(group["memberEvidence"])!=len(members)): _trade_fail()
+        for member_evidence in group["memberEvidence"]:
+            _keys(member_evidence,{"sourceRowId","fields"})
+            if member_evidence["sourceRowId"] not in members or not isinstance(member_evidence["fields"],list) or len(member_evidence["fields"])!=6: _trade_fail()
+            for evidence_field in member_evidence["fields"]:
+                _keys(evidence_field,{"field","rawEvidenceRefs","normalizedValue","candidates","selectedCandidateIndex","correctedValue","finalValue","identity","valueState","riskReasons","correctionReasons","alternatives","cropRefs","stageTrace"})
+        if group["logicalRowId"] in group_map: _trade_fail()
+        group_map[group["logicalRowId"]]=group; mapped.extend(members)
+    if sorted(mapped)!=sorted(source_by_id) or len(mapped)!=len(set(mapped)): _trade_fail("Reconciliation must map every source exactly once.")
+    source_to_logical=ledger["sourceToLogical"]
+    if not isinstance(source_to_logical,list) or len(source_to_logical)!=len(source_rows): _trade_fail()
+    mapping_by_source={}
+    for item in source_to_logical:
+        _keys(item,{"sourceRowId","logicalRowId"})
+        if item["sourceRowId"] in mapping_by_source or item["sourceRowId"] not in source_by_id or item["logicalRowId"] not in group_map: _trade_fail()
+        mapping_by_source[item["sourceRowId"]]=item["logicalRowId"]
+    if [item["sourceRowId"] for item in source_to_logical]!=[item["sourceRowId"] for item in ledger_rows] or set(mapping_by_source)!=set(source_by_id) or any(mapping_by_source[sid]!=next(g["logicalRowId"] for g in ledger["groups"] if sid in g["memberSourceRowIds"]) for sid in source_by_id): _trade_fail()
+    for row, done in zip(rows, completion["rows"], strict=True):
+        _keys(row,{"projectionRowId","captureId","ordinal","rowBox","sourceRefs","fields","classification","classificationReasons"})
+        _keys(done,{"projectionRowId","sourceRefs","fields","disposition","dispositionReason"})
+        rid=row["projectionRowId"]
+        if rid in row_ids or rid not in group_map or done["projectionRowId"]!=rid: _trade_fail()
+        row_ids.append(rid)
+        group = group_map[rid]
+        if row["captureId"] != source_by_id[group["representativeSourceRowId"]]["captureId"] or row["ordinal"] != source_by_id[group["representativeSourceRowId"]]["ordinal"]: _trade_fail("Logical row representative does not match its source member.")
+        if row["classification"] not in {"FINAL_READY","NEEDS_REVIEW","NEEDS_RECAPTURE","CONFLICT"} or not isinstance(row["classificationReasons"],list) or any(not isinstance(x,str) or not x for x in row["classificationReasons"]): _trade_fail()
+        if row["rowBox"] != source_by_id[group["representativeSourceRowId"]]["rowBox"]: _trade_fail("Logical row box must come from its representative source.")
+        expected_refs = [{"sourceRowId": sid, "captureId": source_by_id[sid]["captureId"], "ordinal": source_by_id[sid]["ordinal"]} for sid in group["memberSourceRowIds"]]
+        if row["sourceRefs"] != expected_refs or done["sourceRefs"] != expected_refs: _trade_fail("Logical row sourceRefs do not match its reconciliation group.")
+        if len(row["fields"])!=6 or [x.get("field") for x in row["fields"] if isinstance(x,dict)]!=list(TRADE_FIELDS) or len(done["fields"])!=6: _trade_fail()
+        for pf, cf in zip(row["fields"],done["fields"],strict=True):
+            _keys(pf,{"field","rawEvidenceRefs","normalizedValue","candidates","selectedCandidateIndex","correctedValue","finalValue","identity","valueState","riskReasons","correctionReasons","alternatives","cropRefs","stageTrace"})
+            required={"field","shownValueBefore","finalValue","operationalDecision","riskReasons","cropRefs"}
+            _keys(cf,required,{"userEditReason"})
+            if pf["field"]!=cf["field"] or pf["finalValue"]!=cf["shownValueBefore"] or pf["riskReasons"]!=cf["riskReasons"] or pf["cropRefs"]!=cf["cropRefs"]: _trade_fail()
+            name=pf["field"]; numeric=name in {"reqAmount","count","yield"}
+            for value in (pf["normalizedValue"],pf["correctedValue"],pf["finalValue"],cf["shownValueBefore"],cf["finalValue"]):
+                if value is not None and (numeric and type(value) is not int or not numeric and not isinstance(value,str)): _trade_fail("Projection field value has the wrong type.")
+                if numeric and value is not None and value < (0 if name=="count" else 1): _trade_fail()
+            if not isinstance(pf["candidates"],list) or type(pf["selectedCandidateIndex"]) is not int and pf["selectedCandidateIndex"] is not None: _trade_fail()
+            if pf["selectedCandidateIndex"] is not None and not 0<=pf["selectedCandidateIndex"]<len(pf["candidates"]): _trade_fail()
+            for candidate in pf["candidates"]:
+                _keys(candidate,{"value","identity","reason"})
+                if not isinstance(candidate["reason"],str) or not candidate["reason"]: _trade_fail()
+            if pf["valueState"] not in {"RESOLVED","UNRESOLVED","CONFLICT","CLIPPED"}: _trade_fail()
+            if pf["valueState"]=="CONFLICT" and (pf["finalValue"] is not None or pf["selectedCandidateIndex"] is not None): _trade_fail()
+            for identity in [pf["identity"]]+[candidate.get("identity") for candidate in pf["candidates"] if isinstance(candidate,dict)]:
+                if identity is None: continue
+                _keys(identity,{"kind","stableId","legacyNameKey","authorityStatus"})
+                if identity["kind"] not in {"ITEM","ISLAND"} or identity["stableId"] is not None and _uuid(identity["stableId"],"stableId")!=identity["stableId"] or identity["legacyNameKey"] is not None and (not isinstance(identity["legacyNameKey"],str) or not identity["legacyNameKey"]): _trade_fail()
+                if identity["authorityStatus"] not in {"OPEN_WORLD","LEGACY_UNVERIFIED","VERIFIED_REFERENCE","VERIFIED_CURATED","DISPUTED","DEPRECATED"}: _trade_fail()
+                if identity["authorityStatus"]=="OPEN_WORLD" and (name!="fromItem" or identity["stableId"] is not None or identity["legacyNameKey"] is not None): _trade_fail()
+            if pf["identity"] is not None and numeric: _trade_fail()
+            if not all(isinstance(pf[key],list) for key in ("rawEvidenceRefs","riskReasons","correctionReasons","alternatives","cropRefs","stageTrace")): _trade_fail()
+            expected_raw_refs=[{"sourceRowId":sid,"field":name} for sid in group["memberSourceRowIds"]]
+            if pf["rawEvidenceRefs"]!=expected_raw_refs: _trade_fail()
+            expected_crop_refs=[]
+            for sid in group["memberSourceRowIds"]:
+                source_field=next(x for x in source_by_id[sid]["fields"] if x["field"]==name)
+                for crop in source_field["cropRefs"]:
+                    if crop["cropRefId"] not in expected_crop_refs: expected_crop_refs.append(crop["cropRefId"])
+            if pf["cropRefs"]!=expected_crop_refs: _trade_fail("Projection crop references disagree with source evidence.")
+            if any(not isinstance(x,str) or not x for x in pf["riskReasons"]+pf["correctionReasons"]): _trade_fail()
+            for alternative in pf["alternatives"]:
+                _keys(alternative,{"value","sourceRefs","riskReasons"})
+                if not isinstance(alternative["sourceRefs"],list) or not isinstance(alternative["riskReasons"],list): _trade_fail()
+            previous_stage=-1
+            for trace in pf["stageTrace"]:
+                _keys(trace,{"stage","ruleVersion","inputValue","outputValue","reason"})
+                stage=_integer(trace["stage"],"stage",maximum=8)
+                if stage<=previous_stage or not isinstance(trace["ruleVersion"],str) or not trace["ruleVersion"] or trace["reason"] is not None and not isinstance(trace["reason"],str): _trade_fail()
+                previous_stage=stage
+            decision=cf["operationalDecision"]
+            if decision=="CANDIDATE_RETAINED":
+                if cf["finalValue"]!=cf["shownValueBefore"]: _trade_fail()
+            elif decision=="USER_EDITED":
+                if cf["finalValue"] is None or cf["finalValue"]==cf["shownValueBefore"]: _trade_fail()
+            elif decision=="USER_MARKED_UNKNOWN":
+                if cf["finalValue"] is not None: _trade_fail()
+            else: _trade_fail()
+        if done["disposition"] not in {"INCLUDE","EXCLUDE","RECAPTURE_REQUIRED"}: _trade_fail()
+        if done["disposition"]=="EXCLUDE" and (not isinstance(done["dispositionReason"],str) or not done["dispositionReason"].strip()) or done["disposition"]!="EXCLUDE" and done["dispositionReason"] is not None and not isinstance(done["dispositionReason"],str): _trade_fail()
+    if set(row_ids)!=set(group_map): _trade_fail()
+    edge_work_items=projection["edgeWorkItems"]
+    if not isinstance(edge_work_items,list) or len(edge_work_items)!=len(edges) or not isinstance(completion["workItems"],list) or len(completion["workItems"])!=len(edges): _trade_fail()
+    edge_item_ids=set(); completion_work={}
+    for work in completion["workItems"]:
+        _keys(work,{"workItemId","decision","reason"})
+        if work["decision"] not in {"RECAPTURE_REQUIRED","EXPLICITLY_EXCLUDED"} or not isinstance(work["reason"],str) or not work["reason"] or work["workItemId"] in completion_work: _trade_fail()
+        completion_work[work["workItemId"]]=work
+    for item in edge_work_items:
+        _keys(item,{"workItemId","edgeId","classification","reason","sourceRefs"})
+        if item["classification"]!="NEEDS_RECAPTURE" or item["edgeId"] not in edge_ids or item["workItemId"] in edge_item_ids or not isinstance(item["reason"],str) or not item["reason"] or not isinstance(item["sourceRefs"],list): _trade_fail()
+        edge_item_ids.add(item["workItemId"])
+        done=completion_work.get(item["workItemId"])
+        if done is None or done["decision"] not in {"RECAPTURE_REQUIRED","EXPLICITLY_EXCLUDED"}: _trade_fail()
+    if edge_item_ids!=set(completion_work): _trade_fail()
+    availability = projection["pixelAvailability"]
+    if not isinstance(availability, list) or any(not isinstance(item, dict) or set(item)!={"cropRefId","state"} or item["cropRefId"] not in crops or item["state"] not in {"IN_MEMORY","DURABLE","MISSING","EXPIRED","INVALID"} for item in availability): _trade_fail()
+    if len({item["cropRefId"] for item in availability}) != len(availability): _trade_fail()
+    if [item["cropRefId"] for item in availability] != list(crops): _trade_fail("Pixel availability must preserve the raw crop reference order.")
+    batch=completion["batchConfirmation"]
+    _keys(batch,{"method","confirmedAt","projectionHash","reviewRevision","completionValuesHash"})
+    if batch["method"]!="USER_FINAL_LIST_CONFIRMED" or batch["projectionHash"]!=projection["projectionHash"] or batch["reviewRevision"]!=review_revision or batch["completionValuesHash"]!=_v3_hash({k:v for k,v in completion.items() if k!="batchConfirmation"}): _trade_fail()
+    projection_basis={k:v for k,v in projection.items() if k!="projectionHash"}
+    if projection["projectionHash"]!=_v3_hash(projection_basis): _trade_fail("Projection hash mismatch.")
+    if not isinstance(crop_plan,dict): _trade_fail()
+    _keys(crop_plan,{"schemaVersion","policy","entries"})
+    if crop_plan["schemaVersion"]!=3 or crop_plan["policy"]!="C2_LOGICAL_REPRESENTATIVE_V3" or not isinstance(crop_plan["entries"],list) or len(crop_plan["entries"])!=len(rows)*6: _trade_fail()
+    crop_seen=set()
+    for entry in crop_plan["entries"]:
+        _keys(entry,{"projectionRowId","field","cropRefId","selected","reasons","retentionClass"})
+        key=(entry["projectionRowId"],entry["field"])
+        if key in crop_seen or entry["projectionRowId"] not in row_ids or entry["field"] not in TRADE_FIELDS or type(entry["selected"]) is not bool or not isinstance(entry["reasons"],list): _trade_fail()
+        crop_seen.add(key)
+        row=next(r for r in rows if r["projectionRowId"]==entry["projectionRowId"])
+        field=next(f for f in row["fields"] if f["field"]==entry["field"])
+        group=group_map[entry["projectionRowId"]]
+        representative=source_by_id[group["representativeSourceRowId"]]
+        source_field=next(f for f in representative["fields"] if f["field"]==entry["field"])
+        expected_crop=source_field["cropRefs"][0]["cropRefId"] if source_field["cropRefs"] else None
+        if entry["cropRefId"] != expected_crop: _trade_fail()
+        reasons=[]
+        completion_field=next(f for f in next(r for r in completion["rows"] if r["projectionRowId"]==entry["projectionRowId"])["fields"] if f["field"]==entry["field"])
+        if completion_field["operationalDecision"]=="USER_EDITED": reasons.append("USER_EDITED")
+        if completion_field["operationalDecision"]=="USER_MARKED_UNKNOWN": reasons.append("USER_MARKED_UNKNOWN")
+        if field["riskReasons"]: reasons.append("RISKY_FIELD")
+        selected=bool(reasons) and expected_crop is not None
+        retention="NONE" if not selected else "UNKNOWN_EVIDENCE" if completion_field["operationalDecision"]=="USER_MARKED_UNKNOWN" else "OPERATIONAL_REVIEW_EVIDENCE"
+        if entry["reasons"]!=reasons or entry["selected"]!=selected or entry["retentionClass"]!=retention: _trade_fail("Crop plan does not match completion decisions.")
+    return payload
 
 
 def _keys(value: dict[str, Any], required: set[str], optional: set[str] = frozenset()) -> None:

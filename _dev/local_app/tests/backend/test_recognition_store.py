@@ -51,7 +51,13 @@ class RecognitionStoreTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_schema_v2_initializes_idempotently_in_its_own_database(self):
+    @staticmethod
+    def _drop_v3(connection):
+        for table in ("trade_crop_truth_receipt_v3", "trade_crop_truth_label_v3", "trade_review_crop_receipt_v3",
+                      "trade_review_artifact_v3", "trade_review_observation_v3"):
+            connection.execute(f"DROP TABLE {table}")
+
+    def test_schema_v3_initializes_idempotently_in_its_own_database(self):
         main_path = self.root / "main.sqlite3"
         with closing(sqlite3.connect(main_path)) as connection, connection:
             connection.execute("CREATE TABLE main_data(value TEXT)")
@@ -60,18 +66,58 @@ class RecognitionStoreTests(unittest.TestCase):
         with closing(sqlite3.connect(self.path)) as connection, connection:
             row = connection.execute("SELECT schema_version,config_revision FROM recognition_meta WHERE id=1").fetchone()
             tables = {item[0] for item in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        self.assertEqual(row, (2, 0))
+        self.assertEqual(row, (3, 0))
         self.assertTrue({"recognition_run", "capture_profile", "recognition_label", "recognition_label_receipt",
                          "recognition_apply_intent", "recognition_artifact", "recognition_run_artifact",
-                         "trade_review_observation", "trade_review_artifact", "trade_review_crop_receipt"} <= tables)
+                         "trade_review_observation", "trade_review_artifact", "trade_review_crop_receipt",
+                         "trade_review_observation_v3", "trade_review_artifact_v3", "trade_review_crop_receipt_v3",
+                         "trade_crop_truth_label_v3", "trade_crop_truth_receipt_v3"} <= tables)
         with closing(sqlite3.connect(self.path)) as connection, connection:
             self.assertIsNone(connection.execute("SELECT 1 FROM sqlite_master WHERE name='main_data'").fetchone())
+
+    def test_v2_to_v3_migration_is_additive_idempotent_and_backed_up(self):
+        self.store.initialize()
+        run, _ = self.store.create_run(metadata(), input_hash="9" * 64)
+        old_schema = {}
+        old_rows = {}
+        with closing(sqlite3.connect(self.path)) as connection, connection:
+            self._drop_v3(connection)
+            connection.execute("UPDATE recognition_meta SET schema_version=2 WHERE id=1")
+            names = [row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '%_v3'")]
+            old_schema = {name: connection.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone()[0] for name in names}
+            old_rows = {name: connection.execute(f'SELECT * FROM "{name}"').fetchall() for name in names}
+        self.store.initialize()
+        self.store.initialize()
+        with closing(sqlite3.connect(self.path)) as connection:
+            self.assertEqual(connection.execute("SELECT schema_version FROM recognition_meta WHERE id=1").fetchone()[0], 3)
+            old_tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '%_v3'")}
+            new_schema = {name: connection.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone()[0] for name in old_tables}
+            new_rows = {name: connection.execute(f'SELECT * FROM "{name}"').fetchall() for name in old_tables}
+        old_rows["recognition_meta"] = [tuple([1,2,*old_rows["recognition_meta"][0][2:]])]
+        new_rows["recognition_meta"] = [tuple([1,2,*new_rows["recognition_meta"][0][2:]])]
+        self.assertEqual(old_schema, new_schema)
+        self.assertEqual(old_rows, new_rows)
+        self.assertEqual(self.store.get_run(run["recognitionId"])["inputHash"], "9" * 64)
+        self.assertTrue({"trade_review_observation", "trade_review_artifact", "trade_review_crop_receipt"} <= old_tables)
+        self.assertTrue(self.path.with_name(self.path.name + ".v2-backup").exists())
+
+    def test_v2_to_v3_ddl_failure_rolls_back_partial_schema(self):
+        self.store.initialize()
+        with closing(sqlite3.connect(self.path)) as connection, connection:
+            self._drop_v3(connection)
+            connection.execute("UPDATE recognition_meta SET schema_version=2 WHERE id=1")
+        module = __import__("local_app.backend.recognition_store", fromlist=["TRADE_REVIEW_V3_SCHEMA"])
+        with patch("local_app.backend.recognition_store.TRADE_REVIEW_V3_SCHEMA", ("CREATE TABLE trade_review_observation_v3 (",)):
+            with self.assertRaises(RecognitionStoreError): self.store.initialize()
+        with closing(sqlite3.connect(self.path)) as connection:
+            self.assertEqual(connection.execute("SELECT schema_version FROM recognition_meta WHERE id=1").fetchone()[0], 2)
+            self.assertIsNone(connection.execute("SELECT 1 FROM sqlite_master WHERE name='trade_review_observation_v3'").fetchone())
 
     def test_future_and_malformed_schema_are_rejected_without_migration(self):
         future = self.root / "future.sqlite3"
         with closing(sqlite3.connect(future)) as connection, connection:
             connection.execute("CREATE TABLE recognition_meta(id INTEGER PRIMARY KEY, schema_version INTEGER)")
-            connection.execute("INSERT INTO recognition_meta VALUES (1, 3)")
+            connection.execute("INSERT INTO recognition_meta VALUES (1, 4)")
         with self.assertRaises(FutureSchemaError):
             RecognitionStore(future).initialize()
         malformed = self.root / "malformed.sqlite3"
@@ -90,6 +136,7 @@ class RecognitionStoreTests(unittest.TestCase):
         artifact_path = self.store.artifact_root / f"{artifact_result['artifactRefs'][0]['sha256']}.png"
         self.assertEqual(artifact_path.read_bytes(), artifact_bytes)
         with closing(sqlite3.connect(self.path)) as connection, connection:
+            self._drop_v3(connection)
             connection.execute("DROP TABLE trade_review_crop_receipt")
             connection.execute("DROP TABLE trade_review_artifact")
             connection.execute("DROP TABLE trade_review_observation")
@@ -102,7 +149,7 @@ class RecognitionStoreTests(unittest.TestCase):
             self.assertIsNone(connection.execute("SELECT 1 FROM sqlite_master WHERE name='trade_review_observation'").fetchone())
         self.store.initialize()
         with closing(sqlite3.connect(self.path)) as connection, connection:
-            self.assertEqual(connection.execute("SELECT schema_version FROM recognition_meta WHERE id=1").fetchone()[0], 2)
+            self.assertEqual(connection.execute("SELECT schema_version FROM recognition_meta WHERE id=1").fetchone()[0], 3)
             self.assertEqual(connection.execute("SELECT count(*) FROM recognition_run").fetchone()[0], 1)
             self.assertEqual(connection.execute("SELECT count(*) FROM recognition_label").fetchone()[0], len(labels["labels"]))
         self.assertEqual(artifact_path.read_bytes(), artifact_bytes)
@@ -110,6 +157,7 @@ class RecognitionStoreTests(unittest.TestCase):
     def test_migration_backup_meta_commit_and_stale_backup_failures_are_non_destructive(self):
         self.store.initialize()
         with closing(sqlite3.connect(self.path)) as connection, connection:
+            self._drop_v3(connection)
             for table in ("trade_review_crop_receipt", "trade_review_artifact", "trade_review_observation"):
                 connection.execute(f"DROP TABLE {table}")
             connection.execute("UPDATE recognition_meta SET schema_version=1 WHERE id=1")
@@ -134,6 +182,7 @@ class RecognitionStoreTests(unittest.TestCase):
     def test_migration_refuses_stale_backup_and_unexpected_table_collision(self):
         self.store.initialize()
         with closing(sqlite3.connect(self.path)) as connection, connection:
+            self._drop_v3(connection)
             for table in ("trade_review_crop_receipt", "trade_review_artifact", "trade_review_observation"):
                 connection.execute(f"DROP TABLE {table}")
             connection.execute("UPDATE recognition_meta SET schema_version=1 WHERE id=1")

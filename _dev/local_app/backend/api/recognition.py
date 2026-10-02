@@ -16,6 +16,9 @@ from ..recognition_contracts import (
     validate_feedback_payload,
     validate_trade_review_observation,
     validate_trade_crop_metadata,
+    validate_final_review_observation,
+    validate_trade_crop_metadata_v3,
+    validate_crop_truth_label_request,
     MAX_TRADE_OBSERVATION_BYTES,
     MAX_TRADE_CROP_BYTES,
 )
@@ -74,7 +77,7 @@ def _trade_observation_body() -> dict:
     raw = request.stream.read(MAX_TRADE_OBSERVATION_BYTES + 1)
     if len(raw) > MAX_TRADE_OBSERVATION_BYTES:
         raise RecognitionContractError("request_too_large", "The observation exceeds 8 MiB.", 413)
-    return parse_json(raw, max_bytes=MAX_TRADE_OBSERVATION_BYTES, label="observation")
+    return parse_json(raw, max_bytes=MAX_TRADE_OBSERVATION_BYTES, label="observation", reject_negative_zero=True)
 
 
 @recognition_api.errorhandler(RecognitionContractError)
@@ -161,8 +164,15 @@ TRADE_OBSERVATION_PREFIX = "/trade-review-observations"
 
 @recognition_api.post(TRADE_OBSERVATION_PREFIX)
 def post_trade_review_observation():
-    payload = validate_trade_review_observation(_trade_observation_body())
-    receipt, duplicate = _store().create_trade_review_observation(payload)
+    body = _trade_observation_body()
+    if body.get("schemaVersion") == 3 and body.get("reviewMode") == "FINAL_CORRECTED_RESULT":
+        payload = validate_final_review_observation(body)
+        receipt, duplicate = _store().create_final_review_observation(payload)
+    elif body.get("schemaVersion") == 1 and body.get("completion", {}).get("reviewMode") == "REVIEW_FIRST":
+        payload = validate_trade_review_observation(body)
+        receipt, duplicate = _store().create_trade_review_observation(payload)
+    else:
+        raise RecognitionContractError("invalid_contract", "Observation version and review mode are unsupported.", 422)
     status = 200 if duplicate else 201
     response = jsonify({"ok": True, "receipt": {**receipt, "duplicate": duplicate}})
     response.headers["Cache-Control"] = "no-store"
@@ -173,6 +183,9 @@ def post_trade_review_observation():
 def get_trade_review_observation(observation_id: str):
     observation = _store().get_trade_review_observation(observation_id)
     if observation is None: return _error("observation_not_found", "The observation is unavailable.", 404)
+    requested_version = request.args.get("schemaVersion")
+    if requested_version is not None and requested_version != str(observation.get("schemaVersion")):
+        return _error("observation_not_found", "The observation is unavailable.", 404)
     response = jsonify({"ok": True, "observation": observation,
                         "cropEvidence": _store().get_trade_review_crop_evidence(observation_id)})
     response.headers["Cache-Control"] = "no-store"
@@ -183,6 +196,9 @@ def get_trade_review_observation(observation_id: str):
 def export_trade_review_observation(observation_id: str):
     exported = _store().export_trade_review_observation(observation_id)
     if exported is None: return _error("observation_not_found", "The observation is unavailable.", 404)
+    requested_version = request.args.get("schemaVersion")
+    if requested_version is not None and requested_version != str(exported.get("schemaVersion")):
+        return _error("observation_not_found", "The observation is unavailable.", 404)
     body = json.dumps(exported, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     if len(body) > 32 * 1024 * 1024: return _error("export_too_large", "The observation export exceeds 32 MiB.", 413)
     return Response(body, mimetype="application/json; charset=utf-8",
@@ -200,8 +216,16 @@ def post_trade_review_crop(observation_id: str):
     metadata = parse_json(raw_metadata, max_bytes=4096, label="crop metadata")
     upload = request.files.getlist("image")[0]
     data = upload.stream.read(MAX_TRADE_CROP_BYTES + 1)
-    validated = validate_trade_crop_metadata(metadata, data)
     if (upload.content_type or "").lower() != "image/png": return _error("invalid_crop", "Crop content type must be image/png.", 422)
+    stored = _store().get_trade_review_observation(observation_id)
+    if stored is None: return _error("observation_not_found", "The observation is unavailable.", 404)
+    if stored.get("schemaVersion") == 3:
+        plan = next((entry for entry in stored["cropPlan"]["entries"] if entry.get("projectionRowId") == metadata.get("projectionRowId") and entry.get("field") == metadata.get("field")), None)
+        crop_ref = next((crop for row in stored["sourceContext"]["rawEvidence"]["snapshot"]["sourceRows"] for field in row["fields"] for crop in field["cropRefs"] if plan and crop.get("cropRefId") == plan.get("cropRefId")), None)
+        if crop_ref is None: raise RecognitionContractError("invalid_contract", "The crop source binding is unavailable.", 422)
+        validated = validate_trade_crop_metadata_v3(metadata, data, crop_ref)
+    else:
+        validated = validate_trade_crop_metadata(metadata, data)
     receipt, duplicate = _store().attach_trade_review_crop(observation_id, validated, data)
     response = jsonify({"ok": True, "receipt": {**receipt, "duplicate": duplicate}})
     response.headers["Cache-Control"] = "no-store"
@@ -212,16 +236,63 @@ def post_trade_review_crop(observation_id: str):
 def get_trade_review_crop(observation_id: str, digest: str):
     import re
     if not re.fullmatch(r"[0-9a-f]{64}", digest): return _error("crop_not_found", "The crop is unavailable.", 404)
-    evidence = _store().get_trade_review_crop_evidence(observation_id)
-    item = next((entry for entry in evidence if entry.get("artifactSha256") == digest), None)
-    if item is None: return _error("crop_not_found", "The crop is unavailable.", 404)
-    if item["availability"] == "EXPIRED": return _error("crop_expired", "The crop retention period has ended.", 410)
-    if item["availability"] != "AVAILABLE": return _error("crop_not_found", "The crop is unavailable.", 404)
+    state = _store().get_trade_crop_artifact_state(observation_id, digest)
+    if state is None: return _error("crop_not_found", "The crop is unavailable.", 404)
+    if state == "EXPIRED": return _error("crop_expired", "The crop retention period has ended.", 410)
+    if state != "AVAILABLE": return _error("crop_not_found", "The crop is unavailable.", 404)
     path = _store().artifact_root / f"{digest}.png"
     try: data = path.read_bytes()
     except OSError: return _error("crop_not_found", "The crop is unavailable.", 404)
     if sha256_bytes(data) != digest: return _error("evidence_integrity_error", "Stored evidence failed integrity verification.", 500)
     return Response(data, mimetype="image/png", headers={"Content-Disposition": f'attachment; filename="{digest}.png"', "Cache-Control": "no-store"})
+
+
+@recognition_api.post(TRADE_OBSERVATION_PREFIX + "/<observation_id>/truth-labels")
+def post_trade_crop_truth_label(observation_id: str):
+    if request.headers.get("Content-Encoding", "identity").lower() not in {"", "identity"}:
+        return _error("unsupported_media_type", "Compressed truth uploads are not supported.", 415)
+    if request.mimetype != "multipart/form-data" or set(request.form.keys()) != {"metadata"} or len(request.form.getlist("metadata")) != 1 or set(request.files) - {"image"}:
+        return _error("invalid_truth_parts", "Truth labels require metadata and an optional PNG image.", 422)
+    metadata = parse_json(request.form.getlist("metadata")[0], max_bytes=64 * 1024, label="truth label")
+    observation = _store().get_trade_review_observation(observation_id)
+    if observation is None or observation.get("schemaVersion") != 3: return _error("observation_not_found", "The v3 observation is unavailable.", 404)
+    png = None
+    if request.files.getlist("image"):
+        if len(request.files.getlist("image")) != 1: return _error("invalid_truth_parts", "Exactly one PNG image is accepted.", 422)
+        upload=request.files.getlist("image")[0]
+        if (upload.content_type or "").lower()!="image/png": return _error("invalid_crop", "Truth crop content type must be image/png.", 422)
+        png=upload.stream.read(MAX_TRADE_CROP_BYTES+1)
+        if len(png)>MAX_TRADE_CROP_BYTES: return _error("crop_too_large", "The crop exceeds the allowed size.", 413)
+    validate_crop_truth_label_request(metadata, observation, artifact_present=png is not None)
+    if png is not None:
+        import hashlib
+        from io import BytesIO
+        from PIL import Image, UnidentifiedImageError
+        ref=next(c for row in observation["sourceContext"]["rawEvidence"]["snapshot"]["sourceRows"] for field in row["fields"] for c in field["cropRefs"] if c["cropRefId"]==metadata["cropRefId"])
+        artifact=metadata["artifact"]
+        try:
+            image=Image.open(BytesIO(png))
+            if image.format!="PNG" or getattr(image,"n_frames",1)!=1: raise ValueError("invalid PNG")
+            image.load()
+            if image.size!=(ref["box"]["width"],ref["box"]["height"]): raise ValueError("wrong dimensions")
+            if "A" in image.getbands() and image.getchannel("A").getextrema()!=(255,255): raise ValueError("alpha is not opaque")
+            pixel_hash=hashlib.sha256(image.convert("RGB").tobytes()).hexdigest()
+            if pixel_hash!=ref["pixelSha256"] or hashlib.sha256(png).hexdigest()!=artifact["sha256"]: raise ValueError("hash mismatch")
+        except (UnidentifiedImageError,OSError,ValueError):
+            raise RecognitionContractError("invalid_crop", "Truth crop PNG does not match its pixel binding.", 422) from None
+    receipt, duplicate=_store().create_crop_truth_label(observation_id,metadata,png)
+    response=jsonify({"ok":True,"receipt":{**receipt,"duplicate":duplicate}})
+    response.headers["Cache-Control"]="no-store"
+    return response,200 if duplicate else 201
+
+
+@recognition_api.get(TRADE_OBSERVATION_PREFIX + "/<observation_id>/truth-labels")
+def get_trade_crop_truth_labels(observation_id: str):
+    labels=_store().get_crop_truth_labels(observation_id)
+    if labels is None: return _error("observation_not_found", "The v3 observation is unavailable.", 404)
+    response=jsonify({"ok":True,"labels":labels})
+    response.headers["Cache-Control"]="no-store"
+    return response
 
 
 @recognition_api.get("/trade-runtime")
