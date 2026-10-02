@@ -1,6 +1,7 @@
 import { adaptLegacyCatalog, registrySnapshotSha256 } from "./domain/trade-master-registry.js";
 import { buildTradeBatchReconciliation } from "./domain/trade-batch-reconciliation.js";
 import { buildTradeReviewProjection } from "./domain/trade-review-projection.js";
+import { buildFinalProjection3, buildFinalReviewCompletion, buildFinalReviewObservationRequest } from "./domain/trade-final-evidence.js";
 
 const FIELD_KEYS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
 const FIELD_LABELS = Object.freeze({ island: "섬", fromItem: "소모품", reqAmount: "필요 수량", toItem: "획득품", count: "남은 교환 횟수", yield: "수율" });
@@ -24,6 +25,14 @@ const RISK_LABELS = Object.freeze({
 });
 
 let registryPromise = null;
+
+// Explicit preview/test entry only. The REVIEW_FIRST completion handler below remains the active product path.
+export function buildFinalReviewEvidencePreview({ projectionInput, completionInput, sourceContext, mutationId, createdAt, supersedesObservationId = null } = {}) {
+  const projection = buildFinalProjection3(projectionInput);
+  const completion = buildFinalReviewCompletion({ ...completionInput, projection });
+  const request = buildFinalReviewObservationRequest({ projection, completion, sourceContext, mutationId, createdAt, supersedesObservationId });
+  return Object.freeze({ projection, completion, request });
+}
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;

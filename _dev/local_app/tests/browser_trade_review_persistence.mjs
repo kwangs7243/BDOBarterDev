@@ -11,4 +11,13 @@ const exitCode = await new Promise((resolve, reject) => {
   child.once("exit", (code, signal) => resolve(signal ? 1 : (code ?? 1)));
 });
 if (exitCode !== 0) process.exitCode = exitCode;
-else console.log("browser_trade_review_persistence: PASS · isolated DB, response-loss replay, crop save, no session write");
+else {
+  const integration = spawn(process.execPath, [fileURLToPath(new URL("./trade_final_evidence_regression.mjs", import.meta.url)), "--api-integration"],
+    { stdio: "inherit", windowsHide: true, env: process.env });
+  const integrationCode = await new Promise((resolve, reject) => {
+    integration.once("error", reject);
+    integration.once("exit", (code, signal) => resolve(signal ? 1 : (code ?? 1)));
+  });
+  if (integrationCode !== 0) process.exitCode = integrationCode;
+  else console.log("browser_trade_review_persistence: PASS · legacy REVIEW_FIRST/retry/crop/session isolation preserved; explicit v3 preview/save/retry/crop verified; truth POST 0; primary flow unchanged");
+}
