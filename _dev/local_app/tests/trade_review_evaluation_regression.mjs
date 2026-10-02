@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { adaptLegacyCatalog, registrySnapshotSha256 } from "../frontend/js/domain/trade-master-registry.js";
 import { evaluateTradeReviewDataset, semanticEvaluationSha256 } from "../tools/trade_review_evaluation.mjs";
 
@@ -349,10 +350,12 @@ try {
     observations: [{ exportPath: "observation.json", exclusions: [], cohort: "DEVELOPMENT" }] };
   await writeFile(exportPath, JSON.stringify(known.exportRecord));
   await writeFile(manifestPath, JSON.stringify(cliManifest));
-  const cli = path.resolve("_dev/local_app/tools/trade_review_evaluation.mjs");
+  const cli = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../tools/trade_review_evaluation.mjs");
   const runCli = (out) => spawnSync(process.execPath, [cli, "--manifest", manifestPath, "--out", out], { encoding: "utf8" });
-  assert.equal(runCli(outputA).status, 0);
-  assert.equal(runCli(outputB).status, 0);
+  const cliA = runCli(outputA);
+  assert.equal(cliA.status, 0, cliA.stderr);
+  const cliB = runCli(outputB);
+  assert.equal(cliB.status, 0, cliB.stderr);
   const reportA = JSON.parse(await readFile(outputA, "utf8"));
   const reportB = JSON.parse(await readFile(outputB, "utf8"));
   assert.equal(typeof reportA.generatedAt, "string");
@@ -361,7 +364,8 @@ try {
   assert.notEqual(runCli(outputA).status, 0, "existing output must not be overwritten");
   assert.equal(await readFile(outputA, "utf8"), firstBytes);
   assert.notEqual(runCli(exportPath).status, 0, "output cannot overwrite an input export");
-  assert.notEqual(runCli(path.resolve("_dev/local_app/frontend/js/domain/reviewed-trade-dto.js")).status, 0,
+  const protectedSource = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../frontend/js/domain/reviewed-trade-dto.js");
+  assert.notEqual(runCli(protectedSource).status, 0,
     "output cannot target protected production source");
 } finally {
   await rm(tempDir, { recursive: true, force: true });

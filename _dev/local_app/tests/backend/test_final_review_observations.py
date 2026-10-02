@@ -5,12 +5,13 @@ import json
 import re
 import tempfile
 import unittest
+from unittest.mock import patch
 from contextlib import closing
 from pathlib import Path
 
 from local_app.backend.recognition_contracts import (RecognitionContractError, validate_final_review_observation,
     validate_trade_crop_metadata_v3, validate_crop_truth_label_request)
-from local_app.backend.recognition_store import RecognitionStore
+from local_app.backend.recognition_store import EvidenceIntegrityError, RecognitionStore
 from local_app.backend.app import create_app
 
 
@@ -143,6 +144,45 @@ class FinalReviewObservationTests(unittest.TestCase):
             exported=client.get(f"{url}/{observation_id}/export").get_json()
             field=exported["semantic"]["dataset"]["rows"][0]["fields"][0]
             self.assertEqual(field["truthEvidence"],"HUMAN_CROP_VERIFIED");self.assertTrue(field["knownTruthEligible"])
+            self.assertEqual(len(exported["semantic"]["dataset"]["sourceFields"]),6)
+            original_hashes=(exported["semantic"]["observation"]["payloadHash"],exported["semantic"]["observation"]["observationHash"])
+            original_projection_hash=exported["semantic"]["manifest"]["projectionHash"]
+            self.assertEqual(exported["semanticHash"],client.get(f"{url}/{observation_id}/export").get_json()["semanticHash"])
+
+            def relabel(revision,status,value,supersedes,mutation):
+                request_label={**label,"mutationId":mutation,"labelRevision":revision,"supersedesLabelId":supersedes,
+                    "labelStatus":status,"value":value,"createdAt":f"2026-10-02T00:0{revision+3}:00Z"}
+                response=client.post(truth_url,base_url=origin,data={"metadata":json.dumps(request_label,ensure_ascii=False)},
+                    content_type="multipart/form-data",headers=headers)
+                self.assertEqual(response.status_code,201,response.get_json())
+                return response.get_json()["receipt"]["labelId"]
+
+            unknown_id=relabel(2,"UNKNOWN",None,saved.get_json()["receipt"]["labelId"],"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee")
+            unknown_export=client.get(f"{url}/{observation_id}/export").get_json()
+            unknown_field=unknown_export["semantic"]["dataset"]["rows"][0]["fields"][0]
+            self.assertFalse(unknown_field["knownTruthEligible"]);self.assertIsNone(unknown_field["truthValue"])
+            disputed_id=relabel(3,"DISPUTED",None,unknown_id,"ffffffff-ffff-4fff-8fff-ffffffffffff")
+            disputed_export=client.get(f"{url}/{observation_id}/export").get_json()
+            self.assertFalse(disputed_export["semantic"]["dataset"]["rows"][0]["fields"][0]["knownTruthEligible"])
+            latest_id=relabel(4,"KNOWN","예제 섬",disputed_id,"abababab-abab-4bab-8bab-abababababab")
+            resolved_export=client.get(f"{url}/{observation_id}/export").get_json()
+            resolved_field=resolved_export["semantic"]["dataset"]["rows"][0]["fields"][0]
+            self.assertTrue(resolved_field["knownTruthEligible"]);self.assertEqual(resolved_field["truthValue"],"예제 섬")
+            self.assertEqual(resolved_export["semantic"]["observation"]["payloadHash"],original_hashes[0])
+            self.assertEqual(resolved_export["semantic"]["observation"]["observationHash"],original_hashes[1])
+            self.assertEqual(resolved_export["semantic"]["manifest"]["projectionHash"],original_projection_hash)
+            self.assertEqual(len(resolved_export["semantic"]["truthLabels"]),4)
+            self.assertEqual(resolved_export["semantic"]["manifest"]["truthLabelBindings"],sorted(
+                resolved_export["semantic"]["manifest"]["truthLabelBindings"],key=lambda binding:binding["labelId"]))
+            label_rows=store.get_crop_truth_labels(observation_id)
+            with patch.object(store,"get_crop_truth_labels",return_value=list(reversed(label_rows))):
+                reversed_label_export=store.export_trade_review_observation(observation_id)
+            self.assertEqual(reversed_label_export["semanticHash"],resolved_export["semanticHash"])
+            with closing(store._connect()) as connection:
+                connection.execute("DROP TRIGGER trade_crop_truth_label_v3_no_update")
+                connection.execute("UPDATE trade_crop_truth_label_v3 SET field_name='yield' WHERE label_id=?",(latest_id,))
+                connection.commit()
+            with self.assertRaises(EvidenceIntegrityError): store.export_trade_review_observation(observation_id)
             store.close()
             store.close()
 

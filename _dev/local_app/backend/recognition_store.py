@@ -822,89 +822,120 @@ class RecognitionStore:
 
     def _export_final_review_observation(self, record: dict[str, Any]) -> dict[str, Any]:
         projection, completion = record["projection"], record["completion"]
-        fields = []
         truth_history = self.get_crop_truth_labels(record["observationId"]) or []
-        truth_labels = [item["label"] for item in truth_history]
-        truth_bindings = [{"labelId": label["labelId"], "labelHash": label["labelHash"]} for label in sorted(truth_labels, key=lambda x: x["labelId"])]
+        truth_labels = sorted((item["label"] for item in truth_history), key=lambda item: item["labelId"])
+        truth_bindings = [{"labelId": label["labelId"], "labelHash": label["labelHash"]}
+                          for label in sorted(truth_labels, key=lambda item: item["labelId"])]
         snapshot = record["sourceContext"]["rawEvidence"]["snapshot"]
         source_rows = {row["sourceRowId"]: row for row in snapshot["sourceRows"]}
         groups = {group["logicalRowId"]: group for group in projection["reconciliation"]["groups"]}
-        crop_states = {(item["projectionRowId"], item["field"]): item for item in self.get_trade_review_crop_evidence(record["observationId"])}
-        latest_labels = {}
+        latest_labels: dict[tuple[str, str, str], dict[str, Any]] = {}
         for label in truth_labels:
-            key=(label["sourceRowId"],label["field"],label["cropRefId"])
-            if key not in latest_labels or label["labelRevision"]>latest_labels[key]["labelRevision"]: latest_labels[key]=label
+            key = (label["sourceRowId"], label["field"], label["cropRefId"])
+            if key not in latest_labels or label["labelRevision"] > latest_labels[key]["labelRevision"]:
+                latest_labels[key] = label
+
+        def physical_key(crop: dict[str, Any], field_name: str) -> tuple[str, str, str, str]:
+            return (crop["bitmapSha256"], canonical_json(crop["box"]), crop["pixelSha256"], field_name)
+
+        def is_known(label: dict[str, Any]) -> bool:
+            return label["labelStatus"] == "KNOWN" and label["truthEvidence"] == "HUMAN_CROP_VERIFIED"
+
+        def physical_truth(crop_key: tuple[str, str, str, str], bindings: list[tuple[str, dict[str, Any]]]):
+            # One explicit label can cover duplicate references to the same physical crop;
+            # distinct physical crops must each have their own source-bound label.
+            bound = []
+            for source_id, crop in bindings:
+                label = latest_labels.get((source_id, crop_key[3], crop["cropRefId"]))
+                if label is not None:
+                    bound.append(label)
+            known = [label for label in bound if is_known(label)]
+            values = {canonical_json(label["value"]): label["value"] for label in known}
+            disputed = len(values) > 1 or any(label["labelStatus"] == "DISPUTED" for label in bound)
+            return (next(iter(values.values())) if len(values) == 1 and not disputed else None,
+                    sorted({label["labelId"] for label in bound}), disputed)
+
+        physical_bindings: dict[tuple[str, str, str, str], list[tuple[str, dict[str, Any]]]] = {}
+        for source_id, source in source_rows.items():
+            for source_field in source["fields"]:
+                field_name = source_field["field"]
+                for crop in source_field["cropRefs"]:
+                    physical_bindings.setdefault(physical_key(crop, field_name), []).append((source_id, crop))
 
         def source_cell_truth(source_id: str, field_name: str, crop_refs: list[dict[str, Any]]):
-            eligible=[]; ids=[]; physical=set()
+            unique: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+            label_ids: set[str] = set()
+            values: list[Any] = []
+            disputed = False
             for crop in crop_refs:
-                physical.add((crop["bitmapSha256"],canonical_json(crop["box"]),crop["pixelSha256"],field_name))
-                label=latest_labels.get((source_id,field_name,crop["cropRefId"]))
-                if label is None: continue
-                ids.append(label["labelId"])
-                provenance=label["provenance"]
-                if (label["labelStatus"]=="KNOWN" and label["truthEvidence"]=="HUMAN_CROP_VERIFIED"
-                    and provenance["cohort"]=="INDEPENDENT" and provenance["sourceOrigin"]=="FRESH_CAPTURE"
-                    and provenance["independentOfOperationalReview"] is True and isinstance(provenance["splitManifestHash"],str)):
-                    eligible.append(label["value"])
-            return ids, eligible, len(physical)
+                key = physical_key(crop, field_name)
+                unique.setdefault(key, crop)
+            for key in unique:
+                same_source_bindings = [(bound_source, bound_crop) for bound_source, bound_crop in physical_bindings.get(key, [])
+                                        if bound_source == source_id]
+                value, ids, conflict = physical_truth(key, same_source_bindings or [(source_id, unique[key])])
+                label_ids.update(ids)
+                disputed = disputed or conflict
+                if value is not None:
+                    values.append(value)
+            eligible = bool(unique) and not disputed and len(values) == len(unique) \
+                and len({canonical_json(value) for value in values}) == 1
+            return sorted(label_ids), (values[0] if eligible else None), disputed
 
         def raw_field(source_id: str, field_name: str):
             row=source_rows[source_id]
             return next(item for item in row["fields"] if item["field"]==field_name)
 
-        source_fields=[]
+        source_fields = []
         for source_id, raw_row in source_rows.items():
             for field_name in ("island","fromItem","reqAmount","toItem","count","yield"):
-                raw=raw_field(source_id,field_name); crop_refs=raw["cropRefs"]
-                label_ids,eligible,physical_count=source_cell_truth(source_id,field_name,crop_refs)
-                value=eligible[-1] if physical_count>0 and len(eligible)==physical_count and len(set(map(canonical_json,eligible)))==1 else None
-                group=next(g for g in projection["reconciliation"]["groups"] if source_id in g["memberSourceRowIds"])
-                source_projection_field=None
+                raw = raw_field(source_id, field_name)
+                crop_refs = raw["cropRefs"]
+                label_ids, value, _ = source_cell_truth(source_id, field_name, crop_refs)
+                group = next(g for g in projection["reconciliation"]["groups"] if source_id in g["memberSourceRowIds"])
                 if group["memberEvidence"]:
-                    source_member=next(m for m in group["memberEvidence"] if m["sourceRowId"]==source_id)
-                    source_projection_field=next(f for f in source_member["fields"] if f["field"]==field_name)
+                    source_member = next(m for m in group["memberEvidence"] if m["sourceRowId"] == source_id)
+                    source_projection_field = next(f for f in source_member["fields"] if f["field"] == field_name)
                 else:
-                    projected_row=next(r for r in projection["rows"] if r["projectionRowId"]==group["logicalRowId"])
-                    source_projection_field=next(f for f in projected_row["fields"] if f["field"]==field_name)
-                source_fields.append({"sourceRowId":source_id,"field":field_name,
-                    "rawEvidence":{"sourceRowId":source_id,"rawText":raw["rawText"],"rawNumeric":raw["rawNumeric"],"readerStatus":raw["readerStatus"],"confidence":raw["confidence"]},
-                    "normalizedValue":source_projection_field["normalizedValue"],"correctedValue":source_projection_field["correctedValue"],"truthEvidence":"HUMAN_CROP_VERIFIED" if value is not None else "NONE",
-                    "knownTruthEligible":value is not None,"truthValue":value,"truthLabelIds":label_ids,"cropRefs":crop_refs})
-        dataset_rows=[]
+                    projected_row = next(r for r in projection["rows"] if r["projectionRowId"] == group["logicalRowId"])
+                    source_projection_field = next(f for f in projected_row["fields"] if f["field"] == field_name)
+                source_fields.append({"sourceRowId": source_id, "field": field_name,
+                    "rawEvidence": {"sourceRowId": source_id, "rawText": raw["rawText"], "rawNumeric": raw["rawNumeric"], "readerStatus": raw["readerStatus"], "confidence": raw["confidence"]},
+                    "normalizedValue": source_projection_field["normalizedValue"], "correctedValue": source_projection_field["finalValue"],
+                    "truthEvidence": "HUMAN_CROP_VERIFIED" if value is not None else "NONE",
+                    "knownTruthEligible": value is not None, "truthValue": value, "truthLabelIds": label_ids, "cropRefs": crop_refs})
+        dataset_rows = []
         for row in completion["rows"]:
-            group=groups[row["projectionRowId"]]
             dataset_fields=[]
             for field in row["fields"]:
                 name=field["field"]
-                physical=[]; labels_for_field=[]; raw_evidence=[]
+                physical: dict[tuple[str, str, str, str], list[tuple[str, dict[str, Any]]]] = {}
+                labels_for_field: set[str] = set()
+                raw_evidence=[]
                 for source_ref in row["sourceRefs"]:
                     sid=source_ref["sourceRowId"]; raw=raw_field(sid,name); raw_evidence.append({"sourceRowId":sid,"rawText":raw["rawText"],"rawNumeric":raw["rawNumeric"],"readerStatus":raw["readerStatus"],"confidence":raw["confidence"]})
                     for crop in raw["cropRefs"]:
-                        physical_key=(crop["bitmapSha256"],canonical_json(crop["box"]),crop["pixelSha256"],name)
-                        if physical_key not in [x[0] for x in physical]: physical.append((physical_key,crop,sid))
-                truth_values=[]; truth_ok=bool(physical)
-                for _,crop,sid in physical:
-                    label=latest_labels.get((sid,name,crop["cropRefId"]))
-                    # A repeated bitmap may use a different cropRefId; labels remain source-bound.
-                    if label is None:
-                        label=next((candidate for candidate in truth_labels if candidate["field"]==name and candidate["artifact"]["pixelSha256"]==crop["pixelSha256"] and candidate["artifact"]["width"]==crop["box"]["width"] and candidate["artifact"]["height"]==crop["box"]["height"]),None)
-                    if label is None:
-                        truth_ok=False; continue
-                    labels_for_field.append(label["labelId"])
-                    provenance=label["provenance"]
-                    valid=(label["labelStatus"]=="KNOWN" and label["truthEvidence"]=="HUMAN_CROP_VERIFIED" and provenance["cohort"]=="INDEPENDENT" and provenance["sourceOrigin"]=="FRESH_CAPTURE" and provenance["independentOfOperationalReview"] is True and isinstance(provenance["splitManifestHash"],str))
-                    if not valid: truth_ok=False
-                    else: truth_values.append(label["value"])
-                same_truth=truth_ok and len(truth_values)==len(physical) and len({canonical_json(v) for v in truth_values})==1
+                        physical.setdefault(physical_key(crop, name), []).append((sid, crop))
+                truth_values = []
+                truth_ok = bool(physical)
+                disputed = False
+                for key, bindings in physical.items():
+                    value, ids, conflict = physical_truth(key, physical_bindings.get(key, bindings))
+                    labels_for_field.update(ids)
+                    disputed = disputed or conflict
+                    if value is None:
+                        truth_ok = False
+                    else:
+                        truth_values.append(value)
+                same_truth = truth_ok and not disputed and len(truth_values) == len(physical) \
+                    and len({canonical_json(value) for value in truth_values}) == 1
                 projected_field=next(f for f in next(p for p in projection["rows"] if p["projectionRowId"]==row["projectionRowId"])["fields"] if f["field"]==name)
                 dataset_field={"field":name,"operationalDecision":field["operationalDecision"],"truthEvidence":"HUMAN_CROP_VERIFIED" if same_truth else "NONE",
-                    "knownTruthEligible":same_truth,"truthValue":truth_values[0] if same_truth else None,"truthLabelIds":sorted(set(labels_for_field)),
-                    "rawEvidence":raw_evidence,"normalizedValue":projected_field["normalizedValue"],"correctedValue":field["shownValueBefore"],
+                    "knownTruthEligible":same_truth,"truthValue":truth_values[0] if same_truth else None,"truthLabelIds":sorted(labels_for_field),
+                    "rawEvidence":raw_evidence,"normalizedValue":projected_field["normalizedValue"],"correctedValue":projected_field["finalValue"],
                     "shownValueBefore":field["shownValueBefore"],"finalValue":field["finalValue"],"riskReasons":field["riskReasons"],
                     "correctionReasons":projected_field["correctionReasons"],"masterBinding":projection["masterBinding"],"sourceRefs":row["sourceRefs"],
                     "cropRefs":[crop for sid in [x["sourceRowId"] for x in row["sourceRefs"]] for crop in raw_field(sid,name)["cropRefs"]]}
-                fields.append({"projectionRowId":row["projectionRowId"],**dataset_field})
                 dataset_fields.append(dataset_field)
             dataset_rows.append({"projectionRowId":row["projectionRowId"],"classification":next(p["classification"] for p in projection["rows"] if p["projectionRowId"]==row["projectionRowId"]),
                 "disposition":row["disposition"],"sourceRefs":row["sourceRefs"],"fields":dataset_fields})
@@ -1091,28 +1122,57 @@ class RecognitionStore:
         record=self.get_trade_review_observation(observation_id)
         if record is None or record.get("schemaVersion")!=3: return None
         results=[]
+        source_rows = record["sourceContext"]["rawEvidence"]["snapshot"]["sourceRows"]
+        crop_refs = {crop["cropRefId"]: (source["sourceRowId"], field["field"], crop)
+                     for source in source_rows for field in source["fields"] for crop in field["cropRefs"]}
+        subjects: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
         with closing(self._connect()) as connection:
-            rows=connection.execute("SELECT * FROM trade_crop_truth_label_v3 WHERE observation_id=? ORDER BY created_at,label_id",(observation_id,)).fetchall()
+            rows=connection.execute("SELECT * FROM trade_crop_truth_label_v3 WHERE observation_id=? ORDER BY source_row_id,field_name,crop_ref_id,label_revision,label_id",(observation_id,)).fetchall()
             for row in rows:
-                request=json.loads(row["payload_json"])
+                try:
+                    request=json.loads(row["payload_json"])
+                except (TypeError, json.JSONDecodeError):
+                    raise EvidenceIntegrityError("stored truth request is malformed") from None
+                expected_keys={"schemaVersion","mutationId","sourceRowId","field","cropRefId","labelRevision","supersedesLabelId","labelStatus","value","provenance","createdAt"}
+                if "artifact" in request: expected_keys.add("artifact")
+                if not isinstance(request,dict) or set(request)!=expected_keys:
+                    raise EvidenceIntegrityError("stored truth request shape mismatch")
+                if canonical_json(request)!=row["payload_json"] or sha256_bytes(row["payload_json"].encode("utf-8"))!=row["payload_hash"]:
+                    raise EvidenceIntegrityError("stored truth request hash mismatch")
+                if (request["sourceRowId"],request["field"],request["cropRefId"],request["labelRevision"],request["supersedesLabelId"],
+                    request["labelStatus"],canonical_json(request["value"]),canonical_json(request["provenance"]),request["createdAt"]) != (
+                    row["source_row_id"],row["field_name"],row["crop_ref_id"],row["label_revision"],row["supersedes_label_id"],
+                    row["label_status"],row["value_json"],row["provenance_json"],row["created_at"]):
+                    raise EvidenceIntegrityError("stored truth indexed columns mismatch")
+                if row["truth_evidence"]!="HUMAN_CROP_VERIFIED" or row["observation_id"]!=observation_id:
+                    raise EvidenceIntegrityError("stored truth authority binding mismatch")
+                binding=crop_refs.get(row["crop_ref_id"])
+                if binding is None or binding[0]!=row["source_row_id"] or binding[1]!=row["field_name"]:
+                    raise EvidenceIntegrityError("stored truth crop binding mismatch")
+                crop_ref=binding[2]
                 receipt_row=connection.execute("SELECT * FROM trade_crop_truth_receipt_v3 WHERE label_id=?",(row["label_id"],)).fetchone()
-                if canonical_json(request)!=row["payload_json"] or sha256_bytes(row["payload_json"].encode("utf-8"))!=row["payload_hash"] or receipt_row is None or request["mutationId"]!=receipt_row["mutation_id"] or receipt_row["request_hash"]!=row["payload_hash"]: raise EvidenceIntegrityError("stored truth request integrity check failed")
-                artifact={"sha256":row["artifact_hash"],"pixelSha256":row["pixel_sha256"],"width":request.get("artifact",{}).get("width"),"height":request.get("artifact",{}).get("height")}
-                if artifact["width"] is None:
-                    ref=next(c for source in record["sourceContext"]["rawEvidence"]["snapshot"]["sourceRows"] for f in source["fields"] for c in f["cropRefs"] if c["cropRefId"]==row["crop_ref_id"])
-                    artifact["width"],artifact["height"]=ref["box"]["width"],ref["box"]["height"]
+                if (receipt_row is None or request["mutationId"]!=receipt_row["mutation_id"]
+                    or receipt_row["request_hash"]!=row["payload_hash"] or receipt_row["created_at"]!=row["persisted_at"]):
+                    raise EvidenceIntegrityError("stored truth request/receipt integrity check failed")
+                artifact={"sha256":row["artifact_hash"],"pixelSha256":row["pixel_sha256"],"width":crop_ref["box"]["width"],"height":crop_ref["box"]["height"]}
+                if request.get("artifact") is not None and request["artifact"]!=artifact:
+                    raise EvidenceIntegrityError("stored truth artifact request mismatch")
+                if crop_ref.get("pngArtifactSha256") not in (None,row["artifact_hash"]) or crop_ref["pixelSha256"]!=row["pixel_sha256"]:
+                    raise EvidenceIntegrityError("stored truth artifact does not match source crop")
                 label={**request,"labelId":row["label_id"],"observationId":observation_id,"persistedAt":row["persisted_at"],"artifact":artifact,"truthEvidence":row["truth_evidence"]}
                 if sha256_bytes(canonical_json(label).encode("utf-8"))!=row["label_hash"]: raise EvidenceIntegrityError("stored truth label hash mismatch")
                 label["labelHash"]=row["label_hash"]
+                subject=(row["source_row_id"],row["field_name"],row["crop_ref_id"])
+                history=subjects.setdefault(subject,[])
+                expected_revision=len(history)+1
+                expected_supersedes=history[-1]["labelId"] if history else None
+                if row["label_revision"]!=expected_revision or row["supersedes_label_id"]!=expected_supersedes:
+                    raise EvidenceIntegrityError("stored truth label revision chain is invalid")
+                history.append(label)
                 artifact_path=self.artifact_root / f"{row['artifact_hash']}.png"
                 if not artifact_path.exists(): raise EvidenceIntegrityError("stored truth artifact is missing")
                 artifact_bytes=artifact_path.read_bytes()
                 if sha256_bytes(artifact_bytes)!=row["artifact_hash"]: raise EvidenceIntegrityError("stored truth artifact hash mismatch")
-                crop_ref=next((crop for source in record["sourceContext"]["rawEvidence"]["snapshot"]["sourceRows"]
-                               for field in source["fields"] for crop in field["cropRefs"]
-                               if crop["cropRefId"]==row["crop_ref_id"]),None)
-                if crop_ref is None or crop_ref["sourceRowId"]!=row["source_row_id"] or crop_ref["field"]!=row["field_name"]:
-                    raise EvidenceIntegrityError("stored truth crop binding mismatch")
                 try:
                     from io import BytesIO
                     from PIL import Image, UnidentifiedImageError

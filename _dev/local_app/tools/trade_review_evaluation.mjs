@@ -4,6 +4,8 @@ import { readFile, mkdir, writeFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateReviewedTradeBatch } from "../frontend/js/domain/reviewed-trade-dto.js";
+import { masterBundleContentHash, validateMasterBundleV2 } from "../frontend/js/domain/trade-master-bundle.js";
+import { registrySnapshotSha256 } from "../frontend/js/domain/trade-master-registry.js";
 
 const FIELDS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
 const IDENTITY = new Set(["island", "fromItem", "toItem"]);
@@ -521,7 +523,7 @@ function validateCurationOnly(output) {
     assert(proposal.requiresManualCuration === true && proposal.proposedMutation === null, "curation proposals cannot mutate production");
   });
 }
-export function evaluateTradeReviewDataset({ observations, candidateRuns = [], evaluationPolicyVersion, rawEvaluationVersion, splitSeed } = {}) {
+function evaluateLegacyTradeReviewDataset({ observations, candidateRuns = [], evaluationPolicyVersion, rawEvaluationVersion, splitSeed } = {}) {
   const input = prepareInput({ observations, candidateRuns, evaluationPolicyVersion, rawEvaluationVersion, splitSeed });
   const evidenceGroups = buildEvidenceGroups(input.items, splitSeed);
   const leakageGroups = evidenceGroups.filter((group) => group.splitLeakage);
@@ -580,6 +582,769 @@ export function evaluateTradeReviewDataset({ observations, candidateRuns = [], e
   return output;
 }
 
+const FINAL_EVALUATION_POLICY = "trade-final-review-evaluation-v3";
+const FINAL_EXPORT_TYPE = "TRADE_FINAL_REVIEW_OBSERVATION";
+const FINAL_EXPORT_HASH_BASIS = "TRADE_EXPORT_JSON_V3";
+const DECISIONS = new Set(["CANDIDATE_RETAINED", "USER_EDITED", "USER_MARKED_UNKNOWN"]);
+const CLASSIFICATIONS = new Set(["FINAL_READY", "NEEDS_REVIEW", "NEEDS_RECAPTURE", "CONFLICT"]);
+const RETENTION = new Set(["OPERATIONAL_REVIEW_EVIDENCE", "HUMAN_TRUTH_EVIDENCE", "UNKNOWN_EVIDENCE", "NONE"]);
+const TRUTH_LABEL_KEYS = ["schemaVersion", "mutationId", "sourceRowId", "field", "cropRefId", "labelRevision",
+  "supersedesLabelId", "labelStatus", "value", "provenance", "createdAt", "labelId", "observationId", "persistedAt",
+  "artifact", "truthEvidence", "labelHash"];
+
+function exactKeys(value, keys) {
+  return isRecord(value) && Object.keys(value).sort(compareText).join("\0") === [...keys].sort(compareText).join("\0");
+}
+function finalRatio(numerator, denominator) {
+  const rate = denominator === 0 ? null : (() => {
+    const scaled = Math.floor((numerator * 1_000_000 + denominator / 2) / denominator);
+    return `${Math.floor(scaled / 1_000_000)}.${String(scaled % 1_000_000).padStart(6, "0")}`;
+  })();
+  return { numerator, denominator, rate, status: denominator === 0 ? "N/A" : "AVAILABLE" };
+}
+function physicalCropKey(crop, field) {
+  assert(isRecord(crop) && validHash(crop.bitmapSha256) && validHash(crop.pixelSha256) && isRecord(crop.box)
+    && ["x", "y", "width", "height"].every((key) => Number.isSafeInteger(crop.box[key])), "invalid physical crop identity");
+  return stable([crop.bitmapSha256, crop.box, crop.pixelSha256, field]);
+}
+function finalRawValue(sourceField, field) {
+  const raw = sourceField.rawEvidence;
+  if (field === "island" || field === "fromItem" || field === "toItem") return raw.rawText;
+  const value = raw.rawNumeric;
+  return Number.isSafeInteger(value) && value >= MINIMUM[field] ? value : null;
+}
+function validFinalValue(value, field) {
+  return (IDENTITY.has(field) && (value === null || nonempty(value)))
+    || (NUMERIC.has(field) && (value === null || Number.isSafeInteger(value) && value >= MINIMUM[field]));
+}
+function validUtcTimestamp(value) {
+  const match = typeof value === "string" && value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?Z$/);
+  if (!match) return false;
+  const millis = (match[2] ?? "").padEnd(3, "0");
+  const normalized = `${match[1]}.${millis}Z`;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === normalized;
+}
+function finalLabelIndex(parts) {
+  const { semantic, observation } = parts;
+  const rawRows = observation.sourceContext?.rawEvidence?.snapshot?.sourceRows;
+  const captures = observation.sourceContext?.rawEvidence?.snapshot?.captures;
+  const snapshot = observation.sourceContext?.rawEvidence?.snapshot;
+  assert(Array.isArray(rawRows) && Array.isArray(captures), "Export3 lacks source/capture snapshot");
+  assert(exactKeys(snapshot, ["schemaVersion", "recognitionBatchId", "captures", "sourceRows", "edgeSegments"])
+    && snapshot.schemaVersion === 2 && snapshot.recognitionBatchId === observation.projection.recognitionBatchId
+    && Array.isArray(snapshot.edgeSegments), "invalid RawEvidenceSnapshot2");
+  const captureCounts = new Map(); const captureIds = new Set();
+  const captureOrdinals = new Set();
+  for (const capture of captures) {
+    assert(exactKeys(capture, ["captureId", "captureOrdinal", "imageSha256", "bitmapSha256", "sourceType", "frame", "sourceFidelity", "reencoded", "completeRowCount"])
+      && nonempty(capture.captureId) && !captureIds.has(capture.captureId) && Number.isSafeInteger(capture.captureOrdinal)
+      && capture.captureOrdinal >= 0 && !captureOrdinals.has(capture.captureOrdinal) && validHash(capture.imageSha256)
+      && validHash(capture.bitmapSha256) && ["FILE", "CLIPBOARD", "STREAM"].includes(capture.sourceType)
+      && exactKeys(capture.frame, ["width", "height"]) && Number.isSafeInteger(capture.frame.width) && capture.frame.width > 0
+      && Number.isSafeInteger(capture.frame.height) && capture.frame.height > 0
+      && exactKeys(capture.sourceFidelity, ["sourceWidth", "sourceHeight", "rescaled", "evidence"])
+      && ["file-metadata", "unknown"].includes(capture.sourceFidelity.evidence) && typeof capture.reencoded === "boolean"
+      && Number.isSafeInteger(capture.completeRowCount) && capture.completeRowCount >= 0, "invalid capture source evidence");
+    if (capture.sourceFidelity.evidence === "unknown") assert(capture.sourceFidelity.sourceWidth === null
+      && capture.sourceFidelity.sourceHeight === null && capture.sourceFidelity.rescaled === null, "unknown source fidelity must remain null");
+    else assert(Number.isSafeInteger(capture.sourceFidelity.sourceWidth) && capture.sourceFidelity.sourceWidth > 0
+      && Number.isSafeInteger(capture.sourceFidelity.sourceHeight) && capture.sourceFidelity.sourceHeight > 0
+      && capture.sourceFidelity.rescaled === false, "invalid file-metadata source fidelity");
+    captureIds.add(capture.captureId); captureCounts.set(capture.captureId, 0);
+    captureOrdinals.add(capture.captureOrdinal);
+  }
+  assert([...captureOrdinals].sort((a, b) => a - b).every((ordinal, index) => ordinal === index), "capture ordinals must be contiguous");
+  const crops = new Map();
+  const sourceIds = new Set(); const sourceOrdinals = new Map();
+  const captureOrder = new Map(captures.slice().sort((a, b) => a.captureOrdinal - b.captureOrdinal)
+    .map((capture, index) => [capture.captureId, index]));
+  let previousSourcePosition = null;
+  for (const source of rawRows) {
+    assert(exactKeys(source, ["sourceRowId", "captureId", "ordinal", "rowBox", "fields"])
+      && nonempty(source.sourceRowId) && !sourceIds.has(source.sourceRowId) && captureCounts.has(source.captureId)
+      && Number.isSafeInteger(source.ordinal) && source.ordinal >= 0 && Array.isArray(source.fields)
+      && source.fields.length === FIELDS.length && equal(source.fields.map((field) => field.field), FIELDS), "invalid source row");
+    sourceIds.add(source.sourceRowId);
+    const position = [captureOrder.get(source.captureId), source.ordinal];
+    assert(!previousSourcePosition || position[0] > previousSourcePosition[0]
+      || position[0] === previousSourcePosition[0] && position[1] > previousSourcePosition[1],
+    "RawEvidence source rows are not in capture/ordinal order");
+    previousSourcePosition = position;
+    const ordinals = sourceOrdinals.get(source.captureId) ?? new Set();
+    assert(!ordinals.has(source.ordinal), "duplicate source ordinal in capture"); ordinals.add(source.ordinal); sourceOrdinals.set(source.captureId, ordinals);
+    captureCounts.set(source.captureId, captureCounts.get(source.captureId) + 1);
+    for (const sourceField of source.fields) {
+      assert(exactKeys(sourceField, ["field", "rawText", "rawNumeric", "readerStatus", "confidence", "cropRefs"])
+        && (sourceField.rawText === null || typeof sourceField.rawText === "string")
+        && (sourceField.rawNumeric === null || Number.isSafeInteger(sourceField.rawNumeric))
+        && nonempty(sourceField.readerStatus) && (sourceField.confidence === null || typeof sourceField.confidence === "string")
+        && Array.isArray(sourceField.cropRefs), "invalid source field binding");
+      for (const crop of sourceField.cropRefs) {
+        assert(exactKeys(crop, ["cropRefId", "sourceRowId", "captureId", "field", "bitmapSha256", "frame", "coordinateSpace", "box",
+          "pixelHashBasis", "pixelSha256", "pngArtifactSha256"])
+          && nonempty(crop.cropRefId) && crop.sourceRowId === source.sourceRowId && crop.captureId === source.captureId
+          && crop.field === sourceField.field && validHash(crop.bitmapSha256) && validHash(crop.pixelSha256)
+          && exactKeys(crop.frame, ["width", "height"]) && crop.coordinateSpace === "CAPTURE_BITMAP_PIXELS"
+          && exactKeys(crop.box, ["x", "y", "width", "height"]) && ["x", "y", "width", "height"].every((key) => Number.isSafeInteger(crop.box[key]))
+          && crop.box.x >= 0 && crop.box.y >= 0 && crop.box.width > 0 && crop.box.height > 0
+          && crop.box.x + crop.box.width <= crop.frame.width && crop.box.y + crop.box.height <= crop.frame.height
+          && crop.pixelHashBasis === "RGB8_ROW_MAJOR_V1" && (crop.pngArtifactSha256 === null || validHash(crop.pngArtifactSha256)),
+          `crop source/field binding mismatch: ${JSON.stringify(crop)}`);
+        const cropKey = `${source.sourceRowId}\0${sourceField.field}\0${crop.cropRefId}`;
+        assert(!crops.has(cropKey), "duplicate source crop reference");
+        crops.set(cropKey, crop);
+      }
+    }
+  }
+  assert([...captureCounts].every(([captureId, count]) => captures.find((capture) => capture.captureId === captureId).completeRowCount === count),
+    "source COMPLETE rows differ from immutable capture evidence");
+  const labels = semantic.truthLabels;
+  assert(Array.isArray(labels), "truthLabels must be an array");
+  const labelIds = new Set(); const subjectHistory = new Map();
+  for (const label of labels) {
+    assert(exactKeys(label, TRUTH_LABEL_KEYS) && label.schemaVersion === 1 && label.truthEvidence === "HUMAN_CROP_VERIFIED"
+      && nonempty(label.labelId) && !labelIds.has(label.labelId) && label.observationId === observation.observationId
+      && FIELDS.includes(label.field) && Number.isSafeInteger(label.labelRevision) && label.labelRevision > 0
+      && ["KNOWN", "UNKNOWN", "DISPUTED"].includes(label.labelStatus) && isRecord(label.provenance)
+      && exactKeys(label.artifact, ["sha256", "pixelSha256", "width", "height"]) && validHash(label.artifact.sha256)
+      && validHash(label.artifact.pixelSha256) && Number.isSafeInteger(label.artifact.width) && Number.isSafeInteger(label.artifact.height),
+    "invalid truth-label record");
+    assert(exactKeys(label.provenance, ["method", "labelerRole", "sourceFamilyId", "cohort", "splitManifestHash", "sourceOrigin",
+      "independentOfOperationalReview", "note"]) && label.provenance.method === "HUMAN_CROP_VERIFIED"
+      && label.provenance.labelerRole === "PRODUCT_OWNER" && nonempty(label.provenance.sourceFamilyId)
+      && ["DEVELOPMENT", "INDEPENDENT"].includes(label.provenance.cohort)
+      && ["FRESH_CAPTURE", "ARCHIVED_CAPTURE"].includes(label.provenance.sourceOrigin)
+      && typeof label.provenance.independentOfOperationalReview === "boolean"
+      && (label.provenance.splitManifestHash === null || validHash(label.provenance.splitManifestHash)), "invalid truth-label provenance");
+    labelIds.add(label.labelId);
+    const crop = crops.get(`${label.sourceRowId}\0${label.field}\0${label.cropRefId}`);
+    assert(crop, "truth label refers to unknown source crop");
+    assert(label.artifact.pixelSha256 === crop.pixelSha256 && label.artifact.width === crop.box.width
+      && label.artifact.height === crop.box.height && (crop.pngArtifactSha256 == null || label.artifact.sha256 === crop.pngArtifactSha256),
+    "truth label artifact binding mismatch");
+    const unhashed = { ...label }; delete unhashed.labelHash;
+    assert(validHash(label.labelHash) && semanticEvaluationSha256(unhashed) === label.labelHash, "truth label hash mismatch");
+    assert((label.labelStatus === "KNOWN" && validFinalValue(label.value, label.field))
+      || (label.labelStatus !== "KNOWN" && label.value === null), "truth label value/status mismatch");
+    const subject = `${label.sourceRowId}\0${label.field}\0${label.cropRefId}`;
+    const history = subjectHistory.get(subject) ?? [];
+    history.push(label); subjectHistory.set(subject, history);
+  }
+  for (const history of subjectHistory.values()) {
+    history.sort((a, b) => a.labelRevision - b.labelRevision || compareText(a.labelId, b.labelId));
+    for (let index = 0; index < history.length; index += 1) {
+      assert(history[index].labelRevision === index + 1
+        && history[index].supersedesLabelId === (index ? history[index - 1].labelId : null), "truth label revision chain mismatch");
+    }
+  }
+  const bindings = [...labels].sort((a, b) => compareText(a.labelId, b.labelId)).map(({ labelId, labelHash }) => ({ labelId, labelHash }));
+  assert(equal(semantic.manifest.truthLabelBindings, bindings), "truthLabelBindings mismatch");
+  const latest = new Map([...subjectHistory].map(([key, history]) => [key, history.at(-1)]));
+  return { rawRows, crops, labels, latest };
+}
+function validateFinalExport(exportRecord) {
+  const topKeys = ["schemaVersion", "exportType", "generatedAt", "hashBasis", "semanticHash", "semantic"];
+  assert(exactKeys(exportRecord, topKeys) && exportRecord.schemaVersion === 3 && exportRecord.exportType === FINAL_EXPORT_TYPE
+    && nonempty(exportRecord.generatedAt) && exportRecord.hashBasis === FINAL_EXPORT_HASH_BASIS && validHash(exportRecord.semanticHash),
+  "invalid Export3 envelope");
+  const semantic = exportRecord.semantic;
+  assert(exactKeys(semantic, ["manifest", "observation", "cropEvidence", "truthLabels", "dataset"]), "invalid Export3 semantic shape");
+  assert(semanticEvaluationSha256(semantic) === exportRecord.semanticHash, "Export3 semantic hash mismatch");
+  const manifest = semantic.manifest; const observation = semantic.observation; const dataset = semantic.dataset;
+  assert(exactKeys(manifest, ["observationSchemaVersion", "sidecarSchemaVersion", "projectionSchemaVersion", "completionSchemaVersion",
+    "masterBinding", "projectionHash", "payloadHash", "observationHash", "truthLabelBindings", "evaluationPolicyVersion"])
+    && manifest.observationSchemaVersion === 3 && manifest.sidecarSchemaVersion === 3 && manifest.projectionSchemaVersion === 3
+    && manifest.completionSchemaVersion === 3 && manifest.evaluationPolicyVersion === FINAL_EVALUATION_POLICY
+    && validHash(manifest.projectionHash) && validHash(manifest.payloadHash) && validHash(manifest.observationHash),
+  "invalid Export3 manifest");
+  assert(isRecord(observation) && observation.schemaVersion === 3 && observation.reviewMode === "FINAL_CORRECTED_RESULT"
+    && observation.observationHash === manifest.observationHash && observation.payloadHash === manifest.payloadHash
+    && observation.projection?.projectionHash === manifest.projectionHash, "Export3 observation hash binding mismatch");
+  assert(observation.hashBasis === "TRADE_OBSERVATION_JSON_V3" && nonempty(observation.observationId)
+    && nonempty(observation.persistedAt) && validHash(observation.payloadHash) && validHash(observation.observationHash),
+  "invalid embedded Observation3 identity");
+  const request = Object.fromEntries(Object.entries(observation).filter(([key]) =>
+    !["observationId", "persistedAt", "hashBasis", "payloadHash", "observationHash"].includes(key)));
+  assert(registrySnapshotSha256(request) === observation.payloadHash, "embedded Observation3 payload hash mismatch");
+  const recordForHash = { ...request, observationId: observation.observationId, persistedAt: observation.persistedAt,
+    hashBasis: observation.hashBasis, payloadHash: observation.payloadHash };
+  assert(registrySnapshotSha256(recordForHash) === observation.observationHash, "embedded Observation3 observation hash mismatch");
+  const projection = observation.projection; const completion = observation.completion;
+  const sourceContext = observation.sourceContext;
+  const rawEvidence = sourceContext?.rawEvidence;
+  assert(exactKeys(observation, ["schemaVersion", "reviewMode", "mutationId", "createdAt", "confirmationRevision", "supersedesObservationId",
+    "projection", "completion", "sourceContext", "cropPlan", "observationId", "persistedAt", "hashBasis", "payloadHash", "observationHash"])
+    && exactKeys(sourceContext, ["schemaVersion", "authority", "rawEvidence", "masterBundle", "audit"])
+    && sourceContext.schemaVersion === 3 && sourceContext.authority === "CLIENT_ATTESTED"
+    && exactKeys(rawEvidence, ["hashBasis", "rawEvidenceHash", "snapshot"])
+    && rawEvidence.hashBasis === "TRADE_RAW_EVIDENCE_JSON_V2" && validHash(rawEvidence.rawEvidenceHash)
+    && registrySnapshotSha256(rawEvidence.snapshot) === rawEvidence.rawEvidenceHash
+    && exactKeys(sourceContext.masterBundle, ["binding", "snapshot"])
+    && exactKeys(sourceContext.audit, ["recognitionStartedAt", "recognitionFinishedAt", "latencyMs", "gameVersion"])
+    && (sourceContext.audit.recognitionStartedAt === null || nonempty(sourceContext.audit.recognitionStartedAt))
+    && (sourceContext.audit.recognitionFinishedAt === null || nonempty(sourceContext.audit.recognitionFinishedAt))
+    && (sourceContext.audit.latencyMs === null || Number.isSafeInteger(sourceContext.audit.latencyMs) && sourceContext.audit.latencyMs >= 0)
+    && (sourceContext.audit.gameVersion === null || typeof sourceContext.audit.gameVersion === "string"),
+  "invalid Observation3 source context or raw evidence hash");
+  assert(exactKeys(projection, ["schemaVersion", "reviewMode", "recognitionBatchId", "rawEvidenceHash", "masterBinding", "correctionVersion",
+    "reconciliation", "pixelAvailability", "rows", "edgeWorkItems", "hashBasis", "projectionHash"])
+    && projection.reviewMode === "FINAL_CORRECTED_RESULT" && nonempty(projection.recognitionBatchId)
+    && projection.rawEvidenceHash === rawEvidence.rawEvidenceHash && nonempty(projection.correctionVersion)
+    && projection.hashBasis === "TRADE_FINAL_PROJECTION_JSON_V3" && Array.isArray(projection.rows)
+    && Array.isArray(projection.pixelAvailability) && Array.isArray(projection.edgeWorkItems), "invalid FinalProjection3 shape/binding");
+  const reconciliation = projection.reconciliation;
+  assert(exactKeys(reconciliation, ["schemaVersion", "policyVersion", "captureOrder", "sourceRows", "groups", "sourceToLogical", "findings"])
+    && reconciliation.schemaVersion === 2 && nonempty(reconciliation.policyVersion) && Array.isArray(reconciliation.captureOrder)
+    && Array.isArray(reconciliation.sourceRows) && Array.isArray(reconciliation.groups)
+    && Array.isArray(reconciliation.sourceToLogical) && Array.isArray(reconciliation.findings),
+  "invalid finalized reconciliation contract");
+  assert(exactKeys(completion, ["schemaVersion", "reviewMode", "recognitionBatchId", "projectionHash", "masterBinding", "correctionVersion",
+    "reviewRevision", "rows", "workItems", "batchConfirmation"])
+    && projection?.schemaVersion === 3 && completion.schemaVersion === 3 && completion.reviewMode === "FINAL_CORRECTED_RESULT"
+    && completion.projectionHash === projection.projectionHash && completion.recognitionBatchId === dataset.recognitionBatchId
+    && nonempty(completion.correctionVersion) && Number.isSafeInteger(completion.reviewRevision) && completion.reviewRevision > 0
+    && Array.isArray(completion.rows) && Array.isArray(completion.workItems)
+    && equal(projection.masterBinding, manifest.masterBinding) && equal(completion.masterBinding, manifest.masterBinding),
+  "Export3 projection/completion binding mismatch");
+  const confirmation = completion.batchConfirmation;
+  assert(exactKeys(confirmation, ["method", "confirmedAt", "projectionHash", "reviewRevision", "completionValuesHash"])
+    && confirmation.method === "USER_FINAL_LIST_CONFIRMED" && validUtcTimestamp(confirmation.confirmedAt)
+    && confirmation.projectionHash === projection.projectionHash && confirmation.reviewRevision === completion.reviewRevision
+    && validHash(confirmation.completionValuesHash), "invalid Completion3 batch confirmation");
+  const { batchConfirmation, ...completionValues } = completion;
+  assert(registrySnapshotSha256(completionValues) === batchConfirmation.completionValuesHash,
+    "Completion3 values do not match batch confirmation hash");
+  const { projectionHash, ...projectionBase } = projection;
+  const masterSnapshot = observation.sourceContext?.masterBundle?.snapshot;
+  const masterValidation = masterSnapshot && validateMasterBundleV2(masterSnapshot);
+  assert(registrySnapshotSha256(projectionBase) === projectionHash
+    && equal(observation.sourceContext?.masterBundle?.binding, manifest.masterBinding)
+    && exactKeys(manifest.masterBinding, ["masterSchemaVersion", "registryVersion", "contentHash", "hashBasis"])
+    && manifest.masterBinding.masterSchemaVersion === 2 && validHash(manifest.masterBinding.contentHash)
+    && manifest.masterBinding.hashBasis === "MASTER_CANONICAL_JSON_V2"
+    && masterSnapshot?.schemaVersion === 2 && masterSnapshot.registryVersion === manifest.masterBinding.registryVersion
+    && masterSnapshot.contentHash === manifest.masterBinding.contentHash && masterValidation?.ok === true
+    && masterBundleContentHash(masterSnapshot) === manifest.masterBinding.contentHash,
+  "Export3 projection or pinned Master content hash mismatch");
+  assert(exactKeys(dataset, ["recognitionBatchId", "rows", "sourceFields", "edgeWorkItems"])
+    && Array.isArray(dataset.rows) && Array.isArray(dataset.sourceFields) && Array.isArray(dataset.edgeWorkItems)
+    && Array.isArray(semantic.cropEvidence), "invalid Export3 dataset shape");
+  assert(equal(manifest.masterBinding, projection.masterBinding), "Export3 Master binding mismatch");
+  const { rawRows, crops, latest } = finalLabelIndex({ semantic, observation });
+  const expectedPixelAvailability = [...new Set(rawRows.flatMap((source) => source.fields.flatMap((field) => field.cropRefs.map((crop) => crop.cropRefId))))];
+  assert(projection.pixelAvailability.length === expectedPixelAvailability.length
+    && projection.pixelAvailability.every((item, index) => exactKeys(item, ["cropRefId", "state"])
+      && item.cropRefId === expectedPixelAvailability[index]
+      && ["IN_MEMORY", "DURABLE", "MISSING", "EXPIRED", "INVALID"].includes(item.state)),
+  "Projection3 pixel availability does not cover raw crop references in stable order");
+  const projectionRows = new Map(projection.rows.map((row) => [row.projectionRowId, row]));
+  const completionRows = new Map(completion.rows.map((row) => [row.projectionRowId, row]));
+  assert(projectionRows.size === projection.rows.length && completionRows.size === completion.rows.length
+    && dataset.rows.length === projection.rows.length && completionRows.size === projectionRows.size
+    && equal(completion.rows.map((row) => row.projectionRowId), projection.rows.map((row) => row.projectionRowId))
+    && equal(dataset.rows.map((row) => row.projectionRowId), projection.rows.map((row) => row.projectionRowId)),
+  "Export3 logical row accounting mismatch");
+  const sourceIds = new Set(rawRows.map((row) => row.sourceRowId));
+  assert(sourceIds.size === rawRows.length, "duplicate source row identity in Observation3");
+  const rawRowsById = new Map(rawRows.map((row) => [row.sourceRowId, row]));
+  const rawCaptures = observation.sourceContext.rawEvidence.snapshot.captures;
+  assert(equal(reconciliation.captureOrder, rawCaptures.slice().sort((a, b) => a.captureOrdinal - b.captureOrdinal).map((capture) => capture.captureId))
+    && reconciliation.sourceRows.length === rawRows.length && reconciliation.sourceToLogical.length === rawRows.length,
+  "reconciliation source/capture accounting differs from raw evidence");
+  const reconciliationSourceIds = new Set();
+  for (const [index, source] of reconciliation.sourceRows.entries()) {
+    const raw = rawRows[index];
+    assert(exactKeys(source, ["sourceRowId", "captureId", "ordinal", "projectionSourceIndex"])
+      && source.sourceRowId === raw.sourceRowId && source.captureId === raw.captureId && source.ordinal === raw.ordinal
+      && source.projectionSourceIndex === index && !reconciliationSourceIds.has(source.sourceRowId),
+    "reconciliation source row differs from immutable raw source");
+    reconciliationSourceIds.add(source.sourceRowId);
+  }
+  const groupedSources = new Set(); const groupByLogicalId = new Map();
+  for (const group of reconciliation.groups) {
+    assert(exactKeys(group, ["groupId", "status", "memberSourceRowIds", "representativeSourceRowId", "logicalRowId", "memberEvidence"])
+      && nonempty(group.groupId) && ["SINGLE", "EXACT_OVERLAP", "CONFLICT"].includes(group.status)
+      && Array.isArray(group.memberSourceRowIds) && group.memberSourceRowIds.length > 0
+      && (group.status === "SINGLE" ? group.memberSourceRowIds.length === 1 : group.memberSourceRowIds.length > 1)
+      && group.representativeSourceRowId === group.memberSourceRowIds[0] && sourceIds.has(group.representativeSourceRowId)
+      && nonempty(group.logicalRowId) && Array.isArray(group.memberEvidence)
+      && (group.memberSourceRowIds.length === 1 ? group.memberEvidence.length === 0 : group.memberEvidence.length === group.memberSourceRowIds.length)
+      && !groupByLogicalId.has(group.logicalRowId),
+    "invalid reconciliation group");
+    for (const [index, member] of group.memberEvidence.entries()) {
+      assert(exactKeys(member, ["sourceRowId", "fields"]) && member.sourceRowId === group.memberSourceRowIds[index]
+        && Array.isArray(member.fields) && member.fields.length === FIELDS.length && equal(member.fields.map((field) => field.field), FIELDS),
+      "reconciliation member evidence is incomplete or unordered");
+    }
+    groupByLogicalId.set(group.logicalRowId, group);
+    for (const sourceId of group.memberSourceRowIds) {
+      assert(sourceIds.has(sourceId) && !groupedSources.has(sourceId), "source row is missing or multiply assigned in reconciliation groups");
+      groupedSources.add(sourceId);
+    }
+  }
+  assert(groupedSources.size === sourceIds.size, "reconciliation groups dropped source rows");
+  const logicalBySource = new Map();
+  for (const mapping of reconciliation.sourceToLogical) {
+    assert(exactKeys(mapping, ["sourceRowId", "logicalRowId"]) && sourceIds.has(mapping.sourceRowId)
+      && mapping.sourceRowId === reconciliation.sourceRows[logicalBySource.size]?.sourceRowId
+      && groupByLogicalId.has(mapping.logicalRowId) && !logicalBySource.has(mapping.sourceRowId),
+    "invalid source-to-logical reconciliation mapping");
+    logicalBySource.set(mapping.sourceRowId, mapping.logicalRowId);
+  }
+  assert(logicalBySource.size === sourceIds.size && projection.rows.length === groupByLogicalId.size,
+    "logical reconciliation accounting mismatch");
+  for (const pRow of projection.rows) {
+    const group = groupByLogicalId.get(pRow.projectionRowId);
+    assert(group && equal(pRow.sourceRefs, group.memberSourceRowIds.map((sourceRowId) => {
+      const raw = rawRowsById.get(sourceRowId); return { sourceRowId, captureId: raw.captureId, ordinal: raw.ordinal };
+    })) && pRow.captureId === rawRowsById.get(group.representativeSourceRowId).captureId
+      && pRow.ordinal === rawRowsById.get(group.representativeSourceRowId).ordinal
+      && group.memberSourceRowIds.every((sourceRowId) => logicalBySource.get(sourceRowId) === pRow.projectionRowId),
+    "Projection3 row/sourceRefs disagree with reconciliation group");
+  }
+  const sourceFieldMap = new Map();
+  for (const sourceField of dataset.sourceFields) {
+    assert(exactKeys(sourceField, ["sourceRowId", "field", "rawEvidence", "normalizedValue", "correctedValue", "truthEvidence",
+      "knownTruthEligible", "truthValue", "truthLabelIds", "cropRefs"]) && sourceIds.has(sourceField.sourceRowId)
+      && FIELDS.includes(sourceField.field) && isRecord(sourceField.rawEvidence)
+      && sourceField.rawEvidence.sourceRowId === sourceField.sourceRowId && Array.isArray(sourceField.cropRefs)
+      && Array.isArray(sourceField.truthLabelIds), "invalid Export3 source field");
+    const key = `${sourceField.sourceRowId}\0${sourceField.field}`;
+    assert(!sourceFieldMap.has(key), "duplicate Export3 source field");
+    sourceFieldMap.set(key, sourceField);
+  }
+  assert(sourceFieldMap.size === sourceIds.size * FIELDS.length, "Export3 must preserve all source COMPLETE fields");
+  for (const sourceId of sourceIds) for (const field of FIELDS) assert(sourceFieldMap.has(`${sourceId}\0${field}`), "missing Export3 source field");
+  const allPhysicalBindings = new Map();
+  const rawSourceById = new Map(rawRows.map((source) => [source.sourceRowId, source]));
+  for (const [key, sourceField] of sourceFieldMap) {
+    const [sourceId, fieldName] = key.split("\0");
+    const rawSource = rawSourceById.get(sourceId);
+    const raw = rawSource.fields.find((field) => field.field === fieldName);
+    const rawEvidence = { sourceRowId: sourceId, rawText: raw.rawText, rawNumeric: raw.rawNumeric,
+      readerStatus: raw.readerStatus, confidence: raw.confidence };
+    assert(equal(sourceField.rawEvidence, rawEvidence) && equal(sourceField.cropRefs, raw.cropRefs),
+      "Export3 source field raw/crop evidence differs from immutable recognition snapshot");
+    const logicalId = logicalBySource.get(sourceId);
+    const group = groupByLogicalId.get(logicalId);
+    const member = group.memberEvidence.find((entry) => entry.sourceRowId === sourceId);
+    const sourceProjectionField = member?.fields.find((field) => field.field === fieldName)
+      ?? projectionRows.get(logicalId)?.fields.find((field) => field.field === fieldName);
+    assert(sourceProjectionField && sourceField.normalizedValue === sourceProjectionField.normalizedValue
+      && sourceField.correctedValue === sourceProjectionField.finalValue,
+    "Export3 source corrected trace differs from Projection3 reconciliation evidence");
+    const physical = new Map();
+    for (const crop of raw.cropRefs) {
+      const key = physicalCropKey(crop, fieldName); physical.set(key, crop);
+      const refs = allPhysicalBindings.get(key) ?? []; refs.push({ sourceId, fieldName, crop }); allPhysicalBindings.set(key, refs);
+    }
+    const labels = new Set(); const values = []; let eligible = physical.size > 0; let disputed = false;
+    for (const [key] of physical) {
+      const sameSourceBindings = (allPhysicalBindings.get(key) ?? []).filter((binding) => binding.sourceId === sourceId);
+      const boundLabels = sameSourceBindings.map((binding) => latest.get(`${sourceId}\0${fieldName}\0${binding.crop.cropRefId}`)).filter(Boolean);
+      for (const label of boundLabels) {
+        labels.add(label.labelId);
+        if (label.labelStatus === "DISPUTED") disputed = true;
+      }
+      const known = boundLabels.filter((label) => label.labelStatus === "KNOWN");
+      const distinct = new Map(known.map((label) => [stable(label.value), label.value]));
+      if (distinct.size > 1) disputed = true;
+      if (distinct.size !== 1) eligible = false;
+      else values.push([...distinct.values()][0]);
+    }
+    if (new Set(values.map(stable)).size !== values.length) disputed = true;
+    if (values.length !== physical.size || new Set(values.map(stable)).size !== 1) eligible = false;
+    const expectedValue = eligible && !disputed ? values[0] : null;
+    assert(sourceField.knownTruthEligible === Boolean(eligible && !disputed)
+      && sourceField.truthEvidence === (eligible && !disputed ? "HUMAN_CROP_VERIFIED" : "NONE")
+      && equal(sourceField.truthLabelIds, [...labels].sort(compareText))
+      && (eligible && !disputed ? equal(sourceField.truthValue, expectedValue) : sourceField.truthValue === null),
+    "Export3 source field truth eligibility mismatch");
+  }
+  const logicalFields = [];
+  const seenRows = new Set();
+  const mappedSources = new Set();
+  for (const row of dataset.rows) {
+    assert(exactKeys(row, ["projectionRowId", "classification", "disposition", "sourceRefs", "fields"])
+      && projectionRows.has(row.projectionRowId) && completionRows.has(row.projectionRowId) && !seenRows.has(row.projectionRowId)
+      && CLASSIFICATIONS.has(row.classification) && Array.isArray(row.sourceRefs) && Array.isArray(row.fields)
+      && row.fields.length === FIELDS.length, "invalid Export3 logical row");
+    seenRows.add(row.projectionRowId);
+    const cRow = completionRows.get(row.projectionRowId);
+    const pRow = projectionRows.get(row.projectionRowId);
+    assert(exactKeys(cRow, ["projectionRowId", "sourceRefs", "fields", "disposition", "dispositionReason"])
+      && (cRow.disposition === "INCLUDE" || cRow.disposition === "EXCLUDE" || cRow.disposition === "RECAPTURE_REQUIRED")
+      && (cRow.disposition === "EXCLUDE" ? nonempty(cRow.dispositionReason)
+        : cRow.dispositionReason === null || typeof cRow.dispositionReason === "string")
+      && Array.isArray(cRow.fields) && cRow.fields.length === FIELDS.length && equal(cRow.fields.map((field) => field.field), FIELDS)
+      && equal(pRow.fields.map((field) => field.field), FIELDS) && equal(row.fields.map((field) => field.field), FIELDS),
+    "invalid Completion3 row");
+    assert(row.disposition === cRow.disposition && equal(row.sourceRefs, cRow.sourceRefs)
+      && row.classification === pRow.classification && equal(row.sourceRefs, pRow.sourceRefs), "Export3 row differs from projection/completion");
+    for (const ref of row.sourceRefs) {
+      const source = rawRowsById.get(ref.sourceRowId);
+      assert(isRecord(ref) && source && !mappedSources.has(ref.sourceRowId) && ref.captureId === source.captureId
+        && ref.ordinal === source.ordinal, "Export3 source mapping missing, duplicated, or mismatched");
+      mappedSources.add(ref.sourceRowId);
+    }
+    for (const name of FIELDS) {
+      const field = row.fields.find((item) => item.field === name);
+      assert(field && exactKeys(field, ["field", "operationalDecision", "truthEvidence", "knownTruthEligible", "truthValue", "truthLabelIds",
+        "rawEvidence", "normalizedValue", "correctedValue", "shownValueBefore", "finalValue", "riskReasons", "correctionReasons",
+        "masterBinding", "sourceRefs", "cropRefs"])
+        && DECISIONS.has(field.operationalDecision) && Array.isArray(field.truthLabelIds) && Array.isArray(field.riskReasons)
+        && Array.isArray(field.correctionReasons) && equal(field.sourceRefs, row.sourceRefs)
+        && validFinalValue(field.correctedValue, name) && validFinalValue(field.finalValue, name), "invalid Export3 logical field");
+      const completionField = cRow.fields.find((item) => item.field === name);
+      const projectedField = pRow.fields.find((item) => item.field === name);
+      assert(exactKeys(completionField, ["field", "shownValueBefore", "finalValue", "operationalDecision", "riskReasons", "cropRefs", "userEditReason"])
+        || exactKeys(completionField, ["field", "shownValueBefore", "finalValue", "operationalDecision", "riskReasons", "cropRefs"]),
+      "invalid Completion3 field shape");
+      assert(DECISIONS.has(completionField.operationalDecision) && Array.isArray(completionField.riskReasons)
+        && Array.isArray(completionField.cropRefs) && equal(completionField.riskReasons, projectedField.riskReasons)
+        && equal(completionField.cropRefs, projectedField.cropRefs) && equal(completionField.shownValueBefore, projectedField.finalValue)
+        && (completionField.operationalDecision === "CANDIDATE_RETAINED"
+          ? equal(completionField.finalValue, completionField.shownValueBefore)
+          : completionField.operationalDecision === "USER_EDITED"
+            ? completionField.finalValue !== null && !equal(completionField.finalValue, completionField.shownValueBefore)
+            : completionField.finalValue === null), "Completion3 field decision/value mismatch");
+      assert(completionField && projectedField && field.finalValue === completionField.finalValue
+        && field.operationalDecision === completionField.operationalDecision
+        && field.correctedValue === projectedField.finalValue && field.normalizedValue === projectedField.normalizedValue
+        && field.shownValueBefore === completionField.shownValueBefore
+        && equal(field.riskReasons, completionField.riskReasons) && equal(field.correctionReasons, projectedField.correctionReasons)
+        && equal(field.masterBinding, manifest.masterBinding), "Export3 field trace mismatch");
+      const sourceBindings = [];
+      const expectedRawEvidence = []; const expectedCrops = [];
+      for (const ref of row.sourceRefs) {
+        const sf = sourceFieldMap.get(`${ref.sourceRowId}\0${name}`);
+        assert(sf, "logical row refers to unknown source field");
+        expectedRawEvidence.push(sf.rawEvidence); expectedCrops.push(...sf.cropRefs);
+        for (const crop of sf.cropRefs) sourceBindings.push({ sourceRowId: ref.sourceRowId, crop });
+      }
+      assert(equal(field.rawEvidence, expectedRawEvidence) && equal(field.cropRefs, expectedCrops), "Export3 logical field dropped source evidence");
+      const physical = new Map();
+      for (const item of sourceBindings) physical.set(physicalCropKey(item.crop, name), item);
+      let truthValues = []; let truthLabelIds = new Set(); let truthEligible = physical.size > 0; let truthDisputed = false;
+      for (const key of physical.keys()) {
+        const knownLabels = [];
+        for (const { sourceId, fieldName, crop } of allPhysicalBindings.get(key) ?? []) {
+          if (fieldName !== name) continue;
+          const label = latest.get(`${sourceId}\0${name}\0${crop.cropRefId}`);
+          if (label) { truthLabelIds.add(label.labelId); if (label.labelStatus === "KNOWN") knownLabels.push(label);
+            if (label.labelStatus === "DISPUTED") truthDisputed = true; }
+        }
+        const values = new Map(knownLabels.map((label) => [stable(label.value), label.value]));
+        if (values.size > 1) truthDisputed = true;
+        if (values.size !== 1) truthEligible = false;
+        else truthValues.push([...values.values()][0]);
+      }
+      if (new Set(truthValues.map(stable)).size !== 1) truthEligible = false;
+      assert(field.knownTruthEligible === truthEligible
+        && field.truthEvidence === (truthEligible ? "HUMAN_CROP_VERIFIED" : "NONE")
+        && (truthEligible ? equal(field.truthValue, truthValues[0]) : field.truthValue === null),
+      "Export3 knownTruthEligible claim does not match bound crop truth");
+      assert(equal([...field.truthLabelIds].sort(compareText), [...truthLabelIds].sort(compareText)), "Export3 truth label references mismatch");
+      logicalFields.push({ row, projectionRow: pRow, completionRow: cRow, field, sourceBindings, truthEligible, truthDisputed });
+    }
+  }
+  assert(seenRows.size === projectionRows.size && mappedSources.size === sourceIds.size, "Export3 dropped logical/source row");
+  assert(Array.isArray(projection.edgeWorkItems) && Array.isArray(completion.workItems)
+    && equal(dataset.edgeWorkItems, completion.workItems) && projection.edgeWorkItems.length === completion.workItems.length,
+  "Export3 edge work item accounting mismatch");
+  const edgeWorkIds = new Set(); const completionWorkById = new Map();
+  for (const work of completion.workItems) {
+    assert(exactKeys(work, ["workItemId", "decision", "reason"]) && nonempty(work.workItemId)
+      && ["RECAPTURE_REQUIRED", "EXPLICITLY_EXCLUDED"].includes(work.decision) && nonempty(work.reason)
+      && !completionWorkById.has(work.workItemId), "invalid Completion3 work item");
+    completionWorkById.set(work.workItemId, work);
+  }
+  for (const edge of projection.edgeWorkItems) {
+    assert(exactKeys(edge, ["workItemId", "edgeId", "classification", "reason", "sourceRefs"])
+      && nonempty(edge.workItemId) && nonempty(edge.edgeId) && edge.classification === "NEEDS_RECAPTURE"
+      && nonempty(edge.reason) && Array.isArray(edge.sourceRefs) && !edgeWorkIds.has(edge.workItemId)
+      && completionWorkById.has(edge.workItemId), "invalid Projection3 edge work item");
+    edgeWorkIds.add(edge.workItemId);
+  }
+  assert(edgeWorkIds.size === completionWorkById.size, "Completion3 omitted or added edge work items");
+  const expectedCropEvidence = new Set();
+  const cropEvidenceByKey = new Map();
+  for (const item of semantic.cropEvidence) {
+    assert(exactKeys(item, ["projectionRowId", "field", "cropRefId", "artifactSha256", "pixelSha256", "state", "retentionClass"])
+      && projectionRows.has(item.projectionRowId) && FIELDS.includes(item.field) && nonempty(item.cropRefId)
+      && (item.artifactSha256 === null || validHash(item.artifactSha256)) && (item.pixelSha256 === null || validHash(item.pixelSha256))
+      && ["AVAILABLE", "NOT_UPLOADED", "MISSING", "EXPIRED"].includes(item.state) && RETENTION.has(item.retentionClass),
+    "invalid cropEvidence entry");
+    const key = `${item.projectionRowId}\0${item.field}\0${item.cropRefId}`;
+    assert(!expectedCropEvidence.has(key), "duplicate cropEvidence entry"); expectedCropEvidence.add(key); cropEvidenceByKey.set(key, item);
+  }
+  const cropPlan = observation.cropPlan;
+  assert(exactKeys(cropPlan, ["schemaVersion", "policy", "entries"]) && cropPlan.schemaVersion === 3
+    && cropPlan.policy === "C2_LOGICAL_REPRESENTATIVE_V3" && Array.isArray(cropPlan.entries)
+    && cropPlan.entries.length === projection.rows.length * FIELDS.length, "invalid frozen CropPlan3");
+  const cropPlanKeys = new Set();
+  for (const [rowIndex, pRow] of projection.rows.entries()) for (const [fieldIndex, name] of FIELDS.entries()) {
+    const completionField = completionRows.get(pRow.projectionRowId).fields[fieldIndex];
+    const projectedField = pRow.fields[fieldIndex];
+    const entry = cropPlan.entries[rowIndex * FIELDS.length + fieldIndex];
+    assert(exactKeys(entry, ["projectionRowId", "field", "cropRefId", "selected", "reasons", "retentionClass"])
+      && entry.projectionRowId === pRow.projectionRowId && entry.field === name && typeof entry.selected === "boolean"
+      && Array.isArray(entry.reasons), "invalid CropPlan3 entry/order");
+    const representativeId = pRow.sourceRefs[0]?.sourceRowId;
+    const representative = rawRowsById.get(representativeId);
+    const representativeCrop = representative?.fields.find((item) => item.field === name)?.cropRefs[0]?.cropRefId ?? null;
+    const reasons = [];
+    if (completionField.operationalDecision === "USER_EDITED") reasons.push("USER_EDITED");
+    if (completionField.operationalDecision === "USER_MARKED_UNKNOWN") reasons.push("USER_MARKED_UNKNOWN");
+    if (projectedField.riskReasons.length) reasons.push("RISKY_FIELD");
+    const selected = reasons.length > 0 && representativeCrop !== null;
+    const retentionClass = !selected ? "NONE" : completionField.operationalDecision === "USER_MARKED_UNKNOWN"
+      ? "UNKNOWN_EVIDENCE" : "OPERATIONAL_REVIEW_EVIDENCE";
+    assert(entry.cropRefId === representativeCrop && entry.selected === selected && equal(entry.reasons, reasons)
+      && entry.retentionClass === retentionClass, "CropPlan3 does not match Completion3/projection/source evidence");
+    const key = `${entry.projectionRowId}\0${entry.field}\0${entry.cropRefId}`;
+    assert(!cropPlanKeys.has(key), "duplicate CropPlan3 entry"); cropPlanKeys.add(key);
+    const evidence = cropEvidenceByKey.get(key);
+    const crop = representative?.fields.find((item) => item.field === name)?.cropRefs[0] ?? null;
+    assert(evidence && evidence.pixelSha256 === (crop?.pixelSha256 ?? null) && evidence.retentionClass === retentionClass
+      && (evidence.state === "AVAILABLE" ? validHash(evidence.artifactSha256)
+        : evidence.state === "NOT_UPLOADED" || evidence.state === "MISSING" || evidence.state === "EXPIRED")
+      && (entry.selected || evidence.state === "NOT_UPLOADED" && evidence.artifactSha256 === null),
+    "cropEvidence does not match its frozen source crop/retention plan");
+  }
+  assert(cropPlanKeys.size === expectedCropEvidence.size && [...cropPlanKeys].every((key) => expectedCropEvidence.has(key)),
+    "Export3 crop evidence differs from frozen crop plan");
+  return { semantic, observation, projection, completion, dataset, rawRows, sourceFieldMap, logicalFields, latest, labels: semantic.truthLabels };
+}
+
+function frozenSplit(splitManifest) {
+  assert(isRecord(splitManifest) && splitManifest.schemaVersion === 1 && splitManifest.frozen === true
+    && Array.isArray(splitManifest.assignments) && validHash(splitManifest.manifestHash), "splitManifest must be a frozen schemaVersion 1 manifest");
+  const base = { schemaVersion: splitManifest.schemaVersion, frozen: splitManifest.frozen, assignments: splitManifest.assignments };
+  assert(semanticEvaluationSha256(base) === splitManifest.manifestHash, "splitManifest hash mismatch");
+  const assignments = new Map();
+  for (const entry of splitManifest.assignments) {
+    assert(exactKeys(entry, ["sourceFamilyId", "cohort"]) && nonempty(entry.sourceFamilyId)
+      && ["DEVELOPMENT", "INDEPENDENT"].includes(entry.cohort) && !assignments.has(entry.sourceFamilyId),
+    "invalid splitManifest assignment");
+    assignments.set(entry.sourceFamilyId, entry.cohort);
+  }
+  return { assignments, manifestHash: splitManifest.manifestHash };
+}
+function evalInvalid(errors, partial = {}) {
+  const report = { schemaVersion: 3, evaluationPolicyVersion: FINAL_EVALUATION_POLICY, evaluationStatus: "INVALID_EVALUATION",
+    invalidReasons: [...new Set(errors)].sort(compareText), denominators: { S: null, R: null, F: null, V: null, T: null, K: null, B: null, E: null },
+    metrics: { status: "INVALID", accuracyAvailable: false }, ...partial };
+  report.semanticHash = semanticEvaluationSha256(report); return report;
+}
+function evaluateFinalTradeReviewDataset({ observations, evaluationPolicyVersion = FINAL_EVALUATION_POLICY, splitManifest = null } = {}) {
+  assert(evaluationPolicyVersion === FINAL_EVALUATION_POLICY, `unsupported evaluationPolicyVersion: ${String(evaluationPolicyVersion)}`);
+  assert(Array.isArray(observations), "observations must be an Export3 array");
+  let split = null; const errors = [];
+  try { if (splitManifest !== null) split = frozenSplit(splitManifest); }
+  catch (error) { errors.push(`SPLIT_MANIFEST_INVALID:${error.message}`); }
+  const prepared = [];
+  try {
+    for (const input of observations) {
+      const exportRecord = input?.exportRecord ?? input;
+      assert(exportRecord?.schemaVersion === 3, "Export1/Export3 mixed or unsupported input");
+      prepared.push(validateFinalExport(exportRecord));
+    }
+  } catch (error) { return evalInvalid([`EXPORT_INVALID:${error.message}`]); }
+  const byObservation = new Map();
+  for (const item of prepared) {
+    const id = item.observation.observationId;
+    if (byObservation.has(id)) errors.push("DUPLICATE_OBSERVATION_ID");
+    else byObservation.set(id, item);
+  }
+  const familyCohorts = new Map(); const familyCropCohorts = new Map(); const seenPhysicalSources = new Map();
+  const labelInfo = [];
+  for (const item of prepared) {
+    const sourceFamilies = new Set();
+    for (const label of item.labels) {
+      const p = label.provenance; const expectedCohort = split?.assignments.get(p.sourceFamilyId);
+      if (p.cohort === "INDEPENDENT") {
+        if (!split || !expectedCohort || expectedCohort !== "INDEPENDENT" || p.splitManifestHash !== split.manifestHash
+          || p.sourceOrigin !== "FRESH_CAPTURE" || p.independentOfOperationalReview !== true) errors.push("INDEPENDENT_TRUTH_NOT_BOUND_TO_FROZEN_SPLIT");
+      } else if (p.cohort === "DEVELOPMENT" && split && (expectedCohort !== "DEVELOPMENT" || p.splitManifestHash !== split.manifestHash)) {
+        errors.push("DEVELOPMENT_TRUTH_NOT_BOUND_TO_FROZEN_SPLIT");
+      }
+      if (p.cohort === "INDEPENDENT" || p.cohort === "DEVELOPMENT") {
+        sourceFamilies.add(p.sourceFamilyId);
+        const cohorts = familyCohorts.get(p.sourceFamilyId) ?? new Set(); cohorts.add(p.cohort); familyCohorts.set(p.sourceFamilyId, cohorts);
+      }
+      const crop = item.sourceFieldMap.get(`${label.sourceRowId}\0${label.field}`)?.cropRefs.find((ref) => ref.cropRefId === label.cropRefId);
+      if (crop) {
+        const physical = physicalCropKey(crop, label.field);
+        const cohorts = familyCropCohorts.get(physical) ?? new Set(); cohorts.add(p.cohort); familyCropCohorts.set(physical, cohorts);
+        const refs = seenPhysicalSources.get(physical) ?? new Set(); refs.add(`${p.sourceFamilyId}\0${p.cohort}`); seenPhysicalSources.set(physical, refs);
+      }
+      labelInfo.push({ label, provenance: p });
+    }
+  }
+  if ([...familyCohorts.values()].some((cohorts) => cohorts.size > 1)
+      || [...familyCropCohorts.values()].some((cohorts) => cohorts.has("DEVELOPMENT") && cohorts.has("INDEPENDENT"))) {
+    errors.push("DEVELOPMENT_INDEPENDENT_LEAKAGE");
+  }
+  if ([...seenPhysicalSources.values()].some((owners) => new Set([...owners].map((value) => value.split("\0")[0])).size > 1)) {
+    errors.push("PHYSICAL_CROP_SOURCE_FAMILY_LAUNDERING");
+  }
+  if (errors.length) return evalInvalid(errors);
+  const allLogical = prepared.flatMap((item) => item.logicalFields.map((entry) => ({ ...entry, item })));
+  const sourceAttempts = [];
+  for (const item of prepared) for (const sf of item.sourceFieldMap.values()) {
+    for (const crop of sf.cropRefs) {
+      const key = physicalCropKey(crop, sf.field);
+      const label = item.latest.get(`${sf.sourceRowId}\0${sf.field}\0${crop.cropRefId}`);
+      sourceAttempts.push({ item, sf, crop, key, truthLabel: label?.labelStatus === "KNOWN" ? label : null,
+        raw: finalRawValue(sf, sf.field), corrected: sf.correctedValue });
+    }
+  }
+  const physicalAttempts = new Map();
+  for (const attempt of sourceAttempts) {
+    const entry = physicalAttempts.get(attempt.key) ?? { attempts: [], truths: new Map(), labels: [] };
+    entry.attempts.push(attempt);
+    if (attempt.truthLabel) {
+      entry.truths.set(stable(attempt.truthLabel.value), attempt.truthLabel.value);
+      entry.labels.push(attempt.truthLabel);
+    }
+    physicalAttempts.set(attempt.key, entry);
+  }
+  const independentPhysicalKeys = new Set(sourceAttempts.filter((attempt) => attempt.truthLabel
+    && attempt.truthLabel.provenance.cohort === "INDEPENDENT" && attempt.truthLabel.provenance.sourceOrigin === "FRESH_CAPTURE"
+    && attempt.truthLabel.provenance.independentOfOperationalReview === true).map((attempt) => attempt.key));
+  const eligiblePhysical = [...physicalAttempts.entries()].filter(([key, entry]) => independentPhysicalKeys.has(key) && entry.truths.size === 1)
+    .map(([, entry]) => entry);
+  const disputedPhysicalKeys = new Set([...physicalAttempts.entries()].filter(([, entry]) => entry.truths.size > 1).map(([key]) => key));
+  const independentLabels = labelInfo.filter(({ label, provenance }) => label.labelStatus === "KNOWN"
+    && provenance.cohort === "INDEPENDENT" && provenance.sourceOrigin === "FRESH_CAPTURE" && provenance.independentOfOperationalReview === true);
+  const errorsAfter = [];
+  // Independent truth already passed the frozen-manifest checks above; descriptive-only datasets remain valid.
+  const S = prepared.reduce((sum, item) => sum + item.rawRows.length, 0);
+  const R = allLogical.length / FIELDS.length; const F = R * FIELDS.length;
+  const truthFields = allLogical.filter((entry) => {
+    if (!entry.truthEligible) return false;
+    const physical = new Set(entry.sourceBindings.map(({ crop }) => physicalCropKey(crop, entry.field.field)));
+    return [...physical].every((key) => {
+      const labels = (physicalAttempts.get(key)?.labels ?? []).filter((label) => label.labelStatus === "KNOWN");
+      return !disputedPhysicalKeys.has(key) && labels.length > 0
+        && new Set(labels.map((label) => stable(label.value))).size === 1
+        && labels.some((label) => label.provenance.cohort === "INDEPENDENT" && label.provenance.sourceOrigin === "FRESH_CAPTURE"
+          && label.provenance.independentOfOperationalReview === true);
+    });
+  });
+  const V = truthFields.length;
+  const rowGroups = new Map();
+  for (const entry of allLogical) { const key = `${entry.item.observation.observationId}\0${entry.row.projectionRowId}`; const group = rowGroups.get(key) ?? []; group.push(entry); rowGroups.set(key, group); }
+  const knownRows = [...rowGroups.values()].filter((fields) => fields.length === 6 && fields.every((entry) => truthFields.includes(entry)));
+  const T = knownRows.length; const E = prepared.reduce((sum, item) => sum + item.dataset.edgeWorkItems.length, 0); const B = F;
+  const K = eligiblePhysical.length;
+  const metric = {};
+  const scorePhysical = (fieldNames, predicate) => {
+    const entries = eligiblePhysical.filter((entry) => fieldNames.has(entry.attempts[0].sf.field));
+    return finalRatio(entries.filter((entry) => entry.attempts.every((attempt) => predicate(attempt, entry.truths.values().next().value))).length, entries.length);
+  };
+  const names = new Set(["island", "fromItem", "toItem"]); const nums = new Set(NUMERIC);
+  metric.RAW_TEXT_EXACT = scorePhysical(names, (attempt, truth) => attempt.raw === truth);
+  metric.RAW_NUMERIC_EXACT = scorePhysical(nums, (attempt, truth) => attempt.raw === truth);
+  const rawAll = prepared.flatMap((item) => [...item.sourceFieldMap.values()].map((sf) => ({ sf, raw: finalRawValue(sf, sf.field) })));
+  const rawEmpty = rawAll.filter(({ sf }) => {
+    const value = sf.rawEvidence.rawText;
+    return sf.field === "island" || sf.field === "fromItem" || sf.field === "toItem"
+      ? value === null || value === "" : sf.rawEvidence.rawNumeric === null;
+  }).length;
+  metric.RAW_EMPTY_RATE = finalRatio(rawEmpty, S * FIELDS.length);
+  metric.RAW_EMPTY_RATE_KNOWN = finalRatio(eligiblePhysical.filter((entry) => entry.attempts.every((attempt) => attempt.raw === null)).length, K);
+  metric.RAW_WRONG_CONFIDENT_RATE = { numerator: null, denominator: null, rate: null, status: "N/A", reason: "NO_FROZEN_CONFIDENCE_CALIBRATION" };
+  const rawWrong = eligiblePhysical.filter((entry) => !entry.attempts.every((a) => a.raw === entry.truths.values().next().value));
+  const rawCorrect = eligiblePhysical.filter((entry) => entry.attempts.every((a) => a.raw === entry.truths.values().next().value));
+  metric.CORRECTION_RECOVERY = finalRatio(rawWrong.filter((entry) => entry.attempts.every((a) => a.corrected === entry.truths.values().next().value)).length, rawWrong.length);
+  metric.CORRECTION_HARM = finalRatio(rawCorrect.filter((entry) => entry.attempts.some((a) => a.corrected === null || a.corrected !== entry.truths.values().next().value)).length, rawCorrect.length);
+  const identityFields = allLogical.filter((entry) => IDENTITY.has(entry.field.field));
+  const unresolved = identityFields.filter((entry) => {
+    const projectionField = entry.projectionRow.fields.find((f) => f.field === entry.field.field);
+    const authority = projectionField?.identity?.authorityStatus;
+    return !(projectionField?.identity?.kind === "OPEN_WORLD" && entry.field.field === "fromItem")
+      && !(projectionField?.identity?.stableId && ["VERIFIED_CURATED", "VERIFIED_REFERENCE"].includes(authority));
+  }).length;
+  metric.MASTER_UNRESOLVED = finalRatio(unresolved, R * 3);
+  metric.MASTER_OPEN_WORLD_RESOLVED = count(identityFields.filter((entry) => {
+    const p = entry.projectionRow.fields.find((f) => f.field === entry.field.field);
+    return entry.field.field === "fromItem" && p?.identity?.kind === "OPEN_WORLD";
+  }).length);
+  const numericLogical = allLogical.filter((entry) => NUMERIC.has(entry.field.field));
+  const numericFailed = (value, entry) => value === null || !validFinalValue(value, entry.field.field)
+    || riskCodes(entry.field.riskReasons).some((code) => /CLIPPED|CONFLICT|INVALID|INCOMPLETE/.test(code));
+  metric.NUMERIC_RESOLUTION_FAILURE = finalRatio(numericLogical.filter((entry) => numericFailed(entry.field.correctedValue, entry)).length, 3 * R);
+  metric.RAW_NUMERIC_FAILURE = finalRatio(rawAll.filter(({ sf, raw }) => NUMERIC.has(sf.field) && raw === null).length, 3 * S);
+  metric.FINAL_FIELD_ACCURACY = finalRatio(truthFields.filter((entry) => entry.field.correctedValue === entry.field.truthValue).length, V);
+  metric.FINAL_SIX_FIELD_ROW_ACCURACY = finalRatio(knownRows.filter((fields) => fields.every((entry) => entry.field.correctedValue === entry.field.truthValue)).length, T);
+  metric.POST_REVIEW_OPERATIONAL_EXACT = finalRatio(truthFields.filter((entry) => entry.field.finalValue === entry.field.truthValue).length, V);
+  const rowEntries = prepared.flatMap((item) => item.dataset.rows.map((row) => ({ observationId: item.observation.observationId, row })));
+  for (const classification of CLASSIFICATIONS) metric[`${classification}_RATE`] = finalRatio(rowEntries.filter((entry) => entry.row.classification === classification).length, R);
+  const edited = allLogical.filter((entry) => entry.field.operationalDecision === "USER_EDITED");
+  metric.USER_EDIT_RATE_AFTER_FULL_CORRECTION = finalRatio(edited.length, F);
+  metric.USER_EDITED_ROWS_RATE = finalRatio(new Set(edited.map((entry) => `${entry.item.observation.observationId}\0${entry.row.projectionRowId}`)).size, R);
+  metric.USER_EDITED_BY_FIELD = Object.fromEntries(FIELDS.map((field) => [field, finalRatio(edited.filter((entry) => entry.field.field === field).length, R)]));
+  const unknown = allLogical.filter((entry) => entry.field.operationalDecision === "USER_MARKED_UNKNOWN");
+  metric.UNKNOWN_FIELD_COUNT = count(unknown.length); metric.UNKNOWN_FIELD_RATE = finalRatio(unknown.length, F);
+  metric.UNKNOWN_ROW_COUNT = count(new Set(unknown.map((entry) => `${entry.item.observation.observationId}\0${entry.row.projectionRowId}`)).size);
+  const riskEmptyKnown = truthFields.filter((entry) => riskCodes(entry.field.riskReasons).length === 0);
+  metric.UNHIGHLIGHTED_ERROR_RATE = finalRatio(riskEmptyKnown.filter((entry) => entry.field.correctedValue !== entry.field.truthValue).length, riskEmptyKnown.length);
+  metric.UNHIGHLIGHTED_COVERAGE = finalRatio(riskEmptyKnown.length, V);
+  metric.UNHIGHLIGHTED_EDIT_COUNT = count(edited.filter((entry) => riskCodes(entry.field.riskReasons).length === 0).length);
+  let dtoReadyRows = 0; let dtoExcludedRows = 0;
+  for (const item of prepared) {
+    const observation = item.observation; const projection = observation.projection; const completion = observation.completion;
+    dtoExcludedRows += completion.rows.filter((row) => row.disposition === "EXCLUDE").length;
+    const receipt = { schemaVersion: 3, observationId: observation.observationId, mutationId: observation.mutationId,
+      payloadHash: observation.payloadHash, observationHash: observation.observationHash, persistedAt: observation.persistedAt,
+      duplicate: false, evidenceSaved: true, sessionApplied: false, reviewMode: "FINAL_CORRECTED_RESULT",
+      projectionHash: projection.projectionHash, masterBinding: projection.masterBinding,
+      reviewRevision: completion.reviewRevision, cropPolicy: observation.cropPlan?.policy };
+    const expectedReview = { schemaVersion: 3, recognitionBatchId: projection.recognitionBatchId,
+      projectionHash: projection.projectionHash, reviewRevision: completion.reviewRevision, masterBinding: projection.masterBinding,
+      correctionVersion: projection.correctionVersion, completionValuesHash: completion.batchConfirmation?.completionValuesHash,
+      pixelAvailability: projection.pixelAvailability };
+    const exclusions = completion.rows.filter((row) => row.disposition === "EXCLUDE").map((row) => ({
+      projectionRowId: row.projectionRowId, action: "EXCLUDE_FROM_FINAL_DTO", reason: "USER_EXPLICIT_EXCLUSION" }));
+    try {
+      const result = validateReviewedTradeBatch({ storedObservation: observation, evidenceReceipt: receipt, expectedReview,
+        exclusions, mappingPolicyVersion: "reviewed-trade-dto-mapping-v3" });
+      dtoReadyRows += result.rows?.length ?? 0;
+    } catch { /* invalid observation contributes zero ready outputs */ }
+  }
+  metric.DTO_READY_RATE = { includingExplicitExclusions: finalRatio(dtoReadyRows, R),
+    excludingExplicitExclusions: finalRatio(dtoReadyRows, Math.max(0, R - dtoExcludedRows)),
+    readyRows: dtoReadyRows, explicitExclusions: dtoExcludedRows,
+    note: "DTO readiness is an operational gate, not an accuracy claim." };
+  const independentTruthAvailable = independentLabels.length > 0;
+  const output = { schemaVersion: 3, evaluationPolicyVersion: FINAL_EVALUATION_POLICY,
+    evaluationStatus: independentTruthAvailable ? "VALID_INDEPENDENT_EVALUATION" : "VALID_DESCRIPTIVE_EVALUATION",
+    splitManifestHash: split?.manifestHash ?? null,
+    denominators: { S, R, F, V, T, K, B, E }, metrics: metric,
+    coverage: { truthEligibleLogicalFields: V, logicalFieldCount: F, unknownFieldCount: unknown.length,
+      unknownRowCount: metric.UNKNOWN_ROW_COUNT.count, disputedFieldCount: allLogical.filter((entry) => entry.truthDisputed
+        || entry.sourceBindings.some(({ crop }) => disputedPhysicalKeys.has(physicalCropKey(crop, entry.field.field)))).length,
+      operationalObservationCount: prepared.length, independentTruthLabelCount: independentLabels.length,
+      developmentTruthLabelCount: labelInfo.filter(({ label }) => label.labelStatus === "KNOWN" && label.provenance.cohort === "DEVELOPMENT").length },
+    rowClassifications: Object.fromEntries([...CLASSIFICATIONS].sort(compareText).map((value) => [value, metric[`${value}_RATE`]])),
+    warnings: ["Operational review decisions are not independent truth.", "RAW_WRONG_CONFIDENT_RATE is N/A without frozen calibration.",
+      "DTO readiness is not persisted in Export3 and is therefore N/A in this evaluator."] };
+  output.semanticHash = semanticEvaluationSha256(output);
+  return output;
+}
+
+export { evaluateFinalTradeReviewDataset };
+export function evaluateTradeReviewDataset(options = {}) {
+  if (options.evaluationPolicyVersion === FINAL_EVALUATION_POLICY) {
+    return evaluateFinalTradeReviewDataset({ observations: options.observations, evaluationPolicyVersion: options.evaluationPolicyVersion,
+      splitManifest: options.splitManifest });
+  }
+  return evaluateLegacyTradeReviewDataset(options);
+}
+
 function parseArgs(argv) {
   const result = {};
   for (let i = 0; i < argv.length; i += 1) {
@@ -605,9 +1370,21 @@ async function main() {
   const sourcePaths = new Set([manifestPath]);
   const observations = [];
   for (const entry of manifest.observations) {
-    assert(isRecord(entry) && nonempty(entry.exportPath) && Array.isArray(entry.exclusions) && COHORTS.has(entry.cohort), "invalid manifest observation entry");
+    assert(isRecord(entry) && nonempty(entry.exportPath), "manifest observation entries require exportPath");
     const sourcePath = await resolveInput(entry.exportPath); sourcePaths.add(sourcePath);
-    observations.push({ exportRecord: JSON.parse(await readFile(sourcePath, "utf8")), exclusions: entry.exclusions, cohort: entry.cohort });
+    const exportRecord = JSON.parse(await readFile(sourcePath, "utf8"));
+    if (manifest.evaluationPolicyVersion === FINAL_EVALUATION_POLICY) observations.push(exportRecord);
+    else {
+      assert(Array.isArray(entry.exclusions) && COHORTS.has(entry.cohort), "invalid legacy manifest observation entry");
+      observations.push({ exportRecord, exclusions: entry.exclusions, cohort: entry.cohort });
+    }
+  }
+  let splitManifest = null;
+  if (manifest.evaluationPolicyVersion === FINAL_EVALUATION_POLICY) {
+    if (typeof manifest.splitManifestPath === "string") {
+      const splitPath = await resolveInput(manifest.splitManifestPath); sourcePaths.add(splitPath);
+      splitManifest = JSON.parse(await readFile(splitPath, "utf8"));
+    } else splitManifest = manifest.splitManifest ?? null;
   }
   const candidateRuns = [];
   for (const entry of manifest.candidateRuns ?? []) {
@@ -626,7 +1403,7 @@ async function main() {
     "output path cannot overwrite production source, catalog/reference, or specification files");
   const report = evaluateTradeReviewDataset({ observations, candidateRuns,
     evaluationPolicyVersion: manifest.evaluationPolicyVersion, rawEvaluationVersion: manifest.rawEvaluationVersion,
-    splitSeed: manifest.splitSeed });
+    splitSeed: manifest.splitSeed, splitManifest });
   const envelope = { ...report, generatedAt: new Date().toISOString() };
   await mkdir(path.dirname(outputPath), { recursive: true });
   const canonicalOutput = path.join(await realpath(path.dirname(outputPath)), path.basename(outputPath));
