@@ -40,14 +40,35 @@ function correction(rows = baseRows(), extras = {}) {
   return buildFinalTradeProjection({ rawObservation: { recognitionBatchId: "c3-batch", draftRows: rows, edgeSegments: [], ...extras }, masterBundle,
     correctionPolicy: { policyVersion: "c3-correction-test-v1" }, reconciliationPolicyVersion: extras.reconciliation?.policyVersion });
 }
-function removeSyntheticCompletenessRisk(result) {
-  for (const row of result.sourceRows) for (const field of [row.fields.reqAmount, row.fields.yield]) field.riskReasons = field.riskReasons.filter((entry) => entry.code !== "NUMERIC_COMPLETENESS_UNVERIFIED");
-  for (const row of result.logicalRows) for (const field of [row.fields.reqAmount, row.fields.yield]) field.riskReasons = field.riskReasons.filter((entry) => entry.code !== "NUMERIC_COMPLETENESS_UNVERIFIED");
-}
 function readyCorrection() {
-  const result = structuredClone(correction());
-  removeSyntheticCompletenessRisk(result);
-  return result;
+  const captureId = "cap-ready"; const ordinal = 1; const sourceRowId = `${captureId}-row-${ordinal}`;
+  const values = { island: "아지르 섬", fromItem: "고대 잎", reqAmount: 1, toItem: "산호 상자", count: 0, yield: 2 };
+  const rawFields = {};
+  const correctedFields = {};
+  for (const field of FIELD_NAMES) {
+    const value = values[field]; const isText = typeof value === "string";
+    const term = isText ? masterNames.find((entry) => entry.rawName === value) : null;
+    const candidate = term ? { value, stableId: term.stableId, legacyNameKey: term.legacyNameKey, kind: term.legacyKind, legacyKind: term.legacyKind, tier: term.tier,
+      authorityStatus: "VERIFIED_CURATED", nameStatus: "VERIFIED_CURATED", matchKind: "EXACT", sourceScopes: [term.scope] } : null;
+    const cropRefs = [cropRef(sourceRowId, captureId, field)];
+    rawFields[field] = { rawText: String(value), normalizedText: String(value), rawNumericCandidate: isText ? null : value, value: null,
+      status: "RAW_OCR_CANDIDATE", reasonCodes: [], cropRefs };
+    correctedFields[field] = { field, raw: { text: String(value), normalizedText: String(value), numericCandidate: isText ? null : value,
+      status: "RAW_OCR_CANDIDATE", reasonCodes: [], sourceRefs: [{ captureId, ordinal, draftRowId: sourceRowId }], cropRefs, geometry: null, otherEvidence: {} },
+      normalized: { value: isText ? value : String(value) }, masterMatches: candidate ? [candidate] : [], correctionCandidates: [],
+      selectedCandidate: candidate ?? { value, source: "RAW_NUMERIC_CANDIDATE" }, correctionReasons: [{ code: isText ? "EXACT_MATCH" : "RAW_NUMERIC_CANDIDATE" }], riskReasons: [],
+      finalValue: value, finalStatus: "MATCHED", ...(isText ? {} : { parse: { candidate: value, readerCandidate: value, disagreement: false } }),
+      stageTrace: isText ? [0, 1, 2, 3, 4].map((stage) => ({ stage, name: `S${stage}`, ruleVersion: `synthetic-${stage}-v1`, reason: null }))
+        : [{ stage: 0, name: "RAW_OBSERVATION", ruleVersion: "synthetic-0-v1", reason: null }, { stage: 5, name: "NUMERIC_RESOLUTION", ruleVersion: "synthetic-5-v1", reason: null }] };
+  }
+  const source = { sourceRowId, sourceIndex: 0, captureId, ordinal, rowBox: { x: 0, y: 0, width: 100, height: 10 },
+    sourceRefs: [{ captureId, ordinal, draftRowId: sourceRowId }], originalRawRow: { captureId, ordinal, rowId: sourceRowId, status: "DRAFT_UNVERIFIED", automationDecision: "REVIEW", fields: rawFields }, fields: correctedFields };
+  const logical = { sourceRowId, sourceRowIds: [sourceRowId], captureId, ordinal, sourceRefs: source.sourceRefs, representativeSource: { captureId, ordinal, rowBox: source.rowBox }, fields: structuredClone(correctedFields) };
+  return { schemaVersion: 1, pipelineKind: "TRADE_FINAL_CORRECTION_SHADOW", pipelineVersion: "trade-final-correction-v1", activation: "SHADOW_ONLY",
+    isFinalProjection3: false, sessionCompatible: false, recognitionBatchId: "c3-batch", correctionPolicy: { policyVersion: "c3-correction-test-v1", definition: {} },
+    masterBinding: { masterSchemaVersion: 2, registryVersion: masterBundle.registryVersion, contentHash: masterBundle.contentHash, hashBasis: masterBundle.hashBasis },
+    pixelAvailability: null, sourceRows: [source], logicalRows: [logical], captures: null, edgeSegments: [], reconciliation: null, provisionalFindings: [],
+    stageBoundaries: { stage7: "DEFERRED_TO_C3", stage8: "DEFERRED_TO_C3" }, truthGenerated: false, sessionWrites: false };
 }
 function build(result, states = null) {
   const crops = [...new Set(result.sourceRows.flatMap((source) => FIELD_NAMES.flatMap((field) => source.originalRawRow.fields[field].cropRefs?.map((ref) => ref.cropRefId) ?? [])))];
