@@ -52,3 +52,9 @@ R012는 이후 clean-machine Python/ONNX ABI/model 공급/frozen worker imports/
 ## 6. 보존·삭제 경계
 
 Main/user DB/session/scheduler/Warehouse와 legacy import 계산을 재설계하지 않는다. artifact budget200MiB/미검수 debug30일은 명시 cleanup 정책이다. verified crops/실사 자료/사용자 DB를 무단 삭제하지 않는다. full screenshot 무제한 저장, remote OCR, 자동 scroll/apply는 범위 밖이다. 이번 Task의 DB access/migration/OCR/browser/live는 모두0이다.
+
+## ARCH-E1-DESIGN 문서 gate (2026-10-02)
+
+[EVIDENCE-V3-CONTRACT](EVIDENCE-V3-CONTRACT.md) 기준으로5개 JSON실례/정확한키와enum/hashbasis/SQL DDL/migration/dispatch/truth위치/DTO/evaluation분모 및 Luna단계를 확정한다. MASTER-REFERENCE-AUDIT.md의48확인/1충돌/181미조사를partial evidence로 보존하며 추가조사나runtime gate를 실행하지 않는다.
+
+구현acceptance는 계약10/11절: old evidence hash/receipt/export 불변, retained/edited/batch≠truth, source6→logical4 accounting, realPillow/rollback/retry, 필수unknown/conflictDTOheld, Main/session schema변경0. 이번 docs PASS는 해당runtime gates의 PASS가 아니다. 기존역사적 acceptance 수치/실사결과는 다시 쓰지 않는다.

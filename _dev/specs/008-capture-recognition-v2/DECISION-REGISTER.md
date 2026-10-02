@@ -34,3 +34,15 @@
 | DR-019 | ACTIVE_NEXT architecture 승인→M1. 현재 R011/R012 보류, old live의 향후 용도는 development architecture evidence | DR-010/011 진행 순서 대체. 옛 cohort/hash rewrite 금지 |
 
 상세 schema, current code inventory, 검수/evidence/OCR gate, Task scope는 [통합 아키텍처](UNIFIED-RECOGNITION-ARCHITECTURE.md)에 정의한다. 이 결정은 코드가 새 계약을 이미 충족한다는 뜻이 아니다.
+
+## DR-020 — 최종 목록 확인과 독립 crop truth 분리 (ARCH-E1-DESIGN)
+
+확정: 운영3decisions + USER_FINAL_LIST_CONFIRMED를 독립 HUMAN_CROP_VERIFIED와 별축으로 저장한다. knownTruthEligible은 적격crop label만. raw/correction/final accuracy는 독립분모, 수정률은운영분모. [계약](EVIDENCE-V3-CONTRACT.md) 2–8절. DR-017/018의 구현 세부를 확정하며 old observation 의미/hash를 바꾸지 않는다.
+
+## DR-021 — Additive evidence3 / Master reference authority
+
+Sidecar SQLite3 신규5tables, old1observation/receipt/export와 projection1·2 읽기·호환write 유지. 독립truth는 새 crop truth table, oldrecognition_label 재사용안함. Master Bundle2에 VERIFIED_REFERENCE 호환확장, CURATED>REFERENCE>LEGACY, DISPUTED/DEPRECATED 자동선택금지. 별reference overlay/oldhash rewrite/자료충돌 강제선택0. 계약5/6/9절.
+
+## DR-022 — 구현 순서 재고정
+
+DR-019와 architecture12/13절의 E1a/b/c 세부분할을 E1-A→B→C→D→M4-R→C1/C2/C3→U2/U1→명시activation→전체UI/UX로 대체한다. 먼저 synthetic evidence/DTO계약을 준비하며 실제pipeline/UI가 완성되기 전 primaryflow 활성화금지. 계약10절의 파일scope/금지/검증/완료조건을 따른다.

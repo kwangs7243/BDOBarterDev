@@ -98,4 +98,10 @@ manual JSON fallback, file/paste/STREAM capture, capture frame/fidelity 구분(c
 
 artifact budget200MiB, 미검수debug30일정책, verified crops보호/debugoff를유지한다. 정리는명시적동작이며실사증거·MainDBBLOB·사용자backup을이정책으로자동삭제하지않는다.
 
-DR-012~019가이전DR-001/003/004/005/006/008/010/011의관련제품의미를명시적으로supersede한다. 옛결정과기존storedmeaning은[결정기록](DECISION-REGISTER.md)에보존한다. 다음구현은[로드맵](CURRENT-ROADMAP.md)의M1부터별도지시로시작한다.
+DR-012~019는 이전 DR-001/003/004/005/006/008/010/011의 관련 제품 의미를 대체한다. 옛 결정과 기존 저장 의미는 [결정기록](DECISION-REGISTER.md)에 보존한다. M1–M3는 현재 baseline에 존재하며 다음 구현은 [로드맵](CURRENT-ROADMAP.md)의 E1-A부터 별도 지시로 시작한다.
+
+## ARCH-E1-DESIGN 확정 계약 (2026-10-02)
+
+[EVIDENCE-V3-CONTRACT](EVIDENCE-V3-CONTRACT.md)이 증거/DTO/평가의 정확한 schema·hash·dispatch·migration authority다. 운영 field decision은 CANDIDATE_RETAINED/USER_EDITED/USER_MARKED_UNKNOWN, 일괄 확인은 USER_FINAL_LIST_CONFIRMED, 독립 정답은 별도 HUMAN_CROP_VERIFIED다. 유지/수정/일괄 확인으로 독립 정답을 자동 생성하지 않는다.
+
+Sidecar SQLite 2→3은 기존 tables/JSON/hashes를 보존하고 신규 v3 tables만 추가한다. Observation/Completion/Projection/Receipt/Export는 각각3으로 설계한다. Master Bundle2, Main/session schema 및 validatedBatch 결과1은 유지한다. VERIFIED_REFERENCE는 Bundle2 호환 enum/provenance 확장으로 M4-R에서 구현하며 CURATED 우선·자료 충돌 보류를 따른다. 이번은 문서 설계이며 runtime 구현 완료가 아니다.

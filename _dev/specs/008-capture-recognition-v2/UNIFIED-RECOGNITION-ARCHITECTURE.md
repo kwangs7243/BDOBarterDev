@@ -261,7 +261,7 @@ text/numeric 별engine을 허용한다. 독립data에서 실질 개선, wrong-co
 
 READY의 정답이 자동 확보되는 것은 아니다. 정확도 평가에는 문제queue 밖READY도 별도의 독립crop labeling으로 확인해야 한다. 일반 사용자에게 매번전field review를 요구하는 것과 구분한다. 분모0=N/A, all-HOLD/error0은 usability PASS 아님. coverage/wrong-ready/user burden을 같이 판단한다.
 
-## 12. Luna 구현 Task 명세 — 모두 planned
+## 12. Luna 구현 Task 명세 — 초기 계획 (현재 상태와 대체 범위는 15절)
 
 경로는 `_dev/local_app/` 기준, 신규는 **new**다. 각Task는 새 지시의base/scope를 확인하고 Luna High로 실행한다. 번호는 기존R007-C1 등과 별도 `ARCH-M1` namespace다. 큰storage/integration 작업은 아래substep별 별commit/검증으로 나눈다.
 
@@ -290,7 +290,7 @@ M3/U2/E1/L1은substep별 작은Task다. proposalcuration=M3b, reviewproposalacti
 
 ## 13. 순서와 중단 gate
 
-ACTIVE_NEXT: architecture owner검토→**M1**. M2preview→M3a/b ownercurated정본. C1–C3와O1→U2a/b→U1을 합류해E1a/b/c 저장/DTO/session통합. O2→O3비교, O4채택또는current유지decision. 새L1독립gate이후만R012.
+초기 순서는 M1→M2→M3a/b→C/U→E1a/b/c였다. 현재 M1–M3는 baseline에 존재한다. **ACTIVE_NEXT는 E1-A**이며 E1-A/B/C/D→M4-R→C1–C3→U2/U1→activation의 대체 순서는 [확정 계약10절](EVIDENCE-V3-CONTRACT.md)에 따른다. O2/O3/O4 선택 및 새 L1 독립 gate 이후에만 R012를 재개한다.
 
 authority/schema모순, oldhash파괴, sourceaccounting불가, session계약변경필요는Task중단·보고한다. scope확대로숨기지않는다. READY증가를목적으로threshold/fixturetruth를바꾸지않는다.
 
@@ -305,3 +305,9 @@ authority/schema모순, oldhash파괴, sourceaccounting불가, session계약변�
 7. Engine비교: 고정human-labeledcrop hashes/groups/splits, 같은inputs, 사전freeze confidence/latency/gate, raw/normalized/numeric별report. tuning된holdout 재독립사용금지.
 
 즉시 추가 제품 선택은 필요하지 않다. 다음 구현 전 architecture 승인, M3의 실제 identity/name owner 승인, O3의 평가 전 수치 gate 승인은 필요하다. 기존 실사 source는 앞으로 DEVELOPMENT_ARCHITECTURE_EVIDENCE 용도로 쓰되 과거 cohort/hash 파일을 다시 쓰지 않는다. 현재 R011과 R012는 보류한다. 구현·품질·사용성·release·무인 승인을 분리한다.
+
+## 15. ARCH-E1-DESIGN 확정 및 이전 계획 대체
+
+[EVIDENCE-V3-CONTRACT](EVIDENCE-V3-CONTRACT.md)의 shape/hash/DDL/보존/truth/dispatch가 이 문서9·11·12·13절의 예정 증거 세부보다 우선한다. 기존 E1a/b/c는 E1-A/B/C/D로 분리하며 계약10절의 scope를 따른다. Master Bundle2는 유지하고 VERIFIED_REFERENCE/provenance를 호환 추가한다. 원본 source/tier 충돌은 자동 변환하지 않는다.
+
+M1/M2/M3 구현은 현재 baseline에 존재한다. E1-B/C는 synthetic preview foundation이며 C1–C3/O1-U2 pixels/U1 완료 전 primary activation은 금지한다. raw2/crop availability/source accounting 책임과 원본 보존은 유지한다. Main/session DB schema 및 R009 DB-first 계약 변경은 불필요하다. 이번 설계는 실행 완료가 아니다.

@@ -2,7 +2,7 @@
 
 기준: ARCH-RESET-01 / 2026-10-01. 현재 코드는 기존 전 행 검수 → R006 evidence → R008 DTO → R009 session → R010 평가까지 연결되어 있다. 새 최종 보정·문제 행 중심 구조는 **설계 완료, 구현 전**이다.
 
-**ACTIVE_NEXT — architecture owner 검토 후 ARCH-M1 Master Registry vNext read-only foundation.** 이번 문서 commit은 구현 착수나 배포 승인이 아니다.
+**ACTIVE_NEXT — ARCH-E1-A: evidence v3 backend additive compatibility.** ARCH-E1-DESIGN은 계약 확정이며 구현/마이그레이션은 다음 별도Task다.
 
 ## 단계와 순서
 
@@ -38,3 +38,18 @@ O1과 U2는 U1 완료 전에 필요하다. 번호 순서로 미완료 의존을 
 ## 후속 승인
 
 즉시 추가 제품 방향 선택은 필요 없다. 구현 전 architecture 승인, 실제 Master identity/alias owner curation, O3의 평가 전 수치 threshold/resource gate 승인은 남아 있다. 코드·fixture 정답을 결과에 맞춰 바꾸지 않는다. scope나 authority 충돌은 해당 Task를 멈추고 보고한다.
+
+## ARCH-E1-DESIGN 현재 기준 / 후속 순서 (2026-10-02)
+
+M1/M2/M3a/M3b는committed baseline에 존재한다. 새 fullycorrectedpipeline/UI는구현전. 위이전표의 E1 의존·분할 및 ACTIVE_NEXT는 [정확한계약10절](EVIDENCE-V3-CONTRACT.md)로대체한다.
+
+1. E1-A: sidecar3 additive migration/validator/store/API, oldevidence 보존.
+2. E1-B: Projection3/Completion3 producer/preview, activation없음.
+3. E1-C: DTO v3 input adapter → 기존validatedBatch1/session1 binding.
+4. E1-D: Export3 / independenttruth vs operational metrics.
+5. M4-R: 한국어조사181재개 / VERIFIED_REFERENCE Bundle2발행 / 충돌보류.
+6. C1/C2/C3: pinned Master 기반통합보정/classifier.
+7. O1을포함한 U2a/U2b pixels → U1 finalreview → 별activationgate.
+8. 전체UI/UX재구성은별task, 새independentlive/package는통합후별gate.
+
+앞단계synthetic PASS를 liveprimary 완료로표현하지않는다. 현재MASTER-REFERENCE-AUDIT는partial48/1/181, 완료Master가아니다. 각taskscope/금지/검증/완료조건은계약10절.
