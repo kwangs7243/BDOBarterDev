@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -22,6 +23,150 @@ MAX_BATCH_BYTES = 20 * 1024 * 1024
 MAX_CAPTURES = 100
 WORKER_TIMEOUT_SECONDS = 120
 BOUNDARY_POLICY = "edge-segments-evidence-only-v1"
+RAW_FIELDS = ("island", "fromItem", "reqAmount", "toItem", "count", "yield")
+_LOWER_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _raw_v2_error() -> TradeBatchRuntimeError:
+    return TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned an invalid raw evidence result.", 502)
+
+
+def _valid_raw_hash(value: Any) -> bool:
+    return isinstance(value, str) and _LOWER_SHA256.fullmatch(value) is not None
+
+
+def _valid_raw_box(box: Any, frame: dict[str, Any]) -> bool:
+    return (isinstance(box, dict) and set(box) == {"x", "y", "width", "height"}
+            and all(type(box.get(key)) is int for key in ("x", "y", "width", "height"))
+            and box["x"] >= 0 and box["y"] >= 0 and box["width"] > 0 and box["height"] > 0
+            and box["x"] + box["width"] <= frame["width"]
+            and box["y"] + box["height"] <= frame["height"])
+
+
+def _validate_raw_evidence_v2(snapshot: Any, batch_id: str, captures: list[dict[str, Any]]) -> None:
+    """Validate the worker trust boundary without rewriting its raw snapshot."""
+    top_keys = {"schemaVersion", "recognitionBatchId", "captures", "sourceRows", "edgeSegments"}
+    capture_keys = {"captureId", "captureOrdinal", "imageSha256", "bitmapSha256", "sourceType",
+                    "frame", "sourceFidelity", "reencoded", "completeRowCount"}
+    row_keys = {"sourceRowId", "captureId", "ordinal", "rowBox", "fields"}
+    field_keys = {"field", "rawText", "rawNumeric", "readerStatus", "confidence", "cropRefs"}
+    crop_keys = {"cropRefId", "sourceRowId", "captureId", "field", "bitmapSha256", "frame",
+                 "coordinateSpace", "box", "pixelHashBasis", "pixelSha256", "pngArtifactSha256"}
+    edge_keys = {"edgeId", "captureId", "ordinal", "reason", "rowBox", "sourceRefs"}
+    ref_keys = {"sourceRowId", "captureId", "ordinal"}
+    expected_ids = [capture["captureId"] for capture in captures]
+    if (not isinstance(snapshot, dict) or set(snapshot) != top_keys or type(snapshot.get("schemaVersion")) is not int
+            or snapshot["schemaVersion"] != 2 or snapshot.get("recognitionBatchId") != batch_id):
+        raise _raw_v2_error()
+    raw_captures, rows, edges = snapshot.get("captures"), snapshot.get("sourceRows"), snapshot.get("edgeSegments")
+    if (not isinstance(raw_captures, list) or len(raw_captures) != len(expected_ids)
+            or not isinstance(rows, list) or not isinstance(edges, list)):
+        raise _raw_v2_error()
+    capture_map: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(raw_captures, 1):
+        if not isinstance(item, dict) or set(item) != capture_keys:
+            raise _raw_v2_error()
+        fidelity = item.get("sourceFidelity")
+        unknown_fidelity = {"sourceWidth": None, "sourceHeight": None, "rescaled": None, "evidence": "unknown"}
+        valid_fidelity = fidelity == unknown_fidelity or (
+            isinstance(fidelity, dict) and set(fidelity) == set(unknown_fidelity)
+            and type(fidelity.get("sourceWidth")) is int and fidelity["sourceWidth"] > 0
+            and type(fidelity.get("sourceHeight")) is int and fidelity["sourceHeight"] > 0
+            and type(fidelity.get("rescaled")) is bool
+            and isinstance(fidelity.get("evidence"), str) and bool(fidelity["evidence"].strip())
+            and fidelity["evidence"] != "unknown")
+        frame = item.get("frame")
+        capture_id = item.get("captureId")
+        if (capture_id != expected_ids[index - 1] or not isinstance(capture_id, str) or not capture_id
+                or len(capture_id) > 128 or capture_id in capture_map
+                or type(item.get("captureOrdinal")) is not int or item.get("captureOrdinal") != index
+                or item.get("sourceType") not in ("FILE", "CLIPBOARD", "STREAM")
+                or item.get("sourceType") != {"file": "FILE", "clipboard": "CLIPBOARD", "browser-stream": "STREAM"}.get(
+                    captures[index - 1]["metadata"].get("sourceType"))
+                or type(item.get("reencoded")) is not bool or not valid_fidelity
+                or item.get("reencoded") is not captures[index - 1].get("reencoded")
+                or fidelity != captures[index - 1]["metadata"].get("fidelity")
+                or not isinstance(frame, dict) or set(frame) != {"width", "height"}
+                or any(type(frame.get(key)) is not int or frame[key] < 1 for key in ("width", "height"))
+                or frame != captures[index - 1]["metadata"].get("frame")
+                or not _valid_raw_hash(item.get("imageSha256")) or not _valid_raw_hash(item.get("bitmapSha256"))
+                or item.get("imageSha256") != hashlib.sha256(captures[index - 1].get("imageBytes", b"")).hexdigest()
+                or type(item.get("completeRowCount")) is not int or item["completeRowCount"] < 0):
+            raise _raw_v2_error()
+        capture_map[capture_id] = item
+
+    source_ids: set[str] = set()
+    crop_ids: set[str] = set()
+    source_counts = {capture_id: 0 for capture_id in expected_ids}
+    ordinals = {capture_id: set() for capture_id in expected_ids}
+    last_position = (-1, -1)
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != row_keys:
+            raise _raw_v2_error()
+        source_id, capture_id, ordinal = row.get("sourceRowId"), row.get("captureId"), row.get("ordinal")
+        if (not isinstance(source_id, str) or not source_id or len(source_id) > 128 or source_id in source_ids
+                or source_id in capture_map or not isinstance(capture_id, str) or capture_id not in capture_map
+                or type(ordinal) is not int or ordinal < 0):
+            raise _raw_v2_error()
+        position = (capture_map[capture_id]["captureOrdinal"], ordinal)
+        if position < last_position or ordinal in ordinals[capture_id]:
+            raise _raw_v2_error()
+        last_position = position
+        ordinals[capture_id].add(ordinal)
+        source_ids.add(source_id)
+        source_counts[capture_id] += 1
+        frame = capture_map[capture_id]["frame"]
+        if not _valid_raw_box(row.get("rowBox"), frame):
+            raise _raw_v2_error()
+        fields = row.get("fields")
+        if (not isinstance(fields, list) or len(fields) != len(RAW_FIELDS)
+                or any(not isinstance(field, dict) for field in fields)
+                or [field.get("field") for field in fields] != list(RAW_FIELDS)):
+            raise _raw_v2_error()
+        for field in fields:
+            if (set(field) != field_keys or field.get("rawText") is not None and not isinstance(field.get("rawText"), str)
+                    or field.get("rawNumeric") is not None and (type(field.get("rawNumeric")) is not int
+                        or abs(field["rawNumeric"]) > 9007199254740991)
+                    or field.get("field") not in ("reqAmount", "count", "yield") and field.get("rawNumeric") is not None
+                    or not isinstance(field.get("readerStatus"), str) or not field["readerStatus"]
+                    or field.get("confidence") is not None and not isinstance(field.get("confidence"), str)
+                    or not isinstance(field.get("cropRefs"), list) or len(field["cropRefs"]) > 1):
+                raise _raw_v2_error()
+            for crop in field["cropRefs"]:
+                if (not isinstance(crop, dict) or set(crop) != crop_keys
+                        or not isinstance(crop.get("cropRefId"), str) or not crop["cropRefId"]
+                        or crop["cropRefId"] in crop_ids or crop.get("sourceRowId") != source_id
+                        or crop.get("captureId") != capture_id or crop.get("field") != field["field"]
+                        or crop.get("bitmapSha256") != capture_map[capture_id]["bitmapSha256"]
+                        or crop.get("frame") != frame or crop.get("coordinateSpace") != "CAPTURE_BITMAP_PIXELS"
+                        or crop.get("pixelHashBasis") != "RGB8_ROW_MAJOR_V1"
+                        or not _valid_raw_hash(crop.get("pixelSha256")) or crop.get("pngArtifactSha256") is not None
+                        or not _valid_raw_box(crop.get("box"), frame)):
+                    raise _raw_v2_error()
+                crop_ids.add(crop["cropRefId"])
+    if any(capture_map[capture_id]["completeRowCount"] != count for capture_id, count in source_counts.items()):
+        raise _raw_v2_error()
+
+    edge_ids: set[str] = set()
+    edge_ordinals = {capture_id: set() for capture_id in expected_ids}
+    for edge in edges:
+        if (not isinstance(edge, dict) or set(edge) != edge_keys or not isinstance(edge.get("captureId"), str)
+                or edge.get("captureId") not in capture_map
+                or not isinstance(edge.get("edgeId"), str) or not edge["edgeId"] or len(edge["edgeId"]) > 128
+                or edge["edgeId"] in edge_ids or edge["edgeId"] in source_ids or edge["edgeId"] in capture_map
+                or type(edge.get("ordinal")) is not int or edge["ordinal"] < 0
+                or edge["ordinal"] in edge_ordinals[edge["captureId"]]
+                or not isinstance(edge.get("reason"), str) or not edge["reason"]
+                or not _valid_raw_box(edge.get("rowBox"), capture_map[edge["captureId"]]["frame"])):
+            raise _raw_v2_error()
+        edge_ordinals[edge["captureId"]].add(edge["ordinal"])
+        refs = edge.get("sourceRefs")
+        if (not isinstance(refs, list) or len(refs) != 1 or not isinstance(refs[0], dict)
+                or set(refs[0]) != ref_keys
+                or refs[0] != {"sourceRowId": edge["edgeId"], "captureId": edge["captureId"],
+                               "ordinal": edge["ordinal"]}):
+            raise _raw_v2_error()
+        edge_ids.add(edge["edgeId"])
 
 
 class TradeBatchRuntimeError(RuntimeError):
@@ -141,6 +286,77 @@ class TradeBatchRuntime:
                                       "durationMs": round((time.monotonic() - started) * 1000),
                                       "captureCount": len(captures), "draftRowCount": len(payload["draftRows"])}
                 return payload
+        finally:
+            self._worker_lock.release()
+
+    def recognize_raw_v2(self, batch_id: str, captures: list[dict[str, Any]]) -> dict[str, Any]:
+        """Run the explicitly opted-in raw evidence worker contract."""
+        source_types = {"file": "FILE", "clipboard": "CLIPBOARD", "browser-stream": "STREAM"}
+        if not isinstance(captures, list) or not 1 <= len(captures) <= MAX_CAPTURES:
+            raise TradeBatchRuntimeError("invalid_batch", "Raw evidence capture list is invalid.", 422)
+        for capture in captures:
+            metadata = capture.get("metadata") if isinstance(capture, dict) else None
+            if (not isinstance(capture, dict) or set(capture) != {"captureId", "metadata", "imageBytes", "reencoded"}
+                    or not isinstance(capture.get("captureId"), str) or not capture["captureId"]
+                    or len(capture["captureId"]) > 128 or not isinstance(capture.get("imageBytes"), bytes)
+                    or not isinstance(metadata, dict) or metadata.get("sourceType") not in source_types
+                    or not isinstance(metadata.get("frame"), dict)
+                    or type(capture.get("reencoded")) is not bool):
+                raise TradeBatchRuntimeError("invalid_batch", "Raw evidence capture metadata is invalid.", 422)
+            fidelity = metadata.get("fidelity")
+            if not isinstance(fidelity, dict) or set(fidelity) != {"sourceWidth", "sourceHeight", "rescaled", "evidence"}:
+                raise TradeBatchRuntimeError("invalid_batch", "Raw evidence source fidelity is invalid.", 422)
+        reason, info = self._integrity()
+        if reason == "engine_integrity_error":
+            raise TradeBatchRuntimeError(reason, "The local recognition engine failed integrity verification.", 503)
+        if reason:
+            raise TradeBatchRuntimeError("engine_unavailable", "The local recognition engine is unavailable.", 503)
+        if not self._worker_lock.acquire(blocking=False):
+            raise TradeBatchRuntimeError("engine_busy", "The local recognition engine is busy.", 409, retryable=True)
+        started = time.monotonic()
+        try:
+            with tempfile.TemporaryDirectory(prefix="bdo-trade-batch-v2-", dir=self.temp_root) as temporary:
+                work_dir = Path(temporary)
+                manifest_captures = []
+                for ordinal, capture in enumerate(captures, 1):
+                    name = f"capture-{ordinal:04d}.png"
+                    (work_dir / name).write_bytes(capture["imageBytes"])
+                    manifest_captures.append({
+                        "captureId": capture["captureId"], "batchId": capture["metadata"]["batchId"],
+                        "imagePath": name, "sourceType": source_types[capture["metadata"]["sourceType"]],
+                        "sourceFidelity": dict(capture["metadata"]["fidelity"]),
+                        "reencoded": capture["reencoded"],
+                    })
+                manifest_path, output_path = work_dir / "request.json", work_dir / "result.json"
+                manifest_path.write_text(json.dumps({"version": 1, "batchId": batch_id, "captures": manifest_captures},
+                                                    ensure_ascii=False), encoding="utf-8")
+                command = [str(self.python_path), "-B", str(self.worker_path), "--request", str(manifest_path),
+                           "--out", str(output_path), "--model-dir", str(self.model_dir),
+                           "--raw-evidence-version", "2"]
+                environment = {key: os.environ[key] for key in (
+                    "PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA",
+                    "PROGRAMDATA",
+                ) if key in os.environ}
+                environment.update({"PYTHONDONTWRITEBYTECODE": "1", "HF_HUB_OFFLINE": "1",
+                                    "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
+                                    "PADDLE_PDX_MODEL_SOURCE": "LOCAL", "PADDLE_PDX_CACHE_HOME": str(work_dir / "paddle-cache")})
+                try:
+                    result = self.runner(command, cwd=str(ROOT), shell=False, timeout=self.timeout,
+                                         capture_output=True, text=True, env=environment)
+                except subprocess.TimeoutExpired:
+                    raise TradeBatchRuntimeError("recognition_timeout", "Local recognition timed out.", 504, retryable=True) from None
+                if getattr(result, "returncode", 1) != 0 or not output_path.is_file():
+                    raise _raw_v2_error()
+                try:
+                    snapshot = json.loads(output_path.read_text(encoding="utf-8"))
+                except (OSError, UnicodeError, json.JSONDecodeError):
+                    raise _raw_v2_error() from None
+                _validate_raw_evidence_v2(snapshot, batch_id, captures)
+                return {"rawEvidence": snapshot, "runtime": {
+                    "available": True, "engineId": ENGINE_ID, "modelBundleSha256": info["hashes"]["bundle"],
+                    "workerVersion": WORKER_VERSION, "durationMs": round((time.monotonic() - started) * 1000),
+                    "captureCount": len(captures),
+                }}
         finally:
             self._worker_lock.release()
 

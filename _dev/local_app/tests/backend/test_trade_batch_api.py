@@ -70,6 +70,20 @@ class TradeBatchApiTests(unittest.TestCase):
         return self.client.post("/api/recognition/trade-batch", data=MultiDict(form), headers=self.headers,
                                 base_url="http://localhost:18765")
 
+    def _post_v2(self, items=None, *, batch_id=None, descriptor_transform=None):
+        items = items if items is not None else [self._capture()]
+        batch_id = batch_id or str(uuid4())
+        descriptors = []
+        for descriptor, _png_bytes in items:
+            v2_descriptor = {**descriptor, "reencoded": False}
+            descriptors.append(descriptor_transform(v2_descriptor) if descriptor_transform else v2_descriptor)
+        batch = {"version": 2, "batchId": batch_id, "captures": descriptors}
+        form = [("batch", json.dumps(batch))]
+        for _descriptor, png_bytes in items:
+            form.append(("image", (io.BytesIO(png_bytes), "ignored.png", "image/png")))
+        return self.client.post("/api/recognition/trade-batch", data=MultiDict(form), headers=self.headers,
+                                base_url="http://localhost:18765"), batch_id
+
     def test_runtime_status_is_read_only_and_does_not_expose_paths(self):
         response = self.client.get("/api/recognition/trade-runtime")
         self.assertEqual(response.status_code, 200)
@@ -101,6 +115,53 @@ class TradeBatchApiTests(unittest.TestCase):
         self.assertEqual(list(self.runtime_dir.iterdir()), [])
         single = self._post([self._capture()])
         self.assertEqual(single.status_code, 200)
+
+    def test_v2_dispatch_and_raw_only_response(self):
+        item = self._capture()
+        seen = {}
+        raw_snapshot = {"schemaVersion": 2, "recognitionBatchId": "pending", "captures": [], "sourceRows": [], "edgeSegments": []}
+        def recognize_raw_v2(batch_id, captures):
+            seen["v2"] = (batch_id, captures)
+            snapshot = {**raw_snapshot, "recognitionBatchId": batch_id}
+            return {"rawEvidence": snapshot, "runtime": {"available": True, "engineId": "test",
+                "modelBundleSha256": "a" * 64, "workerVersion": "test-v2", "durationMs": 0, "captureCount": 1}}
+        with patch.object(self.runtime, "recognize_raw_v2", side_effect=recognize_raw_v2) as raw_method, \
+             patch.object(self.runtime, "recognize", wraps=self.runtime.recognize) as v1_method:
+            response, batch_id = self._post_v2([item])
+        self.assertEqual(response.status_code, 200, response.get_json())
+        result = response.get_json()["result"]
+        self.assertEqual(set(result), {"version", "batchId", "status", "rawEvidence", "runtime"})
+        self.assertEqual(result["version"], 2)
+        self.assertEqual(result["batchId"], batch_id)
+        self.assertEqual(result["rawEvidence"]["recognitionBatchId"], batch_id)
+        self.assertEqual(result["status"], "RAW_EVIDENCE_ONLY")
+        self.assertEqual(seen["v2"][1][0]["reencoded"], False)
+        raw_method.assert_called_once()
+        v1_method.assert_not_called()
+
+        with patch.object(self.runtime, "recognize_raw_v2", wraps=self.runtime.recognize_raw_v2) as raw_method, \
+             patch.object(self.runtime, "recognize", wraps=self.runtime.recognize) as v1_method:
+            response = self._post([item])
+        self.assertEqual(response.status_code, 200)
+        v1_method.assert_called_once()
+        raw_method.assert_not_called()
+
+    def test_v2_descriptor_is_strict_and_reencoded_must_be_boolean(self):
+        item = self._capture()
+        for transform in (
+            lambda descriptor: {key: value for key, value in descriptor.items() if key != "reencoded"},
+            lambda descriptor: {**descriptor, "reencoded": "false"},
+            lambda descriptor: {**descriptor, "extra": True},
+        ):
+            response, _batch_id = self._post_v2([item], descriptor_transform=transform)
+            self.assertEqual(response.status_code, 422)
+            self.assertEqual(response.get_json()["error"]["code"], "invalid_batch")
+
+    def test_unsupported_batch_version_is_rejected(self):
+        item = self._capture()
+        response = self._post([item], batch_overrides={"version": 3})
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.get_json()["error"]["code"], "invalid_batch")
 
     def test_edge_segment_evidence_is_passed_through_without_database_writes(self):
         original_runner = self.runtime.runner

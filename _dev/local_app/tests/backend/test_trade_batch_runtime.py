@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import copy
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -52,6 +54,39 @@ def _fake_result(command):
     return SimpleNamespace(returncode=0, stdout="", stderr="")
 
 
+def _raw_v2_snapshot(batch_id, captures):
+    raw_captures = []
+    rows = []
+    for index, capture in enumerate(captures, 1):
+        metadata = capture["metadata"]
+        source_type = {"file": "FILE", "clipboard": "CLIPBOARD", "browser-stream": "STREAM"}[metadata["sourceType"]]
+        raw_captures.append({"captureId": capture["captureId"], "captureOrdinal": index,
+            "imageSha256": hashlib.sha256(capture["imageBytes"]).hexdigest(), "bitmapSha256": "b" * 64, "sourceType": source_type,
+            "frame": metadata["frame"], "sourceFidelity": metadata["fidelity"],
+            "reencoded": capture["reencoded"], "completeRowCount": 1})
+        fields = []
+        for name in FIELDS:
+            fields.append({"field": name, "rawText": None, "rawNumeric": None,
+                           "readerStatus": "OCR_ERROR", "confidence": None, "cropRefs": []})
+        rows.append({"sourceRowId": f"source-{capture['captureId']}", "captureId": capture["captureId"],
+                     "ordinal": 0, "rowBox": {"x": 0, "y": 0, "width": 80, "height": 20}, "fields": fields})
+    return {"schemaVersion": 2, "recognitionBatchId": batch_id, "captures": raw_captures,
+            "sourceRows": rows, "edgeSegments": []}
+
+
+def _fake_raw_v2_result(command):
+    request_path = Path(command[command.index("--request") + 1])
+    output_path = Path(command[command.index("--out") + 1])
+    manifest = json.loads(request_path.read_text(encoding="utf-8"))
+    output_path.write_text(json.dumps(_raw_v2_snapshot(manifest["batchId"], [
+        {"captureId": item["captureId"], "metadata": {"sourceType": {"FILE":"file", "CLIPBOARD":"clipboard",
+          "STREAM":"browser-stream"}[item["sourceType"]], "fidelity": item["sourceFidelity"],
+          "frame": {"width":80,"height":50}}, "reencoded": item["reencoded"],
+          "imageBytes": (request_path.parent / item["imagePath"]).read_bytes()}
+        for item in manifest["captures"]])), encoding="utf-8")
+    return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+
 class ReadyRuntime(TradeBatchRuntime):
     def _integrity(self):
         return None, {"available": True, "modelReady": True,
@@ -66,7 +101,11 @@ class TradeBatchRuntimeTests(unittest.TestCase):
     def test_runtime_result_and_temp_cleanup(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            runtime = ReadyRuntime(temp_root=root, runner=lambda command, **kwargs: _fake_result(command))
+            seen = {}
+            def runner(command, **kwargs):
+                seen["command"] = command
+                return _fake_result(command)
+            runtime = ReadyRuntime(temp_root=root, runner=runner)
             capture_id = "10000000-0000-4000-8000-000000000001"
             batch_id = "20000000-0000-4000-8000-000000000001"
             payload = runtime.recognize(batch_id, [{"captureId": capture_id,
@@ -74,7 +113,99 @@ class TradeBatchRuntimeTests(unittest.TestCase):
             self.assertEqual(payload["captureIds"], [capture_id])
             self.assertEqual(payload["runtime"]["engineId"], ENGINE_ID)
             self.assertEqual(payload["runtime"]["modelBundleSha256"], MODEL_BUNDLE_SHA256)
+            self.assertNotIn("--raw-evidence-version", seen["command"])
             self.assertEqual(list(root.iterdir()), [])
+
+    def test_raw_v2_source_type_mapping_for_file_clipboard_and_stream(self):
+        sources = (
+            ("file", {"sourceWidth":80,"sourceHeight":50,"rescaled":False,"evidence":"file-metadata"}, "FILE"),
+            ("clipboard", {"sourceWidth":None,"sourceHeight":None,"rescaled":None,"evidence":"unknown"}, "CLIPBOARD"),
+            ("browser-stream", {"sourceWidth":None,"sourceHeight":None,"rescaled":None,"evidence":"unknown"}, "STREAM"),
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = ReadyRuntime(temp_root=folder, runner=lambda command, **kwargs: _fake_raw_v2_result(command))
+            for index, (source_type, fidelity, expected_type) in enumerate(sources, 1):
+                with self.subTest(source_type=source_type):
+                    capture_id = f"10000000-0000-4000-8000-{index:012d}"
+                    result = runtime.recognize_raw_v2("20000000-0000-4000-8000-000000000001", [{
+                        "captureId": capture_id, "metadata": {"batchId": None, "sourceType": source_type,
+                            "frame": {"width":80,"height":50}, "fidelity": fidelity},
+                        "imageBytes": b"png", "reencoded": index == 2,
+                    }])
+                    self.assertEqual(result["rawEvidence"]["captures"][0]["sourceType"], expected_type)
+                    self.assertEqual(result["rawEvidence"]["captures"][0]["sourceFidelity"], fidelity)
+                    self.assertEqual(result["rawEvidence"]["captures"][0]["reencoded"], index == 2)
+
+    def test_raw_v2_runtime_manifest_wrapper_and_exact_snapshot(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            seen = {}
+            def runner(command, **kwargs):
+                seen["command"] = command
+                request_path = Path(command[command.index("--request") + 1])
+                seen["manifest"] = json.loads(request_path.read_text(encoding="utf-8"))
+                return _fake_raw_v2_result(command)
+            runtime = ReadyRuntime(temp_root=root, runner=runner)
+            capture_id = "10000000-0000-4000-8000-000000000001"
+            batch_id = "20000000-0000-4000-8000-000000000001"
+            fidelity = {"sourceWidth": None, "sourceHeight": None, "rescaled": None, "evidence": "unknown"}
+            request = [{"captureId": capture_id, "metadata": {"batchId": None, "sourceType": "browser-stream",
+                        "frame": {"width":80,"height":50}, "fidelity": fidelity}, "imageBytes": b"png", "reencoded": False}]
+            result = runtime.recognize_raw_v2(batch_id, request)
+            self.assertEqual(seen["manifest"]["version"], 1)
+            self.assertEqual(seen["manifest"]["captures"][0], {
+                "captureId": capture_id, "batchId": None, "imagePath": "capture-0001.png",
+                "sourceType": "STREAM", "sourceFidelity": fidelity, "reencoded": False})
+            self.assertEqual(seen["command"][-2:], ["--raw-evidence-version", "2"])
+            self.assertEqual(set(result), {"rawEvidence", "runtime"})
+            self.assertEqual(result["rawEvidence"]["recognitionBatchId"], batch_id)
+            self.assertNotIn("runtime", result["rawEvidence"])
+            self.assertEqual(result["runtime"]["captureCount"], 1)
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_raw_v2_rejects_unknown_source_and_invalid_worker_snapshots(self):
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = ReadyRuntime(temp_root=folder, runner=lambda command, **kwargs: _fake_raw_v2_result(command))
+            base = {"captureId": "10000000-0000-4000-8000-000000000001",
+                    "metadata": {"batchId": None, "sourceType": "file", "frame": {"width":80,"height":50}, "fidelity": {
+                        "sourceWidth": 80, "sourceHeight": 50, "rescaled": False, "evidence": "file-metadata"}},
+                    "imageBytes": b"png", "reencoded": True}
+            with self.assertRaises(TradeBatchRuntimeError) as unknown:
+                runtime.recognize_raw_v2("20000000-0000-4000-8000-000000000001", [{**base, "metadata": {
+                    **base["metadata"], "sourceType": "future-source"}}])
+            self.assertEqual(unknown.exception.code, "invalid_batch")
+            valid = _raw_v2_snapshot("20000000-0000-4000-8000-000000000001", [base])
+            invalid_cases = []
+            for name, mutate in [
+                ("schema", lambda p: p.update(schemaVersion=1)),
+                ("batch", lambda p: p.update(recognitionBatchId="wrong")),
+                ("capture_order", lambda p: p["captures"][0].update(captureOrdinal=2)),
+                ("unknown_capture", lambda p: p["sourceRows"][0].update(captureId="missing")),
+                ("duplicate_source", lambda p: p["sourceRows"].append(copy.deepcopy(p["sourceRows"][0]))),
+                ("field_order", lambda p: p["sourceRows"][0]["fields"].reverse()),
+                ("bad_crop_owner", lambda p: (p["sourceRows"][0]["fields"][0].update(cropRefs=[{
+                    "cropRefId":"crop", "sourceRowId":"wrong", "captureId":base["captureId"], "field":"island",
+                    "bitmapSha256":"b"*64,"frame":{"width":80,"height":50},"coordinateSpace":"CAPTURE_BITMAP_PIXELS",
+                    "box":{"x":0,"y":0,"width":5,"height":5},"pixelHashBasis":"RGB8_ROW_MAJOR_V1",
+                    "pixelSha256":"c"*64,"pngArtifactSha256":None}]))),
+                ("bad_hash", lambda p: p["captures"][0].update(imageSha256="A"*64)),
+                ("unknown_edge_capture", lambda p: p.update(edgeSegments=[{
+                    "edgeId":"edge", "captureId":"missing", "ordinal":2, "reason":"EDGE",
+                    "rowBox":{"x":0,"y":0,"width":5,"height":5},
+                    "sourceRefs":[{"sourceRowId":"edge","captureId":"missing","ordinal":2}]}])),
+            ]:
+                broken = copy.deepcopy(valid)
+                mutate(broken)
+                invalid_cases.append((name, broken))
+            for name, broken in invalid_cases:
+                with self.subTest(name=name):
+                    def runner(command, **kwargs):
+                        Path(command[command.index("--out") + 1]).write_text(json.dumps(broken), encoding="utf-8")
+                        return SimpleNamespace(returncode=0, stdout="", stderr="")
+                    runtime.runner = runner
+                    with self.assertRaises(TradeBatchRuntimeError) as caught:
+                        runtime.recognize_raw_v2("20000000-0000-4000-8000-000000000001", [base])
+                    self.assertEqual(caught.exception.code, "recognition_worker_failed")
 
     def test_worker_failure_timeout_and_invalid_result_clean_temporary_files(self):
         errors = [
