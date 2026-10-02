@@ -108,3 +108,179 @@ Python: 깨끗한 `recognition-local/r006-env-recovery/venv314/Scripts/python.ex
 4. 이 계약 경계를 해결한 뒤 남은 한국어 조사→기준 Master→보정→검수→전체 workspace 구현 순서로 재개한다.
 
 이번 작업에서 production/기존 tests/catalog/기존 authority 문서/실제 Main·recognition·Master DB/기존 실사 evidence를 변경하지 않았다. 독립 실사나 OCR을 실행하지 않았고 commit/push도 하지 않았다. 이 요청이 명시한 신규 audit만 추가했으며 재현 스크립트와 JSON은 ignored 영역에 둔다.
++
+
+## 6. ARCH-M4-R 결과 — 2026-10-02
+
+이 절은 M4-R 실행 결과다. 위 1–5절은 ARCH-UNIFIED-02에서 남긴 **이전 partial audit**로 보존한다. M4-R은 해당 181개 미조사 후보를 포함한 원작 legacy group 230개 각각에 대해 한국 공식 사이트와 한국어 BDO Codex 후보별 검색을 수행했다. `/us/` 자료, 영어 번역, 검색 미리보기만으로 Verified claim을 만들지 않았다.
+
+- 범위 해시 재검증: 원작 HTML blob `f13b8e15af392f167d153c873448a4b2abec5a0c:_dev/BDO_물교_v1.0.html` SHA-256은 `924e01e1b424af3f5fe376d76223149c1927afe45b44d961af5ce725344421d6`; 현재 catalog 원시 bytes SHA-256은 `8183b03e6aa0ee354142cf9720b401494bec365e528632f3c0c84ec11b46b4b3`. 원작 파일은 현재 working tree에 없어 V1 baseline Git blob의 원본 bytes를 읽어 재계산했다.
+- source occurrences 241, exact legacy groups 230을 manifest가 전부 정확히 나눠 기록한다. catalog 배열이나 원작 범위는 변경하지 않았다.
+- `VERIFIED_REFERENCE` claims 87개(한국 공식 source evidence 72 claim, BDO Codex KR direct page evidence 15 claim). 동일 group을 여러 출처 claim으로 중복 계산하지 않았다.
+- unresolved 143개: `NO_DIRECT_REFERENCE` 142, `SOURCE_CONFLICT` 1, `TIER_CONFLICT` 0. 각 미해결 후보는 아래 표에 남긴다. 모든 NO_DIRECT_REFERENCE는 후보별 한글 검색을 수행했으나 현재 이름/종류를 뒷받침하는 정확한 직접 페이지를 확보하지 못한 경우다.
+- SOURCE_CONFLICT: `고급 묵양함 상자`. 한국 공식 교역표는 `고급 묵양함`, Codex KR 검색 제목은 `고급 묵향함`이지만 Codex 직접 페이지는 CAPTCHA로 열리지 않았다. 어느 이름도 선택하지 않았다.
+- 0→1 육지 입력품 전체 목록, 새 특수 품목, 전체 섬×교역 조합 DB를 추가하지 않았다. near-name 후보(예: `하코번 섬`/ `하코번`, `일리야 섬`/ `일리야`)를 합치지 않았다.
+- manifest policy `trade-master-reference-v1`, schemaVersion 1. UUID v4 87개는 한 번 발급해 manifest에 고정했다. referenceAuditHash: `46c10355ccf3b8b5aba08880cd5947408cc66720dafdccef4d9deeb12ab2df82`.
+
+### 최종 조사 및 기준 Bundle2 accounting
+
+| 원작 legacy kind | 전체 group | VERIFIED_REFERENCE | 기존 VERIFIED_CURATED 보존 | unresolved | 세부 unresolved |
+|---|---:|---:|---:|---:|---|
+| MASTER_ITEM | 118 | 57 | 0 | 61 | NO_DIRECT_REFERENCE 60, SOURCE_CONFLICT 1 |
+| SPECIAL_ITEM | 9 | 3 | 0 | 6 | NO_DIRECT_REFERENCE 6 |
+| ISLAND (교환 장소 namespace) | 103 | 27 | 0 | 76 | NO_DIRECT_REFERENCE 76 |
+| **합계** | **230** | **87** | **0** | **143** | **NO_DIRECT_REFERENCE 142, SOURCE_CONFLICT 1, TIER_CONFLICT 0, NOT_RESEARCHED 0** |
+
+출처 coverage는 verified claim group 단위이며 중복 없이 계산했다. 한국 공식 자료가 근거인 claim은 72, BDO Codex 한국어 직접 페이지가 근거인 claim은 15, 양쪽 출처가 함께 근거인 claim은 0이다. source occurrences 241개 모두 이 230개 group의 resolved entity 또는 unresolved source record에 한 번씩 남는다. 기준 Bundle2는 entity 87개, compatibility mapping 87개, unresolved legacy record 143개이며 source occurrence 합계는 241이다. Bundle2 schemaVersion은 2, Master Store schemaVersion은 1을 유지한다. 의미 hash는 `0c5133b8c7d8895e27607690d37d9e881d6c641d320e9f24bd77f425259763ce`이고 registryVersion은 `registry-v2:0c5133b8c7d8895e27607690d37d9e881d6c641d320e9f24bd77f425259763ce`다. `createdAt`만 바꾼 재생성에서도 같은 contentHash가 나왔다.
+
+이 표는 unresolved를 자동으로 정답 처리하지 않는다. 해당 143개는 원작 문자열과 각 한국어 후보별 검색 이력을 보존하며, 직접 reference page를 확보하지 못한 142개와 직접 자료 표기가 충돌한 1개를 분리한다. 따라서 미조사 0을 달성했지만 reference-resolved 범위는 87 group이며, audit 결과를 230개 전체가 외부 자료로 검증됐다고 해석하면 안 된다.
+
+한국 공식 자료는 [2026-04-15 교역 개편 및 6·7단계 표](https://www.kr.playblackdesert.com/ko-KR/News/Detail?groupContentNo=15451), [소산 주둔지 관련 공식 업데이트](https://www.kr.playblackdesert.com/ko-KR/News/Detail?groupContentNo=13135), [델링하트 섬 관련 공식 업데이트](https://www.kr.playblackdesert.com/ko-KR/News/Detail?groupContentNo=8555)다. 직접 확인한 한국어 Codex 페이지 예시는 [말린 푸른 장미](https://bdocodex.com/kr/item/800001/), [칼페온 기사단의 전투 교본](https://bdocodex.com/kr/item/800230/), [카슈마 섬](https://bdocodex.com/kr/node/1370/), [라시드 섬](https://bdocodex.com/kr/node/1008/)다. manifest claim은 확인된 page URL, checkedAt, externalId, verifiedProperties만 포함한다.
+
+### 조사 후 unresolved 목록
+
+| 원작 후보명 | 원본 종류 / tier | occurrence 수 | 상태 | 판정 |
+|---|---|---:|---|---|
+| 알마이 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 네트넘 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 던데 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 베이루와 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 널찍한 돌판 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 스타렌 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오스트라 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 청동 촛대 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 만병통치약 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 때 탄 갈매기 조각상 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 타라무라 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 조각상의 눈물 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 웨이타 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 알브레서 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 나르보산 해삼 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해적선 돛대 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해골무늬 카페트 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 족제비 가죽 외투 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 굳어진 용암 액 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 고대 항아리 파편 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 고급 묵양함 상자 | MASTER_ITEM / 6 | 1 | SOURCE_CONFLICT | 공식/Codex 표기 충돌, direct Codex page 미확인 |
+| 종유석 파편 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 바라테르 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 레라오 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 팔랑나비 박제품 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해적 금주화 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 젊음을 담은 비약 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 타슈 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 란디스 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 대양의 견고한 현철 | SPECIAL_ITEM | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오킬루아의 꽃 | SPECIAL_ITEM | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 알나하 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 마르카 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 테야말 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해양 구조품 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오르프스 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 아라킬 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해적의 열쇠 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 균형잡힌 돌탑 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해적단의 보급상자 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 리에드 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 시오닐 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 비옥한 흙 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 로즈반 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 샤샤 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 청록빛 소금덩어리 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 뗏목 조각품 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 빛바랜 황금용 조각상 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 소산 선착장 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 티그리스 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 더코 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 필바라 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 나르보 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해상 기사단의 투구 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 낡은 지령서 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 섬마을 도시락 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오래된 모래 시계 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 하코번 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 루이바노 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 리스즈 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 최고급 굴 상자 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 포르타넨 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 갈퀴 꽃 씨앗 주머니 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 정찰병 망원경 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 마리베노 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 바레미 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 보아 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 난파된 콕스해적선 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 푸자라 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 아레하자 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 일리야 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 에프데 룬 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 안카도 내항 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 벨리아 마을 해변 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해모 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 소코타 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 앙쥬 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 시르나 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 떠돌이 상인의 배 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 푸른빛 석영 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 루루브 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 깊은 밤 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 틴베라 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 화려한 진주 결정 | SPECIAL_ITEM | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해적의 화약 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 102년 묵은 황금초 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 소라게 껍질 장식 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 희귀 약초 무더기 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 자수정 파편 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오벤 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 반달 조리용 칼 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 황금빛 모래 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 쫄깃한 전어 회 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 금주화가 담긴 낡은 상자 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오색 구슬 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 화려한 암염 주괴 | SPECIAL_ITEM | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 고급 문양의 옷감 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 아지르 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 정제된 식수 | MASTER_ITEM / 2 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 롬타스 그물 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 쿠이트 제도 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 찢어진 해적 보물지도 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 데이튼 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 테스테 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 아리타 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 흑수정 장식 팔찌 | SPECIAL_ITEM | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 정체불명의 암석 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 푸른 양초 더미 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 흰색 애벌레 박제품 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 팔각 문양 보관함 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 파라타마 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 목 잘린 용 조각상 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 라메다 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해상 기사단의 창 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 앵두나무 씨앗 주머니 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오리샤 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 두흐 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 성전 해안 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 오킬루아의 눈 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 거대한 물고기 뼈 | MASTER_ITEM / 1 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 황금빛 물고기 비늘 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 툴루 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 마를레느 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 에버딘 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 할마드 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 조개 껍질 장식 | MASTER_ITEM / 4 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 걸쭉한 괴생물 혈액 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 세르카 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 모드릭 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 파딕스 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 유실된 무역품 상자 | SPECIAL_ITEM | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 인버넨 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 알 수 없는 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 37년된 약주 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 진버레이 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 에베토 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 해골 장식 찻잔 | MASTER_ITEM / 3 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 최고급 황금 촛대 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 발베쥬 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 바에자 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 고대인을 형상화한 초상화 | MASTER_ITEM / 5 | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 에스파 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
+| 칸베라 섬 | ISLAND | 1 | NO_DIRECT_REFERENCE | 공식 KR 및 Codex KR 후보별 검색 완료; 정확한 직접 근거 페이지 미확보 |
