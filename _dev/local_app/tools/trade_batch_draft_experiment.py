@@ -10,6 +10,7 @@ import statistics
 import sys
 import time
 from collections import Counter
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -142,7 +143,8 @@ def partition_detected_rows(detected: list[dict[str, Any]]) -> tuple[list[dict[s
     return complete, edge_segments
 
 
-def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any],
+                 capture_pixels: dict[str, Image.Image] | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     complete_rows: list[dict[str, Any]] = []
     edge_segments: list[dict[str, Any]] = []
     capture_evidence: list[dict[str, Any]] = []
@@ -153,7 +155,20 @@ def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any])
         if expected_hash and actual_hash != expected_hash:
             raise ValueError(f"capture image hash mismatch: {capture['captureId']}")
         with Image.open(path) as image_handle:
+            if capture_pixels is not None:
+                if image_handle.format != "PNG":
+                    raise ValueError("RAW_EVIDENCE_CAPTURE_NOT_PNG")
+                has_alpha = "A" in image_handle.getbands() or "transparency" in image_handle.info
+                if has_alpha:
+                    alpha = image_handle.convert("RGBA").getchannel("A")
+                    if alpha.getextrema() != (255, 255):
+                        raise ValueError("RAW_EVIDENCE_ALPHA_NOT_OPAQUE")
             image = image_handle.convert("RGB")
+        if capture_pixels is not None:
+            capture_id = capture["captureId"]
+            if capture_id in capture_pixels:
+                raise ValueError("RAW_EVIDENCE_DUPLICATE_CAPTURE_ID")
+            capture_pixels[capture_id] = image.copy()
         detected = detect_rows(image, row_parameters)
         complete, edges = partition_detected_rows(detected)
         capture_evidence.append({"captureId": capture["captureId"], "batchId": capture.get("batchId"),
@@ -165,9 +180,12 @@ def _row_records(captures: list[dict[str, Any]], row_parameters: dict[str, Any])
             box = {key: int(row[key]) for key in ("top", "bottom", "height")}
             row_box = {"x": 0, "y": box["top"], "width": image.width, "height": box["height"]}
             crop = image.crop((0, box["top"], image.width, box["bottom"]))
-            complete_rows.append({"capture": capture, "captureOrdinal": capture_ordinal, "rowOrdinal": ordinal,
-                             "rowBox": row_box, "rowCrop": crop, "rowCropHash": _crop_hash(crop),
-                             "clipped": False, "boundaryContact": row.get("boundaryContact", {})})
+            row_record = {"capture": capture, "captureOrdinal": capture_ordinal, "rowOrdinal": ordinal,
+                          "rowBox": row_box, "rowCrop": crop, "rowCropHash": _crop_hash(crop),
+                          "clipped": False, "boundaryContact": row.get("boundaryContact", {})}
+            if capture_pixels is not None:
+                row_record["captureFrame"] = {"width": image.width, "height": image.height}
+            complete_rows.append(row_record)
         for ordinal, row, side in edges:
             top, bottom = int(row["top"]), int(row["bottom"])
             crop = image.crop((0, top, image.width, bottom))
@@ -307,12 +325,16 @@ def measure_geometry_candidates(captures: list[dict[str, Any]], base_lanes: dict
 
 
 def _field_record(field: str, crop: Image.Image | None, geometry: dict[str, Any],
-                  numeric_parameters: dict[str, Any], reader: Any) -> dict[str, Any]:
+                  numeric_parameters: dict[str, Any], reader: Any,
+                  adapter_result_sink: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if crop is None or not geometry.get("valid"):
-        return to_legacy_trade_draft_field(read_trade_ocr_field(
+        adapter_result = read_trade_ocr_field(
             field=field, crop=crop, geometry=geometry, reader=reader,
             visual_evidence=None, numeric_structure=None,
-        ))
+        )
+        if adapter_result_sink is not None:
+            adapter_result_sink.append(adapter_result)
+        return to_legacy_trade_draft_field(adapter_result)
     visual = _visual_evidence(crop, field, numeric_parameters, geometry.get("box"))
     boundary = {"top": False, "bottom": False}
     numeric_structure = None
@@ -324,6 +346,8 @@ def _field_record(field: str, crop: Image.Image | None, geometry: dict[str, Any]
         field=field, crop=crop, geometry=geometry, reader=reader,
         visual_evidence=visual, numeric_structure=numeric_structure,
     )
+    if adapter_result_sink is not None:
+        adapter_result_sink.append(adapter_result)
     return to_legacy_trade_draft_field(adapter_result)
 
 
@@ -458,10 +482,14 @@ def _model_hashes(model_dir: Path) -> dict[str, Any]:
 
 def _build_drafts_from_detected_rows(detected_rows: list[dict[str, Any]],
                                      selected_lanes: dict[str, dict[str, float]],
-                                     numeric_parameters: dict[str, Any], reader: Any) -> list[dict[str, Any]]:
+                                     numeric_parameters: dict[str, Any], reader: Any,
+                                     adapter_results: dict[tuple[str, str], dict[str, Any]] | None = None,
+                                     field_regions: dict[tuple[str, str], dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     drafts: list[dict[str, Any]] = []
     for item in detected_rows:
         lane_boxes, lane_errors = _lane_boxes(item["rowCrop"].width, item["rowCrop"].height, selected_lanes)
+        capture_id = item["capture"]["captureId"]
+        draft_id = f"{capture_id}:draft-row-{item['rowOrdinal']:02d}"
         fields: dict[str, Any] = {}
         for field in FIELDS:
             lane = lane_boxes.get(field, {})
@@ -471,12 +499,31 @@ def _build_drafts_from_detected_rows(detected_rows: list[dict[str, Any]],
             if lane.get("valid"):
                 box = lane["box"]
                 crop = item["rowCrop"].crop((box["x"], box["y"], box["x"] + box["width"], box["y"] + box["height"]))
-            fields[field] = _field_record(field, crop, geometry, numeric_parameters, reader)
-        capture_id = item["capture"]["captureId"]
+            if adapter_results is None:
+                fields[field] = _field_record(field, crop, geometry, numeric_parameters, reader)
+            else:
+                adapter_sink: list[dict[str, Any]] = []
+                fields[field] = _field_record(field, crop, geometry, numeric_parameters, reader, adapter_sink)
+                if adapter_sink:
+                    adapter_results[(draft_id, field)] = adapter_sink[0]
+            if field_regions is not None:
+                if crop is None:
+                    field_regions[(draft_id, field)] = {"crop": None, "box": None}
+                else:
+                    local_box = lane["box"]
+                    row_box = item["rowBox"]
+                    field_regions[(draft_id, field)] = {
+                        "crop": crop,
+                        "box": _capture_pixel_box(
+                            row_box,
+                            {key: local_box[key] for key in ("x", "y", "width", "height")},
+                            item["captureFrame"],
+                        ),
+                    }
         refs = [{"captureId": capture_id, "captureOrdinal": item["captureOrdinal"],
                  "rowOrdinal": item["rowOrdinal"], "rowCropHash": item["rowCropHash"],
                  "rowBox": item["rowBox"]}]
-        drafts.append({"draftId": f"{capture_id}:draft-row-{item['rowOrdinal']:02d}",
+        drafts.append({"draftId": draft_id,
                        "captureId": capture_id, "batchId": item["capture"].get("batchId"),
                        "ordinal": len(drafts) + 1, "rowBox": item["rowBox"], "sourceRefs": refs,
                        "rowCropHash": item["rowCropHash"], "fields": fields,
@@ -494,6 +541,255 @@ def build_batch_drafts_once(captures: list[dict[str, Any]],
             "boundaryPolicy": BOUNDARY_POLICY,
             "draftRows": _build_drafts_from_detected_rows(detected_rows, selected_lanes,
                                                             numeric_parameters, reader)}
+
+
+def _raw_id(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value or len(value) > 128:
+        raise ValueError(f"RAW_EVIDENCE_INVALID_{label.upper()}")
+    return value
+
+
+def _raw_box(box: Any, frame: dict[str, int], label: str) -> dict[str, int]:
+    if not isinstance(box, dict) or set(box) != {"x", "y", "width", "height"}:
+        raise ValueError(f"RAW_EVIDENCE_INVALID_{label.upper()}_SHAPE")
+    if any(type(box[key]) is not int for key in ("x", "y", "width", "height")):
+        raise ValueError(f"RAW_EVIDENCE_INVALID_{label.upper()}_INTEGER")
+    normalized = {key: box[key] for key in ("x", "y", "width", "height")}
+    if (normalized["x"] < 0 or normalized["y"] < 0 or normalized["width"] <= 0
+            or normalized["height"] <= 0 or normalized["x"] + normalized["width"] > frame["width"]
+            or normalized["y"] + normalized["height"] > frame["height"]):
+        raise ValueError(f"RAW_EVIDENCE_{label.upper()}_OUT_OF_BOUNDS")
+    return normalized
+
+
+def _capture_pixel_box(row_box: dict[str, int], local_box: dict[str, int],
+                       frame: dict[str, int]) -> dict[str, int]:
+    """Translate a checked row-local pixel box into the capture bitmap pixel space."""
+    checked_row = _raw_box(row_box, frame, "row_box")
+    local_frame = {"width": checked_row["width"], "height": checked_row["height"]}
+    checked_local = _raw_box(local_box, local_frame, "row_local_box")
+    return _raw_box({"x": checked_row["x"] + checked_local["x"],
+                     "y": checked_row["y"] + checked_local["y"],
+                     "width": checked_local["width"],
+                     "height": checked_local["height"]}, frame, "capture_crop_box")
+
+
+def _raw_source_fidelity(value: Any) -> dict[str, Any]:
+    keys = {"sourceWidth", "sourceHeight", "rescaled", "evidence"}
+    if not isinstance(value, dict) or set(value) != keys:
+        raise ValueError("RAW_EVIDENCE_INVALID_SOURCE_FIDELITY")
+    fidelity = {key: value[key] for key in ("sourceWidth", "sourceHeight", "rescaled", "evidence")}
+    if fidelity == {"sourceWidth": None, "sourceHeight": None, "rescaled": None, "evidence": "unknown"}:
+        return fidelity
+    if (type(fidelity["sourceWidth"]) is not int or fidelity["sourceWidth"] <= 0
+            or type(fidelity["sourceHeight"]) is not int or fidelity["sourceHeight"] <= 0
+            or type(fidelity["rescaled"]) is not bool or not isinstance(fidelity["evidence"], str)
+            or not fidelity["evidence"].strip() or fidelity["evidence"] == "unknown"):
+        raise ValueError("RAW_EVIDENCE_INVALID_SOURCE_FIDELITY")
+    return fidelity
+
+
+def _raw_confidence(score: Any) -> str | None:
+    if score is None:
+        return None
+    try:
+        decimal = Decimal(str(score))
+    except (InvalidOperation, ValueError):
+        raise ValueError("RAW_EVIDENCE_INVALID_CONFIDENCE") from None
+    if not decimal.is_finite():
+        raise ValueError("RAW_EVIDENCE_INVALID_CONFIDENCE")
+    text = format(decimal, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text
+
+
+def _raw_bytes_sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def build_raw_evidence_snapshot_v2_once(
+    captures: list[dict[str, Any]],
+    selected_lanes: dict[str, dict[str, float]],
+    row_parameters: dict[str, Any],
+    numeric_parameters: dict[str, Any],
+    reader: Any,
+    recognition_batch_id: str | None = None,
+) -> dict[str, Any]:
+    """Build the portable raw-v2 snapshot from the exact crops sent to the reader."""
+    if not isinstance(captures, list) or not 1 <= len(captures) <= 100:
+        raise ValueError("RAW_EVIDENCE_INVALID_CAPTURE_COUNT")
+    if recognition_batch_id is None:
+        recognition_batch_id = captures[0].get("batchId") if isinstance(captures[0], dict) else None
+    recognition_batch_id = _raw_id(recognition_batch_id, "recognition_batch_id")
+
+    capture_ids: list[str] = []
+    for capture in captures:
+        if not isinstance(capture, dict):
+            raise ValueError("RAW_EVIDENCE_INVALID_CAPTURE")
+        capture_id = _raw_id(capture.get("captureId"), "capture_id")
+        if capture_id in capture_ids:
+            raise ValueError("RAW_EVIDENCE_DUPLICATE_CAPTURE_ID")
+        capture_ids.append(capture_id)
+        source_type = capture.get("sourceType")
+        if not isinstance(source_type, str) or source_type not in {"FILE", "CLIPBOARD", "STREAM"}:
+            raise ValueError("RAW_EVIDENCE_INVALID_SOURCE_TYPE")
+        _raw_source_fidelity(capture.get("sourceFidelity"))
+        if type(capture.get("reencoded")) is not bool:
+            raise ValueError("RAW_EVIDENCE_INVALID_REENCODED")
+
+    capture_pixels: dict[str, Image.Image] = {}
+    detected_rows, edge_segments, capture_evidence = _row_records(captures, row_parameters, capture_pixels)
+    adapter_results: dict[tuple[str, str], dict[str, Any]] = {}
+    field_regions: dict[tuple[str, str], dict[str, Any]] = {}
+    drafts = _build_drafts_from_detected_rows(
+        detected_rows, selected_lanes, numeric_parameters, reader,
+        adapter_results=adapter_results, field_regions=field_regions,
+    )
+
+    evidence_by_capture = {item["captureId"]: item for item in capture_evidence}
+    capture_records: list[dict[str, Any]] = []
+    frames: dict[str, dict[str, int]] = {}
+    bitmap_hashes: dict[str, str] = {}
+    for capture_ordinal, capture in enumerate(captures, 1):
+        capture_id = capture["captureId"]
+        evidence = evidence_by_capture[capture_id]
+        bitmap = capture_pixels[capture_id]
+        frame = {"width": int(bitmap.width), "height": int(bitmap.height)}
+        if frame["width"] <= 0 or frame["height"] <= 0:
+            raise ValueError("RAW_EVIDENCE_INVALID_FRAME")
+        image_sha = evidence["imageHash"]
+        bitmap_sha = _raw_bytes_sha256(bitmap.tobytes())
+        if not isinstance(image_sha, str) or len(image_sha) != 64 or image_sha.lower() != image_sha:
+            raise ValueError("RAW_EVIDENCE_INVALID_IMAGE_SHA256")
+        frames[capture_id] = frame
+        bitmap_hashes[capture_id] = bitmap_sha
+        capture_records.append({
+            "captureId": capture_id,
+            "captureOrdinal": capture_ordinal,
+            "imageSha256": image_sha,
+            "bitmapSha256": bitmap_sha,
+            "sourceType": capture["sourceType"],
+            "frame": frame,
+            "sourceFidelity": _raw_source_fidelity(capture["sourceFidelity"]),
+            "reencoded": capture["reencoded"],
+            "completeRowCount": evidence["completeRowCount"],
+        })
+
+    source_rows: list[dict[str, Any]] = []
+    source_ids: set[str] = set()
+    per_capture_ordinals: dict[str, set[int]] = {capture_id: set() for capture_id in capture_ids}
+    crop_ids: set[str] = set()
+    for draft in drafts:
+        source_row_id = _raw_id(draft.get("draftId"), "source_row_id")
+        capture_id = draft.get("captureId")
+        if capture_id not in frames:
+            raise ValueError("RAW_EVIDENCE_UNKNOWN_SOURCE_CAPTURE")
+        if source_row_id in source_ids:
+            raise ValueError("RAW_EVIDENCE_DUPLICATE_SOURCE_ROW_ID")
+        if source_row_id in capture_ids:
+            raise ValueError("RAW_EVIDENCE_SOURCE_ID_COLLISION")
+        ordinal = draft.get("ordinal")
+        if type(ordinal) is not int or ordinal < 0 or ordinal in per_capture_ordinals[capture_id]:
+            raise ValueError("RAW_EVIDENCE_INVALID_SOURCE_ORDINAL")
+        per_capture_ordinals[capture_id].add(ordinal)
+        frame = frames[capture_id]
+        row_box = _raw_box(draft.get("rowBox"), frame, "row_box")
+        fields = draft.get("fields")
+        if not isinstance(fields, dict) or tuple(fields.keys()) != FIELDS:
+            raise ValueError("RAW_EVIDENCE_INVALID_DRAFT_FIELDS")
+        raw_fields: list[dict[str, Any]] = []
+        for field in FIELDS:
+            adapter = adapter_results.get((source_row_id, field))
+            region = field_regions.get((source_row_id, field))
+            if adapter is None or region is None:
+                raise ValueError("RAW_EVIDENCE_FIELD_ACCOUNTING_MISMATCH")
+            raw_value = adapter["raw"]["text"]
+            if raw_value is not None and not isinstance(raw_value, str):
+                raise ValueError("RAW_EVIDENCE_INVALID_RAW_TEXT")
+            raw_numeric = adapter["parse"]["numericCandidate"]
+            if field not in NUMERIC_FIELDS:
+                raw_numeric = None
+            elif raw_numeric is not None and (type(raw_numeric) is not int or abs(raw_numeric) > 9007199254740991):
+                raise ValueError("RAW_EVIDENCE_INVALID_RAW_NUMERIC")
+            crop_refs: list[dict[str, Any]] = []
+            crop = region["crop"]
+            if crop is not None:
+                box = _raw_box(region["box"], frame, "crop_box")
+                capture_bitmap = capture_pixels[capture_id]
+                capture_crop = capture_bitmap.crop((box["x"], box["y"],
+                                                    box["x"] + box["width"], box["y"] + box["height"]))
+                ocr_rgb = crop.convert("RGB")
+                if (capture_crop.size != ocr_rgb.size or capture_crop.tobytes() != ocr_rgb.tobytes()):
+                    raise ValueError("RAW_EVIDENCE_OCR_CROP_PIXEL_MISMATCH")
+                crop_ref_id = _raw_id(f"{source_row_id}:{field}", "crop_ref_id")
+                if crop_ref_id in crop_ids:
+                    raise ValueError("RAW_EVIDENCE_DUPLICATE_CROP_REF_ID")
+                crop_ids.add(crop_ref_id)
+                crop_refs.append({
+                    "cropRefId": crop_ref_id,
+                    "sourceRowId": source_row_id,
+                    "captureId": capture_id,
+                    "field": field,
+                    "bitmapSha256": bitmap_hashes[capture_id],
+                    "frame": dict(frame),
+                    "coordinateSpace": "CAPTURE_BITMAP_PIXELS",
+                    "box": box,
+                    "pixelHashBasis": "RGB8_ROW_MAJOR_V1",
+                    "pixelSha256": _raw_bytes_sha256(ocr_rgb.tobytes()),
+                    "pngArtifactSha256": None,
+                })
+            raw_fields.append({
+                "field": field,
+                "rawText": raw_value,
+                "rawNumeric": raw_numeric,
+                "readerStatus": adapter["status"],
+                "confidence": _raw_confidence(adapter["raw"]["score"]),
+                "cropRefs": crop_refs,
+            })
+        source_rows.append({"sourceRowId": source_row_id, "captureId": capture_id,
+                            "ordinal": ordinal, "rowBox": row_box, "fields": raw_fields})
+        source_ids.add(source_row_id)
+
+    if len(source_rows) != len(detected_rows):
+        raise ValueError("RAW_EVIDENCE_SOURCE_ACCOUNTING_MISMATCH")
+    for record in capture_records:
+        count = sum(row["captureId"] == record["captureId"] for row in source_rows)
+        if record["completeRowCount"] != count:
+            raise ValueError("RAW_EVIDENCE_COMPLETE_ROW_COUNT_MISMATCH")
+
+    edge_records: list[dict[str, Any]] = []
+    edge_ids: set[str] = set()
+    for edge in edge_segments:
+        capture_id = edge.get("captureId")
+        if capture_id not in frames:
+            raise ValueError("RAW_EVIDENCE_UNKNOWN_EDGE_CAPTURE")
+        ordinal = edge.get("detectorOrdinal")
+        if type(ordinal) is not int or ordinal < 0:
+            raise ValueError("RAW_EVIDENCE_INVALID_EDGE_ORDINAL")
+        edge_id = _raw_id(f"{capture_id}:edge-row-{ordinal}", "edge_id")
+        if edge_id in edge_ids or edge_id in capture_ids or edge_id in source_ids:
+            raise ValueError("RAW_EVIDENCE_EDGE_ID_COLLISION")
+        edge_ids.add(edge_id)
+        reasons = edge.get("reasonCodes")
+        reason = next((value for value in reasons if isinstance(value, str) and value.strip()), None) if isinstance(reasons, list) else None
+        if reason is None:
+            reason = "IMAGE_BOUNDARY_CONTACT"
+        box = _raw_box(edge.get("rowBox"), frames[capture_id], "edge_row_box")
+        edge_records.append({
+            "edgeId": edge_id,
+            "captureId": capture_id,
+            "ordinal": ordinal,
+            "reason": reason,
+            "rowBox": box,
+            "sourceRefs": [{"sourceRowId": edge_id, "captureId": capture_id, "ordinal": ordinal}],
+        })
+
+    all_ids = set(capture_ids) | source_ids | edge_ids
+    if len(all_ids) != len(capture_ids) + len(source_ids) + len(edge_ids):
+        raise ValueError("RAW_EVIDENCE_CAPTURE_SOURCE_EDGE_ID_COLLISION")
+    return {"schemaVersion": 2, "recognitionBatchId": recognition_batch_id,
+            "captures": capture_records, "sourceRows": source_rows, "edgeSegments": edge_records}
 
 
 def run_batch(captures: list[dict[str, Any]], selected_lanes: dict[str, dict[str, float]],
