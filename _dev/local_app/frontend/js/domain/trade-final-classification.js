@@ -234,7 +234,7 @@ function classifyCore({ row, group, pixelAvailability }) {
       const authority = candidate?.authorityStatus ?? candidate?.nameStatus;
       if (!candidate || !["VERIFIED_CURATED", "VERIFIED_REFERENCE"].includes(authority)) {
         review = true;
-        if (!riskCodes.some((code) => REVIEW_RISKS.has(code))) fieldReasons.push(`${fieldName}:${authority === "LEGACY_UNVERIFIED" ? "LEGACY_UNVERIFIED" : "IDENTITY_UNRESOLVED"}`);
+        if (!riskCodes.length) fieldReasons.push(`${fieldName}:${authority === "LEGACY_UNVERIFIED" ? "LEGACY_UNVERIFIED" : "IDENTITY_UNRESOLVED"}`);
       }
       if (authority === "DISPUTED" || authority === "DEPRECATED") review = true;
       if (authority === "OPEN_WORLD") { review = true; fieldReasons.push(`${fieldName}:OPEN_WORLD_FROM_ITEM`); }

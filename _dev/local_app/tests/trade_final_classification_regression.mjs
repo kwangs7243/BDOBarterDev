@@ -104,6 +104,26 @@ const testRisk = (risk, expected, mutate = (field) => { field.riskReasons.push({
 for (const risk of ["MASTER_UNRESOLVED", "SOURCE_CONFLICT", "AMBIGUOUS_MATCH", "NO_MATCH", "MASTER_DISPUTED", "MASTER_DEPRECATED", "BOUNDED_UNIQUE_MATCH", "NUMERIC_COMPLETENESS_UNVERIFIED", "NUMERIC_MISSING_OR_INVALID", "OPEN_WORLD_FROM_ITEM", "OCR_ERROR"]) {
   testRisk(risk, "NEEDS_REVIEW");
 }
+const reviewCases = [
+  ["LEGACY_UNVERIFIED", (field) => { field.selectedCandidate.authorityStatus = "LEGACY_UNVERIFIED"; field.selectedCandidate.nameStatus = "LEGACY_UNVERIFIED"; field.riskReasons.push({ code: "MASTER_UNRESOLVED" }); }],
+  ["MASTER_DISPUTED", (field) => { field.selectedCandidate.authorityStatus = "DISPUTED"; field.selectedCandidate.nameStatus = "DISPUTED"; field.finalStatus = "MASTER_DISAGREEMENT"; field.riskReasons.push({ code: "MASTER_DISPUTED" }); }],
+  ["MASTER_DEPRECATED", (field) => { field.selectedCandidate.authorityStatus = "DEPRECATED"; field.selectedCandidate.nameStatus = "DEPRECATED"; field.finalStatus = "MASTER_DEPRECATED"; field.riskReasons.push({ code: "MASTER_DEPRECATED" }); }],
+  ["BOUNDED_UNIQUE_MATCH", (field) => { field.selectedCandidate.matchKind = "BOUNDED_UNIQUE_MATCH"; field.riskReasons.push({ code: "BOUNDED_UNIQUE_MATCH" }); }],
+  ["AMBIGUOUS_MATCH", (field) => { field.selectedCandidate = null; field.finalStatus = "AMBIGUOUS"; field.riskReasons.push({ code: "AMBIGUOUS_MATCH" }); }],
+  ["UNMATCHED", (field) => { field.selectedCandidate = null; field.finalStatus = "UNMATCHED"; field.riskReasons.push({ code: "NO_MATCH" }); }],
+];
+for (const [name, mutate] of reviewCases) {
+  const result = readyCorrection();
+  mutate(result.sourceRows[0].fields.toItem); mutate(result.logicalRows[0].fields.toItem);
+  const projection = build(result);
+  assert.equal(projection.rows[0].classification, "NEEDS_REVIEW", name);
+  assert.ok(projection.rows[0].fields[3].finalValue !== null, `${name} candidate remains reviewable`);
+}
+const missingNumber = readyCorrection();
+for (const field of [missingNumber.sourceRows[0].fields.reqAmount, missingNumber.logicalRows[0].fields.reqAmount]) {
+  field.finalValue = null; field.normalized.value = null; field.selectedCandidate = null; field.parse.candidate = null; field.riskReasons.push({ code: "NUMERIC_MISSING_OR_INVALID" });
+}
+assert.equal(build(missingNumber).rows[0].classification, "NEEDS_REVIEW", "missing numeric value is retained as a review row");
 for (const risk of ["FIELD_CLIPPED", "GEOMETRY_ABSTAIN"]) testRisk(risk, "NEEDS_RECAPTURE");
 
 for (const state of ["MISSING", "EXPIRED", "INVALID"]) {
