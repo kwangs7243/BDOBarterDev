@@ -77,7 +77,7 @@ export function buildTradeBatchReconciliation({ captures, draftRows, policyVersi
   const positions = new Set();
   const sourceRows = draftRows.map((row, projectionSourceIndex) => {
     if (!record(row) || row.status !== "DRAFT_UNVERIFIED" || row.automationDecision !== "REVIEW"
-        || !captureIndex.has(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 1) {
+        || !captureIndex.has(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 0) {
       throw new TypeError(`draftRows[${projectionSourceIndex}] has invalid source position`);
     }
     const position = `${row.captureId}\0${row.ordinal}`;

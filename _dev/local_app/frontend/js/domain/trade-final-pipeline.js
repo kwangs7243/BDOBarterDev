@@ -47,7 +47,7 @@ function validateSnapshot(rawEvidence) {
   const captureOrdinal = new Map(rawEvidence.captures.map((capture) => [capture.captureId, capture.captureOrdinal]));
   for (const [index, row] of rawEvidence.sourceRows.entries()) {
     if (!isRecord(row) || typeof row.sourceRowId !== "string" || !row.sourceRowId || rowIds.has(row.sourceRowId)
-        || !captureIds.has(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 1
+        || !captureIds.has(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 0
         || (captureOrdinal.get(row.captureId) < priorCaptureOrdinal)
         || (captureOrdinal.get(row.captureId) === priorCaptureOrdinal && row.ordinal <= priorRowOrdinal)
         || !(row.rowBox === null || isRecord(row.rowBox)) || !Array.isArray(row.fields) || row.fields.length !== FIELDS.length) {
@@ -113,7 +113,7 @@ export function adaptRawEvidenceSnapshot2ToCorrectionInput(rawEvidence) {
   });
 }
 
-export function buildTradeFinalShadowPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy } = {}) {
+function buildPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy }) {
   if (!isRecord(correctionPolicy) || typeof correctionPolicy.policyVersion !== "string" || !correctionPolicy.policyVersion.trim()) {
     fail("correctionPolicy with a nonempty policyVersion is required");
   }
@@ -139,14 +139,23 @@ export function buildTradeFinalShadowPipeline({ rawEvidence, masterBundle, pixel
     pixelAvailability,
   });
   const projection = buildClassifiedFinalProjection3({ correctionResult, rawEvidenceHash, pixelAvailability });
+  return { rawEvidenceHash, rawObservation, preliminaryReconciliation, correctionResult, projection };
+}
+
+export function buildTradeFinalShadowPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy } = {}) {
   return deepFreeze({
     schemaVersion: 1,
     pipelineKind: "TRADE_FINAL_SHADOW_PIPELINE",
     activation: "SHADOW_ONLY",
-    rawEvidenceHash,
-    rawObservation,
-    preliminaryReconciliation,
-    correctionResult,
-    projection,
+    ...buildPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy }),
+  });
+}
+
+export function buildTradeFinalPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy } = {}) {
+  return deepFreeze({
+    schemaVersion: 1,
+    pipelineKind: "TRADE_FINAL_PIPELINE",
+    activation: "ACTIVE",
+    ...buildPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy }),
   });
 }

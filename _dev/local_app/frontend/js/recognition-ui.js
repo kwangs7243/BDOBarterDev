@@ -1,10 +1,16 @@
 import { state } from "./state.js";
 import { CaptureError, CaptureQueue, DEFAULT_TRADE_ROI, PreviewRegistry, ScreenCaptureSession, captureFromFile, captureFromPaste, captureLimits, displayedVideoContentRect, isEditableTarget, moveNormalizedRegion, normalizeRegion, resizeNormalizedRegion } from "./capture.js";
-import { getTradeRecognitionRuntime, recognizeTradeBatch } from "./trade-recognition-client.js";
+import { getTradeRecognitionRuntime, recognizeTradeBatch, recognizeTradeBatchV2 } from "./trade-recognition-client.js";
 import { mountTradeRecognitionReview } from "./trade-recognition-review.js";
 import { validateReviewedTradeBatch } from "./domain/reviewed-trade-dto.js";
+import { masterBundleContentHash, validateMasterBundleV2 } from "./domain/trade-master-bundle.js";
+import { buildFinalReviewObservationRequest } from "./domain/trade-final-evidence.js";
 import { buildReviewedTradeSessionStage } from "./domain/trade-session-staging.js";
 import { confirmWorkingSessionSnapshot, refreshPersistentState, sendWorkingSessionSnapshot, whenPersistenceIdle } from "./persistence.js";
+import { runTradeFinalFlow } from "./trade-final-shadow.js";
+
+const FINAL_CORRECTION_POLICY = Object.freeze({ policyVersion: "trade-final-correction-v1", boundedMatchPolicy: "V1_UNIQUE_BOUNDED_0.75" });
+const legacyReviewFirstCompatibility = new URLSearchParams(window.location.search).get("tradeCompatibility") === "REVIEW_FIRST";
 
 function captureContext(taskType) {
   const sessionId = state.session?.id;
@@ -96,6 +102,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeRecognitionResult = null;
   let tradeRecognitionResultRevision = null;
   let tradeReviewController = null;
+  let tradeFinalFlow = null;
   let tradeReviewGeneration = 0;
   let tradeReviewForResult = null;
   let tradeReviewMountPromise = null;
@@ -131,6 +138,19 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const copy = JSON.parse(JSON.stringify(value));
     const freeze = (item) => { if (item && typeof item === "object" && !Object.isFrozen(item)) { Object.freeze(item); Object.values(item).forEach(freeze); } return item; };
     return freeze(copy);
+  };
+  const loadPinnedMasterBundle = async () => {
+    const response = await fetch("/api/master/active", { credentials: "same-origin", cache: "no-store" });
+    if (!response.ok) throw new Error(`활성 Master를 읽지 못했습니다 (${response.status}).`);
+    const active = await response.json();
+    const bundle = active?.bundle;
+    if (active?.ok !== true || typeof active.activeRegistryVersion !== "string" || !active.activeRegistryVersion.trim()
+        || !bundle || bundle.schemaVersion !== 2 || bundle.registryVersion !== active.activeRegistryVersion) {
+      throw new Error("활성 Master Bundle2가 없습니다. Master를 검수·저장한 뒤 다시 시도하세요.");
+    }
+    const validation = validateMasterBundleV2(bundle);
+    if (!validation.ok || masterBundleContentHash(bundle) !== bundle.contentHash) throw new Error("활성 Master Bundle2 검증에 실패했습니다.");
+    return cloneFrozen(bundle);
   };
   const renderSessionApplyPanel = () => {
     sessionApplyPanel.replaceChildren();
@@ -203,8 +223,10 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       if (!response.ok || body?.ok !== true || !body.observation) throw new Error("저장된 검수 자료를 읽지 못했습니다.");
       const observation = body.observation;
       if (observation.observationId !== saved.observationId || observation.completion?.recognitionBatchId !== saved.batchId) throw new Error("저장된 검수 자료의 식별 정보가 다릅니다.");
+      const isV3 = saved.expectedReview.schemaVersion === 3;
       const nextBatch = validateReviewedTradeBatch({ storedObservation: observation, evidenceReceipt: saved.receipt,
-        expectedReview: saved.expectedReview, exclusions: [...reviewedExclusions.values()], mappingPolicyVersion: "reviewed-trade-dto-mapping-v1" });
+        expectedReview: saved.expectedReview, exclusions: [...reviewedExclusions.values()],
+        mappingPolicyVersion: isV3 ? "reviewed-trade-dto-mapping-v3" : "reviewed-trade-dto-mapping-v1" });
       if (refreshRevision !== reviewedBatchRefreshRevision) return;
       reviewedBatch = nextBatch;
     } catch (error) {
@@ -348,11 +370,16 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       }
       job.receipt = body.receipt;
       const completion = job.payload.completion;
-      const expectedReview = { observationId: body.receipt.observationId, mutationId: job.payload.mutationId,
-        recognitionBatchId: completion.recognitionBatchId, projectionHash: completion.projectionHash,
-        registryVersion: completion.registryVersion, correctionVersion: completion.correctionVersion,
-        reviewRevision: completion.reviewRevision, confirmationRevision: job.payload.confirmationRevision };
-      tradeSavedObservation = cloneFrozen({ observationId: body.receipt.observationId, batchId: completion.recognitionBatchId,
+      const expectedReview = job.payload.schemaVersion === 3
+        ? { schemaVersion: 3, recognitionBatchId: completion.recognitionBatchId, projectionHash: completion.projectionHash,
+          reviewRevision: completion.reviewRevision, masterBinding: completion.masterBinding, correctionVersion: completion.correctionVersion,
+          completionValuesHash: completion.batchConfirmation.completionValuesHash, pixelAvailability: job.payload.projection.pixelAvailability }
+        : { observationId: body.receipt.observationId, mutationId: job.payload.mutationId,
+          recognitionBatchId: completion.recognitionBatchId, projectionHash: completion.projectionHash,
+          registryVersion: completion.registryVersion, correctionVersion: completion.correctionVersion,
+          reviewRevision: completion.reviewRevision, confirmationRevision: job.payload.confirmationRevision };
+      tradeSavedObservation = cloneFrozen({ schemaVersion: job.payload.schemaVersion ?? 1,
+        observationId: body.receipt.observationId, batchId: completion.recognitionBatchId,
         receipt: body.receipt, expectedReview });
       reviewedBatch = null;
       reviewedExclusions = new Map();
@@ -370,18 +397,30 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const postSelectedTradeCrops = async (job) => {
     try {
       if (!job.crops) job.crops = await job.createSelectedCrops();
-      else if (job.crops.some((item) => item.entry.selected && item.entry.geometry && !item.blob && !item.receipt)) {
+      else if (job.crops.some((item) => item.entry.selected && (job.payload.schemaVersion === 3
+        ? item.entry.cropRefId : item.entry.geometry) && !item.blob && !item.receipt)) {
         const regenerated = await job.createSelectedCrops();
         const byKey = new Map(regenerated.map((item) => [`${item.entry.projectionRowId}\0${item.entry.field}`, item]));
-        for (const item of job.crops) if (!item.blob && !item.receipt) item.blob = byKey.get(`${item.entry.projectionRowId}\0${item.entry.field}`)?.blob ?? null;
+        for (const item of job.crops) if (!item.blob && !item.receipt) {
+          const replacement = byKey.get(`${item.entry.projectionRowId}\0${item.entry.field}`);
+          item.blob = replacement?.blob ?? null;
+          if (replacement && job.payload.schemaVersion === 3) {
+            item.pixelSha256 = replacement.pixelSha256; item.width = replacement.width; item.height = replacement.height;
+          }
+        }
       }
       let failed = false;
       let nonRetryable = false;
       for (const item of job.crops) {
-        if (!item.entry.selected || !item.entry.geometry || item.receipt) continue;
+        const v3Crop = job.payload.schemaVersion === 3;
+        if (!item.entry.selected || (v3Crop ? !item.entry.cropRefId : !item.entry.geometry) || item.receipt) continue;
         if (!item.blob) { failed = true; continue; }
-        if (!item.metadata) item.metadata = { version: 1, cropMutationId: crypto.randomUUID(), projectionRowId: item.entry.projectionRowId,
-          field: item.entry.field, sha256: await sha256Blob(item.blob), width: item.entry.geometry.width, height: item.entry.geometry.height };
+        if (!item.metadata) item.metadata = v3Crop
+          ? { schemaVersion: 3, cropMutationId: crypto.randomUUID(), projectionRowId: item.entry.projectionRowId,
+            field: item.entry.field, cropRefId: item.entry.cropRefId, sha256: await sha256Blob(item.blob),
+            pixelSha256: item.pixelSha256, width: item.width, height: item.height }
+          : { version: 1, cropMutationId: crypto.randomUUID(), projectionRowId: item.entry.projectionRowId,
+            field: item.entry.field, sha256: await sha256Blob(item.blob), width: item.entry.geometry.width, height: item.entry.geometry.height };
         const form = new FormData(); form.append("metadata", JSON.stringify(item.metadata)); form.append("image", item.blob, "review-crop.png");
         try {
           const response = await fetch(`/api/recognition/trade-review-observations/${job.receipt.observationId}/crops`, { method: "POST", credentials: "same-origin", cache: "no-store", body: form });
@@ -397,6 +436,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         { retry: !nonRetryable, download: true });
       } else {
         tradeObservationJob = null;
+        if (job.payload.schemaVersion === 3) tradeFinalFlow?.sourceEvidence?.clear?.();
         setTradeStorageStatus("검수와 선택된 원본 영역 저장이 완료됐습니다. 회차 목록에는 적용되지 않았습니다.", { download: true });
       }
     } catch {
@@ -573,6 +613,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     updateRecognitionControls();
   };
   const invalidateRecognitionResult = (message = "대기 이미지가 변경되었습니다. 다시 인식하세요.") => {
+    if (tradeFinalFlow) {
+      tradeFinalFlow.destroy();
+      tradeFinalFlow = null;
+      tradeReviewController = null;
+    }
     tradeRecognitionResult = null;
     tradeRecognitionResultRevision = null;
     renderTradeRecognitionResult();
@@ -712,6 +757,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeQueueRevision += 1;
     tradePreviews.clear();
     tradeBatchId = null;
+    if (tradeFinalFlow) { tradeFinalFlow.destroy(); tradeFinalFlow = null; tradeReviewController = null; }
     tradeRecognitionResult = null;
     tradeRecognitionResultRevision = null;
     renderTradeRecognitionResult();
@@ -729,21 +775,91 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     updateRecognitionControls();
     renderTradeQueue();
     try {
-      const result = await recognizeTradeBatch(captures);
-      if (requestRevision !== tradeQueueRevision) {
-        invalidateRecognitionResult("대기 이미지가 변경되어 인식 결과를 사용하지 않았습니다. 다시 인식하세요.");
+      if (tradeFinalFlow) { tradeFinalFlow.destroy(); tradeFinalFlow = null; tradeReviewController = null; }
+      tradeRecognitionResult = null;
+      tradeRecognitionResultRevision = null;
+      tradeReviewRoot.replaceChildren();
+      if (legacyReviewFirstCompatibility) {
+        const result = await recognizeTradeBatch(captures);
+        if (requestRevision !== tradeQueueRevision) {
+          invalidateRecognitionResult("대기 이미지가 변경되어 인식 결과를 사용하지 않았습니다. 다시 인식하세요.");
+          return;
+        }
+        tradeRecognitionResult = result;
+        tradeRecognitionResultRevision = requestRevision;
+        tradeRecognitionStatus.textContent = "인식 결과를 받았습니다. 검수 화면을 준비하는 중…";
+        const mountResult = await renderTradeRecognitionResult();
+        if (requestRevision !== tradeQueueRevision || result !== tradeRecognitionResult) return;
+        if (mountResult?.status === "mounted") {
+          tradeRecognitionStatus.textContent = result.draftRows.length === 0
+            ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
+            : "인식 결과를 검수 창에 표시했습니다. 목록에는 아직 적용되지 않았습니다.";
+        }
         return;
       }
-      tradeRecognitionResult = result;
-      tradeRecognitionResultRevision = requestRevision;
-      tradeRecognitionStatus.textContent = "인식 결과를 받았습니다. 검수 화면을 준비하는 중…";
-      const mountResult = await renderTradeRecognitionResult();
-      if (requestRevision !== tradeQueueRevision || result !== tradeRecognitionResult) return;
-      if (mountResult?.status === "mounted") {
-        tradeRecognitionStatus.textContent = result.draftRows.length === 0
-          ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
-          : "인식 결과를 검수 창에 표시했습니다. 목록에는 아직 적용되지 않았습니다.";
+      const masterBundle = await loadPinnedMasterBundle();
+      const finalFlow = await runTradeFinalFlow({
+        captures,
+        masterBundle,
+        root: tradeReviewRoot,
+        reviewRevision: requestRevision,
+        correctionPolicy: FINAL_CORRECTION_POLICY,
+        getConfirmedAt: async () => new Date().toISOString(),
+        onConfirm: async (completion) => {
+          if (tradeObservationJob) {
+            setTradeStorageStatus("앞선 검수 자료의 저장/재시도가 끝난 뒤 새 검수를 완료할 수 있습니다.", { retry: true, download: true });
+            return;
+          }
+          const sourceContext = {
+            schemaVersion: 3,
+            authority: "CLIENT_ATTESTED",
+            rawEvidence: { hashBasis: "TRADE_RAW_EVIDENCE_JSON_V2", rawEvidenceHash: finalFlow.pipeline.rawEvidenceHash,
+              snapshot: finalFlow.rawEvidence },
+            masterBundle: { binding: finalFlow.pipeline.projection.masterBinding, snapshot: masterBundle },
+            audit: finalFlow.audit,
+          };
+          const observation = buildFinalReviewObservationRequest({
+            projection: finalFlow.pipeline.projection,
+            completion,
+            sourceContext,
+            mutationId: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+          });
+          const createSelectedCrops = async () => {
+            const crops = [];
+            for (const entry of observation.cropPlan.entries) {
+              if (!entry.selected || !entry.cropRefId) continue;
+              const crop = await finalFlow.sourceEvidence.createDisplayCrop(entry.cropRefId);
+              crops.push({ entry, blob: crop.blob, pixelSha256: crop.pixelSha256, width: crop.width, height: crop.height });
+            }
+            return crops;
+          };
+          const body = JSON.stringify(observation);
+          tradeObservationJob = { payload: observation, body, createSelectedCrops, receipt: null, crops: null };
+          if (new TextEncoder().encode(body).byteLength > 8 * 1024 * 1024) {
+            setTradeStorageStatus("검수 JSON이 8 MiB 제한을 넘었습니다. 자료를 내려받아 오류를 확인하세요.", { download: true });
+            return;
+          }
+          await postTradeObservation();
+        },
+        onClose: () => {},
+      });
+      if (requestRevision !== tradeQueueRevision) {
+        finalFlow.destroy();
+        tradeRecognitionStatus.textContent = "대기 이미지가 변경되어 인식 결과를 사용하지 않았습니다. 다시 인식하세요.";
+        return;
       }
+      tradeFinalFlow = finalFlow;
+      tradeRecognitionResultRevision = requestRevision;
+      tradeReviewController = finalFlow.reviewController;
+      tradeReviewRoot.hidden = false;
+      tradeReviewRoot.append(reviewStorage);
+      reviewLauncher.textContent = `최종 인식 결과 ${finalFlow.pipeline.projection.rows.length}행 · 검수 창 열기`;
+      tradeRecognitionResultRegion.hidden = false;
+      openReviewDialog();
+      tradeRecognitionStatus.textContent = finalFlow.rawEvidence.sourceRows.length === 0
+        ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
+        : "최종 보정 결과를 검수 창에 표시했습니다. 회차 목록에는 아직 적용되지 않았습니다.";
     } catch (error) {
       tradeRecognitionStatus.textContent = error?.message || "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.";
     } finally {
@@ -856,6 +972,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     screenSession.disconnectScreen("beforeunload");
     tradePreviews.clear();
     tradeQueue.clear();
+    tradeFinalFlow?.destroy?.();
   });
 
   return {
@@ -867,6 +984,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       previewResizeObserver?.disconnect();
       tradeReviewController?.destroy();
       tradeReviewController = null;
+      tradeFinalFlow?.destroy?.();
+      tradeFinalFlow = null;
       tradePreviews.clear();
       tradeQueue.clear();
     },

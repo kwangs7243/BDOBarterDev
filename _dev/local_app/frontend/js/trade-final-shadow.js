@@ -1,7 +1,7 @@
 import { recognizeTradeBatchV2 as defaultRecognizeTradeBatchV2 } from "./trade-recognition-client.js";
 import { createTradeSourceEvidenceCache as defaultCreateSourceEvidenceCache } from "./trade-source-evidence.js";
 import { mountTradeFinalReview as defaultMountTradeFinalReview } from "./trade-final-review.js";
-import { buildTradeFinalShadowPipeline } from "./domain/trade-final-pipeline.js";
+import { buildTradeFinalPipeline, buildTradeFinalShadowPipeline } from "./domain/trade-final-pipeline.js";
 
 function fail(message) { throw new TypeError(message); }
 function validateInput(input) {
@@ -23,7 +23,7 @@ function validateInput(input) {
   return { captures, masterBundle, root, reviewRevision, correctionPolicy, getConfirmedAt, onConfirm, onClose, recognize, createCache, mountReview };
 }
 
-export async function runTradeFinalShadow(input = {}) {
+async function executeTradeFinalFlow(input, active) {
   const args = validateInput(input);
   const { captures, masterBundle, root, reviewRevision, correctionPolicy, getConfirmedAt, onConfirm, onClose,
     recognize, createCache, mountReview } = args;
@@ -41,13 +41,18 @@ export async function runTradeFinalShadow(input = {}) {
   };
   try {
     sourceEvidence.retainCaptures(captures);
+    const recognitionStartedAt = new Date().toISOString();
+    const recognitionStartedMs = Date.now();
     const result = await recognize(captures);
+    const recognitionFinishedAt = new Date().toISOString();
+    const recognitionFinishedMs = Date.now();
     if (!result || typeof result !== "object" || result.version !== 2 || result.status !== "RAW_EVIDENCE_ONLY"
         || !result.rawEvidence || result.batchId !== result.rawEvidence.recognitionBatchId) fail("recognition adapter returned an invalid RawEvidenceSnapshot2 result");
     const rawEvidence = result.rawEvidence;
     const pixelAvailability = await sourceEvidence.buildPixelAvailability(rawEvidence);
     if (!Array.isArray(pixelAvailability)) fail("pixel availability verification did not return a list");
-    const pipeline = buildTradeFinalShadowPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy });
+    const buildPipeline = active ? buildTradeFinalPipeline : buildTradeFinalShadowPipeline;
+    const pipeline = buildPipeline({ rawEvidence, masterBundle, pixelAvailability, correctionPolicy });
     reviewController = await mountReview({
       root,
       projection: pipeline.projection,
@@ -61,9 +66,19 @@ export async function runTradeFinalShadow(input = {}) {
       onClose,
     });
     if (!reviewController || typeof reviewController.destroy !== "function") fail("review mount did not return a controller");
-    return { result, rawEvidence, sourceEvidence, pipeline, reviewController, destroy: cleanup };
+    return { result, rawEvidence, sourceEvidence, pipeline, reviewController,
+      audit: { recognitionStartedAt, recognitionFinishedAt, latencyMs: Math.max(0, recognitionFinishedMs - recognitionStartedMs), gameVersion: null },
+      destroy: cleanup };
   } catch (error) {
     cleanup();
     throw error;
   }
+}
+
+export function runTradeFinalFlow(input = {}) {
+  return executeTradeFinalFlow(input, true);
+}
+
+export function runTradeFinalShadow(input = {}) {
+  return executeTradeFinalFlow(input, false);
 }

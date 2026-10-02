@@ -100,7 +100,7 @@ try {
   const activePortPath = join(profile, "chrome-profile", "DevToolsActivePort");
   const activePortText = await waitFor(async () => { try { return await readFile(activePortPath, "utf8"); } catch { return false; } }, "Chrome DevTools endpoint");
   const debugPort = activePortText.trim().split(/\r?\n/)[0];
-  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT" });
+  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(`${baseUrl}?tradeCompatibility=REVIEW_FIRST`)}`, { method: "PUT" });
   assert.equal(targetResponse.ok, true);
   const target = await targetResponse.json(); socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolveOpen, reject) => { socket.addEventListener("open", resolveOpen, { once: true }); socket.addEventListener("error", reject, { once: true }); });
@@ -108,6 +108,14 @@ try {
   socket.addEventListener("message", (event) => { const message = JSON.parse(event.data); if (!message.id || !pending.has(message.id)) return; const waiter = pending.get(message.id); pending.delete(message.id); message.error ? waiter.reject(new Error(message.error.message)) : waiter.resolve(message.result); });
   send = (method, params = {}) => new Promise((resolveMessage, reject) => { const id = ++nextId; pending.set(id, { resolve: resolveMessage, reject }); socket.send(JSON.stringify({ id, method, params })); });
   const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails)); return result.result?.value; };
+  let reloadSequence = 0;
+  const reloadAndWait = async (label) => {
+    const marker = `review-session-reload-${++reloadSequence}`;
+    await evaluate(`window.__reviewSessionReloadMarker=${JSON.stringify(marker)}`);
+    try { await send("Page.reload", { ignoreCache: true }); }
+    catch (error) { if (!error.message.includes("Inspected target navigated or closed")) throw error; }
+    await waitFor(async () => evaluate(`window.__reviewSessionReloadMarker!==${JSON.stringify(marker)} && document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'`), label);
+  };
   await send("Page.enable"); await send("Runtime.enable"); await send("DOM.enable");
   await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1.3, mobile: false });
   await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "app bootstrap");
@@ -375,8 +383,7 @@ try {
   assert.equal(await evaluate("document.querySelectorAll('.trade-review-input').length"), 0);
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "0");
   assert.equal(await evaluate("window.__r005CompletionEvents"), 2, "queue mutation cannot emit another completion");
-  await send("Page.reload", { ignoreCache: true });
-  await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "reload restores staged reviewed session");
+  await reloadAndWait("reload restores staged reviewed session");
   const reloaded = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   await waitFor(async () => evaluate(`document.querySelectorAll('.trade-row').length===${reloaded.workingSession.scannedTrades.length}`), "trade list after session reload");
   assert.equal(reloaded.workingSession.id, firstApplied.workingSession.id);
@@ -421,8 +428,7 @@ try {
   assert.deepEqual(Object.keys(v3NewResult.row).sort(), ["count", "fromItem", "island", "reqAmount", "toItem", "yield"].sort());
   assert.equal(v3NewResult.row.count, 0); assert.equal(v3NewResult.observationRef.schemaVersion, 3);
   const v3BatchesForAppend = await evaluate("JSON.stringify(window.__v3Batches)").then(JSON.parse);
-  await send("Page.reload", { ignoreCache: true });
-  await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "v3 NEW durable session reload");
+  await reloadAndWait("v3 NEW durable session reload");
   let v3Bootstrap = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   await waitFor(async () => evaluate("document.querySelectorAll('.trade-row').length===1"), "v3 NEW rendered session row");
   assert.equal(v3Bootstrap.workingSession.id, "50000000-0000-4000-8000-000000000011");
@@ -445,8 +451,7 @@ try {
   })()`);
   assert.equal(v3AppendResults.status, "READY"); assert.equal(v3AppendResults.rows.length, 2);
   assert.equal(v3AppendResults.duplicate, "NO_CHANGE"); assert.equal(v3AppendResults.numeric, "BLOCKED"); assert.equal(v3AppendResults.input, "BLOCKED");
-  await send("Page.reload", { ignoreCache: true });
-  await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "v3 APPEND durable session reload");
+  await reloadAndWait("v3 APPEND durable session reload");
   v3Bootstrap = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   await waitFor(async () => evaluate("document.querySelectorAll('.trade-row').length===2"), "v3 APPEND rendered rows");
   assert.equal(v3Bootstrap.workingSession.scannedTrades.length, 2);

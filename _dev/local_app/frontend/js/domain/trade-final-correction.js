@@ -394,7 +394,7 @@ function validateRows(draftRows) {
   const ids = new Set();
   return draftRows.map((row, index) => {
     if (!isRecord(row) || row.status !== "DRAFT_UNVERIFIED" || row.automationDecision !== "REVIEW"
-        || !nonempty(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 1) throw new TypeError(`draftRows[${index}] is not a valid R003 recognition draft`);
+        || !nonempty(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 0) throw new TypeError(`draftRows[${index}] is not a valid R003 recognition draft`);
     const rowId = nonempty(row.rowId) ? row.rowId : `draft:${row.captureId}:${row.ordinal}`;
     if (ids.has(rowId)) throw new TypeError(`duplicate draft row identity: ${rowId}`);
     ids.add(rowId);

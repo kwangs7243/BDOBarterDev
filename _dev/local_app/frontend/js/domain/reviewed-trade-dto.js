@@ -235,10 +235,10 @@ function captureIndex(source) {
   return { byId, capturesById };
 }
 
-function validateRefs(refs, knownCaptures = null) {
+function validateRefs(refs, knownCaptures = null, minimumOrdinal = 1) {
   if (!Array.isArray(refs) || refs.length > 100) return false;
   return refs.every((ref) => isRecord(ref) && validUuid(ref.captureId) && (!knownCaptures || knownCaptures.has(ref.captureId))
-    && Number.isSafeInteger(ref.ordinal) && ref.ordinal >= 1);
+    && Number.isSafeInteger(ref.ordinal) && ref.ordinal >= minimumOrdinal);
 }
 
 function validateLegacyProjection(projection, completion, evidenceById) {
@@ -285,7 +285,7 @@ function validateFinalReconciliation(projection, completion, evidenceById) {
         || !nonempty(row.sourceRowId) || row.sourceRowId.length > 256 || source.has(row.sourceRowId)
         || !perCapture.has(row.captureId) || !Number.isSafeInteger(row.ordinal) || row.ordinal < 1
         || !Number.isSafeInteger(row.projectionSourceIndex) || row.projectionSourceIndex < 0
-        || !validateRefs(row.sourceRefs, perCapture)) throw new Error("source_row_shape");
+        || !validateRefs(row.sourceRefs, perCapture, 0)) throw new Error("source_row_shape");
     const position = `${row.captureId}\0${row.ordinal}`;
     if (positions.has(position)) throw new Error("duplicate_source_position");
     positions.add(position); source.set(row.sourceRowId, row); perCapture.set(row.captureId, perCapture.get(row.captureId) + 1);
@@ -827,7 +827,7 @@ const CROP_POLICY_V3 = "C2_LOGICAL_REPRESENTATIVE_V3";
 
 function sameBinding(left, right) { return exactKeys(left, MASTER_BINDING_KEYS) && exactKeys(right, MASTER_BINDING_KEYS) && same(left, right); }
 function timestamp(value) { return typeof value === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?Z$/.test(value) && Number.isFinite(Date.parse(value)); }
-function bundleStatusToV1(status) { return status === "VERIFIED_CURATED" ? "VERIFIED" : status; }
+function bundleStatusToV1(status) { return ["VERIFIED_CURATED", "VERIFIED_REFERENCE"].includes(status) ? "VERIFIED" : status; }
 
 function candidateIdentityMatchesPinnedMapping(identity, mapping) {
   if (identity === null) return true;
@@ -989,7 +989,12 @@ function validateObservation3(input, policyVersion) {
     const source = projection.rows[mapped.index]; const completed = rowById.get(source.projectionRowId);
     const completionFields = new Map(completed.fields.map((field) => [field.field, field]));
     const reasons = [];
-    if (["NEEDS_RECAPTURE", "CONFLICT"].includes(source.classification)) reasons.push(rowReason(source.classification === "NEEDS_RECAPTURE" ? "NEEDS_RECAPTURE" : "UNRESOLVED_CONFLICT", null, { classification: source.classification, reasons: source.classificationReasons }));
+    if (source.classification === "NEEDS_RECAPTURE") reasons.push(rowReason("NEEDS_RECAPTURE", null, { classification: source.classification, reasons: source.classificationReasons }));
+    const conflictFields = source.fields.filter((field) => field.valueState === "CONFLICT");
+    if (source.classification === "CONFLICT" && (!conflictFields.length || conflictFields.some((field) =>
+        completionFields.get(field.field)?.operationalDecision !== "USER_EDITED"))) {
+      reasons.push(rowReason("UNRESOLVED_CONFLICT", null, { classification: source.classification, reasons: source.classificationReasons }));
+    }
     if (completed.disposition === "RECAPTURE_REQUIRED") reasons.push(rowReason("NEEDS_RECAPTURE", null, { reason: completed.dispositionReason }));
     for (const field of source.fields) {
       const reviewed = completionFields.get(field.field);
@@ -998,7 +1003,8 @@ function validateObservation3(input, policyVersion) {
         reasons.push(rowReason(REASONS.INVALID_NUMERIC, field.field, { minimum: minFor(field.field) }));
       }
       if (reviewed.operationalDecision !== "USER_MARKED_UNKNOWN" && !NUMERIC_FIELDS.has(field.field) && !isValidText(reviewed.finalValue, field.field !== "island")) reasons.push(rowReason(REASONS.INVALID_TEXT, field.field, { rule: "EXACT_BOUNDED_TEXT" }));
-      if (field.valueState === "CONFLICT" || field.identity?.authorityStatus === "MASTER_DISAGREEMENT") reasons.push(rowReason(field.valueState === "CONFLICT" ? REASONS.NUMERIC_CONFLICT : REASONS.MASTER_DISAGREEMENT_UNRESOLVED, field.field, null));
+      if (field.valueState === "CONFLICT" && reviewed.operationalDecision !== "USER_EDITED"
+          || field.identity?.authorityStatus === "MASTER_DISAGREEMENT") reasons.push(rowReason(field.valueState === "CONFLICT" ? REASONS.NUMERIC_CONFLICT : REASONS.MASTER_DISAGREEMENT_UNRESOLVED, field.field, null));
       const expectedKind = field.field === "island" ? "ISLAND" : field.field === "reqAmount" || NUMERIC_FIELDS.has(field.field) ? null : "ITEM";
       if (expectedKind && field.identity !== null && (!isRecord(field.identity) || ![expectedKind, expectedKind === "ITEM" ? "MASTER_ITEM" : "ISLAND"].includes(field.identity.kind))) {
         reasons.push(rowReason(REASONS.UNRESOLVED_MAPPING, field.field, { reason: "IDENTITY_KIND_MISMATCH" }));

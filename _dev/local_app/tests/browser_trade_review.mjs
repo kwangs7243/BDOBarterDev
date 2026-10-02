@@ -95,7 +95,7 @@ try {
   const activePortPath = join(profile, "chrome-profile", "DevToolsActivePort");
   const activePortText = await waitFor(async () => { try { return await readFile(activePortPath, "utf8"); } catch { return false; } }, "Chrome DevTools endpoint");
   const debugPort = activePortText.trim().split(/\r?\n/)[0];
-  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT" });
+  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(`${baseUrl}?tradeCompatibility=REVIEW_FIRST`)}`, { method: "PUT" });
   assert.equal(targetResponse.ok, true);
   const target = await targetResponse.json(); socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolveOpen, reject) => { socket.addEventListener("open", resolveOpen, { once: true }); socket.addEventListener("error", reject, { once: true }); });

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { adaptLegacyCatalog } from "../frontend/js/domain/trade-master-registry.js";
 import { adaptRegistrySnapshotV1ToMasterBundleV2, applyTradeMasterReferenceManifestToBundleV2 } from "../frontend/js/domain/trade-master-bundle.js";
 import { computeCatalogProvenanceV2 } from "../frontend/js/domain/trade-catalog-provenance.js";
-import { adaptRawEvidenceSnapshot2ToCorrectionInput, buildTradeFinalShadowPipeline } from "../frontend/js/domain/trade-final-pipeline.js";
+import { adaptRawEvidenceSnapshot2ToCorrectionInput, buildTradeFinalPipeline, buildTradeFinalShadowPipeline } from "../frontend/js/domain/trade-final-pipeline.js";
 import { hashRawEvidenceSnapshot2 } from "../frontend/js/domain/trade-final-evidence.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -101,6 +101,25 @@ assert.deepEqual(pipeline.projection.rows[0].fields.map((field) => field.field),
 assert.equal(pipeline.projection.rows[0].fields.find((field) => field.field === "count").finalValue, 0);
 assert.deepEqual(pipeline, buildTradeFinalShadowPipeline({ rawEvidence: rawOne, masterBundle, pixelAvailability, correctionPolicy }), "shadow output is deterministic");
 assert.equal(Object.isFrozen(pipeline) && Object.isFrozen(pipeline.projection.rows[0]), true);
+const activePipeline = buildTradeFinalPipeline({ rawEvidence: rawOne, masterBundle, pixelAvailability, correctionPolicy });
+assert.equal(activePipeline.pipelineKind, "TRADE_FINAL_PIPELINE");
+assert.equal(activePipeline.activation, "ACTIVE");
+assert.equal(activePipeline.projection.projectionHash, pipeline.projection.projectionHash, "active and shadow wrappers share identical semantic output");
+
+const zeroOrdinal = structuredClone(rawOne);
+zeroOrdinal.sourceRows[0].ordinal = 0;
+const zeroOrdinalPipeline = buildTradeFinalShadowPipeline({ rawEvidence: zeroOrdinal, masterBundle, pixelAvailability, correctionPolicy });
+assert.equal(zeroOrdinalPipeline.projection.reconciliation.sourceRows[0].ordinal, 0, "RawEvidence2 ordinal zero is preserved through correction/reconciliation");
+const negativeOrdinal = structuredClone(rawOne);
+negativeOrdinal.sourceRows[0].ordinal = -1;
+assert.throws(() => buildTradeFinalShadowPipeline({ rawEvidence: negativeOrdinal, masterBundle, pixelAvailability, correctionPolicy }), /identity\/order/);
+const duplicateOrdinal = structuredClone(rawOne);
+duplicateOrdinal.sourceRows.push({ ...structuredClone(duplicateOrdinal.sourceRows[0]), sourceRowId: "capture-a-row-duplicate" });
+assert.throws(() => buildTradeFinalShadowPipeline({ rawEvidence: duplicateOrdinal, masterBundle, pixelAvailability, correctionPolicy }), /invalid identity\/order|duplicate captureId\/ordinal/);
+const reversedOrdinal = structuredClone(rawOne);
+reversedOrdinal.sourceRows.push({ ...structuredClone(reversedOrdinal.sourceRows[0]), sourceRowId: "capture-a-row-2", ordinal: 2 });
+reversedOrdinal.sourceRows.reverse();
+assert.throws(() => buildTradeFinalShadowPipeline({ rawEvidence: reversedOrdinal, masterBundle, pixelAvailability, correctionPolicy }), /identity\/order/);
 
 const captureB = capture("capture-b", 2, "c", 3);
 const overlapRows = [

@@ -45,7 +45,7 @@ const sampleProjection = section("### 12.1 FinalProjection3", "### 12.2 Completi
 const sampleCompletion = section("### 12.2 Completion3", "### 12.3 Observation3");
 const sampleObservation = section("### 12.3 Observation3 (persisted record)", "### 12.4");
 
-function inputs({ classification = "FINAL_READY", values = { island: "섬", fromItem: "재료", reqAmount: 1, toItem: "교환품", count: 0, yield: 48 }, unknown = [], identityOverrides = {}, status = "VERIFIED", disposition = "INCLUDE", mutationId = IDS.mutation } = {}) {
+function inputs({ classification = "FINAL_READY", values = { island: "섬", fromItem: "재료", reqAmount: 1, toItem: "교환품", count: 0, yield: 48 }, unknown = [], identityOverrides = {}, status = "VERIFIED", disposition = "INCLUDE", editedConflictField = null, mutationId = IDS.mutation } = {}) {
   const { bundle, registry } = syntheticBundle(status);
   const binding = { masterSchemaVersion: 2, registryVersion: bundle.registryVersion, contentHash: bundle.contentHash, hashBasis: bundle.hashBasis };
   const identityByField = Object.fromEntries(["island", "fromItem", "toItem"].map((field) => {
@@ -66,12 +66,17 @@ function inputs({ classification = "FINAL_READY", values = { island: "섬", from
     }
     field.valueState = "RESOLVED";
   }
+  if (editedConflictField) {
+    const field = p.rows[0].fields.find((item) => item.field === editedConflictField);
+    assert.ok(field); field.valueState = "CONFLICT"; field.finalValue = field.correctedValue = field.normalizedValue = null;
+    field.selectedCandidateIndex = null; field.alternatives = [48, 148].map((value) => ({ value, sourceRefs: [], riskReasons: [] }));
+  }
   const projectionInput = { recognitionBatchId: p.recognitionBatchId, rawEvidenceHash: p.rawEvidenceHash, masterBinding: binding,
     correctionVersion: p.correctionVersion, reconciliation: p.reconciliation, pixelAvailability: p.pixelAvailability, rows: p.rows, edgeWorkItems: p.edgeWorkItems };
   const projection = buildFinalProjection3(projectionInput);
   const completionRows = structuredClone(sampleCompletion.rows).map((row) => ({
     ...row, disposition, dispositionReason: disposition === "EXCLUDE" ? "USER_EXPLICIT_EXCLUSION" : null,
-    fields: row.fields.map((field) => ({ field: field.field, finalValue: unknown.includes(field.field) ? null : values[field.field], unknown: unknown.includes(field.field) })),
+    fields: row.fields.map((field) => ({ field: field.field, finalValue: unknown.includes(field.field) ? null : field.field === editedConflictField ? 148 : values[field.field], unknown: unknown.includes(field.field) })),
   }));
   const completion = buildFinalReviewCompletion({ projection, reviewRevision: 4, confirmedAt: "2026-10-02T00:01:00Z", rows: completionRows, workItems: [] });
   const sourceContext = structuredClone(sampleObservation.sourceContext); sourceContext.masterBundle = { binding, snapshot: bundle };
@@ -139,6 +144,10 @@ async function run() {
     const result = validateReviewedTradeBatch({ storedObservation: fixture.observation, evidenceReceipt: fixture.receipt, expectedReview: fixture.expectedReview, mappingPolicyVersion: POLICY });
     assert.equal(result.status, "NOT_READY", classification);
   }
+  const resolvedConflict = inputs({ classification: "CONFLICT", editedConflictField: "yield" });
+  const resolvedConflictResult = validateReviewedTradeBatch({ storedObservation: resolvedConflict.observation, evidenceReceipt: resolvedConflict.receipt,
+    expectedReview: resolvedConflict.expectedReview, mappingPolicyVersion: POLICY });
+  assert.equal(resolvedConflictResult.status, "READY", "a conflict row is eligible only after the conflicting field receives USER_EDITED final value");
   const needsReview = inputs({ classification: "NEEDS_REVIEW" });
   assert.equal(validateReviewedTradeBatch({ storedObservation: needsReview.observation, evidenceReceipt: needsReview.receipt, expectedReview: needsReview.expectedReview, mappingPolicyVersion: POLICY }).status, "READY",
     "only contract-permitted, exactly mapped NEEDS_REVIEW candidates may proceed after whole-list confirmation");
