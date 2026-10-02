@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createReadyV3Batch } from "./reviewed_trade_dto_v3_regression.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const baseUrl = process.env.BDO_TEST_URL ?? "http://127.0.0.1:18778/";
@@ -72,6 +73,10 @@ def request_probe(): return jsonify(requests)
 def observation_count():
     path=r'${database}'.replace('isolated.sqlite3','recognition/recognition.sqlite3')
     with sqlite3.connect(path) as db: return jsonify({"count":db.execute("SELECT count(*) FROM trade_review_observation").fetchone()[0]})
+@app.get("/__test__/observation-v3-count")
+def observation_v3_count():
+    path=r'${database}'.replace('isolated.sqlite3','recognition/recognition.sqlite3')
+    with sqlite3.connect(path) as db: return jsonify({"count":db.execute("SELECT count(*) FROM trade_review_observation_v3").fetchone()[0]})
 app.run(host="127.0.0.1",port=${Number(port)},use_reloader=False,threaded=True)
 `;
 let server; let chrome; let socket; let send;
@@ -102,7 +107,7 @@ try {
   const pending = new Map(); let nextId = 0;
   socket.addEventListener("message", (event) => { const message = JSON.parse(event.data); if (!message.id || !pending.has(message.id)) return; const waiter = pending.get(message.id); pending.delete(message.id); message.error ? waiter.reject(new Error(message.error.message)) : waiter.resolve(message.result); });
   send = (method, params = {}) => new Promise((resolveMessage, reject) => { const id = ++nextId; pending.set(id, { resolve: resolveMessage, reject }); socket.send(JSON.stringify({ id, method, params })); });
-  const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.result?.description ?? result.exceptionDetails.text); return result.result?.value; };
+  const evaluate = async (expression) => { const result = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails)); return result.result?.value; };
   await send("Page.enable"); await send("Runtime.enable"); await send("DOM.enable");
   await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1.3, mobile: false });
   await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "app bootstrap");
@@ -377,16 +382,87 @@ try {
   assert.equal(reloaded.workingSession.id, firstApplied.workingSession.id);
   assert.deepEqual(reloaded.workingSession.scannedTrades, firstApplied.workingSession.scannedTrades);
   assert.equal(await evaluate("document.querySelectorAll('.trade-row').length"), firstApplied.workingSession.scannedTrades.length, "reload restores trade list");
+
+  const v3Inputs = [
+    createReadyV3Batch({ mutationId: "00000000-0000-4000-8000-000000000021" }),
+    createReadyV3Batch({ mutationId: "00000000-0000-4000-8000-000000000022", values: { island: "다른 섬", fromItem: "재료", reqAmount: 1, toItem: "교환품", count: 0, yield: 48 } }),
+    createReadyV3Batch({ mutationId: "00000000-0000-4000-8000-000000000023", values: { island: "섬", fromItem: "재료", reqAmount: 1, toItem: "교환품", count: 1, yield: 48 } }),
+    createReadyV3Batch({ mutationId: "00000000-0000-4000-8000-000000000024", values: { island: "섬", fromItem: "다른 재료", reqAmount: 1, toItem: "교환품", count: 0, yield: 48 } }),
+  ].map((fixture) => ({ request: fixture.request, expectedReview: fixture.expectedReview }));
+  await evaluate(`window.__v3Inputs=${JSON.stringify(v3Inputs)}`);
+  const v3NewResult = await evaluate(`(async()=>{
+    const {validateReviewedTradeBatch}=await import('/assets/js/domain/reviewed-trade-dto.js');
+    const {buildReviewedTradeSessionStage}=await import('/assets/js/domain/trade-session-staging.js');
+    const {state}=await import('/assets/js/state.js');
+    const saved=[];
+    for(const fixture of window.__v3Inputs){
+      const post=await fetch('/api/recognition/trade-review-observations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fixture.request)});
+      const postBody=await post.json();if(post.status!==201)throw new Error('v3 observation POST '+post.status+' '+JSON.stringify(postBody));
+      const receipt=postBody.receipt;const read=await fetch('/api/recognition/trade-review-observations/'+receipt.observationId+'?schemaVersion=3');
+      const readBody=await read.json();if(!read.ok)throw new Error('v3 observation readback failed '+JSON.stringify(readBody));
+      const batch=validateReviewedTradeBatch({storedObservation:readBody.observation,evidenceReceipt:receipt,expectedReview:fixture.expectedReview,mappingPolicyVersion:'reviewed-trade-dto-mapping-v3'});
+      if(batch.status!=='READY'||batch.schemaVersion!==1)throw new Error('v3 DTO not READY '+JSON.stringify(batch.batchErrors));
+      saved.push({batch,receipt});
+    }
+    const boot=await (await fetch('/api/bootstrap')).json();const localBefore=JSON.stringify(state.session.scannedTrades);
+    const staged=buildReviewedTradeSessionStage({mode:'NEW',validatedBatch:saved[0].batch,currentWorkingSession:null,localSession:null,settings:boot.settings,
+      baseRevision:boot.revision,sessionRevision:null,mutationId:'50000000-0000-4000-8000-000000000001',newSessionId:'50000000-0000-4000-8000-000000000011'});
+    if(staged.status!=='READY')throw new Error('v3 NEW stage blocked '+JSON.stringify(staged.reasons));
+    if(JSON.stringify(state.session.scannedTrades)!==localBefore)throw new Error('stage mutated local session before durable commit');
+    const put=await fetch('/api/working-session',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(staged.request)});const putBody=await put.json();
+    if(!put.ok)throw new Error('v3 NEW durable commit failed '+JSON.stringify(putBody));
+    const readback=await (await fetch('/api/bootstrap')).json();
+    const canonicalRow=row=>Object.fromEntries(Object.keys(row).sort().map(key=>[key,row[key]]));
+    if(JSON.stringify(readback.workingSession.scannedTrades.map(canonicalRow))!==JSON.stringify([saved[0].batch.rows[0].dto].map(canonicalRow)))throw new Error('v3 NEW readback mismatch '+JSON.stringify({actual:readback.workingSession.scannedTrades,expected:[saved[0].batch.rows[0].dto]}));
+    window.__v3Batches=saved.map(item=>item.batch);window.__v3Receipts=saved.map(item=>item.receipt);window.__v3NewReadback=readback;
+    return {status:staged.status,receiptSessionApplied:saved[0].receipt.sessionApplied,row:readback.workingSession.scannedTrades[0],observationRef:saved[0].batch.observationRef};
+  })()`);
+  assert.equal(v3NewResult.status, "READY"); assert.equal(v3NewResult.receiptSessionApplied, false);
+  assert.deepEqual(Object.keys(v3NewResult.row).sort(), ["count", "fromItem", "island", "reqAmount", "toItem", "yield"].sort());
+  assert.equal(v3NewResult.row.count, 0); assert.equal(v3NewResult.observationRef.schemaVersion, 3);
+  const v3BatchesForAppend = await evaluate("JSON.stringify(window.__v3Batches)").then(JSON.parse);
+  await send("Page.reload", { ignoreCache: true });
+  await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "v3 NEW durable session reload");
+  let v3Bootstrap = await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  await waitFor(async () => evaluate("document.querySelectorAll('.trade-row').length===1"), "v3 NEW rendered session row");
+  assert.equal(v3Bootstrap.workingSession.id, "50000000-0000-4000-8000-000000000011");
+  assert.equal(await evaluate("document.querySelectorAll('.trade-row').length"), 1);
+  await evaluate(`window.__v3Batches=${JSON.stringify(v3BatchesForAppend)}`);
+  const v3AppendResults = await evaluate(`(async()=>{
+    const {buildReviewedTradeSessionStage}=await import('/assets/js/domain/trade-session-staging.js');
+    const {state}=await import('/assets/js/state.js');
+    const before=(await fetch('/api/bootstrap')).json();const boot=await before;let current=boot.workingSession;
+    const stage=(batch,mutationId)=>buildReviewedTradeSessionStage({mode:'APPEND',validatedBatch:batch,currentWorkingSession:current,localSession:current,
+      settings:boot.settings,baseRevision:boot.revision,sessionRevision:current.revision??boot.revision,mutationId,newSessionId:null});
+    const appended=stage(window.__v3Batches[1],'50000000-0000-4000-8000-000000000002');if(appended.status!=='READY')throw new Error('v3 APPEND stage blocked '+JSON.stringify(appended.reasons));
+    const put=await fetch('/api/working-session',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(appended.request)});const putBody=await put.json();
+    if(!put.ok)throw new Error('v3 APPEND commit failed '+JSON.stringify(putBody));
+    const after=await (await fetch('/api/bootstrap')).json();if(after.workingSession.scannedTrades.length!==2)throw new Error('v3 APPEND readback row count mismatch');current=after.workingSession;
+    const duplicate=stage(window.__v3Batches[1],'browser-v3-session-duplicate');if(duplicate.status!=='NO_CHANGE')throw new Error('v3 exact duplicate should be NO_CHANGE');
+    const numeric=stage(window.__v3Batches[2],'browser-v3-session-numeric');if(numeric.status!=='BLOCKED'||numeric.request!==null)throw new Error('v3 numeric conflict must block without a request');
+    const input=stage(window.__v3Batches[3],'browser-v3-session-input');if(input.status!=='BLOCKED'||input.request!==null)throw new Error('v3 input conflict must block without a request');
+    window.__v3AppendReadback=after;return {status:appended.status,rows:after.workingSession.scannedTrades,duplicate:duplicate.status,numeric:numeric.status,input:input.status};
+  })()`);
+  assert.equal(v3AppendResults.status, "READY"); assert.equal(v3AppendResults.rows.length, 2);
+  assert.equal(v3AppendResults.duplicate, "NO_CHANGE"); assert.equal(v3AppendResults.numeric, "BLOCKED"); assert.equal(v3AppendResults.input, "BLOCKED");
+  await send("Page.reload", { ignoreCache: true });
+  await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "v3 APPEND durable session reload");
+  v3Bootstrap = await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  await waitFor(async () => evaluate("document.querySelectorAll('.trade-row').length===2"), "v3 APPEND rendered rows");
+  assert.equal(v3Bootstrap.workingSession.scannedTrades.length, 2);
+  assert.deepEqual(v3Bootstrap.workingSession.scannedTrades, v3AppendResults.rows);
   const requests = await (await fetch(`${baseUrl}__test__/requests`)).json();
   const sessionWrites = requests.filter((item) => ["POST", "PUT", "PATCH", "DELETE"].includes(item.method) && item.path.startsWith("/api/working-session"));
   const observationPosts = requests.filter((item) => item.method === "POST" && item.path === "/api/recognition/trade-review-observations");
-  assert.equal(sessionWrites.length, 3, "session endpoint sees the explicit commit, exact idempotent replay, and rejected stale attempt only");
-  assert.equal(observationPosts.length, 2, "synthetic failures never persist and same-body replay creates one observation");
+  assert.equal(sessionWrites.length, 5, "only three legacy attempts and explicit v3 NEW/APPEND commits reach the session endpoint");
+  assert.equal(observationPosts.length, 6, "legacy replay and four stored v3 observations are accounted");
+  assert.equal(requests.filter((item) => item.method === "POST" && item.path.endsWith("/truth-labels")).length, 0, "DTO/session apply never creates crop truth");
   assert.equal((await (await fetch(`${baseUrl}__test__/observation-count`)).json()).count, 1, "idempotent retry retains one immutable observation");
+  assert.equal((await (await fetch(`${baseUrl}__test__/observation-v3-count`)).json()).count, 4, "v3 evidence is persisted separately and remains immutable");
   const testDb = await (await fetch(`${baseUrl}__test__/db`)).json();
   assert.equal(testDb.databaseExists, true);
   assert.ok(testDb.appDbPath.startsWith(profile), "only the temporary test DB was accessed");
-  console.log("browser_trade_review_session: PASS · explicit NEW/APPEND, DB-first PUT, readback, reload · Chrome 1920×1080 + CDP deviceScaleFactor 1.3");
+  console.log("browser_trade_review_session: PASS · legacy REVIEW_FIRST preserved; Observation3→schema1 DTO→v3 NEW/APPEND, duplicate/conflict holds, DB-first PUT/readback/reload; truth POST 0 · Chrome 1920×1080 + CDP deviceScaleFactor 1.3");
 } finally {
   try { socket?.close(); } catch {}
   await Promise.all([stopChild(chrome), stopChild(server)]);

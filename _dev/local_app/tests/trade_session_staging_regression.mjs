@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { buildReviewedTradeSessionStage } from "../frontend/js/domain/trade-session-staging.js";
+import { createReadyV3Batch } from "./reviewed_trade_dto_v3_regression.mjs";
 
 const settings = { ship: { mode: "inner" }, parley: { defaultBudget: 1500000, normalCost: 1 }, tuning: { value: 2 } };
 const row = (island, fromItem, reqAmount, toItem, count, yieldValue) => ({ island, fromItem, reqAmount, toItem, count, yield: yieldValue });
@@ -82,5 +83,31 @@ const notReady = buildReviewedTradeSessionStage(args({ validatedBatch: { ...batc
 assert.equal(notReady.status, "BLOCKED");
 assert.equal(notReady.request, null);
 
+const finalEvidenceBatch = createReadyV3Batch().batch;
+assert.equal(finalEvidenceBatch.schemaVersion, 1);
+assert.equal(finalEvidenceBatch.status, "READY");
+const finalEvidenceDto = finalEvidenceBatch.rows[0].dto;
+const v3New = buildReviewedTradeSessionStage(args({ validatedBatch: finalEvidenceBatch }));
+assert.equal(v3New.status, "READY", "the existing stage accepts v3-adapted schema1 DTO output");
+assert.deepEqual(v3New.stagedSession.scannedTrades, [finalEvidenceDto]);
+assert.equal(v3New.stagedSession.diagnostics.observationId, finalEvidenceBatch.observationRef.observationId);
+assert.deepEqual(Object.keys(v3New.stagedSession.scannedTrades[0]).sort(), ["count", "fromItem", "island", "reqAmount", "toItem", "yield"].sort());
+
+const v3Prior = session([a]); const v3Local = structuredClone(v3Prior);
+const v3AppendArgs = (validatedBatch) => args({ mode: "APPEND", validatedBatch, currentWorkingSession: v3Prior, localSession: v3Local,
+  sessionRevision: 6, mutationId: "v3-append", newSessionId: null });
+const v3Append = buildReviewedTradeSessionStage(v3AppendArgs(finalEvidenceBatch));
+assert.equal(v3Append.status, "READY"); assert.deepEqual(v3Append.stagedSession.scannedTrades, [a, finalEvidenceDto]);
+const v3Current = session([finalEvidenceDto]); const v3CurrentLocal = structuredClone(v3Current);
+const v3ExistingArgs = (validatedBatch) => args({ mode: "APPEND", validatedBatch, currentWorkingSession: v3Current, localSession: v3CurrentLocal,
+  sessionRevision: 7, mutationId: "v3-existing", newSessionId: null });
+const v3Duplicate = buildReviewedTradeSessionStage(v3ExistingArgs(finalEvidenceBatch));
+assert.equal(v3Duplicate.status, "NO_CHANGE", "v3 exact6 duplicate keeps existing policy");
+const v3NumericConflict = buildReviewedTradeSessionStage(v3ExistingArgs(createReadyV3Batch({ values: { island: "섬", fromItem: "재료", reqAmount: 1, toItem: "교환품", count: 1, yield: 48 } }).batch));
+assert.equal(v3NumericConflict.status, "BLOCKED"); assert.equal(v3NumericConflict.request, null);
+const v3InputConflict = buildReviewedTradeSessionStage(v3ExistingArgs(createReadyV3Batch({ values: { island: "섬", fromItem: "다른 재료", reqAmount: 1, toItem: "교환품", count: 0, yield: 48 } }).batch));
+assert.equal(v3InputConflict.status, "BLOCKED"); assert.equal(v3InputConflict.request, null);
+
 console.log(JSON.stringify({ ok: true, new: true, append: true, exact6Duplicates: true, allDuplicateNoChange: true,
-  numericAndInputConflictsBlocked: true, deletedAndDisabledSemantics: true, localDivergenceBlocked: true, immutableDeterministic: true }));
+  numericAndInputConflictsBlocked: true, deletedAndDisabledSemantics: true, localDivergenceBlocked: true, immutableDeterministic: true,
+  evidenceV3Schema1DtoNewAppend: true, evidenceV3DuplicateNumericInputConflict: true }));

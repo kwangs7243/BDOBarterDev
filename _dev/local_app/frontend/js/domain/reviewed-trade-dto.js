@@ -1,4 +1,6 @@
 import { registrySnapshotSha256, validateRegistrySnapshot } from "./trade-master-registry.js";
+import { masterBundleContentHash, validateMasterBundleV2 } from "./trade-master-bundle.js";
+import { buildFinalProjection3, buildFinalReviewCompletion, buildFinalReviewObservationRequest } from "./trade-final-evidence.js";
 
 const POLICY = "reviewed-trade-dto-mapping-v1";
 const FIELDS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
@@ -677,8 +679,8 @@ function heldOutput(row, observationRef) {
   };
 }
 
-function buildSemanticOutput({ observation, expectedReview, policyVersion, sourceCount, rows, edgeSegments, exclusions, initialConflicts, batchErrors, mappingPolicyVersion = policyVersion }) {
-  const observationRef = observation ? {
+function buildSemanticOutput({ observation, expectedReview, policyVersion, sourceCount, rows, edgeSegments, exclusions, initialConflicts, batchErrors, mappingPolicyVersion = policyVersion, observationRefOverride = null }) {
+  const observationRef = observationRefOverride ? cloneJson(observationRefOverride) : observation ? {
     observationId: observation.observationId, mutationId: observation.mutationId,
     payloadHash: observation.payloadHash, observationHash: observation.observationHash,
     persistedAt: observation.persistedAt, hashBasis: observation.hashBasis,
@@ -750,7 +752,7 @@ function buildSemanticOutput({ observation, expectedReview, policyVersion, sourc
     provenance: { reviewMode: observation?.completion?.reviewMode ?? null,
       correctionVersion: observation?.completion?.correctionVersion ?? null, reviewRevision: observation?.completion?.reviewRevision ?? null,
       confirmationRevision: observation?.confirmationRevision ?? null,
-      reconciliation: observation?.sourceContext?.projection?.snapshot?.reconciliation ?? null,
+      reconciliation: observation?.projection?.reconciliation ?? observation?.sourceContext?.projection?.snapshot?.reconciliation ?? null,
       edgeSegments: cloneJson(edgeSegments) },
     hashBasis: HASH_BASIS,
   };
@@ -816,7 +818,255 @@ function validateObservation(input, policyVersion) {
   return { observation, authority, edgeSegments, accounting, rows: mapped, batchErrors };
 }
 
+const POLICY_V3 = "reviewed-trade-dto-mapping-v3";
+const MASTER_BINDING_KEYS = ["masterSchemaVersion", "registryVersion", "contentHash", "hashBasis"];
+const V3_EXPECTED_KEYS = ["schemaVersion", "recognitionBatchId", "projectionHash", "reviewRevision", "masterBinding", "correctionVersion", "completionValuesHash", "pixelAvailability"];
+const V3_RECEIPT_KEYS = ["schemaVersion", "observationId", "mutationId", "payloadHash", "observationHash", "persistedAt", "duplicate", "evidenceSaved", "sessionApplied", "reviewMode", "projectionHash", "masterBinding", "reviewRevision", "cropPolicy"];
+const OBSERVATION3_KEYS = ["schemaVersion", "reviewMode", "mutationId", "createdAt", "confirmationRevision", "supersedesObservationId", "projection", "completion", "sourceContext", "cropPlan", "observationId", "persistedAt", "hashBasis", "payloadHash", "observationHash"];
+const CROP_POLICY_V3 = "C2_LOGICAL_REPRESENTATIVE_V3";
+
+function sameBinding(left, right) { return exactKeys(left, MASTER_BINDING_KEYS) && exactKeys(right, MASTER_BINDING_KEYS) && same(left, right); }
+function timestamp(value) { return typeof value === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?Z$/.test(value) && Number.isFinite(Date.parse(value)); }
+function bundleStatusToV1(status) { return status === "VERIFIED_CURATED" ? "VERIFIED" : status; }
+
+function candidateIdentityMatchesPinnedMapping(identity, mapping) {
+  if (identity === null) return true;
+  const kindMatches = identity.kind === "ISLAND"
+    ? mapping.kind === "ISLAND"
+    : identity.kind === "ITEM" && ["MASTER_ITEM", "SPECIAL_ITEM", null].includes(mapping.kind);
+  return kindMatches && identity.stableId === mapping.stableId
+    && identity.legacyNameKey === mapping.legacyNameKey
+    && bundleStatusToV1(identity.authorityStatus) === mapping.authorityStatus;
+}
+
+// Build a read-only R008 mapping view from the Bundle2 snapshot pinned by Observation3.
+// It translates vocabulary only; it never fetches the active Master or performs name similarity matching.
+function registryViewFromBundle2(bundle) {
+  const validation = validateMasterBundleV2(bundle);
+  if (!validation.ok || masterBundleContentHash(bundle) !== bundle.contentHash) throw new Error("master_bundle_integrity");
+  const names = [];
+  const entities = bundle.entities.map((entity) => {
+    const legacyNames = entity.legacyNames.map((record) => {
+      names.push({ ...record, kind: record.legacyKind, stableId: entity.stableId, authorityStatus: bundleStatusToV1(record.authorityStatus) });
+      return record.legacyNameKey;
+    });
+    const nameKinds = new Set(entity.legacyNames.map((record) => record.legacyKind));
+    if (nameKinds.size > 1 && [...nameKinds].some((kind) => kind === "ISLAND") !== (entity.kind === "ISLAND")) throw new Error("master_entity_kind_mismatch");
+    const displayNames = entity.displayNames.map((entry) => ({ ...entry, status: bundleStatusToV1(entry.status) }));
+    const aliases = entity.aliases.map((entry) => ({ ...entry, status: bundleStatusToV1(entry.status) }));
+    const status = bundleStatusToV1(entity.status);
+    return { stableId: entity.stableId, kind: entity.kind === "ISLAND" ? "ISLAND" : (entity.legacyNames[0]?.legacyKind ?? "MASTER_ITEM"),
+      canonicalName: entity.canonicalName, status, displayNames, aliases, provenance: entity.provenance, replacedBy: entity.replacedBy,
+      legacyNameKeys: legacyNames };
+  });
+  for (const record of bundle.unresolvedLegacyNames) names.push({ ...record, kind: record.legacyKind, stableId: null, authorityStatus: "LEGACY_UNVERIFIED" });
+  const byKey = new Map();
+  for (const record of names) {
+    if (byKey.has(record.legacyNameKey)) throw new Error("master_legacy_name_duplicate");
+    byKey.set(record.legacyNameKey, record);
+  }
+  const legacyNames = [...byKey.values()];
+  const unresolvedMappings = legacyNames.filter((name) => name.stableId === null).map((name) => ({ legacyNameKey: name.legacyNameKey }));
+  return { schemaVersion: 1, registryVersion: bundle.registryVersion, source: { revision: bundle.sourceRevisions[0]?.revision ?? "pinned-bundle2", sha256: bundle.contentHash },
+    curation: { revision: null }, legacyNames, entities, unresolvedMappings,
+    compatibilityMappings: bundle.compatibilityMappings.map((mapping) => ({ ...mapping })), findings: [] };
+}
+
+function projectionInputFromV3(projection) {
+  return { recognitionBatchId: projection.recognitionBatchId, rawEvidenceHash: projection.rawEvidenceHash, masterBinding: projection.masterBinding,
+    correctionVersion: projection.correctionVersion, reconciliation: projection.reconciliation, pixelAvailability: projection.pixelAvailability,
+    rows: projection.rows, edgeWorkItems: projection.edgeWorkItems };
+}
+
+function completionInputFromV3(projection, completion) {
+  return { projection, reviewRevision: completion.reviewRevision, confirmedAt: completion.batchConfirmation?.confirmedAt,
+    rows: completion.rows.map((row) => ({ projectionRowId: row.projectionRowId, sourceRefs: row.sourceRefs, disposition: row.disposition,
+      dispositionReason: row.dispositionReason, fields: row.fields.map((field) => ({ field: field.field, finalValue: field.finalValue,
+        unknown: field.operationalDecision === "USER_MARKED_UNKNOWN", ...(Object.hasOwn(field, "userEditReason") ? { userEditReason: field.userEditReason } : {}) })) })),
+    workItems: completion.workItems };
+}
+
+function v3ObservationIntegrity(observation) {
+  if (!exactKeys(observation, OBSERVATION3_KEYS) || observation.schemaVersion !== 3 || observation.reviewMode !== "FINAL_CORRECTED_RESULT"
+      || !validUuid(observation.mutationId) || !validUuid(observation.observationId) || observation.confirmationRevision !== 1
+      || !(observation.supersedesObservationId === null || validUuid(observation.supersedesObservationId))
+      || !timestamp(observation.createdAt) || !timestamp(observation.persistedAt) || observation.hashBasis !== "TRADE_OBSERVATION_JSON_V3"
+      || !validHash(observation.payloadHash) || !validHash(observation.observationHash)) throw new Error("observation3_shape");
+  const projection = buildFinalProjection3(projectionInputFromV3(observation.projection));
+  if (!same(projection, observation.projection)) throw new Error("projection3_hash_or_shape");
+  const completion = observation.completion;
+  if (!isRecord(completion) || !Array.isArray(completion.rows)) throw new Error("completion3_shape");
+  const rebuiltCompletion = buildFinalReviewCompletion(completionInputFromV3(projection, completion));
+  if (!same(rebuiltCompletion, completion)) throw new Error("completion3_hash_or_shape");
+  const request = buildFinalReviewObservationRequest({ projection, completion, sourceContext: observation.sourceContext,
+    mutationId: observation.mutationId, createdAt: observation.createdAt, supersedesObservationId: observation.supersedesObservationId });
+  if (!same(request, Object.fromEntries(Object.entries(observation).filter(([key]) => !["observationId", "persistedAt", "hashBasis", "payloadHash", "observationHash"].includes(key))))) {
+    throw new Error("observation3_request_mismatch");
+  }
+  if (registrySnapshotSha256(request) !== observation.payloadHash) throw new Error("observation3_payload_hash");
+  const hashedRecord = { ...request, observationId: observation.observationId, persistedAt: observation.persistedAt, hashBasis: observation.hashBasis, payloadHash: observation.payloadHash };
+  if (registrySnapshotSha256(hashedRecord) !== observation.observationHash) throw new Error("observation3_hash");
+  return { projection, completion, request };
+}
+
+function compareReceipt3(observation, receipt) {
+  if (!exactKeys(receipt, V3_RECEIPT_KEYS) || receipt.schemaVersion !== 3 || receipt.evidenceSaved !== true || receipt.sessionApplied !== false
+      || typeof receipt.duplicate !== "boolean" || receipt.reviewMode !== "FINAL_CORRECTED_RESULT" || receipt.cropPolicy !== observation.cropPlan?.policy
+      || receipt.cropPolicy !== CROP_POLICY_V3) return batchError("STALE_REVIEW", "receipt3_shape_or_save_state");
+  const projection = observation.projection; const completion = observation.completion;
+  if (receipt.observationId !== observation.observationId || receipt.mutationId !== observation.mutationId
+      || receipt.payloadHash !== observation.payloadHash || receipt.observationHash !== observation.observationHash
+      || receipt.persistedAt !== observation.persistedAt || receipt.projectionHash !== projection.projectionHash
+      || receipt.reviewRevision !== completion.reviewRevision || !sameBinding(receipt.masterBinding, projection.masterBinding)) {
+    return batchError("STALE_REVIEW", "receipt3_observation_binding");
+  }
+  return null;
+}
+
+function compareExpected3(observation, expected) {
+  if (!exactKeys(expected, V3_EXPECTED_KEYS) || expected.schemaVersion !== 3) return batchError("STALE_REVIEW", "expected_review3_shape");
+  const { projection, completion } = observation;
+  const confirmation = completion.batchConfirmation;
+  if (expected.recognitionBatchId !== projection.recognitionBatchId || expected.projectionHash !== projection.projectionHash
+      || expected.reviewRevision !== completion.reviewRevision || expected.correctionVersion !== projection.correctionVersion
+      || expected.completionValuesHash !== confirmation.completionValuesHash || !sameBinding(expected.masterBinding, projection.masterBinding)) {
+    return batchError("STALE_REVIEW", "expected_review3_binding");
+  }
+  if (!Array.isArray(expected.pixelAvailability) || !same(expected.pixelAvailability, projection.pixelAvailability)) return batchError("STALE_REVIEW", "pixel_availability_stale");
+  return null;
+}
+
+function v3ProjectedRow(row, projection, bundle, registryVersion, index) {
+  const reviewed = observationForV3Field(row, projection);
+  const projected = { projectionRowId: row.projectionRowId, captureId: row.captureId, ordinal: row.ordinal, sourceRefs: row.sourceRefs,
+    reconciliationGroupId: row.reconciliationGroupId ?? null, reconciliationStatus: row.reconciliationStatus ?? null,
+    reconciliationMembers: row.reconciliationMembers ?? null, fields: {} };
+  for (const field of row.fields) {
+    projected.fields[field.field] = { status: field.identity?.authorityStatus === "MASTER_DISAGREEMENT" ? "MASTER_DISAGREEMENT"
+        : field.valueState === "CONFLICT" ? "AMBIGUOUS" : field.identity?.stableId ? "MATCHED" : "UNMATCHED",
+      shownValue: field.finalValue, candidate: field.candidates?.[field.selectedCandidateIndex] ?? null,
+      rawEvidence: field.rawEvidenceRefs, correctionReason: field.correctionReasons, riskReasons: field.riskReasons, masterVersion: registryVersion };
+  }
+  return { projected, reviewed, fields: Object.fromEntries(row.fields.map((field) => [field.field, { field: reviewed.fields.find((item) => item.field === field.field), reasons: [] }])),
+    reasons: [], initialReasons: [], index };
+}
+
+function observationForV3Field(row, projection) {
+  const complete = projection.completion.rows.find((item) => item.projectionRowId === row.projectionRowId);
+  return { projectionRowId: row.projectionRowId, captureId: row.captureId, ordinal: row.ordinal, sourceRefs: row.sourceRefs,
+    fields: complete.fields.map((field) => ({ field: field.field, shownValueBefore: field.shownValueBefore, finalValue: field.finalValue,
+      verificationMethod: field.operationalDecision === "CANDIDATE_RETAINED" ? "USER_BATCH_CONFIRMED_UNCHANGED" : field.operationalDecision,
+      projectionStatus: row.fields.find((item) => item.field === field.field).identity?.authorityStatus === "MASTER_DISAGREEMENT" ? "MASTER_DISAGREEMENT" : "MATCHED",
+      candidate: null, rawEvidence: row.fields.find((item) => item.field === field.field).rawEvidenceRefs,
+      correctionReason: row.fields.find((item) => item.field === field.field).correctionReasons,
+      riskReasons: field.riskReasons, masterVersion: projection.masterBinding.registryVersion })) };
+}
+
+function validateObservation3(input, policyVersion) {
+  let observation; let receipt; let expected;
+  try {
+    observation = cloneJson(input.storedObservation, "storedObservation");
+    receipt = cloneJson(input.evidenceReceipt, "evidenceReceipt");
+    expected = cloneJson(input.expectedReview, "expectedReview");
+  } catch { return emptyResult("INVALID_OBSERVATION", "v3_input_not_json", policyVersion); }
+  if (new TextEncoder().encode(stable(observation)).length > 8 * 1024 * 1024) return emptyResult("INVALID_OBSERVATION", "stored_observation_too_large", policyVersion);
+  let verified;
+  try { verified = v3ObservationIntegrity(observation); }
+  catch { return emptyResult("INVALID_OBSERVATION", "stored_observation3_integrity", policyVersion); }
+  const batchErrors = [];
+  const receiptError = compareReceipt3(observation, receipt); if (receiptError) batchErrors.push(receiptError);
+  const expectedError = compareExpected3(observation, expected); if (expectedError) batchErrors.push(expectedError);
+  const projection = verified.projection; const completion = verified.completion; const bundle = observation.sourceContext.masterBundle.snapshot;
+  let registry;
+  try { registry = registryViewFromBundle2(bundle); }
+  catch { return emptyResult("INVALID_OBSERVATION", "pinned_master_bundle2_invalid", policyVersion); }
+  const evidence = observation.sourceContext.rawEvidence.snapshot;
+  const sourceCount = projection.reconciliation.sourceRows.length;
+  const edgeSegments = evidence.edgeSegments;
+  const rows = projection.rows.map((row, index) => v3ProjectedRow(row, { ...projection, completion }, bundle, bundle.registryVersion, index));
+  const rowById = new Map(completion.rows.map((row) => [row.projectionRowId, row]));
+  for (const mapped of rows) {
+    const source = projection.rows[mapped.index]; const completed = rowById.get(source.projectionRowId);
+    const completionFields = new Map(completed.fields.map((field) => [field.field, field]));
+    const reasons = [];
+    if (["NEEDS_RECAPTURE", "CONFLICT"].includes(source.classification)) reasons.push(rowReason(source.classification === "NEEDS_RECAPTURE" ? "NEEDS_RECAPTURE" : "UNRESOLVED_CONFLICT", null, { classification: source.classification, reasons: source.classificationReasons }));
+    if (completed.disposition === "RECAPTURE_REQUIRED") reasons.push(rowReason("NEEDS_RECAPTURE", null, { reason: completed.dispositionReason }));
+    for (const field of source.fields) {
+      const reviewed = completionFields.get(field.field);
+      if (reviewed.operationalDecision === "USER_MARKED_UNKNOWN") reasons.push(rowReason(REASONS.UNKNOWN_FIELD, field.field, null));
+      if (reviewed.operationalDecision !== "USER_MARKED_UNKNOWN" && NUMERIC_FIELDS.has(field.field) && (typeof reviewed.finalValue !== "number" || !Number.isSafeInteger(reviewed.finalValue) || reviewed.finalValue < minFor(field.field))) {
+        reasons.push(rowReason(REASONS.INVALID_NUMERIC, field.field, { minimum: minFor(field.field) }));
+      }
+      if (reviewed.operationalDecision !== "USER_MARKED_UNKNOWN" && !NUMERIC_FIELDS.has(field.field) && !isValidText(reviewed.finalValue, field.field !== "island")) reasons.push(rowReason(REASONS.INVALID_TEXT, field.field, { rule: "EXACT_BOUNDED_TEXT" }));
+      if (field.valueState === "CONFLICT" || field.identity?.authorityStatus === "MASTER_DISAGREEMENT") reasons.push(rowReason(field.valueState === "CONFLICT" ? REASONS.NUMERIC_CONFLICT : REASONS.MASTER_DISAGREEMENT_UNRESOLVED, field.field, null));
+      const expectedKind = field.field === "island" ? "ISLAND" : field.field === "reqAmount" || NUMERIC_FIELDS.has(field.field) ? null : "ITEM";
+      if (expectedKind && field.identity !== null && (!isRecord(field.identity) || ![expectedKind, expectedKind === "ITEM" ? "MASTER_ITEM" : "ISLAND"].includes(field.identity.kind))) {
+        reasons.push(rowReason(REASONS.UNRESOLVED_MAPPING, field.field, { reason: "IDENTITY_KIND_MISMATCH" }));
+      }
+    }
+    mapped.reasons = unique(reasons); mapped.initialReasons = cloneJson(mapped.reasons);
+    const mappedValues = mapRow(mapped, registry, bundle.registryVersion);
+    mapped.human = mappedValues.human; mapped.mappingEvidence = mappedValues.evidence; mapped.dto = mappedValues.dto;
+    mapped.reasons = unique([...mapped.reasons, ...mappedValues.reasons]);
+    mapped.initialReasons = cloneJson(mapped.reasons);
+    for (const field of ["island", "fromItem", "toItem"]) {
+      const projectedField = source.fields.find((item) => item.field === field);
+      const operational = completionFields.get(field);
+      if (operational.operationalDecision === "CANDIDATE_RETAINED" && projectedField.identity !== null) {
+        const evidenceForField = mapped.mappingEvidence?.[field];
+        if (!candidateIdentityMatchesPinnedMapping(projectedField.identity, evidenceForField ?? {})) {
+          mapped.reasons.push(rowReason(REASONS.UNRESOLVED_MAPPING, field, { reason: "PINNED_IDENTITY_MISMATCH" }));
+        }
+      }
+    }
+    mapped.reasons = unique(mapped.reasons); mapped.initialReasons = cloneJson(mapped.reasons);
+    if (completed.disposition === "EXCLUDE" && mapped.reasons.length === 0) batchErrors.push(batchError("INVALID_EXCLUSION", "target_not_initially_held"));
+  }
+  const explicit = [];
+  const byRow = new Map(projection.rows.map((row) => [row.projectionRowId, row]));
+  for (const row of completion.rows) if (row.disposition === "EXCLUDE") {
+    explicit.push({ projectionRowId: row.projectionRowId, action: "EXCLUDE_FROM_FINAL_DTO", reason: "USER_EXPLICIT_EXCLUSION" });
+  }
+  if (Array.isArray(input.exclusions)) {
+    for (const decision of input.exclusions) {
+      if (!exactKeys(decision, ["projectionRowId", "action", "reason"]) || decision.action !== "EXCLUDE_FROM_FINAL_DTO" || decision.reason !== "USER_EXPLICIT_EXCLUSION") {
+        batchErrors.push(batchError("INVALID_EXCLUSION", "malformed_or_unsupported_v3_exclusion")); continue;
+      }
+      const completed = completion.rows.find((row) => row.projectionRowId === decision.projectionRowId);
+      if (!completed || completed.disposition !== "EXCLUDE") batchErrors.push(batchError("INVALID_EXCLUSION", "v3_exclusion_not_bound_to_completion"));
+      else if (!explicit.some((entry) => entry.projectionRowId === decision.projectionRowId)) explicit.push(cloneJson(decision));
+    }
+  } else batchErrors.push(batchError("INVALID_EXCLUSION", "exclusions_not_array"));
+  const uniqueExplicit = [];
+  const explicitIds = new Set();
+  for (const entry of explicit) {
+    if (explicitIds.has(entry.projectionRowId)) { batchErrors.push(batchError("INVALID_EXCLUSION", "duplicate_v3_exclusion")); continue; }
+    explicitIds.add(entry.projectionRowId); uniqueExplicit.push(entry);
+  }
+  const exclusionsAccepted = exclusionsFor(rows, uniqueExplicit, batchErrors);
+  if (exclusionsAccepted.length !== explicit.length || exclusionsAccepted.some((item) => !byRow.has(item.projectionRowId))) {
+    // exclusionsFor already records the precise reason; retain the row rather than silently dropping it.
+  }
+  const observationRef = { schemaVersion: 3, observationId: observation.observationId, observationHash: observation.observationHash,
+    projectionHash: projection.projectionHash, reviewRevision: completion.reviewRevision,
+    completionValuesHash: completion.batchConfirmation.completionValuesHash, masterBinding: cloneJson(projection.masterBinding) };
+  const semanticObservation = { ...observation, completion: { ...completion, registryVersion: bundle.registryVersion } };
+  const output = buildSemanticOutput({ observation: semanticObservation, expectedReview: expected, policyVersion: POLICY_V3,
+    mappingPolicyVersion: POLICY_V3, sourceCount, rows, edgeSegments, exclusions: exclusionsAccepted,
+    initialConflicts: [], batchErrors, observationRefOverride: observationRef });
+  return output;
+}
+
 export function validateReviewedTradeBatch({ storedObservation, evidenceReceipt, expectedReview, exclusions = [], mappingPolicyVersion } = {}) {
+  if (storedObservation?.schemaVersion === 3 || storedObservation?.reviewMode === "FINAL_CORRECTED_RESULT") {
+    const v3Policy = mappingPolicyVersion === undefined ? POLICY_V3 : mappingPolicyVersion;
+    if (v3Policy !== POLICY_V3) return finish(emptyResult("UNSUPPORTED_MAPPING_POLICY", typeof v3Policy === "string" ? v3Policy : "invalid", POLICY_V3));
+    let safeExclusions;
+    try { safeExclusions = cloneJson(exclusions, "exclusions"); }
+    catch { return finish(emptyResult("INVALID_EXCLUSION", "exclusions_not_json", POLICY_V3)); }
+    try { return validateObservation3({ storedObservation, evidenceReceipt, expectedReview, exclusions: safeExclusions }, POLICY_V3); }
+    catch { return finish(emptyResult("INVALID_OBSERVATION", "unexpected_invalid_v3_input", POLICY_V3)); }
+  }
   const policy = mappingPolicyVersion === undefined ? "" : mappingPolicyVersion;
   if (policy !== POLICY) return finish(emptyResult("UNSUPPORTED_MAPPING_POLICY", typeof policy === "string" ? policy : "invalid", POLICY));
   let safeExclusions; let exclusionInputError = false;
