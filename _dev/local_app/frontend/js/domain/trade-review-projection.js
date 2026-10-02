@@ -1,4 +1,4 @@
-import { getSafeUniqueItemMatch } from "./trade-import.js";
+import { deriveTradeDomainConstraints, normalizeTradeCorrectionName, resolveTradeIdentityCorrection, resolveTradeNumericCorrection } from "./trade-final-correction.js";
 import { registrySnapshotSha256, validateRegistrySnapshot } from "./trade-master-registry.js";
 import { reconcileTradeProjectionRows } from "./trade-batch-reconciliation.js";
 
@@ -77,30 +77,8 @@ function deepFreeze(value) {
   return value;
 }
 
-function normalizeName(value, fieldKey) {
-  const steps = [];
-  const original = value;
-  let normalized = value.trim();
-  if (normalized !== original) steps.push({ operation: "TRIM", before: original, after: normalized });
-  if (fieldKey !== "island") {
-    const displayPrefix = normalized.match(/^\[[^\]]*\]\s*/u);
-    const stage = displayPrefix?.[0].match(/(?:T?([1-7])\s*(?:단계|티어)?|(?:tier|stage|티어|단계)\s*T?([1-7]))/i);
-    if (displayPrefix) {
-      const before = normalized;
-      normalized = normalized.slice(displayPrefix[0].length).trim();
-      steps.push({ operation: "REMOVE_DISPLAY_PREFIX", before, after: normalized });
-      if (stage) steps.push({ operation: "TIER_HINT", tier: Number(stage[1] ?? stage[2]) });
-    }
-    const decorated = normalized.match(/\s+x\s*\d+\s*$/i);
-    if (decorated) {
-      const before = normalized;
-      normalized = normalized.slice(0, decorated.index).trim();
-      steps.push({ operation: "REMOVE_DISPLAY_QUANTITY", before, after: normalized });
-    }
-  }
-  const compact = fieldKey === "island" ? normalized : normalized.replace(/\s+/gu, "");
-  if (compact !== normalized) steps.push({ operation: "REMOVE_WHITESPACE_FOR_MATCH", before: normalized, after: compact });
-  return { original, normalized, compact, steps };
+function legacyNormalization(normalized, original) {
+  return normalized ? { original, normalized: normalized.value, compact: normalized.matchingKey, steps: normalized.appliedRules } : null;
 }
 
 function makeRisk(code, detail = null) {
@@ -169,12 +147,13 @@ function createIdentityTerms(registrySnapshot) {
   const terms = [];
   const add = (base, text, source, nameStatus = null) => {
     if (!nonempty(text)) return;
-    terms.push({ ...base, text, source, nameStatus });
+    terms.push({ ...base, value: text, nameSource: source, nameStatus });
   };
   for (const name of registrySnapshot.legacyNames) {
     const entity = entityForName(name, entitiesById);
     const base = {
-      kind: name.kind,
+      kind: name.kind === "ISLAND" ? "ISLAND" : "ITEM",
+      legacyKind: name.kind,
       tier: name.tier,
       stableId: name.stableId,
       legacyNameKey: name.legacyNameKey,
@@ -197,7 +176,7 @@ function createIdentityTerms(registrySnapshot) {
   const seen = new Map();
   for (const term of terms) {
     const identity = term.stableId === null ? `legacy:${term.legacyNameKey}` : `entity:${term.stableId}`;
-    const key = `${identity}\0${term.kind}\0${normalizeName(term.text, "toItem").compact}`;
+    const key = `${identity}\0${term.kind}\0${normalizeTradeCorrectionName({ field: term.kind === "ISLAND" ? "island" : "toItem", sourceText: term.value }).matchingKey}`;
     const prior = seen.get(key);
     if (!prior) {
       seen.set(key, { ...term, legacyNameKeys: [...term.legacyNameKeys] });
@@ -205,7 +184,7 @@ function createIdentityTerms(registrySnapshot) {
     }
     prior.legacyNameKeys = [...new Set([...prior.legacyNameKeys, ...term.legacyNameKeys])].sort();
     prior.occurrenceScopes = [...new Set([...prior.occurrenceScopes, ...term.occurrenceScopes])].sort();
-    if (prior.source !== term.source) prior.source = "CURATED_NAME_SET";
+    if (prior.nameSource !== term.nameSource) prior.nameSource = "CURATED_NAME_SET";
     if (term.nameStatus === "DISPUTED") prior.nameStatus = "DISPUTED";
     else if (prior.nameStatus !== "DISPUTED" && term.nameStatus === "VERIFIED") prior.nameStatus = "VERIFIED";
   }
@@ -214,17 +193,17 @@ function createIdentityTerms(registrySnapshot) {
 
 function toPublicCandidate(term, observedText, normalizationSteps) {
   return {
-    value: term.text,
+    value: term.value,
     observedText,
     stableId: term.stableId,
-    kind: term.kind,
+    kind: term.legacyKind,
     tier: term.tier,
     canonicalName: term.canonicalName,
     authorityStatus: term.authorityStatus,
     legacyNameKey: term.legacyNameKey,
     legacyNameKeys: [...term.legacyNameKeys],
-    nameSource: term.source,
-    source: term.source,
+    nameSource: term.nameSource,
+    source: term.nameSource,
     nameStatus: term.nameStatus,
     occurrenceScopes: [...term.occurrenceScopes],
     normalizationSteps,
@@ -242,7 +221,6 @@ function riskForIdentity(term, matchStatus) {
 function identityFieldProjection({ key, field, registrySnapshot, terms, pool, scopeFilter = null, externalRisk = [] }) {
   const rawEvidence = field[RAW_EVIDENCE] ?? cloneJson(field, `rawEvidence.${key}`);
   const rawText = nonempty(field.normalizedText) ? field.normalizedText : nonempty(field.rawText) ? field.rawText : null;
-  const normalization = rawText === null ? null : normalizeName(rawText, key);
   const risks = [...externalRisk];
   const reasons = [];
   if (field.status === "UNKNOWN") risks.push(makeRisk("FIELD_STATUS_MISSING"));
@@ -259,61 +237,25 @@ function identityFieldProjection({ key, field, registrySnapshot, terms, pool, sc
       risks.push(makeRisk("RECOGNITION_WARNING", reasonCode));
     }
   }
-  let eligible = pool.filter((term) => scopeFilter === null || term.occurrenceScopes.some((scope) => scopeFilter.includes(scope)));
-  if (key !== "island" && normalization.steps.some((step) => step.operation === "TIER_HINT")) {
-    const hintedTier = normalization.steps.find((step) => step.operation === "TIER_HINT").tier;
-    const tierCandidates = eligible.filter((term) => term.tier === hintedTier);
-    eligible = tierCandidates;
-    if (!tierCandidates.length) risks.push(makeRisk("OUTPUT_TIER_HINT_UNAVAILABLE", `인식된 접두 단계 ${hintedTier}`));
-  }
-
-  let matches = [];
-  let matchStatus = "unmatched";
-  const exactMatches = eligible.filter((term) => normalizeName(term.text, key).compact === normalization.compact);
-  if (exactMatches.length) {
-    matches = exactMatches;
-    matchStatus = "exact";
-  } else {
-    const matchTarget = key === "island" ? normalization.normalized : normalization.compact;
-    const result = getSafeUniqueItemMatch(matchTarget, eligible.map((term) => term.text));
-    if (result.status === "exact") {
-      // Ask the V1 helper per identity so its whitespace-insensitive exact
-      // semantics cannot hide a second legacy or curated identity.
-      matches = eligible.filter((term) => getSafeUniqueItemMatch(matchTarget, [term.text]).status === "exact");
-      matchStatus = "exact";
-    } else if (result.status === "corrected") {
-      matches = eligible.filter((term) => term.text === result.value);
-      matchStatus = "corrected";
-    } else if (result.status === "ambiguous") {
-      const values = new Set(result.candidates);
-      matches = eligible.filter((term) => values.has(term.text));
-      matchStatus = "ambiguous";
-    }
-  }
-  const distinct = new Map();
-  for (const term of matches) {
-    const identity = term.stableId === null ? `legacy:${term.legacyNameKey}` : `entity:${term.stableId}`;
-    distinct.set(identity, term);
-  }
-  matches = [...distinct.values()];
-  if (matches.length > 1 || matchStatus === "ambiguous") {
-    const alternatives = matches.map((term) => toPublicCandidate(term, rawText, normalization.steps));
+  const resolution = resolveTradeIdentityCorrection({ field: key, sourceText: rawText, terms: pool, authorityPolicy: "LEGACY_REGISTRY1_COMPAT", scopeFilter });
+  const normalization = legacyNormalization(resolution.normalized, rawText);
+  if (resolution.tierHintUnavailable) risks.push(makeRisk("OUTPUT_TIER_HINT_UNAVAILABLE", `인식된 접두 단계 ${normalization.steps.find((step) => step.operation === "TIER_HINT")?.tier}`));
+  const exactMatches = resolution.exactMatches;
+  if (resolution.ambiguous) {
+    const alternatives = resolution.alternatives.map((term) => toPublicCandidate(term, rawText, normalization.steps));
     const ambiguityCode = exactMatches.length > 1 ? "NORMALIZED_NAME_COLLISION" : "AMBIGUOUS_MATCH";
     return makeFieldResult({ key, rawEvidence, candidate: null, alternatives, shownValue: normalization.normalized, status: "AMBIGUOUS", reasons: [makeReason("AMBIGUOUS_MATCH")], risks: [...risks, makeRisk(ambiguityCode)], normalizationSteps: normalization.steps, registrySnapshot });
   }
-  if (!matches.length) {
+  if (!resolution.selected) {
     risks.push(makeRisk("NO_MATCH"));
     return makeFieldResult({ key, rawEvidence, candidate: null, alternatives: [], shownValue: normalization.normalized, status: "UNMATCHED", reasons: [makeReason("UNMATCHED_SOURCE_PRESERVED")], risks, normalizationSteps: normalization.steps, registrySnapshot });
   }
 
-  const term = matches[0];
+  const term = resolution.selected;
   const candidate = toPublicCandidate(term, rawText, normalization.steps);
-  const correctionReason = matchStatus === "corrected" ? "BOUNDED_UNIQUE_MATCH"
-    : term.source === "ALIAS" ? "VERIFIED_ALIAS_MATCH"
-      : term.source === "DISPLAY_NAME" ? "VERIFIED_DISPLAY_NAME_MATCH"
-        : matchStatus === "exact" ? "EXACT_MATCH" : "UNMATCHED_SOURCE_PRESERVED";
+  const correctionReason = resolution.correctionCode ?? "UNMATCHED_SOURCE_PRESERVED";
   reasons.push(makeReason(correctionReason));
-  risks.push(...riskForIdentity(term, matchStatus));
+  risks.push(...riskForIdentity(term, resolution.matchStatus));
   const disputed = term.nameStatus === "DISPUTED" || term.authorityStatus === "DISPUTED";
   const status = disputed ? "MASTER_DISAGREEMENT" : "MATCHED";
   if (disputed) reasons.push(makeReason("MASTER_DISAGREEMENT"));
@@ -323,26 +265,6 @@ function identityFieldProjection({ key, field, registrySnapshot, terms, pool, sc
     return makeFieldResult({ key, rawEvidence, candidate, alternatives: [candidate], status, reasons: [...reasons, makeReason("MASTER_NAME_DISPUTED")], risks, normalizationSteps: normalization.steps, registrySnapshot });
   }
   return makeFieldResult({ key, rawEvidence, candidate, alternatives: [], status, reasons, risks, normalizationSteps: normalization.steps, registrySnapshot });
-}
-
-function numericToken(value) {
-  const compact = value.replace(/\s+/gu, "");
-  const matches = [...compact.matchAll(/[0-9]+(?:,[0-9]{3})*/gu)];
-  return { compact, matches };
-}
-
-function allowedNumericDecoration(key, before, after) {
-  const prefixes = {
-    reqAmount: new Set(["", "수:", "수량:", "필요:", "필요수량:", "필요수량", "필요", "요구", "요구수량:"]),
-    count: new Set(["", "횟수:", "남은횟수:", "남은교환횟수:", "수:"]),
-    yield: new Set(["", "수율:", "획득:"]),
-  };
-  const suffixes = {
-    reqAmount: new Set(["", "개", "개씩", "회", "회분"]),
-    count: new Set(["", "회", "번", "회남음", "번남음"]),
-    yield: new Set(["", "개", "개씩", "개당", "회"]),
-  };
-  return prefixes[key].has(before) && suffixes[key].has(after);
 }
 
 function numericFieldProjection(key, field, registrySnapshot) {
@@ -357,30 +279,16 @@ function numericFieldProjection(key, field, registrySnapshot) {
   if (!field.rawText && field.normalizedText) risks.push(makeRisk("RAW_TEXT_MISSING"));
   if (field.status === "UNKNOWN") risks.push(makeRisk("FIELD_STATUS_MISSING"));
   if (CLIPPED_STATUSES.has(field.status)) risks.push(makeRisk(field.status));
-  const textNumbers = rawText === null ? { compact: "", matches: [] } : numericToken(rawText);
-  let parsed = null;
-  let parseFailure = null;
-  if (textNumbers.matches.length > 1) {
-    parseFailure = "MULTIPLE_NUMERIC_GROUPS";
-  } else if (textNumbers.matches.length === 1) {
-    const match = textNumbers.matches[0];
-    const before = textNumbers.compact.slice(0, match.index);
-    const after = textNumbers.compact.slice(match.index + match[0].length);
-    if (allowedNumericDecoration(key, before, after)) {
-      const value = Number(match[0].replaceAll(",", ""));
-      if (Number.isSafeInteger(value) && value >= (key === "count" ? 0 : 1)) parsed = value;
-      else parseFailure = "NUMERIC_FORMAT_UNSUPPORTED";
-    } else parseFailure = "NUMERIC_FORMAT_UNSUPPORTED";
-  } else {
-    parseFailure = "NUMERIC_MISSING";
-  }
-  const minimum = key === "count" ? 0 : 1;
-  const hasReaderCandidate = field.rawNumericCandidate !== null;
-  const readerCandidateValid = Number.isSafeInteger(field.rawNumericCandidate) && field.rawNumericCandidate >= minimum;
-  const readerValue = readerCandidateValid ? field.rawNumericCandidate : null;
+  const numeric = resolveTradeNumericCorrection({ field: key, sourceText: rawText, readerCandidate: field.rawNumericCandidate });
+  const parsed = numeric.textParsedCandidate;
+  const parseFailure = numeric.parseStatus;
+  const minimum = numeric.minimum;
+  const hasReaderCandidate = numeric.readerCandidatePresent;
+  const readerCandidateValid = numeric.readerCandidateValid;
+  const readerValue = readerCandidateValid ? numeric.readerCandidate : null;
   const alternatives = [];
   if (parseFailure === "MULTIPLE_NUMERIC_GROUPS" && !hasReaderCandidate) {
-    risks.push(makeRisk("MULTIPLE_NUMERIC_GROUPS", textNumbers.matches.map((match) => match[0])));
+    risks.push(makeRisk("MULTIPLE_NUMERIC_GROUPS", numeric.groups));
     reasons.push(makeReason("MULTIPLE_NUMERIC_GROUPS"));
     return makeFieldResult({ key, rawEvidence, candidate: null, alternatives, shownValue: null, status: "AMBIGUOUS", reasons, risks, normalizationSteps: [], registrySnapshot });
   }
@@ -391,11 +299,11 @@ function numericFieldProjection(key, field, registrySnapshot) {
   }
   if (!hasReaderCandidate && parsed === null) {
     const code = parseFailure === "MULTIPLE_NUMERIC_GROUPS" ? "MULTIPLE_NUMERIC_GROUPS" : "NUMERIC_MISSING_OR_INVALID";
-    risks.push(makeRisk(code, parseFailure === "MULTIPLE_NUMERIC_GROUPS" ? textNumbers.matches.map((match) => match[0]) : null));
+    risks.push(makeRisk(code, parseFailure === "MULTIPLE_NUMERIC_GROUPS" ? numeric.groups : null));
     reasons.push(makeReason(code));
     return makeFieldResult({ key, rawEvidence, candidate: null, alternatives: [], shownValue: null, status: parseFailure === "MULTIPLE_NUMERIC_GROUPS" ? "AMBIGUOUS" : "UNMATCHED", reasons, risks, registrySnapshot });
   }
-  const value = hasReaderCandidate ? readerValue : parsed;
+  const value = numeric.selectedCandidate;
   if (rawText === null) risks.push(makeRisk("RAW_TEXT_MISSING"));
   const source = hasReaderCandidate ? "RAW_NUMERIC_CANDIDATE" : "BOUNDED_NUMERIC_PARSE";
   const candidate = { value, source, rawText, rawNumericCandidate: hasReaderCandidate ? readerValue : null };
@@ -427,30 +335,25 @@ function makeFieldResult({ key, rawEvidence, candidate, alternatives, status, re
   };
 }
 
-function getTierChoices(field) {
-  const choices = [field.candidate, ...field.alternatives].filter((candidate) => candidate && candidate.kind === "MASTER_ITEM" && Number.isInteger(candidate.tier));
-  return [...new Set(choices.map((candidate) => candidate.tier))];
-}
-
 function projectFromItem(field, toItemProjection, registrySnapshot, terms, masterVersion) {
   const rawEvidence = field[RAW_EVIDENCE] ?? cloneJson(field, "rawEvidence.fromItem");
-  if (toItemProjection.status === "MATCHED" && toItemProjection.candidate?.kind === "SPECIAL_ITEM") {
-    const pool = terms.filter((term) => term.kind === "MASTER_ITEM" || term.kind === "SPECIAL_ITEM");
+  const domain = deriveTradeDomainConstraints({ toItemStatus: toItemProjection.status, toItemCandidate: toItemProjection.candidate, toItemAlternatives: toItemProjection.alternatives });
+  if (domain.fromItemMode === "SPECIAL_FULL_POOL") {
+    const pool = terms.filter((term) => term.kind === "ITEM");
     const result = identityFieldProjection({ key: "fromItem", field, registrySnapshot, terms, pool });
     result.masterVersion = masterVersion;
     result.masterRevision = masterVersion;
     return result;
   }
-  const tiers = getTierChoices(toItemProjection);
-  if (toItemProjection.status !== "MATCHED" || tiers.length !== 1) {
+  if (domain.fromItemMode === "DEPENDENCY_UNRESOLVED") {
     const rawText = nonempty(field.normalizedText) ? field.normalizedText : nonempty(field.rawText) ? field.rawText : null;
-    const normalized = rawText === null ? null : normalizeName(rawText, "fromItem");
+    const normalized = rawText === null ? null : legacyNormalization(normalizeTradeCorrectionName({ field: "fromItem", sourceText: rawText }), rawText);
     const status = ["AMBIGUOUS", "MASTER_DISAGREEMENT"].includes(toItemProjection.status) ? "AMBIGUOUS" : "UNMATCHED";
     return makeFieldResult({
       key: "fromItem", rawEvidence, candidate: null, alternatives: [],
       shownValue: normalized?.normalized ?? null, status,
       reasons: [makeReason("TO_ITEM_DEPENDENCY_UNRESOLVED")],
-      risks: [makeRisk("TO_ITEM_DEPENDENCY_UNRESOLVED", { toItemStatus: toItemProjection.status, tierChoices: tiers }),
+      risks: [makeRisk("TO_ITEM_DEPENDENCY_UNRESOLVED", { toItemStatus: toItemProjection.status, tierChoices: domain.tierChoices }),
         ...(field.status === "UNKNOWN" ? [makeRisk("FIELD_STATUS_MISSING")] : []),
         ...(CLIPPED_STATUSES.has(field.status) ? [makeRisk(field.status)] : []),
         ...field.reasonCodes.filter((code) => code !== "ROW_BOUNDARY_CONTACT").map((code) =>
@@ -459,8 +362,7 @@ function projectFromItem(field, toItemProjection, registrySnapshot, terms, maste
       normalizationSteps: normalized?.steps ?? [], registrySnapshot,
     });
   }
-  const outputTier = tiers[0];
-  if (outputTier === 1) {
+  if (domain.fromItemMode === "OPEN_WORLD") {
     const rawText = nonempty(field.normalizedText) ? field.normalizedText : nonempty(field.rawText) ? field.rawText : null;
     const candidate = rawText === null ? null : {
       value: rawText.trim(), observedText: rawText, stableId: null, kind: "MASTER_ITEM", tier: null,
@@ -479,8 +381,7 @@ function projectFromItem(field, toItemProjection, registrySnapshot, terms, maste
     }
     return makeFieldResult({ key: "fromItem", rawEvidence, candidate, alternatives: [], status: candidate ? "OPEN_WORLD" : "UNMATCHED", reasons: [makeReason(candidate ? "OPEN_WORLD_PRESERVED" : "RAW_TEXT_MISSING")], risks, normalizationSteps: [], registrySnapshot });
   }
-  const allowedTier = outputTier - 1;
-  const pool = terms.filter((term) => term.kind === "MASTER_ITEM" && term.tier === allowedTier);
+  const pool = terms.filter((term) => term.kind === "ITEM" && term.legacyKind === "MASTER_ITEM" && term.tier === domain.allowedTier);
   const result = identityFieldProjection({ key: "fromItem", field, registrySnapshot, terms, pool });
   result.masterVersion = masterVersion;
   result.masterRevision = masterVersion;
@@ -489,15 +390,12 @@ function projectFromItem(field, toItemProjection, registrySnapshot, terms, maste
 
 function projectRow(rowInfo, registrySnapshot, terms, masterVersion) {
   const row = rowInfo.row;
-  const toItemPool = terms.filter((term) => term.kind === "MASTER_ITEM" || term.kind === "SPECIAL_ITEM");
+  const toItemPool = terms.filter((term) => term.kind === "ITEM");
   const toItem = identityFieldProjection({ key: "toItem", field: rowInfo.fields.toItem, registrySnapshot, terms, pool: toItemPool });
   toItem.masterRevision = masterVersion;
-  const tierChoices = getTierChoices(toItem);
-  const tierResolved = toItem.status === "MATCHED" && tierChoices.length === 1;
-  const islandScopes = tierResolved
-    ? [...new Set(tierChoices.map((tier) => tier === 6 ? "T6_ISLANDS" : tier === 7 ? "T7_ISLANDS" : "GENERAL_ISLANDS"))]
-    : ["GENERAL_ISLANDS", "T6_ISLANDS", "T7_ISLANDS"];
-  const islandRisk = tierResolved ? [] : [makeRisk("TO_ITEM_TIER_UNRESOLVED", { toItemStatus: toItem.status, tierChoices })];
+  const domain = deriveTradeDomainConstraints({ toItemStatus: toItem.status, toItemCandidate: toItem.candidate, toItemAlternatives: toItem.alternatives });
+  const islandScopes = domain.islandAllowedScopes;
+  const islandRisk = domain.tierResolved ? [] : [makeRisk("TO_ITEM_TIER_UNRESOLVED", { toItemStatus: toItem.status, tierChoices: domain.tierChoices })];
   const islandPool = terms.filter((term) => term.kind === "ISLAND");
   const island = identityFieldProjection({ key: "island", field: rowInfo.fields.island, registrySnapshot, terms, pool: islandPool, scopeFilter: islandScopes, externalRisk: islandRisk });
   island.masterRevision = masterVersion;

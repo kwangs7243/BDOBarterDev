@@ -6,11 +6,33 @@ import { fileURLToPath } from "node:url";
 import { adaptLegacyCatalog } from "../frontend/js/domain/trade-master-registry.js";
 import { getSafeUniqueItemMatch } from "../frontend/js/domain/trade-import.js";
 import { adaptRegistrySnapshotV1ToMasterBundleV2, applyTradeMasterReferenceManifestToBundleV2, createMasterBundleV2, masterBundleContentHash, validateMasterBundleV2 } from "../frontend/js/domain/trade-master-bundle.js";
-import { buildFinalTradeProjection } from "../frontend/js/domain/trade-final-correction.js";
+import { buildFinalTradeProjection, deriveTradeDomainConstraints, normalizeTradeCorrectionName, resolveTradeIdentityCorrection, resolveTradeNumericCorrection } from "../frontend/js/domain/trade-final-correction.js";
 import { buildTradeReviewProjection } from "../frontend/js/domain/trade-review-projection.js";
 import { buildTradeBatchReconciliation } from "../frontend/js/domain/trade-batch-reconciliation.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const normalizedItem = normalizeTradeCorrectionName({ field: "toItem", sourceText: " [2단계] 고대 목걸이 x 3 " });
+assert.equal(normalizedItem.value, "고대 목걸이");
+assert.equal(normalizedItem.matchingKey, "고대목걸이");
+assert.equal(normalizedItem.tierHint, 2);
+assert.equal(normalizeTradeCorrectionName({ field: "island", sourceText: " 해모 섬 " }).matchingKey, "해모 섬", "island display whitespace is preserved");
+assert.equal(normalizeTradeCorrectionName({ field: "island", sourceText: "하코번..." }).value, "하코번...", "punctuation is not normalized away");
+const kernelTerms = [
+  { value: "가나다라나", stableId: "verified-a", legacyNameKey: "a", kind: "ITEM", legacyKind: "MASTER_ITEM", tier: 2, authorityStatus: "VERIFIED_CURATED", nameStatus: "VERIFIED_CURATED", nameSource: "CANONICAL_NAME", scopes: ["MASTER_TIER_2"] },
+  { value: "가나다라바", stableId: "verified-b", legacyNameKey: "b", kind: "ITEM", legacyKind: "MASTER_ITEM", tier: 2, authorityStatus: "VERIFIED_CURATED", nameStatus: "VERIFIED_CURATED", nameSource: "CANONICAL_NAME", scopes: ["MASTER_TIER_2"] },
+];
+const kernelMatch = resolveTradeIdentityCorrection({ field: "toItem", sourceText: "가나다라마", terms: kernelTerms.slice(0, 1), authorityPolicy: "CANONICAL_BUNDLE2" });
+assert.equal(kernelMatch.selected.stableId, "verified-a");
+const kernelAmbiguous = resolveTradeIdentityCorrection({ field: "toItem", sourceText: "가나다라", terms: kernelTerms, authorityPolicy: "CANONICAL_BUNDLE2" });
+assert.equal(kernelAmbiguous.selected, null, "ambiguous identities remain unselected");
+assert.equal(kernelAmbiguous.matchStatus, "ambiguous");
+const kernelDisagreement = resolveTradeNumericCorrection({ field: "yield", sourceText: "2", readerCandidate: 3 });
+assert.deepEqual([kernelDisagreement.readerCandidate, kernelDisagreement.textParsedCandidate, kernelDisagreement.disagreement, kernelDisagreement.selectedCandidate], [3, 2, true, 3]);
+assert.equal(resolveTradeNumericCorrection({ field: "count", sourceText: "0회" }).selectedCandidate, 0);
+assert.equal(resolveTradeNumericCorrection({ field: "reqAmount", sourceText: "1회 / 2회" }).parseStatus, "MULTIPLE_NUMERIC_GROUPS");
+assert.deepEqual(deriveTradeDomainConstraints({ toItemStatus: "MATCHED", toItemCandidate: { kind: "MASTER_ITEM", tier: 6 } }).islandAllowedScopes, ["T6_ISLANDS"]);
+assert.equal(deriveTradeDomainConstraints({ toItemStatus: "MATCHED", toItemCandidate: { kind: "MASTER_ITEM", tier: 1 } }).fromItemMode, "OPEN_WORLD");
+assert.equal(deriveTradeDomainConstraints({ toItemStatus: "MATCHED", toItemCandidate: { kind: "SPECIAL_ITEM" } }).fromItemMode, "SPECIAL_FULL_POOL");
 const fields = (values, overrides = {}) => Object.fromEntries(["island", "fromItem", "reqAmount", "toItem", "count", "yield"].map((key) => {
   const text = values[key] ?? null;
   return [key, { rawText: text, normalizedText: text, rawNumericCandidate: null, value: null,
@@ -240,5 +262,14 @@ assert.equal(result.sessionWrites, false);
 assert.equal(JSON.stringify(result).includes("FINAL_READY"), false);
 assert.throws(() => build([one], {}, { correctionPolicy: { policyVersion: " " } }), /policyVersion/);
 assert.throws(() => build([one], {}, { masterBundle: { ...bundle, contentHash: "0".repeat(64) } }), /invalid Master bundle|contentHash/);
+
+const correctionSource = await readFile(resolve(root, "frontend/js/domain/trade-final-correction.js"), "utf8");
+const legacyProjectionSource = await readFile(resolve(root, "frontend/js/domain/trade-review-projection.js"), "utf8");
+for (const exportName of ["normalizeTradeCorrectionName", "resolveTradeIdentityCorrection", "resolveTradeNumericCorrection", "deriveTradeDomainConstraints"]) {
+  assert.match(correctionSource, new RegExp(`export function ${exportName}\\b`));
+}
+assert.doesNotMatch(legacyProjectionSource, /getSafeUniqueItemMatch|matchAll\(\/\[0-9\]|allowedNumericDecoration|function numericToken|function normalizeName/);
+assert.equal((correctionSource.match(/getSafeUniqueItemMatch\(/gu) ?? []).length, 2, "only the shared resolver owns bounded/exact matcher calls");
+assert.equal((correctionSource.match(/matchAll\(\/\[0-9\]/gu) ?? []).length, 1, "numeric token regex has one implementation");
 
 console.log("PASS trade_final_correction_regression: Bundle2 authority; R003 exact/bounded/ambiguous/unmatched/open-world/numeric parity; 1 intentional reference authority upgrade; immutable deterministic output; R007 source 6 -> logical 4");

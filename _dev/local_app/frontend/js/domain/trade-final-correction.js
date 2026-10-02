@@ -3,10 +3,7 @@ import { masterBundleContentHash, validateMasterBundleV2 } from "./trade-master-
 import { reconcileTradeProjectionRows } from "./trade-batch-reconciliation.js";
 
 const FIELDS = Object.freeze(["island", "fromItem", "reqAmount", "toItem", "count", "yield"]);
-const NUMERIC = new Set(["reqAmount", "count", "yield"]);
-const MINIMUM = Object.freeze({ reqAmount: 1, count: 0, yield: 1 });
 const SAFE_AUTHORITY = new Set(["VERIFIED_CURATED", "VERIFIED_REFERENCE"]);
-const BLOCKED_AUTHORITY = new Set(["DISPUTED", "DEPRECATED"]);
 const UNRESOLVED = new Set(["AMBIGUOUS", "UNMATCHED", "MASTER_DISAGREEMENT"]);
 
 function isRecord(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
@@ -33,33 +30,182 @@ function freeze(value) {
   }
   return value;
 }
-function normalizeName(value, field) {
-  const steps = [];
-  let normalized = value.trim();
-  if (normalized !== value) steps.push({ operation: "TRIM", before: value, after: normalized });
+/** Shared R003/C1 display normalization. It never guesses spelling or removes punctuation. */
+export function normalizeTradeCorrectionName({ field, sourceText } = {}) {
+  if (!["island", "fromItem", "toItem"].includes(field) || typeof sourceText !== "string") {
+    throw new TypeError("field and sourceText are required for trade name normalization");
+  }
+  const appliedRules = [];
+  const original = sourceText;
+  let value = sourceText.trim();
+  if (value !== original) appliedRules.push({ operation: "TRIM", before: original, after: value });
   let tierHint = null;
   if (field !== "island") {
-    const prefix = normalized.match(/^\[[^\]]*\]\s*/u);
+    const prefix = value.match(/^\[[^\]]*\]\s*/u);
     const stage = prefix?.[0].match(/(?:T?([1-7])\s*(?:단계|티어)?|(?:tier|stage|티어|단계)\s*T?([1-7]))/i);
     if (prefix) {
-      const before = normalized;
-      normalized = normalized.slice(prefix[0].length).trim();
-      steps.push({ operation: "REMOVE_DISPLAY_PREFIX", before, after: normalized });
-      if (stage) { tierHint = Number(stage[1] ?? stage[2]); steps.push({ operation: "TIER_HINT", tier: tierHint }); }
+      const before = value;
+      value = value.slice(prefix[0].length).trim();
+      appliedRules.push({ operation: "REMOVE_DISPLAY_PREFIX", before, after: value });
+      if (stage) { tierHint = Number(stage[1] ?? stage[2]); appliedRules.push({ operation: "TIER_HINT", tier: tierHint }); }
     }
-    const decoration = normalized.match(/\s+x\s*\d+\s*$/i);
+    const decoration = value.match(/\s+x\s*\d+\s*$/i);
     if (decoration) {
-      const before = normalized;
-      normalized = normalized.slice(0, decoration.index).trim();
-      steps.push({ operation: "REMOVE_DISPLAY_QUANTITY", before, after: normalized });
+      const before = value;
+      value = value.slice(0, decoration.index).trim();
+      appliedRules.push({ operation: "REMOVE_DISPLAY_QUANTITY", before, after: value });
     }
   }
-  const matchingKey = field === "island" ? normalized : normalized.replace(/\s+/gu, "");
-  if (matchingKey !== normalized) steps.push({ operation: "REMOVE_WHITESPACE_FOR_MATCH", before: normalized, after: matchingKey });
-  return { value: normalized, matchingKey, tierHint, appliedRules: steps };
+  const matchingKey = field === "island" ? value : value.replace(/\s+/gu, "");
+  if (matchingKey !== value) appliedRules.push({ operation: "REMOVE_WHITESPACE_FOR_MATCH", before: value, after: matchingKey });
+  return { value, matchingKey, tierHint, appliedRules };
 }
-function compact(value) { return String(value ?? "").replace(/\s+/gu, ""); }
+
 function termIdentity(term) { return term.stableId ? `stable:${term.stableId}` : `legacy:${term.legacyNameKey}`; }
+
+/** Schema-independent identity resolution shared by Bundle2 and the Registry1 adapter. */
+export function resolveTradeIdentityCorrection({ field, sourceText, terms, authorityPolicy, scopeFilter = null, termFilter = null } = {}) {
+  if (!Array.isArray(terms) || !["CANONICAL_BUNDLE2", "LEGACY_REGISTRY1_COMPAT"].includes(authorityPolicy)) {
+    throw new TypeError("terms and a supported authorityPolicy are required");
+  }
+  const normalized = typeof sourceText === "string" ? normalizeTradeCorrectionName({ field, sourceText }) : null;
+  if (!normalized) return { normalized: null, matchStatus: "unmatched", matches: [], alternatives: [], selected: null, correctionCode: null, riskCodes: [], collision: false,
+    exactMatches: [], blockedMatches: [], blockedOnly: false, ambiguous: false, tierHintUnavailable: false,
+    authority: { policy: authorityPolicy, selectedStatus: null, selectedNameStatus: null, candidateStatuses: [] } };
+  const expectedKind = field === "island" ? "ISLAND" : "ITEM";
+  let eligible = terms.filter((term) => term.kind === expectedKind
+    && (scopeFilter === null || (term.scopes ?? term.occurrenceScopes ?? []).some((scope) => scopeFilter.includes(scope)))
+    && (termFilter === null || termFilter(term)));
+  const tierHintUnavailable = normalized.tierHint !== null && !eligible.some((term) => term.tier === normalized.tierHint);
+  if (normalized.tierHint !== null) eligible = eligible.filter((term) => term.tier === normalized.tierHint);
+  const termKey = (term) => normalizeTradeCorrectionName({ field: field === "island" ? "island" : "toItem", sourceText: term.value }).matchingKey;
+  const exactMatches = eligible.filter((term) => termKey(term) === normalized.matchingKey);
+  const blocked = (term) => ["DISPUTED", "DEPRECATED"].includes(term.authorityStatus)
+    || ["DISPUTED", "DEPRECATED"].includes(term.nameStatus)
+    || ["DISPUTED", "DEPRECATED"].includes(term.entityStatus);
+  const safeExact = authorityPolicy === "CANONICAL_BUNDLE2" ? exactMatches.filter((term) => !blocked(term)) : exactMatches;
+  const blockedExact = authorityPolicy === "CANONICAL_BUNDLE2" ? exactMatches.filter(blocked) : [];
+  let matches = safeExact;
+  let matchStatus = exactMatches.length ? "exact" : "unmatched";
+  let alternatives = [];
+  if (!exactMatches.length) {
+    const boundedPool = authorityPolicy === "CANONICAL_BUNDLE2"
+      ? eligible.filter((term) => SAFE_AUTHORITY.has(term.authorityStatus) && SAFE_AUTHORITY.has(term.nameStatus) && !blocked(term))
+      : eligible;
+    const bounded = getSafeUniqueItemMatch(field === "island" ? normalized.value : normalized.matchingKey, boundedPool.map((term) => term.value));
+    if (bounded.status === "corrected") {
+      matches = boundedPool.filter((term) => term.value === bounded.value);
+      matchStatus = "corrected";
+    } else if (bounded.status === "ambiguous") {
+      const names = new Set(bounded.candidates);
+      alternatives = boundedPool.filter((term) => names.has(term.value));
+      matches = alternatives;
+      matchStatus = "ambiguous";
+    } else if (bounded.status === "exact") {
+      matches = boundedPool.filter((term) => getSafeUniqueItemMatch(field === "island" ? normalized.value : normalized.matchingKey, [term.value]).status === "exact");
+      matchStatus = "exact";
+    }
+  }
+  const byIdentity = new Map();
+  for (const term of matches) byIdentity.set(termIdentity(term), term);
+  matches = [...byIdentity.values()];
+  const collision = exactMatches.length > 1 && new Set(exactMatches.map(termIdentity)).size > 1;
+  const blockedOnly = exactMatches.length > 0 && safeExact.length === 0;
+  const distinctMatchCount = new Set(matches.map(termIdentity)).size;
+  const ambiguous = distinctMatchCount > 1 || matchStatus === "ambiguous"
+    || (authorityPolicy === "CANONICAL_BUNDLE2" && blockedExact.length > 0 && safeExact.length > 0);
+  if (ambiguous) alternatives = exactMatches.length ? exactMatches : matches;
+  const selected = !ambiguous && matches.length === 1 ? matches[0] : null;
+  const selectedNameSource = selected?.nameSource ?? selected?.source;
+  const selectedCorrectionCode = matchStatus === "corrected" ? "BOUNDED_UNIQUE_MATCH"
+    : selectedNameSource === "ALIAS" ? "VERIFIED_ALIAS_MATCH"
+      : selectedNameSource === "DISPLAY_NAME" ? "VERIFIED_DISPLAY_NAME_MATCH"
+        : selected ? "EXACT_MATCH" : null;
+  const riskCodes = [];
+  if (ambiguous) riskCodes.push(collision ? "NORMALIZED_NAME_COLLISION" : "AMBIGUOUS_MATCH");
+  else if (!selected) riskCodes.push(blockedOnly ? "MASTER_AUTHORITY_BLOCKED" : "NO_MATCH");
+  if (matchStatus === "corrected") riskCodes.push("BOUNDED_UNIQUE_MATCH");
+  if (selected && (selected.authorityStatus === "DISPUTED" || selected.nameStatus === "DISPUTED")) riskCodes.push("MASTER_NAME_DISPUTED");
+  const correctionCode = selectedCorrectionCode ?? (ambiguous ? (collision ? "NORMALIZED_NAME_COLLISION" : "AMBIGUOUS_MATCH") : blockedOnly ? "MASTER_AUTHORITY_BLOCKED" : "NO_MATCH");
+  return { normalized, matchStatus: ambiguous ? "ambiguous" : matchStatus, matches, alternatives, selected, correctionCode, riskCodes, collision,
+    authority: { policy: authorityPolicy, selectedStatus: selected?.authorityStatus ?? null, selectedNameStatus: selected?.nameStatus ?? null,
+      candidateStatuses: [...new Set((alternatives.length ? alternatives : matches).map((term) => `${term.authorityStatus ?? "UNKNOWN"}/${term.nameStatus ?? "UNKNOWN"}`))] },
+    exactMatches, blockedMatches: blockedExact, blockedOnly,
+    ambiguous: Boolean(ambiguous), tierHintUnavailable };
+}
+
+/** Shared, bounded numeric parser. Disagreement remains explicit for canonical callers. */
+export function resolveTradeNumericCorrection({ field, sourceText, readerCandidate = null } = {}) {
+  if (!["reqAmount", "count", "yield"].includes(field) || !(sourceText === null || typeof sourceText === "string")) {
+    throw new TypeError("field and optional sourceText are required for numeric correction");
+  }
+  const minimum = field === "count" ? 0 : 1;
+  const compactText = sourceText === null ? "" : sourceText.replace(/\s+/gu, "");
+  const groups = [...compactText.matchAll(/[0-9]+(?:,[0-9]{3})*/gu)];
+  let textParsedCandidate = null;
+  let parseStatus = "NUMERIC_MISSING";
+  if (groups.length > 1) parseStatus = "MULTIPLE_NUMERIC_GROUPS";
+  else if (groups.length === 1) {
+    const match = groups[0];
+    const before = compactText.slice(0, match.index);
+    const after = compactText.slice(match.index + match[0].length);
+    const prefixes = {
+      reqAmount: ["", "수:", "수량:", "필요:", "필요수량:", "필요수량", "필요", "요구", "요구수량:"],
+      count: ["", "횟수:", "남은횟수:", "남은교환횟수:", "수:"],
+      yield: ["", "수율:", "획득:"],
+    };
+    const suffixes = {
+      reqAmount: ["", "개", "개씩", "회", "회분"],
+      count: ["", "회", "번", "회남음", "번남음"],
+      yield: ["", "개", "개씩", "개당", "회"],
+    };
+    const parsed = Number(match[0].replaceAll(",", ""));
+    if (!prefixes[field].includes(before) || !suffixes[field].includes(after)
+        || !Number.isSafeInteger(parsed) || parsed < minimum) parseStatus = "NUMERIC_FORMAT_UNSUPPORTED";
+    else { textParsedCandidate = parsed; parseStatus = "PARSED"; }
+  }
+  const readerCandidatePresent = readerCandidate !== null && readerCandidate !== undefined;
+  const readerCandidateValid = readerCandidatePresent && Number.isSafeInteger(readerCandidate) && readerCandidate >= minimum;
+  const reader = readerCandidateValid ? readerCandidate : null;
+  const selectedCandidate = readerCandidatePresent ? reader : textParsedCandidate;
+  const disagreement = readerCandidateValid && textParsedCandidate !== null && reader !== textParsedCandidate;
+  return {
+    readerCandidate: readerCandidatePresent ? readerCandidate : null,
+    readerCandidateValid: Boolean(readerCandidateValid),
+    textParsedCandidate,
+    parseStatus,
+    disagreement,
+    selectedCandidate,
+    readerCandidatePresent,
+    minimum,
+    compactText,
+    groups: groups.map((group) => group[0]),
+  };
+}
+
+/** Shared toItem -> fromItem -> island dependency contract. */
+export function deriveTradeDomainConstraints({ toItemStatus, toItemCandidate = null, toItemAlternatives = [] } = {}) {
+  const choices = [toItemCandidate, ...toItemAlternatives].filter((candidate) => candidate
+    && ["MASTER_ITEM", "ITEM"].includes(candidate.kind) && Number.isInteger(candidate.tier));
+  const tierChoices = [...new Set(choices.map((candidate) => candidate.tier))];
+  const tierResolved = toItemStatus === "MATCHED" && tierChoices.length === 1;
+  const special = toItemStatus === "MATCHED" && toItemCandidate?.kind === "SPECIAL_ITEM";
+  let fromItemMode = "DEPENDENCY_UNRESOLVED";
+  let allowedTier = null;
+  if (special) fromItemMode = "SPECIAL_FULL_POOL";
+  else if (tierResolved && tierChoices[0] === 1) fromItemMode = "OPEN_WORLD";
+  else if (tierResolved) { fromItemMode = "TIER_SCOPED"; allowedTier = tierChoices[0] - 1; }
+  return {
+    tierChoices,
+    tierResolved,
+    fromItemMode,
+    allowedTier,
+    islandAllowedScopes: tierResolved
+      ? [tierChoices[0] === 6 ? "T6_ISLANDS" : tierChoices[0] === 7 ? "T7_ISLANDS" : "GENERAL_ISLANDS"]
+      : ["GENERAL_ISLANDS", "T6_ISLANDS", "T7_ISLANDS"],
+    dependencyUnresolved: fromItemMode === "DEPENDENCY_UNRESOLVED",
+  };
+}
 function sourceFieldText(field) {
   return nonempty(field.normalizedText) ? field.normalizedText : nonempty(field.rawText) ? field.rawText : null;
 }
@@ -107,7 +253,7 @@ function createTerms(bundle) {
   });
   const unique = new Map();
   for (const term of terms) {
-    const key = `${termIdentity(term)}\0${term.kind}\0${compact(term.value)}`;
+    const key = `${termIdentity(term)}\0${term.kind}\0${normalizeTradeCorrectionName({ field: term.kind === "ISLAND" ? "island" : "toItem", sourceText: term.value }).matchingKey}`;
     const prior = unique.get(key);
     if (!prior) { unique.set(key, { ...term, scopes: [...term.scopes] }); continue; }
     prior.scopes = [...new Set([...prior.scopes, ...term.scopes])].sort();
@@ -161,40 +307,19 @@ function textField(fieldName, field, terms, context, scopeFilter = null, termFil
     risks.push(reason("RAW_TEXT_MISSING"));
     return { field: fieldName, raw, normalized: { value: null, matchingKey: null, policyVersion: "r003-name-normalization-v1", appliedRules: [] }, masterMatches: [], correctionCandidates: [], selectedCandidate: null, correctionReasons: [], riskReasons: risks, finalValue: null, finalStatus: "UNMATCHED", stageTrace: [...trace, { stage: 1, name: "NORMALIZATION", ruleVersion: "r003-name-normalization-v1", reason: "RAW_TEXT_MISSING" }, { stage: 2, name: "MASTER_EXACT_MATCH", ruleVersion: "bundle2-exact-v1", reason: "NO_TEXT" }, { stage: 3, name: "MASTER_BOUNDED_CORRECTION", ruleVersion: "V1_UNIQUE_BOUNDED_0.75", reason: "NO_TEXT" }, { stage: 4, name: "DOMAIN_CORRECTION", ruleVersion: "r003-domain-v1", reason: "NO_TEXT" }], deferred: { stage7: "DEFERRED_TO_C3", stage8: "DEFERRED_TO_C3" } };
   }
-  const normalized = normalizeName(text, fieldName);
+  const resolution = resolveTradeIdentityCorrection({
+    field: fieldName, sourceText: text, terms, authorityPolicy: "CANONICAL_BUNDLE2", scopeFilter, termFilter,
+  });
+  const normalized = resolution.normalized;
   trace.push({ stage: 1, name: "NORMALIZATION", ruleVersion: "r003-name-normalization-v1", reason: null });
-  const expectedKind = fieldName === "island" ? "ISLAND" : "ITEM";
-  let pool = terms.filter((term) => term.kind === expectedKind
-    && (scopeFilter === null || term.scopes.some((scope) => scopeFilter.includes(scope)))
-    && (termFilter === null || termFilter(term)));
-  if (normalized.tierHint !== null) pool = pool.filter((term) => term.tier === normalized.tierHint);
-  const exact = pool.filter((term) => (fieldName === "island" ? term.value.trim() : compact(term.value)) === normalized.matchingKey);
+  const { exactMatches: exact, blockedOnly } = resolution;
   trace.push({ stage: 2, name: "MASTER_EXACT_MATCH", ruleVersion: "bundle2-exact-v1", reason: exact.length ? null : "NO_EXACT_NAME" });
-  const safeExact = exact.filter((term) => !BLOCKED_AUTHORITY.has(term.authorityStatus) && !BLOCKED_AUTHORITY.has(term.nameStatus));
-  let matches = safeExact;
-  let matchKind = "EXACT";
-  let bounded = [];
-  if (!exact.length) {
-    const verified = pool.filter((term) => SAFE_AUTHORITY.has(term.authorityStatus)
-      && SAFE_AUTHORITY.has(term.nameStatus) && !BLOCKED_AUTHORITY.has(term.entityStatus));
-    const result = getSafeUniqueItemMatch(fieldName === "island" ? normalized.value : normalized.matchingKey, verified.map((term) => term.value));
-    if (result.status === "corrected") {
-      matches = verified.filter((term) => term.value === result.value);
-      matchKind = "BOUNDED_UNIQUE_MATCH";
-    } else if (result.status === "ambiguous") {
-      const names = new Set(result.candidates);
-      bounded = verified.filter((term) => names.has(term.value));
-      matchKind = "AMBIGUOUS";
-    }
-  }
-  const distinct = new Map();
-  for (const term of matches) distinct.set(termIdentity(term), term);
-  matches = [...distinct.values()];
-  const blockedOnly = exact.length > 0 && safeExact.length === 0;
+  const matches = resolution.matches;
+  const matchKind = resolution.matchStatus === "corrected" ? "BOUNDED_UNIQUE_MATCH"
+    : resolution.matchStatus === "ambiguous" ? "AMBIGUOUS" : "EXACT";
   const blockedIdentities = new Set(exact.map(termIdentity));
-  const ambiguous = matches.length > 1 || matchKind === "AMBIGUOUS" || (exact.length > 0 && safeExact.length > 0 && safeExact.length !== exact.length)
-    || (blockedOnly && blockedIdentities.size > 1);
-  const allMatchTerms = exact.length ? exact : (bounded.length ? bounded : matches);
+  const ambiguous = resolution.ambiguous || (blockedOnly && blockedIdentities.size > 1);
+  const allMatchTerms = exact.length ? exact : resolution.alternatives.length ? resolution.alternatives : matches;
   const candidates = allMatchTerms.map((term) => publicCandidate(term, text, normalized, exact.length ? "EXACT" : matchKind));
   trace.push({ stage: 3, name: "MASTER_BOUNDED_CORRECTION", ruleVersion: "V1_UNIQUE_BOUNDED_0.75", reason: exact.length ? "EXACT_MATCH_PRECEDENCE" : (matches.length ? null : matchKind === "AMBIGUOUS" ? "AMBIGUOUS" : "NO_QUALIFIED_MATCH") });
   let selectedCandidate = null;
@@ -205,8 +330,8 @@ function textField(fieldName, field, terms, context, scopeFilter = null, termFil
   } else if (ambiguous) {
     finalStatus = "AMBIGUOUS";
     risks.push(reason(exact.length ? "MASTER_NAME_COLLISION_OR_BLOCKED" : "AMBIGUOUS_MATCH"));
-  } else if (matches.length === 1) {
-    const term = matches[0];
+  } else if (resolution.selected) {
+    const term = resolution.selected;
     selectedCandidate = publicCandidate(term, text, normalized, matchKind);
     finalStatus = term.authorityStatus === "DISPUTED" || term.nameStatus === "DISPUTED" ? "MASTER_DISAGREEMENT" : "MATCHED";
     reasons.push(reason(matchKind === "BOUNDED_UNIQUE_MATCH" ? "BOUNDED_UNIQUE_MATCH" : "EXACT_MATCH"));
@@ -235,36 +360,11 @@ function textField(fieldName, field, terms, context, scopeFilter = null, termFil
   };
 }
 
-const PREFIXES = {
-  reqAmount: new Set(["", "수:", "수량:", "필요:", "필요수량:", "필요수량", "필요", "요구", "요구수량:"]),
-  count: new Set(["", "횟수:", "남은횟수:", "남은교환횟수:", "수:"]),
-  yield: new Set(["", "수율:", "획득:"]),
-};
-const SUFFIXES = {
-  reqAmount: new Set(["", "개", "개씩", "회", "회분"]),
-  count: new Set(["", "회", "번", "회남음", "번남음"]),
-  yield: new Set(["", "개", "개씩", "개당", "회"]),
-};
 function numericField(fieldName, field, context) {
   const rawText = sourceFieldText(field);
-  const compactText = rawText === null ? "" : rawText.replace(/\s+/gu, "");
-  const groups = [...compactText.matchAll(/[0-9]+(?:,[0-9]{3})*/gu)];
-  let parsed = null;
-  let parseStatus = "NUMERIC_MISSING";
-  if (groups.length > 1) parseStatus = "MULTIPLE_NUMERIC_GROUPS";
-  else if (groups.length === 1) {
-    const match = groups[0];
-    const before = compactText.slice(0, match.index);
-    const after = compactText.slice(match.index + match[0].length);
-    const value = Number(match[0].replaceAll(",", ""));
-    if (!PREFIXES[fieldName].has(before) || !SUFFIXES[fieldName].has(after)
-        || !Number.isSafeInteger(value) || value < MINIMUM[fieldName]) parseStatus = "NUMERIC_FORMAT_UNSUPPORTED";
-    else { parsed = value; parseStatus = "PARSED"; }
-  }
-  const hasReader = field.rawNumericCandidate !== null && field.rawNumericCandidate !== undefined;
-  const readerValid = hasReader && Number.isSafeInteger(field.rawNumericCandidate) && field.rawNumericCandidate >= MINIMUM[fieldName];
-  const value = hasReader ? (readerValid ? field.rawNumericCandidate : null) : parsed;
-  const disagreement = readerValid && parsed !== null && parsed !== field.rawNumericCandidate;
+  const numeric = resolveTradeNumericCorrection({ field: fieldName, sourceText: rawText, readerCandidate: field.rawNumericCandidate });
+  const { compactText, groups, parseStatus, textParsedCandidate: parsed, readerCandidatePresent: hasReader,
+    readerCandidateValid: readerValid, selectedCandidate: value, disagreement } = numeric;
   const risks = [];
   if (value === null) risks.push(reason(parseStatus === "MULTIPLE_NUMERIC_GROUPS" ? "AMBIGUOUS_NUMERIC_GROUPS" : "NUMERIC_MISSING_OR_INVALID", { parseStatus }));
   if (rawText === null) risks.push(reason("RAW_TEXT_MISSING"));
@@ -385,14 +485,12 @@ export function buildFinalTradeProjection({ rawObservation, masterBundle, correc
     const fields = {};
     fields.toItem = textField("toItem", row.fields.toItem, terms, context, null);
     const to = fields.toItem.selectedCandidate;
-    const outputTier = fields.toItem.finalStatus === "MATCHED" ? to?.tier : null;
-    const scopes = outputTier === null ? ["GENERAL_ISLANDS", "T6_ISLANDS", "T7_ISLANDS"]
-      : [outputTier === 6 ? "T6_ISLANDS" : outputTier === 7 ? "T7_ISLANDS" : "GENERAL_ISLANDS"];
-    fields.island = textField("island", row.fields.island, terms, { ...context, domainReason: outputTier === null ? "TO_ITEM_TIER_UNRESOLVED" : null }, scopes);
-    if (outputTier === null) fields.island.riskReasons.push(reason("TO_ITEM_TIER_UNRESOLVED", { toItemStatus: fields.toItem.finalStatus }));
-    if (to?.legacyKind === "SPECIAL_ITEM" && fields.toItem.finalStatus === "MATCHED") {
+    const domain = deriveTradeDomainConstraints({ toItemStatus: fields.toItem.finalStatus, toItemCandidate: to, toItemAlternatives: fields.toItem.masterMatches });
+    fields.island = textField("island", row.fields.island, terms, { ...context, domainReason: domain.tierResolved ? null : "TO_ITEM_TIER_UNRESOLVED" }, domain.islandAllowedScopes);
+    if (!domain.tierResolved) fields.island.riskReasons.push(reason("TO_ITEM_TIER_UNRESOLVED", { toItemStatus: fields.toItem.finalStatus }));
+    if (domain.fromItemMode === "SPECIAL_FULL_POOL") {
       fields.fromItem = textField("fromItem", row.fields.fromItem, terms, context, null);
-    } else if (fields.toItem.finalStatus === "MATCHED" && outputTier === 1) {
+    } else if (domain.fromItemMode === "OPEN_WORLD") {
       const observed = sourceFieldText(row.fields.fromItem);
       const value = observed === null ? null : observed.trim();
       fields.fromItem = {
@@ -406,7 +504,7 @@ export function buildFinalTradeProjection({ rawObservation, masterBundle, correc
         stageTrace: [{ stage: 0, name: "RAW_OBSERVATION", ruleVersion: "raw-draft-adapter-v1", reason: null }, { stage: 4, name: "DOMAIN_CORRECTION", ruleVersion: "r003-domain-v1", reason: "TIER_ONE_OPEN_WORLD" }],
         deferred: { stage7: "DEFERRED_TO_C3", stage8: "DEFERRED_TO_C3" },
       };
-    } else if (fields.toItem.finalStatus !== "MATCHED" || !Number.isSafeInteger(outputTier)) {
+    } else if (domain.fromItemMode === "DEPENDENCY_UNRESOLVED") {
       fields.fromItem = textField("fromItem", row.fields.fromItem, terms, { ...context, domainReason: "TO_ITEM_DEPENDENCY_UNRESOLVED" }, []);
       fields.fromItem.masterMatches = [];
       fields.fromItem.correctionCandidates = [];
@@ -415,7 +513,7 @@ export function buildFinalTradeProjection({ rawObservation, masterBundle, correc
       fields.fromItem.finalStatus = "UNMATCHED";
       fields.fromItem.riskReasons.push(reason("TO_ITEM_DEPENDENCY_UNRESOLVED"));
     } else {
-      const allowedTier = outputTier - 1;
+      const allowedTier = domain.allowedTier;
       fields.fromItem = textField("fromItem", row.fields.fromItem, terms, context, null,
         (term) => term.legacyKind === "MASTER_ITEM" && term.tier === allowedTier);
     }

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { adaptLegacyCatalog } from "../frontend/js/domain/trade-master-registry.js";
 import { getSafeUniqueItemMatch } from "../frontend/js/domain/trade-import.js";
 import { buildTradeReviewProjection } from "../frontend/js/domain/trade-review-projection.js";
+import { buildTradeBatchReconciliation } from "../frontend/js/domain/trade-batch-reconciliation.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const emptyCatalog = () => ({
@@ -98,6 +99,14 @@ const rows = [
 const input = { draftRows: rows, registrySnapshot, correctionPolicyVersion: "r003-correction-v1" };
 const inputBefore = structuredClone(input);
 const projection = buildTradeReviewProjection(input);
+const baselineTopology = buildTradeBatchReconciliation({
+  captures: [...new Set(rows.map((row) => row.captureId))].map((captureId) => ({ captureId })),
+  draftRows: rows,
+  policyVersion: "trade-batch-reconciliation-v1",
+});
+const baselineProjectionV2 = buildTradeReviewProjection({ ...input, reconciliation: baselineTopology });
+assert.equal(projection.projectionHash, "94a8e9823c46d0ad529ac2dea0b51f367306aa9a582405c5ae705476a290a769", "REVIEW_FIRST schema 1 pre-C2 golden hash");
+assert.equal(baselineProjectionV2.projectionHash, "011f0bb0df113beb3642841f33992cc84962f382d388445c5db7296604ba63c7", "REVIEW_FIRST schema 2 pre-C2 golden hash");
 assert.deepEqual(input, inputBefore, "draft rows, reconciliation, and registry inputs are not mutated");
 assert.equal(Object.isFrozen(projection) && Object.isFrozen(projection.rows[0].fields.island.rawEvidence.evidence.box), true);
 assert.equal(projection.correctionVersion, "r003-correction-v1");
@@ -393,9 +402,12 @@ for (const tier of [6, 7]) {
   assert.equal(forcedMatchProjection.rows[0].fields.island.status, "UNMATCHED");
 }
 
-// Runtime module retains the V1 bounded matcher and has no Node-only dependency or parsed-trade entry point.
+// Runtime module delegates all correction parsing/matching to the shared kernel.
 const runtimeSource = await readFile(resolve(root, "local_app/frontend/js/domain/trade-review-projection.js"), "utf8");
-assert.match(runtimeSource, /import\s*\{\s*getSafeUniqueItemMatch\s*\}\s*from\s*["']\.\/trade-import\.js["']/);
+assert.match(runtimeSource, /resolveTradeIdentityCorrection/);
+assert.match(runtimeSource, /resolveTradeNumericCorrection/);
+assert.match(runtimeSource, /deriveTradeDomainConstraints/);
+assert.doesNotMatch(runtimeSource, /getSafeUniqueItemMatch|matchAll\(\/\[0-9\]|allowedNumericDecoration|function numericToken|function normalizeName/);
 assert.doesNotMatch(runtimeSource, /processParsedTrades|node:|\bBuffer\b|\bprocess\s*\.|\brequire\s*\(/);
 assert.doesNotMatch(runtimeSource, /getBestMatch|forceMatch/);
 
