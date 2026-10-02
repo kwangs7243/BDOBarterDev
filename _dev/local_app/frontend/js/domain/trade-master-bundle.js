@@ -2,6 +2,7 @@ import {
   registrySnapshotSha256,
   validateRegistrySnapshot,
 } from "./trade-master-registry.js";
+import { CATALOG_PROVENANCE_V2, computeCatalogProvenanceV2 } from "./trade-catalog-provenance.js";
 
 const SCHEMA_VERSION = 2;
 const HASH_BASIS = "MASTER_CANONICAL_JSON_V2";
@@ -29,6 +30,10 @@ const UNRESOLVED_KEYS = Object.freeze([...LEGACY_NAME_KEYS, "reason"]);
 const SOURCE_REVISION_KEYS = Object.freeze(["sourceType", "revision", "sha256"]);
 const REFERENCE_MANIFEST_KEYS = Object.freeze(["schemaVersion", "policyVersion", "scope", "claims", "unresolved", "referenceAuditHash"]);
 const REFERENCE_SCOPE_KEYS = Object.freeze(["originalHtmlSha256", "catalogSha256", "sourceOccurrenceCount", "legacyGroupCount"]);
+const REFERENCE_MANIFEST_V2_KEYS = Object.freeze(["schemaVersion", "policyVersion", "scope", "migration", "claims", "unresolved", "referenceAuditHash"]);
+const REFERENCE_SCOPE_V2_KEYS = Object.freeze(["originalHtmlSha256", "catalogDigest", "sourceOccurrenceCount", "legacyGroupCount"]);
+const CATALOG_DIGEST_V2_KEYS = Object.freeze(["schemaVersion", "hashBasis", "sha256"]);
+const REFERENCE_MIGRATION_V2_KEYS = Object.freeze(["fromManifestSchemaVersion", "fromReferenceAuditHash", "fromCatalogRawSha256"]);
 const REFERENCE_CLAIM_KEYS = Object.freeze(["legacyNameKey", "stableId", "kind", "legacyKind", "canonicalName", "displayName", "tier", "category", "decision", "evidence"]);
 const CREATE_INPUT_KEYS = Object.freeze([
   "createdAt", "entities", "compatibilityMappings", "unresolvedLegacyNames", "sourceRevisions", "provenance",
@@ -270,11 +275,30 @@ function validateReferenceProvenance(provenance, path, errors) {
 
 function validateReferenceManifestInternal(manifest) {
   const errors = [];
-  if (!exactKeys(manifest, REFERENCE_MANIFEST_KEYS)) return { ok: false, errors: ["manifest has invalid top-level fields"] };
-  if (manifest.schemaVersion !== 1 || manifest.policyVersion !== "trade-master-reference-v1") issue(errors, "manifest", "unsupported reference manifest version");
-  if (!exactKeys(manifest.scope, REFERENCE_SCOPE_KEYS)) issue(errors, "manifest.scope", "has invalid fields");
+  const version = manifest?.schemaVersion;
+  const v2 = version === 2;
+  if (!exactKeys(manifest, v2 ? REFERENCE_MANIFEST_V2_KEYS : REFERENCE_MANIFEST_KEYS)) return { ok: false, errors: ["manifest has invalid top-level fields"] };
+  if (version === 1 && manifest.policyVersion !== "trade-master-reference-v1") issue(errors, "manifest", "unsupported reference manifest version");
+  else if (v2 && manifest.policyVersion !== "trade-master-reference-v2") issue(errors, "manifest", "unsupported reference manifest version");
+  else if (version !== 1 && !v2) issue(errors, "manifest", "unsupported reference manifest version");
+  const scopeKeys = v2 ? REFERENCE_SCOPE_V2_KEYS : REFERENCE_SCOPE_KEYS;
+  if (!exactKeys(manifest.scope, scopeKeys)) issue(errors, "manifest.scope", "has invalid fields");
   else {
-    for (const key of ["originalHtmlSha256", "catalogSha256"]) if (!/^[a-f0-9]{64}$/.test(manifest.scope[key] ?? "")) issue(errors, `manifest.scope.${key}`, "must be lowercase SHA-256");
+    if (!/^[a-f0-9]{64}$/.test(manifest.scope.originalHtmlSha256 ?? "")) issue(errors, "manifest.scope.originalHtmlSha256", "must be lowercase SHA-256");
+    if (!v2 && !/^[a-f0-9]{64}$/.test(manifest.scope.catalogSha256 ?? "")) issue(errors, "manifest.scope.catalogSha256", "must be lowercase SHA-256");
+    if (v2) {
+      const digest = manifest.scope.catalogDigest;
+      if (!exactKeys(digest, CATALOG_DIGEST_V2_KEYS) || digest.schemaVersion !== 2
+          || digest.hashBasis !== CATALOG_PROVENANCE_V2.hashBasis || !/^[a-f0-9]{64}$/.test(digest.sha256 ?? "")) {
+        issue(errors, "manifest.scope.catalogDigest", "has unsupported schema, hash basis, or SHA-256");
+      }
+      const migration = manifest.migration;
+      if (!exactKeys(migration, REFERENCE_MIGRATION_V2_KEYS) || migration.fromManifestSchemaVersion !== 1
+          || migration.fromReferenceAuditHash !== "46c10355ccf3b8b5aba08880cd5947408cc66720dafdccef4d9deeb12ab2df82"
+          || migration.fromCatalogRawSha256 !== "8183b03e6aa0ee354142cf9720b401494bec365e528632f3c0c84ec11b46b4b3") {
+        issue(errors, "manifest.migration", "does not identify the approved v1 reference baseline");
+      }
+    }
     if (!Number.isSafeInteger(manifest.scope.sourceOccurrenceCount) || manifest.scope.sourceOccurrenceCount < 0) issue(errors, "manifest.scope.sourceOccurrenceCount", "must be a nonnegative integer");
     if (!Number.isSafeInteger(manifest.scope.legacyGroupCount) || manifest.scope.legacyGroupCount < 0) issue(errors, "manifest.scope.legacyGroupCount", "must be a nonnegative integer");
   }
@@ -304,8 +328,12 @@ function validateReferenceManifestInternal(manifest) {
     if (!Array.isArray(entry.evidence) || !nonempty(entry.note)) issue(errors, path, "requires evidence accounting and an explanation");
   });
   if (manifest.scope?.legacyGroupCount !== keys.size) issue(errors, "manifest.scope.legacyGroupCount", "does not equal accounted claim and unresolved group count");
+  if (v2 && (manifest.claims.length !== 87 || manifest.unresolved.length !== 143
+      || manifest.scope.sourceOccurrenceCount !== 241 || manifest.scope.legacyGroupCount !== 230)) {
+    issue(errors, "manifest.scope", "does not match the frozen 87/143/241/230 reference baseline");
+  }
   const semantic = {};
-  for (const key of REFERENCE_MANIFEST_KEYS) if (key !== "referenceAuditHash") defineDataProperty(semantic, key, manifest[key]);
+  for (const key of (v2 ? REFERENCE_MANIFEST_V2_KEYS : REFERENCE_MANIFEST_KEYS)) if (key !== "referenceAuditHash") defineDataProperty(semantic, key, manifest[key]);
   if (!/^[a-f0-9]{64}$/.test(manifest.referenceAuditHash ?? "") || sha256(canonicalStringify(semantic)) !== manifest.referenceAuditHash) issue(errors, "manifest.referenceAuditHash", "does not match canonical semantic content");
   return { ok: errors.length === 0, errors };
 }
@@ -645,11 +673,18 @@ export function createMasterBundleV2(input = {}) {
 }
 
 export function adaptRegistrySnapshotV1ToMasterBundleV2(snapshot, options = {}) {
-  if (!exactKeys(options, ["createdAt"])) throw new TypeError("adapter options must contain exactly createdAt");
-  const { createdAt } = options;
+  if (!exactKeys(options, options?.catalogProvenance === undefined ? ["createdAt"] : ["createdAt", "catalogProvenance"])) throw new TypeError("adapter options must include createdAt and only the optional catalogProvenance field");
+  const { createdAt, catalogProvenance } = options;
   const legacyValidation = validateRegistrySnapshot(snapshot);
   if (!legacyValidation.ok) throw new TypeError(`invalid registry snapshot v1: ${legacyValidation.errors.join("; ")}`);
   if (!nonempty(createdAt)) throw new TypeError("createdAt must be a nonempty caller-supplied string");
+  if (catalogProvenance !== undefined && (!exactKeys(catalogProvenance, ["schemaVersion", "hashBasis", "sha256"])
+      || catalogProvenance.schemaVersion !== 2 || catalogProvenance.hashBasis !== CATALOG_PROVENANCE_V2.hashBasis
+      || !/^[a-f0-9]{64}$/.test(catalogProvenance.sha256 ?? "")
+      || snapshot.source.sha256 !== catalogProvenance.sha256
+      || snapshot.source.revision !== `catalog-provenance-v2:${catalogProvenance.sha256}`)) {
+    throw new TypeError("catalogProvenance v2 does not match the Registry1 compatibility input");
+  }
 
   const namesByKey = new Map(snapshot.legacyNames.map((record) => [record.legacyNameKey, record]));
   const unresolvedKeys = new Set(snapshot.unresolvedMappings.map((record) => record.legacyNameKey));
@@ -697,7 +732,7 @@ export function adaptRegistrySnapshotV1ToMasterBundleV2(snapshot, options = {}) 
     compatibilityMappings,
     unresolvedLegacyNames,
     sourceRevisions: [{
-      sourceType: "TRADE_MASTER_REGISTRY_V1",
+      sourceType: catalogProvenance ? "TRADE_CATALOG_TEXT_V2" : "TRADE_MASTER_REGISTRY_V1",
       revision: snapshot.source.revision,
       sha256: snapshot.source.sha256,
     }],
@@ -706,6 +741,7 @@ export function adaptRegistrySnapshotV1ToMasterBundleV2(snapshot, options = {}) 
       sourceRegistryVersion: snapshot.registryVersion,
       sourceSnapshotSha256: snapshotHash,
       curationRevision: snapshot.curation.revision,
+      ...(catalogProvenance ? { catalogProvenance: cloneJson(catalogProvenance, "catalogProvenance") } : {}),
     },
   });
 }
@@ -718,16 +754,29 @@ export function validateTradeMasterReferenceManifest(manifest) {
 }
 
 export function applyTradeMasterReferenceManifestToBundleV2(baseBundle, manifest, options = {}) {
-  if (!exactKeys(options, ["createdAt"])) throw new TypeError("reference bundle options must contain exactly createdAt");
+  const v2 = manifest?.schemaVersion === 2;
+  if (!exactKeys(options, v2 ? ["createdAt", "catalogBytes"] : ["createdAt"])) throw new TypeError("reference bundle options are invalid for the manifest version");
   if (!nonempty(options.createdAt)) throw new TypeError("createdAt must be a nonempty caller-supplied string");
   const base = cloneJson(baseBundle, "base Master bundle");
   const baseValidation = validateBundleInternal(base);
   if (!baseValidation.ok) throw new TypeError(`invalid base Master bundle: ${baseValidation.errors.join("; ")}`);
   const source = validateTradeMasterReferenceManifest(manifest);
   if (!source.ok) throw new TypeError(`invalid reference manifest: ${source.errors.join("; ")}`);
-  const catalogHash = manifest.scope.catalogSha256;
-  if (!base.sourceRevisions.some((revision) => revision.sha256 === catalogHash)) {
-    throw new TypeError("reference manifest catalog hash does not match the base bundle source revision");
+  if (v2) {
+    const computed = computeCatalogProvenanceV2(options.catalogBytes);
+    const digest = manifest.scope.catalogDigest.sha256;
+    const expectedRevision = `catalog-provenance-v2:${digest}`;
+    const expectedSource = { sourceType: "TRADE_CATALOG_TEXT_V2", revision: expectedRevision, sha256: digest };
+    const expectedBinding = { schemaVersion: 2, hashBasis: CATALOG_PROVENANCE_V2.hashBasis, sha256: digest };
+    if (computed.sha256 !== digest || canonicalStringify(base.provenance.catalogProvenance) !== canonicalStringify(expectedBinding)
+        || base.sourceRevisions.length !== 1 || canonicalStringify(base.sourceRevisions[0]) !== canonicalStringify(expectedSource)) {
+      throw new TypeError("reference manifest catalog digest does not match the v2 base bundle source provenance");
+    }
+  } else {
+    const catalogHash = manifest.scope.catalogSha256;
+    if (!base.sourceRevisions.some((revision) => revision.sha256 === catalogHash)) {
+      throw new TypeError("reference manifest catalog hash does not match the base bundle source revision");
+    }
   }
 
   const allRecords = [

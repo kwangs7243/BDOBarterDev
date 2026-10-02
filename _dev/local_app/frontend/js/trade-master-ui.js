@@ -2,8 +2,10 @@ import { adaptLegacyCatalog } from "./domain/trade-master-registry.js";
 import {
   createMasterBundleV2,
   adaptRegistrySnapshotV1ToMasterBundleV2,
+  applyTradeMasterReferenceManifestToBundleV2,
   validateMasterBundleV2,
 } from "./domain/trade-master-bundle.js";
+import { computeCatalogProvenanceV2 } from "./domain/trade-catalog-provenance.js";
 
 const STATUSES = Object.freeze([
   ["LEGACY_UNVERIFIED", "미검증 legacy"],
@@ -32,19 +34,25 @@ async function loadLegacySeed() {
   });
   if (!response.ok) throw new Error(`catalog fetch failed (${response.status})`);
   const bytes = await response.arrayBuffer();
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
-  const sourceSha256 = [...new Uint8Array(digest)]
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("");
-  const sourceText = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  const catalog = JSON.parse(sourceText);
-  const registry = adaptLegacyCatalog(catalog, {
-    sourceRevision: "current-trade-catalog",
+  const catalogProvenance = computeCatalogProvenanceV2(bytes);
+  const sourceSha256 = catalogProvenance.sha256;
+  const registry = adaptLegacyCatalog(catalogProvenance.catalog, {
+    sourceRevision: `catalog-provenance-v2:${sourceSha256}`,
     sourceSha256,
     curatedMappings: null,
   });
-  return adaptRegistrySnapshotV1ToMasterBundleV2(registry, {
+  const base = adaptRegistrySnapshotV1ToMasterBundleV2(registry, {
     createdAt: new Date().toISOString(),
+    catalogProvenance: { schemaVersion: catalogProvenance.schemaVersion,
+      hashBasis: catalogProvenance.hashBasis, sha256: sourceSha256 },
+  });
+  const manifestResponse = await fetch("/assets/data/trade-master-reference-manifest-v2.json", {
+    credentials: "same-origin", cache: "no-cache",
+  });
+  if (!manifestResponse.ok) throw new Error(`reference manifest fetch failed (${manifestResponse.status})`);
+  const manifest = await manifestResponse.json();
+  return applyTradeMasterReferenceManifestToBundleV2(base, manifest, {
+    createdAt: new Date().toISOString(), catalogBytes: bytes,
   });
 }
 

@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { migrateTradeMasterReferenceManifestV1ToV2 } from "../tools/migrate_trade_master_reference_manifest.mjs";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const catalogBytes = await readFile(resolve(root, "frontend/data/trade-catalog.json"));
+const v1Bytes = await readFile(resolve(root, "frontend/data/trade-master-reference-manifest.json"));
+const v1Before = createHash("sha256").update(v1Bytes).digest("hex");
+const legacyManifest = JSON.parse(v1Bytes.toString("utf8"));
+const first = migrateTradeMasterReferenceManifestV1ToV2({ catalogBytes, legacyManifest });
+const second = migrateTradeMasterReferenceManifestV1ToV2({ catalogBytes, legacyManifest });
+assert.deepEqual(first, second, "migration is deterministic");
+assert.equal(createHash("sha256").update(await readFile(resolve(root, "frontend/data/trade-master-reference-manifest.json"))).digest("hex"), v1Before);
+assert.equal(first.manifest.schemaVersion, 2);
+assert.equal(first.manifest.claims.length, 87);
+assert.equal(first.manifest.unresolved.length, 143);
+assert.equal(first.manifest.scope.sourceOccurrenceCount, 241);
+assert.equal(first.manifest.scope.legacyGroupCount, 230);
+assert.equal(first.manifest.scope.catalogDigest.sha256, "bc7f1e50460ea29ebe822018606008506334315cab07ac67f8cdbec2a19e606e");
+assert.deepEqual(first.manifest.claims, legacyManifest.claims);
+assert.deepEqual(first.manifest.unresolved, legacyManifest.unresolved);
+console.log(`PASS trade_catalog_reference_manifest_migration_regression: audit=${first.manifest.referenceAuditHash}`);

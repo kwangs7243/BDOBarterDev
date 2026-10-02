@@ -53,6 +53,13 @@
 - 공식 2026-04-15 공지: `고급 묵양함`.
 - 한국어 Codex 검색 결과 ID 800219: `고급 묵향함`.
 - 후속 검색에서 이 교역품의 표기를 확정하는 공식 정정 자료를 찾지 못했다. 별개의 일반 무역품 `묵향함` 공지는 해당 6단계 품목의 정정 증거로 사용하지 않았다.
+
+## 3. Catalog Provenance v2 runtime baseline reconciliation (2026-10-03)
+
+- `0c5133b8c7d8895e27607690d37d9e881d6c641d320e9f24bd77f425259763ce`는 M4 reference-audit 시점의 **historical semantic Bundle2 hash**이며, 현재 runtime expected hash가 아니다. 당시 기록은 보존한다.
+- Registry1 source/snapshot provenance가 실제 Bundle semantic envelope에 포함된 runtime integration은 `37c5df1303a83aaae8aed7e1bf3f4d1cd1a1c8bc` (`feat: support verified reference master`)에서 이루어졌다.
+- Catalog Provenance Digest v2는 CRLF/LF checkout 차이를 입력 provenance에서 제거한다. 전체 LF 및 CRLF 재구성에서 catalog digest `bc7f1e50460ea29ebe822018606008506334315cab07ac67f8cdbec2a19e606e`, Registry snapshot hash `9b2fa94dfb3c77d550777354a224ab3bfd336284c0097b948ce0a5a86bd3fc3f`, 그리고 Bundle2 content hash `ad0b6a929130dfeafd0f66bc5c302a7d2c60c400d5145cd16cd20b66bd3e652b`가 동일하게 재현됐다.
+- 2026-10-03 전체 R2F 필수 회귀가 PASS했다. 현재 runtime의 authoritative provenance-v2 Bundle2 baseline은 `ad0b6a929130dfeafd0f66bc5c302a7d2c60c400d5145cd16cd20b66bd3e652b`다. 이 기준은 M4 historical audit hash를 대체하거나 과거 조사 결과를 수정하지 않는다.
 - 결정: `SOURCE_CONFLICT`, 확정명 없음. 공식 표의 오탈자라고 추정하거나 Codex 검색 제목만으로 VERIFIED_REFERENCE를 발행하지 않는다.
 
 ## 3. 구현 중단을 일으킨 cross-layer 계약

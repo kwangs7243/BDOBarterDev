@@ -161,18 +161,18 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]')?.textContent === '241'"), "production catalog preview");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=names]').textContent"), "230");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=verified]').textContent"), "0");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=unresolved]').textContent"), "230");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=saved]').textContent"), "0");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=unresolved]').textContent"), "143");
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=saved]').textContent"), "87");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').disabled"), true);
   const allCount = await evaluate("document.querySelectorAll('#trade-master-dialog [data-master-list] [role=option]').length");
   assert.equal(allCount, 230, "every unresolved legacy name is reachable in the production list");
   const filterCounts = await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const count=(kind)=>{d.querySelector(`[data-master-filter=${kind}]`).click();return d.querySelectorAll('[data-master-list] [role=option]').length};const item=count('ITEM'),island=count('ISLAND');d.querySelector('[data-master-filter=ALL]').click();return {item,island,all:d.querySelectorAll('[data-master-list] [role=option]').length}})()");
   assert.ok(filterCounts.item > 0 && filterCounts.island > 0);
   assert.equal(filterCounts.item + filterCounts.island, 230);
-  const firstRawName = await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1'));if(!row)throw new Error('tier 1 legacy record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()");
+  const firstRawName = await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.dataset.masterKey.startsWith('legacy:')&&x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1'));if(!row)throw new Error('unresolved tier 1 legacy record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()");
   await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const s=d.querySelector('[data-master-search]');s.value=${JSON.stringify(firstRawName.slice(0, 2))};s.dispatchEvent(new Event('input',{bubbles:true}))})()`);
   assert.ok(await evaluate("document.querySelectorAll('#trade-master-dialog [data-master-list] [role=option]').length") > 0);
-  await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const s=d.querySelector('[data-master-search]');s.value='';s.dispatchEvent(new Event('input',{bubbles:true}));const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-name').textContent===${JSON.stringify(firstRawName)});row.click()})()`);
+  await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const s=d.querySelector('[data-master-search]');s.value='';s.dispatchEvent(new Event('input',{bubbles:true}));const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.dataset.masterKey.startsWith('legacy:')&&x.querySelector('.trade-master-list-name').textContent===${JSON.stringify(firstRawName)});row.click()})()`);
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"stableId\"]').textContent"), "미발급");
   const selectedRawName = await evaluate("document.querySelector('#trade-master-dialog .trade-master-editor-title h3').textContent");
   const masterPayload = "<script>window.__masterXss=true</script> & \"따옴표\"";
@@ -203,18 +203,20 @@ try {
   await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('저장 완료')"), "first owner-confirmed publish");
   const firstStored = await fetch(`${baseUrl}api/master/active`).then((response) => response.json());
-  assert.equal(firstStored.bundle.entities.length, 1);
-  assert.equal(firstStored.bundle.unresolvedLegacyNames.length, 229);
-  assert.equal(firstStored.bundle.entities[0].canonicalName, masterPayload);
-  assert.match(firstStored.bundle.entities[0].stableId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-  assert.equal(firstStored.bundle.entities[0].legacyNames[0].occurrences.length > 0, true);
+  assert.equal(firstStored.bundle.entities.length, 88);
+  assert.equal(firstStored.bundle.unresolvedLegacyNames.length, 142);
+  const publishedEntity = firstStored.bundle.entities.find((entity) => entity.canonicalName === masterPayload);
+  assert.ok(publishedEntity, "owner draft is published alongside the 87 reference entities");
+  assert.match(publishedEntity.stableId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.equal(publishedEntity.legacyNames[0].occurrences.length > 0, true);
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]').textContent"), "241");
   const firstPublishBodies = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').map(x=>x.body)");
   assert.equal(firstPublishBodies.length, 2);
   assert.equal(firstPublishBodies[0].mutationId, firstPublishBodies[1].mutationId);
   assert.equal(firstPublishBodies[0].bundle.registryVersion, firstPublishBodies[1].bundle.registryVersion);
   assert.equal(firstPublishBodies[0].bundle.contentHash, firstPublishBodies[1].bundle.contentHash);
-  assert.equal(firstPublishBodies[0].bundle.entities[0].stableId, firstPublishBodies[1].bundle.entities[0].stableId);
+  assert.equal(firstPublishBodies[0].bundle.entities.find((entity) => entity.canonicalName === masterPayload).stableId,
+    firstPublishBodies[1].bundle.entities.find((entity) => entity.canonicalName === masterPayload).stableId);
   assert.deepEqual(await fetch(`${baseUrl}api/bootstrap`).then((response) => response.json()), beforeRuntime,
     "Master publish leaves the active app/session bootstrap unchanged");
 
@@ -225,12 +227,13 @@ try {
   await evaluate("document.querySelector('#open-trade-master').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-summary=occurrences]')?.textContent === '241'"), "persisted Master after reload");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=names]').textContent"), "230");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=unresolved]').textContent"), "229");
-  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"stableId\"]').textContent"), firstStored.bundle.entities[0].stableId);
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-summary=unresolved]').textContent"), "142");
+  await evaluate(`(()=>{const stable=${JSON.stringify(publishedEntity.stableId)};const row=[...document.querySelectorAll('#trade-master-dialog [data-master-list] [role=option]')].find(x=>x.dataset.masterKey.startsWith('entity:'+stable+':'));if(!row)throw new Error('published owner entity not in list');row.click()})()`);
+  assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"stableId\"]').textContent"), publishedEntity.stableId);
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [aria-label=\"Canonical 이름 초안\"]').value"), masterPayload, "reload reads persisted curation rather than the legacy seed");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-export]').disabled"), false);
 
-  const secondRawName = await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1')&&x.querySelector('.trade-master-list-name').textContent!==${JSON.stringify(firstRawName)});if(!row)throw new Error('second tier 1 legacy record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()`);
+  const secondRawName = await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.dataset.masterKey.startsWith('legacy:')&&x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1')&&x.querySelector('.trade-master-list-name').textContent!==${JSON.stringify(firstRawName)});if(!row)throw new Error('second unresolved tier 1 legacy record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()`);
   await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const input=d.querySelector('[aria-label=\"Canonical 이름 초안\"]');input.value='두 번째 검수 품목';input.dispatchEvent(new Event('input',{bubbles:true}))})()");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').disabled"), true,
     "unreviewed edits cannot be saved");
@@ -243,9 +246,9 @@ try {
   await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('저장 완료')"), "incremental second publish");
   const afterSecond = await fetch(`${baseUrl}api/master/active`).then((response) => response.json());
-  assert.equal(afterSecond.bundle.entities.length, 2);
-  assert.equal(afterSecond.bundle.unresolvedLegacyNames.length, 228);
-  assert.ok(afterSecond.bundle.entities.some((entity) => entity.stableId === firstStored.bundle.entities[0].stableId));
+  assert.equal(afterSecond.bundle.entities.length, 89);
+  assert.equal(afterSecond.bundle.unresolvedLegacyNames.length, 141);
+  assert.ok(afterSecond.bundle.entities.some((entity) => entity.stableId === publishedEntity.stableId));
   assert.equal(afterSecond.storeRevision, 2, "the ambiguous retry activates only once");
   const secondPublishBodies = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').slice(-2).map(x=>x.body)");
   assert.equal(secondPublishBodies.length, 2);
@@ -253,19 +256,19 @@ try {
   assert.equal(secondPublishBodies[0].bundle.registryVersion, secondPublishBodies[1].bundle.registryVersion);
   assert.equal(secondPublishBodies[0].bundle.contentHash, secondPublishBodies[1].bundle.contentHash);
 
-  const linkedRawName = await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const excluded=new Set([${JSON.stringify(firstRawName)},${JSON.stringify(secondRawName)}]);const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1')&&!excluded.has(x.querySelector('.trade-master-list-name').textContent));if(!row)throw new Error('linkable tier 1 record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()`);
+  const linkedRawName = await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const excluded=new Set([${JSON.stringify(firstRawName)},${JSON.stringify(secondRawName)}]);const row=[...d.querySelectorAll('[data-master-list] [role=option]')].find(x=>x.dataset.masterKey.startsWith('legacy:')&&x.querySelector('.trade-master-list-meta').textContent.includes('원본 tier 1')&&!excluded.has(x.querySelector('.trade-master-list-name').textContent));if(!row)throw new Error('linkable unresolved tier 1 record not found');row.click();return row.querySelector('.trade-master-list-name').textContent})()`);
   await evaluate("(()=>{const d=document.querySelector('#trade-master-dialog');const mode=d.querySelector('[aria-label=\"저장 연결 방식 초안\"]');mode.value='LINK_EXISTING';mode.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   assert.equal(await evaluate("document.querySelector('#trade-master-dialog .trade-master-review-action button').disabled"), true,
     "linking cannot be confirmed before the owner chooses an existing entity");
-  await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const target=d.querySelector('[aria-label="연결할 기존 entity 초안"]');target.value=${JSON.stringify(firstStored.bundle.entities[0].stableId)};target.dispatchEvent(new Event('change',{bubbles:true}));d.querySelector('.trade-master-review-action button').click();window.__simulateReadbackFailureOnce=true;d.querySelector('[data-master-save]').click()})()`);
+  await evaluate(`(()=>{const d=document.querySelector('#trade-master-dialog');const target=d.querySelector('[aria-label="연결할 기존 entity 초안"]');target.value=${JSON.stringify(publishedEntity.stableId)};target.dispatchEvent(new Event('change',{bubbles:true}));d.querySelector('.trade-master-review-action button').click();window.__simulateReadbackFailureOnce=true;d.querySelector('[data-master-save]').click()})()`);
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('최종 확인에 실패')"), "publish success with simulated readback failure");
   const publishesBeforeReadbackRetry = await evaluate("window.__masterApiRequests.filter(x=>x.url==='/api/master/publish').length");
   await evaluate("document.querySelector('#trade-master-dialog [data-master-save]').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog [data-master-save-status]')?.textContent.includes('저장 완료')"), "readback-only retry");
   const afterLink = await fetch(`${baseUrl}api/master/active`).then((response) => response.json());
-  assert.equal(afterLink.bundle.entities.length, 2, "linking does not create another entity");
-  assert.equal(afterLink.bundle.unresolvedLegacyNames.length, 227);
-  const linkedEntity = afterLink.bundle.entities.find((entity) => entity.stableId === firstStored.bundle.entities[0].stableId);
+  assert.equal(afterLink.bundle.entities.length, 89, "linking does not create another entity");
+  assert.equal(afterLink.bundle.unresolvedLegacyNames.length, 140);
+  const linkedEntity = afterLink.bundle.entities.find((entity) => entity.stableId === publishedEntity.stableId);
   const linkedRecord = linkedEntity.legacyNames.find((record) => record.rawName === linkedRawName);
   assert.ok(linkedRecord);
   assert.ok(afterLink.bundle.compatibilityMappings.some((mapping) => mapping.stableId === linkedEntity.stableId && mapping.legacyNameKeys.includes(linkedRecord.legacyNameKey)));

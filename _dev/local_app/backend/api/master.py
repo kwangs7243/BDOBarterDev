@@ -36,10 +36,14 @@ def _store():
     return store
 
 
-def _approved_reference_manifest():
+def _approved_reference_manifest(bundle):
     manifest_path = current_app.config.get("MASTER_REFERENCE_MANIFEST_PATH")
     if manifest_path is None:
-        manifest_path = Path(__file__).resolve().parents[2] / "frontend" / "data" / "trade-master-reference-manifest.json"
+        data_dir = Path(__file__).resolve().parents[2] / "frontend" / "data"
+        wants_v2 = any(source.get("sourceType") == "TRADE_CATALOG_TEXT_V2"
+                       for source in bundle.get("sourceRevisions", []) if isinstance(source, dict))
+        manifest_path = data_dir / ("trade-master-reference-manifest-v2.json" if wants_v2
+                                    else "trade-master-reference-manifest.json")
     manifest_path = Path(manifest_path).resolve()
     catalog_path = current_app.config.get("MASTER_REFERENCE_CATALOG_PATH")
     if catalog_path is None:
@@ -53,13 +57,21 @@ def _approved_reference_manifest():
         manifest = json.loads(raw.decode("utf-8", errors="strict"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise InvalidMasterBundle("approved reference manifest is not valid UTF-8 JSON") from error
+    if manifest.get("schemaVersion") == 2:
+        if not any(source.get("sourceType") == "TRADE_CATALOG_TEXT_V2"
+                   for source in bundle.get("sourceRevisions", []) if isinstance(source, dict)):
+            raise InvalidMasterBundle("v2 reference manifest requires v2 catalog source provenance")
+        return validate_reference_manifest(manifest, catalog_bytes=catalog_bytes)
+    if any(source.get("sourceType") == "TRADE_CATALOG_TEXT_V2"
+           for source in bundle.get("sourceRevisions", []) if isinstance(source, dict)):
+        raise InvalidMasterBundle("v2 catalog source provenance cannot fall back to a v1 reference manifest")
     return validate_reference_manifest(manifest, expected_catalog_sha256=catalog_hash)
 
 
 def _validate_reference_authority(bundle):
     if not any(entity.get("status") == "VERIFIED_REFERENCE" for entity in bundle.get("entities", [])):
         return
-    validate_reference_bundle_against_manifest(bundle, _approved_reference_manifest())
+    validate_reference_bundle_against_manifest(bundle, _approved_reference_manifest(bundle))
 
 
 def _body():

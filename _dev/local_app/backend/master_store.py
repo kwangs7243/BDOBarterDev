@@ -14,6 +14,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from .catalog_provenance import (
+    CATALOG_PROVENANCE_HASH_BASIS,
+    compute_catalog_provenance_v2,
+)
+
 MASTER_STORE_SCHEMA_VERSION = 1
 MASTER_BUNDLE_SCHEMA_VERSION = 2
 MASTER_HASH_BASIS = "MASTER_CANONICAL_JSON_V2"
@@ -97,21 +102,53 @@ def _validate_reference_provenance(provenance: Any, label: str) -> None:
         raise InvalidMasterBundle(f"{label} VERIFIED_REFERENCE provenance is invalid")
 
 
-def validate_reference_manifest(manifest: Any, *, expected_catalog_sha256: str | None = None) -> dict[str, Any]:
+def validate_reference_manifest(manifest: Any, *, expected_catalog_sha256: str | None = None,
+                                catalog_bytes: bytes | None = None) -> dict[str, Any]:
     """Validate the committed M4 reference manifest without trusting caller claims."""
     _json_safe(manifest, "referenceManifest")
     manifest = _object(manifest, "referenceManifest")
-    top_keys = {"schemaVersion", "policyVersion", "scope", "claims", "unresolved", "referenceAuditHash"}
-    if set(manifest) != top_keys or manifest["schemaVersion"] != 1 or manifest["policyVersion"] != "trade-master-reference-v1":
+    version = manifest.get("schemaVersion")
+    v2 = version == 2
+    top_keys = ({"schemaVersion", "policyVersion", "scope", "migration", "claims", "unresolved", "referenceAuditHash"}
+                if v2 else {"schemaVersion", "policyVersion", "scope", "claims", "unresolved", "referenceAuditHash"})
+    expected_policy = "trade-master-reference-v2" if v2 else "trade-master-reference-v1"
+    if set(manifest) != top_keys or version not in {1, 2} or manifest["policyVersion"] != expected_policy:
         raise InvalidMasterBundle("reference manifest has an unsupported schema or fields")
     scope = _object(manifest["scope"], "referenceManifest.scope")
-    if set(scope) != {"originalHtmlSha256", "catalogSha256", "sourceOccurrenceCount", "legacyGroupCount"}:
+    scope_keys = ({"originalHtmlSha256", "catalogDigest", "sourceOccurrenceCount", "legacyGroupCount"}
+                  if v2 else {"originalHtmlSha256", "catalogSha256", "sourceOccurrenceCount", "legacyGroupCount"})
+    if set(scope) != scope_keys:
         raise InvalidMasterBundle("reference manifest scope has invalid fields")
-    for key in ("originalHtmlSha256", "catalogSha256"):
-        if not isinstance(scope[key], str) or not HASH_RE.fullmatch(scope[key]):
-            raise InvalidMasterBundle(f"reference manifest scope {key} is invalid")
-    if expected_catalog_sha256 is not None and scope["catalogSha256"] != expected_catalog_sha256:
-        raise InvalidMasterBundle("reference manifest catalog hash does not match the bundled catalog")
+    if not isinstance(scope["originalHtmlSha256"], str) or not HASH_RE.fullmatch(scope["originalHtmlSha256"]):
+        raise InvalidMasterBundle("reference manifest scope originalHtmlSha256 is invalid")
+    if v2:
+        digest = _object(scope["catalogDigest"], "referenceManifest.scope.catalogDigest")
+        if (set(digest) != {"schemaVersion", "hashBasis", "sha256"} or digest["schemaVersion"] != 2
+                or digest["hashBasis"] != CATALOG_PROVENANCE_HASH_BASIS
+                or not isinstance(digest["sha256"], str) or not HASH_RE.fullmatch(digest["sha256"])):
+            raise InvalidMasterBundle("reference manifest catalogDigest has invalid schema, basis, or hash")
+        migration = _object(manifest["migration"], "referenceManifest.migration")
+        if (set(migration) != {"fromManifestSchemaVersion", "fromReferenceAuditHash", "fromCatalogRawSha256"}
+                or migration["fromManifestSchemaVersion"] != 1
+                or migration["fromReferenceAuditHash"] != "46c10355ccf3b8b5aba08880cd5947408cc66720dafdccef4d9deeb12ab2df82"
+                or migration["fromCatalogRawSha256"] != "8183b03e6aa0ee354142cf9720b401494bec365e528632f3c0c84ec11b46b4b3"):
+            raise InvalidMasterBundle("reference manifest migration does not identify the approved v1 baseline")
+        if expected_catalog_sha256 is not None:
+            raise InvalidMasterBundle("v2 catalog validation requires source bytes, not a caller-provided hash")
+        if catalog_bytes is not None:
+            try:
+                computed = compute_catalog_provenance_v2(catalog_bytes)
+            except (TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise InvalidMasterBundle(f"bundled catalog provenance is invalid: {exc}") from exc
+            if computed["sha256"] != digest["sha256"]:
+                raise InvalidMasterBundle("reference manifest catalog digest does not match the bundled catalog")
+    else:
+        if not isinstance(scope["catalogSha256"], str) or not HASH_RE.fullmatch(scope["catalogSha256"]):
+            raise InvalidMasterBundle("reference manifest scope catalogSha256 is invalid")
+        if catalog_bytes is not None:
+            raise InvalidMasterBundle("v1 catalog validation uses its existing raw-byte hash contract")
+        if expected_catalog_sha256 is not None and scope["catalogSha256"] != expected_catalog_sha256:
+            raise InvalidMasterBundle("reference manifest catalog hash does not match the bundled catalog")
     for key in ("sourceOccurrenceCount", "legacyGroupCount"):
         if isinstance(scope[key], bool) or not isinstance(scope[key], int) or scope[key] < 0:
             raise InvalidMasterBundle(f"reference manifest scope {key} is invalid")
@@ -175,6 +212,9 @@ def validate_reference_manifest(manifest: Any, *, expected_catalog_sha256: str |
         _string(unresolved["note"], f"{label}.note")
     if len(accounted) != scope["legacyGroupCount"]:
         raise InvalidMasterBundle("reference manifest legacy-group scope does not match accounted names")
+    if v2 and (len(manifest["claims"]) != 87 or len(manifest["unresolved"]) != 143
+               or scope["sourceOccurrenceCount"] != 241 or scope["legacyGroupCount"] != 230):
+        raise InvalidMasterBundle("reference manifest does not match the frozen 87/143/241/230 baseline")
     semantic = {key: value for key, value in manifest.items() if key != "referenceAuditHash"}
     expected_hash = hashlib.sha256(_canonical_json(semantic).encode("utf-8", errors="strict")).hexdigest()
     if manifest["referenceAuditHash"] != expected_hash:
@@ -191,6 +231,14 @@ def validate_reference_bundle_against_manifest(bundle: Any, manifest: Any) -> No
         return
     if bundle["provenance"].get("referenceAuditHash") != manifest["referenceAuditHash"]:
         raise InvalidMasterBundle("reference bundle is not bound to the approved reference manifest")
+    if manifest["schemaVersion"] == 2:
+        digest = manifest["scope"]["catalogDigest"]["sha256"]
+        expected_source = {"sourceType": "TRADE_CATALOG_TEXT_V2",
+                           "revision": f"catalog-provenance-v2:{digest}", "sha256": digest}
+        expected_provenance = {"schemaVersion": 2, "hashBasis": CATALOG_PROVENANCE_HASH_BASIS, "sha256": digest}
+        if (bundle["sourceRevisions"] != [expected_source]
+                or bundle["provenance"].get("catalogProvenance") != expected_provenance):
+            raise InvalidMasterBundle("reference bundle catalog provenance disagrees with the v2 manifest")
     claims = {claim["legacyNameKey"]: claim for claim in manifest["claims"]}
     bundle_reference_keys: set[str] = set()
     protected_owner_keys: set[str] = set()
