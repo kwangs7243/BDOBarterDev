@@ -267,6 +267,11 @@ function errorCode(error, fallback = "SOURCE_EVIDENCE_INVALID") {
   return error instanceof TradeSourceEvidenceError ? error.code : fallback;
 }
 
+function displayPng(blob) {
+  return Boolean(blob && typeof blob.type === "string" && blob.type.toLowerCase() === "image/png"
+    && Number.isSafeInteger(blob.size) && blob.size > 0);
+}
+
 export function createTradeSourceEvidenceCache(adapters = {}) {
   const sha256Bytes = adapters.sha256Bytes ?? defaultSha256Bytes;
   const decodePngToRgba = adapters.decodePngToRgba ?? defaultDecodePngToRgba;
@@ -339,19 +344,32 @@ export function createTradeSourceEvidenceCache(adapters = {}) {
     return candidates.map((candidate) => candidate.captureId);
   }
 
-  async function decodeAndVerifyCapture(captureId, capture, cropEntries, invalidCropIds) {
+  function markCaptureInvalid(captureId) {
     const entry = captures.get(captureId);
-    if (!entry || entry.state !== "RETAINED") return new Map();
-    const statuses = new Map();
+    if (entry && entry.state !== "EXPIRED") entry.state = "INVALID";
+    if (lastRawEvidence) {
+      for (const row of lastRawEvidence.sourceRows) {
+        if (row.captureId !== captureId) continue;
+        for (const field of row.fields) {
+          for (const cropRef of field.cropRefs) lastStateById.set(cropRef.cropRefId, "INVALID");
+        }
+      }
+    }
+  }
+
+  async function decodeVerifiedCapture(captureId, capture) {
+    const entry = captures.get(captureId);
+    if (!entry) fail("CROP_SOURCE_MISSING");
+    if (entry.state === "EXPIRED") fail("CROP_SOURCE_EXPIRED");
+    if (entry.state === "INVALID") fail("CROP_SOURCE_INVALID");
+    if (entry.state !== "RETAINED" || !capture || capture.captureId !== captureId) fail("CROP_SOURCE_INVALID");
     let decoded;
     try {
       const rawBytes = new Uint8Array(await entry.blob.arrayBuffer());
       const imageHash = await sha256Bytes(rawBytes);
       if (!hasPngSignature(rawBytes) || !validHash(imageHash) || imageHash !== capture.imageSha256
           || entry.advertisedSha256 !== null && entry.advertisedSha256 !== capture.imageSha256) {
-        entry.state = "INVALID";
-        for (const item of cropEntries) statuses.set(item.cropRef.cropRefId, "INVALID");
-        return statuses;
+        fail("CROP_SOURCE_INVALID");
       }
       decoded = await decodePngToRgba(entry.blob);
       const rgbaBytes = asBytes(decoded?.rgbaBytes);
@@ -360,42 +378,48 @@ export function createTradeSourceEvidenceCache(adapters = {}) {
           || entry.frame && !sameFrame(entry.frame, capture.frame)
           || entry.reencoded !== undefined && entry.reencoded !== capture.reencoded
           || !rgbaBytes) {
-        entry.state = "INVALID";
-        for (const item of cropEntries) statuses.set(item.cropRef.cropRefId, "INVALID");
-        return statuses;
+        fail("CROP_SOURCE_INVALID");
       }
       let rgbBytes;
       try { rgbBytes = rgbaToRgb(rgbaBytes, decoded.width, decoded.height); }
-      catch {
-        entry.state = "INVALID";
-        for (const item of cropEntries) statuses.set(item.cropRef.cropRefId, "INVALID");
-        return statuses;
-      }
+      catch { fail("CROP_SOURCE_INVALID"); }
       const bitmapHash = await sha256Bytes(rgbBytes);
       if (!validHash(bitmapHash) || bitmapHash !== capture.bitmapSha256) {
-        entry.state = "INVALID";
-        for (const item of cropEntries) statuses.set(item.cropRef.cropRefId, "INVALID");
-        return statuses;
+        fail("CROP_SOURCE_INVALID");
       }
+      return { entry, rgbBytes };
+    } catch (error) {
+      markCaptureInvalid(captureId);
+      if (error instanceof TradeSourceEvidenceError && error.code === "CROP_SOURCE_INVALID") throw error;
+      fail("CROP_SOURCE_INVALID");
+    } finally {
+      decoded?.close?.();
+      decoded = null;
+    }
+  }
+
+  async function decodeAndVerifyCapture(captureId, capture, cropEntries, invalidCropIds) {
+    const statuses = new Map();
+    let verified;
+    try {
+      verified = await decodeVerifiedCapture(captureId, capture);
       for (const item of cropEntries) {
         const { cropRef } = item;
         if (invalidCropIds.has(cropRef.cropRefId)) {
           statuses.set(cropRef.cropRefId, "INVALID");
           continue;
         }
-        const pixels = cropRgb(rgbBytes, capture.frame, cropRef.box);
+        const pixels = cropRgb(verified.rgbBytes, capture.frame, cropRef.box);
         const pixelHash = await sha256Bytes(pixels);
         statuses.set(cropRef.cropRefId, validHash(pixelHash) && pixelHash === cropRef.pixelSha256
           ? "IN_MEMORY" : "INVALID");
       }
       return statuses;
-    } catch (error) {
-      entry.state = "INVALID";
+    } catch {
       for (const item of cropEntries) statuses.set(item.cropRef.cropRefId, "INVALID");
       return statuses;
     } finally {
-      decoded?.close?.();
-      decoded = null;
+      verified = null;
     }
   }
 
@@ -459,51 +483,32 @@ export function createTradeSourceEvidenceCache(adapters = {}) {
     return { found, entry };
   }
 
-  async function getVerifiedCrop(cropRefId) {
-    if (!lastRawEvidence || JSON.stringify(lastRawEvidence) !== lastRawEvidenceSignature) {
+  function requireVerifiedSnapshot() {
+    if (!lastRawEvidence) fail("RAW_EVIDENCE_NOT_VERIFIED");
+    if (JSON.stringify(lastRawEvidence) !== lastRawEvidenceSignature) {
       fail("RAW_EVIDENCE_CHANGED_REVERIFY_REQUIRED");
     }
+    return validateRawEvidence(lastRawEvidence);
+  }
+
+  async function getVerifiedCrop(cropRefId) {
+    requireVerifiedSnapshot();
     if (lastStateById.get(cropRefId) !== "IN_MEMORY") {
       const state = lastStateById.get(cropRefId);
       fail(state ? `CROP_${state}` : "CROP_NOT_VERIFIED");
     }
     const latest = locateTradeCropRef(lastRawEvidence, cropRefId);
-    const capture = latest.capture;
     const { entry } = requireLastRawEvidence(cropRefId);
-    let decoded;
+    let verified;
     try {
-      const rawBytes = new Uint8Array(await entry.blob.arrayBuffer());
-      const rawHash = await sha256Bytes(rawBytes);
-      if (!hasPngSignature(rawBytes) || rawHash !== capture.imageSha256 || entry.advertisedSha256 !== null
-          && entry.advertisedSha256 !== capture.imageSha256) {
-        entry.state = "INVALID";
-        lastStateById.set(cropRefId, "INVALID");
-        fail("CROP_SOURCE_INVALID");
-      }
-      decoded = await decodePngToRgba(entry.blob);
-      const rgbaBytes = asBytes(decoded?.rgbaBytes);
-      if (!rgbaBytes || !validFrame({ width: decoded?.width, height: decoded?.height })
-          || !sameFrame({ width: decoded.width, height: decoded.height }, capture.frame)
-          || entry.frame && !sameFrame(entry.frame, capture.frame)
-          || entry.reencoded !== undefined && entry.reencoded !== capture.reencoded) {
-        entry.state = "INVALID";
-        lastStateById.set(cropRefId, "INVALID");
-        fail("CROP_SOURCE_INVALID");
-      }
-      const rgbBytes = rgbaToRgb(rgbaBytes, decoded.width, decoded.height);
-      const bitmapHash = await sha256Bytes(rgbBytes);
-      if (bitmapHash !== capture.bitmapSha256) {
-        entry.state = "INVALID";
-        lastStateById.set(cropRefId, "INVALID");
-        fail("CROP_SOURCE_INVALID");
-      }
-      const pixels = cropRgb(rgbBytes, capture.frame, latest.cropRef.box);
+      verified = await decodeVerifiedCapture(latest.capture.captureId, latest.capture);
+      const pixels = cropRgb(verified.rgbBytes, latest.capture.frame, latest.cropRef.box);
       const pixelHash = await sha256Bytes(pixels);
-      if (pixelHash !== latest.cropRef.pixelSha256 || latest.cropRef.bitmapSha256 !== capture.bitmapSha256) {
+      if (pixelHash !== latest.cropRef.pixelSha256 || latest.cropRef.bitmapSha256 !== latest.capture.bitmapSha256) {
         lastStateById.set(cropRefId, "INVALID");
         fail("CROP_INVALID");
       }
-      return { cropRefId, captureId: capture.captureId, field: latest.field.field,
+      return { cropRefId, captureId: latest.capture.captureId, field: latest.field.field,
         width: latest.cropRef.box.width, height: latest.cropRef.box.height,
         pixelSha256: latest.cropRef.pixelSha256, rgbBytes: new Uint8Array(pixels) };
     } catch (error) {
@@ -511,12 +516,11 @@ export function createTradeSourceEvidenceCache(adapters = {}) {
         lastStateById.set(cropRefId, "INVALID");
         throw error;
       }
-      entry.state = "INVALID";
-      lastStateById.set(cropRefId, "INVALID");
       if (error instanceof TradeSourceEvidenceError) throw error;
+      markCaptureInvalid(latest.capture.captureId);
       fail("CROP_SOURCE_INVALID");
     } finally {
-      decoded?.close?.();
+      verified = null;
     }
   }
 
@@ -524,11 +528,46 @@ export function createTradeSourceEvidenceCache(adapters = {}) {
     const verified = await getVerifiedCrop(cropRefId);
     const blob = await encodeDisplayCrop({ width: verified.width, height: verified.height,
       rgbBytes: new Uint8Array(verified.rgbBytes) });
-    if (!blob || typeof blob.type !== "string" || blob.type.toLowerCase() !== "image/png"
-        || !Number.isSafeInteger(blob.size) || blob.size < 1) fail("PNG_ENCODE_FAILED");
+    if (!displayPng(blob)) fail("PNG_ENCODE_FAILED");
     return { cropRefId: verified.cropRefId, captureId: verified.captureId, field: verified.field,
       width: verified.width, height: verified.height, pixelSha256: verified.pixelSha256,
       displayOnly: true, blob };
+  }
+
+  async function createDisplayRowCrop(sourceRowId) {
+    const validated = requireVerifiedSnapshot();
+    const row = validated.sourceRows.get(sourceRowId);
+    if (!row) fail("SOURCE_ROW_NOT_FOUND");
+    if (row.rowBox === null) fail("ROW_CROP_UNAVAILABLE");
+    const capture = validated.captures.get(row.captureId);
+    let verified;
+    try {
+      verified = await decodeVerifiedCapture(row.captureId, capture);
+      if (!validBox(row.rowBox, capture.frame)) fail("ROW_CROP_INVALID");
+      const pixels = cropRgb(verified.rgbBytes, capture.frame, row.rowBox);
+      const pixelSha256 = await sha256Bytes(pixels);
+      if (!validHash(pixelSha256)) fail("ROW_CROP_INVALID");
+      const blob = await encodeDisplayCrop({ width: row.rowBox.width, height: row.rowBox.height,
+        rgbBytes: new Uint8Array(pixels) });
+      if (!displayPng(blob)) fail("PNG_ENCODE_FAILED");
+      return { sourceRowId: row.sourceRowId, captureId: row.captureId, ordinal: row.ordinal,
+        rowBox: { ...row.rowBox }, width: row.rowBox.width, height: row.rowBox.height,
+        pixelSha256, displayOnly: true, blob };
+    } catch (error) {
+      if (error instanceof TradeSourceEvidenceError) throw error;
+      fail("ROW_CROP_INVALID");
+    } finally {
+      verified = null;
+    }
+  }
+
+  async function createDisplayCapture(captureId) {
+    const validated = requireVerifiedSnapshot();
+    const capture = validated.captures.get(captureId);
+    if (!capture) fail("CAPTURE_NOT_FOUND");
+    const verified = await decodeVerifiedCapture(captureId, capture);
+    return { captureId, frame: { ...capture.frame }, imageSha256: capture.imageSha256,
+      bitmapSha256: capture.bitmapSha256, displayOnly: true, blob: verified.entry.blob };
   }
 
   function releaseCapture(captureId) {
@@ -551,5 +590,6 @@ export function createTradeSourceEvidenceCache(adapters = {}) {
   }
 
   return { retainCapture, retainCaptures, verifyRawEvidence, buildPixelAvailability,
-    getVerifiedCrop, createDisplayCrop, releaseCapture, clear };
+    getVerifiedCrop, createDisplayCrop, createDisplayRowCrop, createDisplayCapture,
+    releaseCapture, clear };
 }

@@ -52,7 +52,7 @@ function cropRgb(rgb, box) {
 
 function makeFixture({ captureId = "capture-one", rgba = rgbPattern(),
   imageBytes = [137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3, 4],
-  cropDefinitions = BOXES } = {}) {
+  cropDefinitions = BOXES, rowBox = { x: 1, y: 2, width: 3, height: 2 } } = {}) {
   const blob = new Blob([new Uint8Array(imageBytes)], { type: "image/png" });
   const capture = {
     metadata: { captureId, frame: { ...FRAME }, sourceType: "file", fidelity: {
@@ -92,19 +92,20 @@ function makeFixture({ captureId = "capture-one", rgba = rgbPattern(),
       sourceFidelity: { sourceWidth: null, sourceHeight: null, rescaled: null, evidence: "unknown" },
       reencoded: false, completeRowCount: 1 }],
     sourceRows: [{ sourceRowId: "source-row-one", captureId, ordinal: 0,
-      rowBox: { x: 0, y: 0, width: FRAME.width, height: FRAME.height }, fields }],
+      rowBox: rowBox === null ? null : { ...rowBox }, fields }],
     edgeSegments: [],
   };
   return { capture, rawEvidence, rgba, rgb };
 }
 
-function makeAdapters(fixture, { onDecode, encodeDisplayCrop } = {}) {
+function makeAdapters(fixture, { onDecode, onClose, encodeDisplayCrop } = {}) {
   return {
     sha256Bytes: async (bytes) => hash(bytes),
     decodePngToRgba: async (blob) => {
       onDecode?.(blob);
       assert.equal(blob, fixture.capture.blob);
-      return { width: FRAME.width, height: FRAME.height, rgbaBytes: new Uint8Array(fixture.rgba) };
+      return { width: FRAME.width, height: FRAME.height, rgbaBytes: new Uint8Array(fixture.rgba),
+        close: () => onClose?.() };
     },
     encodeDisplayCrop: encodeDisplayCrop ?? (async ({ rgbBytes }) => new Blob([rgbBytes], { type: "image/png" })),
   };
@@ -162,6 +163,123 @@ async function rejectsCode(promise, code) {
   assert.equal(display.blob.type, "image/png");
   assert.equal(fixture.rawEvidence.sourceRows[0].fields[1].cropRefs[0].pngArtifactSha256, null);
   assert.equal(decodeCount, 3, "each explicit crop fetch re-verifies pixels without retaining a decoded full frame");
+}
+
+{
+  const fixture = makeFixture();
+  let encoded;
+  let decodeCount = 0;
+  let closeCount = 0;
+  const cache = makeCache(fixture, {
+    onDecode: () => { decodeCount += 1; },
+    onClose: () => { closeCount += 1; },
+    encodeDisplayCrop: async (input) => {
+      encoded = { ...input, rgbBytes: new Uint8Array(input.rgbBytes) };
+      return new Blob([input.rgbBytes], { type: "image/png" });
+    },
+  });
+  cache.retainCapture(fixture.capture);
+  await cache.verifyRawEvidence(fixture.rawEvidence);
+  const originalEvidence = cloneRaw(fixture.rawEvidence);
+  const expectedPixels = cropRgb(fixture.rgb, fixture.rawEvidence.sourceRows[0].rowBox);
+  const rowCrop = await cache.createDisplayRowCrop("source-row-one");
+  assert.deepEqual({ sourceRowId: rowCrop.sourceRowId, captureId: rowCrop.captureId,
+    ordinal: rowCrop.ordinal, rowBox: rowCrop.rowBox, width: rowCrop.width, height: rowCrop.height,
+    pixelSha256: rowCrop.pixelSha256, displayOnly: rowCrop.displayOnly }, {
+    sourceRowId: "source-row-one", captureId: "capture-one", ordinal: 0,
+    rowBox: { x: 1, y: 2, width: 3, height: 2 }, width: 3, height: 2,
+    pixelSha256: hash(expectedPixels), displayOnly: true,
+  });
+  assert.equal(rowCrop.blob.type, "image/png");
+  assert.deepEqual(encoded.rgbBytes, expectedPixels, "row crop uses exact capture RGB pixels without field-crop stitching");
+  assert.equal(encoded.width, 3);
+  assert.equal(encoded.height, 2);
+  assert.deepEqual(fixture.rawEvidence, originalEvidence, "display row crop does not mutate RawEvidenceSnapshot2");
+
+  const full = await cache.createDisplayCapture("capture-one");
+  assert.deepEqual(full, { captureId: "capture-one", frame: { ...FRAME },
+    imageSha256: fixture.rawEvidence.captures[0].imageSha256,
+    bitmapSha256: fixture.rawEvidence.captures[0].bitmapSha256,
+    displayOnly: true, blob: fixture.capture.blob });
+  assert.equal(full.blob, fixture.capture.blob, "full capture returns the verified retained PNG without re-encoding");
+  assert.deepEqual(fixture.rawEvidence, originalEvidence);
+  assert.equal(decodeCount, 3, "row and full display calls re-decode and verify without retaining decoded frames");
+  assert.equal(closeCount, 3, "decoded image resources close after verification and display operations");
+}
+
+{
+  const fixture = makeFixture({ rowBox: null });
+  const cache = makeCache(fixture);
+  cache.retainCapture(fixture.capture);
+  await cache.verifyRawEvidence(fixture.rawEvidence);
+  await rejectsCode(cache.createDisplayRowCrop("source-row-one"), "ROW_CROP_UNAVAILABLE");
+  await rejectsCode(cache.createDisplayRowCrop("not-a-row"), "SOURCE_ROW_NOT_FOUND");
+  await rejectsCode(cache.createDisplayCapture("not-a-capture"), "CAPTURE_NOT_FOUND");
+}
+
+{
+  const fixture = makeFixture();
+  const cache = makeCache(fixture);
+  await rejectsCode(cache.createDisplayCapture("capture-one"), "RAW_EVIDENCE_NOT_VERIFIED");
+  await rejectsCode(cache.createDisplayRowCrop("source-row-one"), "RAW_EVIDENCE_NOT_VERIFIED");
+  await cache.verifyRawEvidence(fixture.rawEvidence);
+  await rejectsCode(cache.createDisplayCapture("capture-one"), "CROP_SOURCE_MISSING");
+  await rejectsCode(cache.createDisplayRowCrop("source-row-one"), "CROP_SOURCE_MISSING");
+}
+
+{
+  const fixture = makeFixture();
+  const cache = makeCache(fixture);
+  cache.retainCapture(fixture.capture);
+  await cache.verifyRawEvidence(fixture.rawEvidence);
+  fixture.rawEvidence.sourceRows[0].rowBox.x += 1;
+  await rejectsCode(cache.createDisplayRowCrop("source-row-one"), "RAW_EVIDENCE_CHANGED_REVERIFY_REQUIRED");
+  await rejectsCode(cache.createDisplayCapture("capture-one"), "RAW_EVIDENCE_CHANGED_REVERIFY_REQUIRED");
+}
+
+{
+  const fixture = makeFixture({ rowBox: { x: 11, y: 7, width: 2, height: 2 } });
+  const cache = makeCache(fixture);
+  cache.retainCapture(fixture.capture);
+  await rejectsCode(cache.verifyRawEvidence(fixture.rawEvidence), "INVALID_RAW_EVIDENCE");
+}
+
+{
+  const invalidCases = [
+    { name: "wrong source image bytes", mutateFixture: (fixture) => {
+      fixture.capture = { ...fixture.capture, blob: new Blob(["wrong"], { type: "image/png" }),
+        bytes: 5 };
+    } },
+    { name: "wrong snapshot image hash", mutateRaw: (raw) => { raw.captures[0].imageSha256 = "0".repeat(64); } },
+    { name: "wrong snapshot frame", mutateRaw: (raw) => { raw.captures[0].frame.width += 1; } },
+    { name: "wrong snapshot bitmap hash", mutateRaw: (raw) => { raw.captures[0].bitmapSha256 = "0".repeat(64); } },
+    { name: "non-opaque source alpha", mutateFixture: (fixture) => { fixture.rgba[3] = 254; } },
+  ];
+  for (const testCase of invalidCases) {
+    const fixture = makeFixture();
+    testCase.mutateFixture?.(fixture);
+    testCase.mutateRaw?.(fixture.rawEvidence);
+    const cache = makeCache(fixture);
+    cache.retainCapture(fixture.capture);
+    const availability = await cache.verifyRawEvidence(fixture.rawEvidence);
+    assert.ok(availability.every((item) => item.state === "INVALID"), `${testCase.name}: source state is INVALID`);
+    await rejectsCode(cache.createDisplayRowCrop("source-row-one"), "CROP_SOURCE_INVALID");
+    await rejectsCode(cache.createDisplayCapture("capture-one"), "CROP_SOURCE_INVALID");
+    assert.ok((await cache.buildPixelAvailability(fixture.rawEvidence)).every((item) => item.state === "INVALID"),
+      `${testCase.name}: invalid source cannot later appear usable`);
+  }
+}
+
+{
+  const fixture = makeFixture();
+  const cache = makeCache(fixture);
+  cache.retainCapture(fixture.capture);
+  await cache.verifyRawEvidence(fixture.rawEvidence);
+  assert.equal(cache.releaseCapture("capture-one"), true);
+  await cache.buildPixelAvailability(fixture.rawEvidence);
+  await rejectsCode(cache.createDisplayRowCrop("source-row-one"), "CROP_SOURCE_EXPIRED");
+  await rejectsCode(cache.createDisplayCapture("capture-one"), "CROP_SOURCE_EXPIRED");
+  await rejectsCode(cache.createDisplayCrop("crop-A"), "CROP_EXPIRED");
 }
 
 {
