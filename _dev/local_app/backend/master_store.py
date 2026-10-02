@@ -12,6 +12,7 @@ from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 MASTER_STORE_SCHEMA_VERSION = 1
 MASTER_BUNDLE_SCHEMA_VERSION = 2
@@ -19,7 +20,7 @@ MASTER_HASH_BASIS = "MASTER_CANONICAL_JSON_V2"
 REGISTRY_PREFIX = "registry-v2:"
 MAX_SAFE_INTEGER = (1 << 53) - 1
 HASH_RE = re.compile(r"^[a-f0-9]{64}$")
-STATUSES = {"LEGACY_UNVERIFIED", "VERIFIED_CURATED", "DISPUTED", "DEPRECATED"}
+STATUSES = {"LEGACY_UNVERIFIED", "VERIFIED_REFERENCE", "VERIFIED_CURATED", "DISPUTED", "DEPRECATED"}
 TOP_KEYS = {
     "schemaVersion", "registryVersion", "createdAt", "entities", "compatibilityMappings",
     "unresolvedLegacyNames", "sourceRevisions", "provenance", "hashBasis", "contentHash",
@@ -53,6 +54,167 @@ class InvalidMasterBundle(MasterStoreError):
 
 class _RejectNumber(ValueError):
     pass
+
+
+def _valid_reference_evidence(entry: Any) -> bool:
+    if not isinstance(entry, dict) or set(entry) != {"sourceKind", "sourceUrl", "checkedAt", "externalId", "verifiedProperties"}:
+        return False
+    if not isinstance(entry["sourceUrl"], str) or not isinstance(entry["checkedAt"], str):
+        return False
+    if entry["externalId"] is not None and (not isinstance(entry["externalId"], str) or not entry["externalId"].strip()):
+        return False
+    try:
+        checked = datetime.fromisoformat(entry["checkedAt"].replace("Z", "+00:00"))
+        if checked.tzinfo is None or checked.utcoffset() is None or not entry["checkedAt"].endswith("Z"):
+            return False
+        parsed = urlparse(entry["sourceUrl"])
+    except (ValueError, TypeError):
+        return False
+    if parsed.scheme != "https" or parsed.username or parsed.password:
+        return False
+    if entry["sourceKind"] == "BDO_OFFICIAL_KR":
+        if parsed.hostname not in {"kr.playblackdesert.com", "www.kr.playblackdesert.com"} or not parsed.path.startswith("/ko-KR/"):
+            return False
+    elif entry["sourceKind"] == "BDOCODEX_KR":
+        if parsed.hostname != "bdocodex.com" or not parsed.path.startswith("/kr/"):
+            return False
+    else:
+        return False
+    allowed = {"canonicalName", "displayName", "tier", "category", "identity"}
+    values = entry["verifiedProperties"]
+    return (isinstance(values, list) and bool(values)
+            and all(isinstance(value, str) for value in values)
+            and len(set(values)) == len(values)
+            and all(value in allowed for value in values))
+
+
+def _validate_reference_provenance(provenance: Any, label: str) -> None:
+    if (not isinstance(provenance, dict) or provenance.get("authority") != "VERIFIED_REFERENCE"
+            or provenance.get("referenceDecision") != "MATCHED"
+            or not isinstance(provenance.get("referenceEvidence"), list)
+            or not provenance["referenceEvidence"]
+            or not all(_valid_reference_evidence(item) for item in provenance["referenceEvidence"])):
+        raise InvalidMasterBundle(f"{label} VERIFIED_REFERENCE provenance is invalid")
+
+
+def validate_reference_manifest(manifest: Any, *, expected_catalog_sha256: str | None = None) -> dict[str, Any]:
+    """Validate the committed M4 reference manifest without trusting caller claims."""
+    _json_safe(manifest, "referenceManifest")
+    manifest = _object(manifest, "referenceManifest")
+    top_keys = {"schemaVersion", "policyVersion", "scope", "claims", "unresolved", "referenceAuditHash"}
+    if set(manifest) != top_keys or manifest["schemaVersion"] != 1 or manifest["policyVersion"] != "trade-master-reference-v1":
+        raise InvalidMasterBundle("reference manifest has an unsupported schema or fields")
+    scope = _object(manifest["scope"], "referenceManifest.scope")
+    if set(scope) != {"originalHtmlSha256", "catalogSha256", "sourceOccurrenceCount", "legacyGroupCount"}:
+        raise InvalidMasterBundle("reference manifest scope has invalid fields")
+    for key in ("originalHtmlSha256", "catalogSha256"):
+        if not isinstance(scope[key], str) or not HASH_RE.fullmatch(scope[key]):
+            raise InvalidMasterBundle(f"reference manifest scope {key} is invalid")
+    if expected_catalog_sha256 is not None and scope["catalogSha256"] != expected_catalog_sha256:
+        raise InvalidMasterBundle("reference manifest catalog hash does not match the bundled catalog")
+    for key in ("sourceOccurrenceCount", "legacyGroupCount"):
+        if isinstance(scope[key], bool) or not isinstance(scope[key], int) or scope[key] < 0:
+            raise InvalidMasterBundle(f"reference manifest scope {key} is invalid")
+    if not isinstance(manifest["claims"], list) or not isinstance(manifest["unresolved"], list):
+        raise InvalidMasterBundle("reference manifest claims and unresolved must be arrays")
+    accounted: set[str] = set()
+    stable_ids: set[str] = set()
+    claim_keys = {"legacyNameKey", "stableId", "kind", "legacyKind", "canonicalName", "displayName",
+                  "tier", "category", "decision", "evidence"}
+    for index, claim in enumerate(manifest["claims"]):
+        label = f"referenceManifest.claims[{index}]"
+        claim = _object(claim, label)
+        if set(claim) != claim_keys:
+            raise InvalidMasterBundle(f"{label} has invalid fields")
+        key = _string(claim["legacyNameKey"], f"{label}.legacyNameKey")
+        if key in accounted:
+            raise InvalidMasterBundle("reference manifest accounts for a legacy name more than once")
+        accounted.add(key)
+        stable_id = _string(claim["stableId"], f"{label}.stableId")
+        try:
+            parsed_id = uuid.UUID(stable_id)
+            if str(parsed_id) != stable_id or parsed_id.version != 4:
+                raise ValueError
+        except (ValueError, AttributeError) as exc:
+            raise InvalidMasterBundle(f"{label}.stableId must be a pinned canonical UUID v4") from exc
+        if stable_id in stable_ids:
+            raise InvalidMasterBundle("reference manifest stableIds must be unique")
+        stable_ids.add(stable_id)
+        if claim["kind"] not in {"ITEM", "ISLAND"} or claim["legacyKind"] not in {"MASTER_ITEM", "SPECIAL_ITEM", "ISLAND"}:
+            raise InvalidMasterBundle(f"{label} has invalid kind")
+        if (claim["legacyKind"] == "ISLAND") != (claim["kind"] == "ISLAND"):
+            raise InvalidMasterBundle(f"{label} kind disagrees with legacy kind")
+        _string(claim["canonicalName"], f"{label}.canonicalName")
+        _string(claim["displayName"], f"{label}.displayName")
+        if claim["legacyKind"] == "MASTER_ITEM":
+            if isinstance(claim["tier"], bool) or not isinstance(claim["tier"], int) or not 1 <= claim["tier"] <= 7:
+                raise InvalidMasterBundle(f"{label}.tier must be 1..7")
+        elif claim["tier"] is not None:
+            raise InvalidMasterBundle(f"{label}.tier must be null")
+        expected_category = "LEGACY_SPECIAL_ITEM" if claim["legacyKind"] == "SPECIAL_ITEM" else None
+        if claim["category"] != expected_category or claim["decision"] != "VERIFIED_REFERENCE":
+            raise InvalidMasterBundle(f"{label} category or decision is invalid")
+        if not isinstance(claim["evidence"], list) or not claim["evidence"]:
+            raise InvalidMasterBundle(f"{label}.evidence is required")
+        for evidence in claim["evidence"]:
+            if not _valid_reference_evidence(evidence):
+                raise InvalidMasterBundle(f"{label} has invalid Korean reference evidence")
+    for index, unresolved in enumerate(manifest["unresolved"]):
+        label = f"referenceManifest.unresolved[{index}]"
+        unresolved = _object(unresolved, label)
+        if set(unresolved) != {"legacyNameKey", "status", "evidence", "note"}:
+            raise InvalidMasterBundle(f"{label} has invalid fields")
+        key = _string(unresolved["legacyNameKey"], f"{label}.legacyNameKey")
+        if key in accounted:
+            raise InvalidMasterBundle("reference manifest claim/unresolved overlap or duplicate")
+        accounted.add(key)
+        if unresolved["status"] not in {"SOURCE_CONFLICT", "TIER_CONFLICT", "NO_DIRECT_REFERENCE"}:
+            raise InvalidMasterBundle(f"{label}.status is invalid")
+        if not isinstance(unresolved["evidence"], list):
+            raise InvalidMasterBundle(f"{label}.evidence must be an array")
+        _string(unresolved["note"], f"{label}.note")
+    if len(accounted) != scope["legacyGroupCount"]:
+        raise InvalidMasterBundle("reference manifest legacy-group scope does not match accounted names")
+    semantic = {key: value for key, value in manifest.items() if key != "referenceAuditHash"}
+    expected_hash = hashlib.sha256(_canonical_json(semantic).encode("utf-8", errors="strict")).hexdigest()
+    if manifest["referenceAuditHash"] != expected_hash:
+        raise InvalidMasterBundle("reference manifest hash does not match semantic content")
+    return json.loads(_canonical_json(manifest))
+
+
+def validate_reference_bundle_against_manifest(bundle: Any, manifest: Any) -> None:
+    """Require all reference authority in a proposed bundle to match the approved manifest exactly."""
+    bundle = validate_master_bundle(bundle)
+    manifest = validate_reference_manifest(manifest)
+    reference_entities = [entity for entity in bundle["entities"] if entity["status"] == "VERIFIED_REFERENCE"]
+    if not reference_entities:
+        return
+    if bundle["provenance"].get("referenceAuditHash") != manifest["referenceAuditHash"]:
+        raise InvalidMasterBundle("reference bundle is not bound to the approved reference manifest")
+    claims = {claim["legacyNameKey"]: claim for claim in manifest["claims"]}
+    bundle_reference_keys: set[str] = set()
+    protected_owner_keys: set[str] = set()
+    for entity in bundle["entities"]:
+        for record in entity["legacyNames"]:
+            key = record["legacyNameKey"]
+            if entity["status"] != "VERIFIED_REFERENCE":
+                if key in claims and entity["status"] in {"VERIFIED_CURATED", "DISPUTED", "DEPRECATED"}:
+                    protected_owner_keys.add(key)
+                continue
+            claim = claims.get(key)
+            if claim is None:
+                raise InvalidMasterBundle("bundle contains a reference mapping absent from the approved manifest")
+            if (entity["stableId"] != claim["stableId"] or entity["kind"] != claim["kind"]
+                    or entity["canonicalName"] != claim["canonicalName"] or entity["tier"] != claim["tier"]
+                    or entity["category"] != claim["category"] or record["legacyKind"] != claim["legacyKind"]
+                    or record["rawName"] != claim["canonicalName"] or record["authorityStatus"] != "VERIFIED_REFERENCE"):
+                raise InvalidMasterBundle("bundle reference mapping disagrees with the approved manifest")
+            provenance = entity["provenance"]
+            if provenance.get("referenceEvidence") != claim["evidence"]:
+                raise InvalidMasterBundle("bundle reference evidence disagrees with the approved manifest")
+            bundle_reference_keys.add(key)
+    if bundle_reference_keys | protected_owner_keys != set(claims):
+        raise InvalidMasterBundle("bundle reference mappings do not exactly account for manifest claims")
 
 
 def default_master_database_path() -> Path:
@@ -188,6 +350,10 @@ def validate_master_bundle(bundle: Any) -> dict[str, Any]:
             _string(canonical, f"entities[{index}].canonicalName")
         if entity["status"] == "VERIFIED_CURATED" and canonical is None:
             raise InvalidMasterBundle(f"entities[{index}].canonicalName required for VERIFIED_CURATED")
+        if entity["status"] == "VERIFIED_REFERENCE":
+            if canonical is None:
+                raise InvalidMasterBundle(f"entities[{index}].canonicalName required for VERIFIED_REFERENCE")
+            _validate_reference_provenance(entity["provenance"], f"entities[{index}]")
         tier = entity["tier"]
         if tier is not None and (isinstance(tier, bool) or not isinstance(tier, int) or tier < 1 or tier > 7):
             raise InvalidMasterBundle(f"entities[{index}].tier must be null or 1..7")
@@ -209,6 +375,8 @@ def validate_master_bundle(bundle: Any) -> dict[str, Any]:
                     raise InvalidMasterBundle("name status is unknown")
                 if _has_machine_path(_object(entry["provenance"], "name provenance")):
                     raise InvalidMasterBundle("name provenance cannot contain absolute filesystem paths")
+                if entry["status"] == "VERIFIED_REFERENCE":
+                    _validate_reference_provenance(entry["provenance"], "name entry")
         names = entity["legacyNames"]
         if not isinstance(names, list):
             raise InvalidMasterBundle("legacyNames must be an array")
@@ -228,6 +396,10 @@ def validate_master_bundle(bundle: Any) -> dict[str, Any]:
                 raise InvalidMasterBundle("legacy master item tier does not match entity")
             if record["authorityStatus"] not in STATUSES:
                 raise InvalidMasterBundle("legacy authorityStatus is unknown")
+            if record["authorityStatus"] == "VERIFIED_CURATED" and entity["status"] != "VERIFIED_CURATED":
+                raise InvalidMasterBundle("curated legacy authority cannot exceed its entity")
+            if record["authorityStatus"] == "VERIFIED_REFERENCE" and entity["status"] not in {"VERIFIED_REFERENCE", "VERIFIED_CURATED"}:
+                raise InvalidMasterBundle("reference legacy authority cannot exceed its entity")
             if not isinstance(record["occurrences"], list):
                 raise InvalidMasterBundle("legacy occurrences must be an array")
             for occurrence in record["occurrences"]:

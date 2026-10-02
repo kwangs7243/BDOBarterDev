@@ -1,18 +1,21 @@
 import hashlib
 import json
 import sqlite3
+import subprocess
 import tempfile
 import unittest
 import uuid
+import copy
 from contextlib import closing
 from pathlib import Path
 
 from local_app.backend.api.master import MAX_MASTER_JSON_BYTES, _proposal_hash
 from local_app.backend.app import create_app
-from local_app.backend.master_store import MasterStore
+from local_app.backend.master_store import MasterStore, master_bundle_content_hash
 
 
 ORIGIN = "http://127.0.0.1:18765"
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def make_bundle(*, name="검수 품목", created_at="2026-10-02T00:00:00.000Z", stable_id=None):
@@ -70,6 +73,29 @@ class MasterApiTests(unittest.TestCase):
                 "expectedRegistryVersion": expected, "ownerApproved": owner,
                 "proposalHash": proposal_hash, "bundle": bundle}
 
+    def _reference_bundle(self):
+        catalog_path = ROOT / "frontend" / "data" / "trade-catalog.json"
+        manifest_path = ROOT / "frontend" / "data" / "trade-master-reference-manifest.json"
+        registry_path = ROOT / "frontend" / "js" / "domain" / "trade-master-registry.js"
+        master_path = ROOT / "frontend" / "js" / "domain" / "trade-master-bundle.js"
+        script = f'''
+          import fs from "node:fs";
+          import {{ pathToFileURL }} from "node:url";
+          const registry = await import(pathToFileURL({json.dumps(str(registry_path))}));
+          const master = await import(pathToFileURL({json.dumps(str(master_path))}));
+          const bytes = fs.readFileSync({json.dumps(str(catalog_path))});
+          const catalog = JSON.parse(bytes.toString("utf8"));
+          const sourceSha256 = await import("node:crypto").then((m) => m.createHash("sha256").update(bytes).digest("hex"));
+          const snapshot = registry.adaptLegacyCatalog(catalog, {{sourceRevision:"api-reference-test-v1", sourceSha256}});
+          const base = master.adaptRegistrySnapshotV1ToMasterBundleV2(snapshot, {{createdAt:"2026-10-02T07:20:43Z"}});
+          const manifest = JSON.parse(fs.readFileSync({json.dumps(str(manifest_path))}, "utf8"));
+          process.stdout.write(JSON.stringify(master.applyTradeMasterReferenceManifestToBundleV2(base, manifest, {{createdAt:"2026-10-02T07:20:43Z"}})));
+        '''
+        proc = subprocess.run(["node", "--input-type=module", "-e", script], text=True,
+                              encoding="utf-8", capture_output=True, check=False)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads(proc.stdout)
+
     def test_store_paths_are_separate_and_active_get_is_empty_read_only(self):
         self.assertNotEqual(self.main_path.resolve(), self.sidecar_path.resolve())
         self.assertNotEqual(self.main_path.resolve(), self.master_path.resolve())
@@ -99,6 +125,63 @@ class MasterApiTests(unittest.TestCase):
         self.assertEqual(stale.status_code, 409)
         self.assertEqual(stale.get_json()["error"]["code"], "master_revision_conflict")
         self.assertEqual(db_snapshot(self.master_path), before)
+
+    def test_reference_manifest_authority_is_enforced_at_proposal_and_temporary_publish(self):
+        bundle = self._reference_bundle()
+        before = db_snapshot(self.master_path)
+        proposal_response = self.post("/api/master/proposal", self.proposal(bundle))
+        self.assertEqual(proposal_response.status_code, 200, proposal_response.get_json())
+        proposal = proposal_response.get_json()["proposal"]
+        self.assertEqual(db_snapshot(self.master_path), before)
+
+        # Re-hashing a modified candidate cannot make it authoritative. The API
+        # checks content against the checked-in manifest, not just its hash.
+        def reject_forgery(mutator):
+            forged = copy.deepcopy(bundle)
+            mutator(forged)
+            forged["contentHash"] = master_bundle_content_hash(forged)
+            forged["registryVersion"] = f"registry-v2:{forged['contentHash']}"
+            response = self.post("/api/master/proposal", self.proposal(forged))
+            self.assertEqual(response.status_code, 422, response.get_json())
+            self.assertEqual(response.get_json()["error"]["code"], "invalid_master_bundle")
+            self.assertEqual(db_snapshot(self.master_path), before)
+
+        def reference_entity(candidate):
+            return next(entity for entity in candidate["entities"] if entity["status"] == "VERIFIED_REFERENCE")
+
+        def forge_status(candidate):
+            reference_entity(candidate)["status"] = "MADE_UP_REFERENCE"
+
+        def forge_source_url(candidate):
+            reference_entity(candidate)["provenance"]["referenceEvidence"][0]["sourceUrl"] = "https://bdocodex.com/us/item/fake/"
+
+        def forge_canonical(candidate):
+            reference_entity(candidate)["canonicalName"] = "조작된 이름"
+
+        def forge_stable_id(candidate):
+            target = reference_entity(candidate)
+            old_id = target["stableId"]
+            new_id = str(uuid.uuid4())
+            target["stableId"] = new_id
+            for mapping in candidate["compatibilityMappings"]:
+                if mapping["stableId"] == old_id:
+                    mapping["stableId"] = new_id
+
+        def forge_audit_hash(candidate):
+            candidate["provenance"]["referenceAuditHash"] = "0" * 64
+
+        for mutation in (forge_status, forge_source_url, forge_canonical, forge_stable_id, forge_audit_hash):
+            reject_forgery(mutation)
+
+        publish_body = self.publish(bundle, proposal["proposalHash"],
+                                    mutation="b4f9d949-4778-47ba-b61d-3c2c35e04010", owner=True)
+        saved = self.post("/api/master/publish", publish_body)
+        self.assertEqual(saved.status_code, 200, saved.get_json())
+        self.assertTrue(saved.get_json()["activated"])
+        replay = self.post("/api/master/publish", publish_body)
+        self.assertEqual(replay.status_code, 200, replay.get_json())
+        self.assertEqual(replay.get_json(), saved.get_json())
+        self.assertEqual(self.app.extensions["master_store"].get_active_bundle(), bundle)
 
     def test_publish_owner_proposal_first_save_pinned_read_and_exact_export(self):
         bundle = make_bundle()

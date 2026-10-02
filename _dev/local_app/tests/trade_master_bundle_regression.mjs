@@ -5,9 +5,11 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   adaptRegistrySnapshotV1ToMasterBundleV2,
+  applyTradeMasterReferenceManifestToBundleV2,
   createMasterBundleV2,
   masterBundleContentHash,
   validateMasterBundleV2,
+  validateTradeMasterReferenceManifest,
 } from "../frontend/js/domain/trade-master-bundle.js";
 import {
   adaptLegacyCatalog,
@@ -20,7 +22,8 @@ const modulePath = resolve(root, "frontend/js/domain/trade-master-bundle.js");
 const moduleText = await readFile(modulePath, "utf8");
 const exportsFound = [...moduleText.matchAll(/^export\s+function\s+(\w+)/gm)].map((match) => match[1]).sort();
 assert.deepEqual(exportsFound, [
-  "adaptRegistrySnapshotV1ToMasterBundleV2", "createMasterBundleV2", "masterBundleContentHash", "validateMasterBundleV2",
+  "adaptRegistrySnapshotV1ToMasterBundleV2", "applyTradeMasterReferenceManifestToBundleV2", "createMasterBundleV2",
+  "masterBundleContentHash", "validateMasterBundleV2", "validateTradeMasterReferenceManifest",
 ].sort());
 
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
@@ -111,6 +114,7 @@ const currentV1RegistryHash = registrySnapshotSha256(currentV1);
 assert.equal(currentV1.registryVersion, "registry-v1:945c2783ef60038074414c11747152bb17f2a9032c4e19c7a1832996bac762da");
 assert.equal(currentV1RegistryHash, "e7b6b9e19db555c4549199ad71a98e7d34802f77151b3bddb0fef65a8d6e4ee4");
 const currentV2 = adaptRegistrySnapshotV1ToMasterBundleV2(currentV1, { createdAt: "2026-10-01T12:00:00.000Z" });
+const currentV2BeforeReferenceImport = structuredClone(currentV2);
 assert.equal(validateMasterBundleV2(currentV2).ok, true);
 assert.equal(currentV2.entities.length, 0);
 assert.equal(currentV2.unresolvedLegacyNames.length, 230);
@@ -121,6 +125,100 @@ assert.equal(currentV2.unresolvedLegacyNames.every((name) => name.reason === "NO
 assert.equal(currentV2.entities.some((entity) => entity.status === "VERIFIED_CURATED"), false);
 assert.equal(currentV2.entities.reduce((sum, entity) => sum + entity.aliases.filter((entry) => entry.status === "VERIFIED_CURATED").length, 0), 0);
 assert.equal(/\b(reqAmount|count|yield)\b/.test(JSON.stringify(currentV2)), false);
+const referenceManifest = JSON.parse(await readFile(resolve(root, "frontend/data/trade-master-reference-manifest.json"), "utf8"));
+assert.equal(validateTradeMasterReferenceManifest(referenceManifest).ok, true);
+assert.equal(referenceManifest.claims.length + referenceManifest.unresolved.length, 230);
+assert.equal(referenceManifest.claims.some((claim) => claim.legacyNameKey === "missing"), false);
+assert.equal(new Set(referenceManifest.claims.map((claim) => claim.stableId)).size, referenceManifest.claims.length);
+assert.equal(referenceManifest.claims.every((claim) => /\b[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/.test(claim.stableId)), true);
+assert.equal(referenceManifest.unresolved.some((entry) => entry.status === "NOT_RESEARCHED"), false);
+const referenceBundle = applyTradeMasterReferenceManifestToBundleV2(currentV2, referenceManifest, { createdAt: "2026-10-02T07:20:43Z" });
+const referenceBundleAgain = applyTradeMasterReferenceManifestToBundleV2(currentV2, referenceManifest, { createdAt: "2026-10-02T07:20:43Z" });
+assert.equal(validateMasterBundleV2(referenceBundle).ok, true);
+assert.equal(referenceBundle.schemaVersion, 2, "VERIFIED_REFERENCE remains Bundle2-compatible");
+assert.deepEqual(currentV2, currentV2BeforeReferenceImport, "reference adaptation does not mutate its source Bundle2");
+assert.equal(referenceBundle.entities.filter((entity) => entity.status === "VERIFIED_REFERENCE").length, referenceManifest.claims.length);
+assert.equal(referenceBundle.unresolvedLegacyNames.length, referenceManifest.unresolved.length);
+assert.equal(referenceBundle.compatibilityMappings.length, referenceManifest.claims.length);
+assert.equal(referenceBundle.provenance.referenceAuditHash, referenceManifest.referenceAuditHash);
+assert.equal(referenceBundle.contentHash, referenceBundleAgain.contentHash, "same pinned manifest produces the same semantic Bundle2 hash");
+const referenceBundleDifferentTimestamp = applyTradeMasterReferenceManifestToBundleV2(currentV2, referenceManifest,
+  { createdAt: "2026-10-03T07:20:43Z" });
+assert.equal(referenceBundle.contentHash, referenceBundleDifferentTimestamp.contentHash,
+  "createdAt does not affect the semantic Bundle2 hash");
+assert.equal(referenceBundle.entities.flatMap((entity) => entity.legacyNames).reduce((n, record) => n + record.occurrences.length, 0)
+  + referenceBundle.unresolvedLegacyNames.reduce((n, record) => n + record.occurrences.length, 0), 241);
+for (const mutate of [
+  (candidate, entity) => { entity.canonicalName = null; },
+  (candidate, entity) => { entity.provenance = {}; },
+]) {
+  const malformed = structuredClone(referenceBundle);
+  mutate(malformed, malformed.entities.find((entity) => entity.status === "VERIFIED_REFERENCE"));
+  const result = validateMasterBundleV2(malformed);
+  assert.equal(result.ok, false, "VERIFIED_REFERENCE requires a canonical name and direct evidence provenance");
+  assert.equal(result.errors.some((message) => message.includes("VERIFIED_REFERENCE")), true);
+}
+const protectedClaim = referenceManifest.claims[0];
+const protectedSource = currentV2.unresolvedLegacyNames.find((record) => record.legacyNameKey === protectedClaim.legacyNameKey);
+for (const status of ["VERIFIED_CURATED", "DISPUTED", "DEPRECATED"]) {
+  const protectedRecord = structuredClone(protectedSource);
+  delete protectedRecord.reason;
+  if (status === "VERIFIED_CURATED") protectedRecord.authorityStatus = status;
+  const protectedEntity = {
+    stableId: `owner-preserved-${status.toLowerCase()}`,
+    kind: protectedClaim.kind,
+    canonicalName: "소유자 보존 이름",
+    displayNames: [], aliases: [], legacyNames: [protectedRecord],
+    tier: protectedClaim.kind === "ITEM" ? protectedClaim.tier : null,
+    category: protectedClaim.category,
+    status,
+    provenance: { ownerNote: "must survive reference import" },
+    replacedBy: null,
+  };
+  const protectedBase = createMasterBundleV2({
+    createdAt: "2026-10-02T07:20:43Z",
+    entities: [protectedEntity],
+    compatibilityMappings: [{ stableId: protectedEntity.stableId,
+      legacyNameKeys: [protectedRecord.legacyNameKey],
+      sourceLocators: protectedRecord.occurrences.map((occurrence) => occurrence.locator) }],
+    unresolvedLegacyNames: currentV2.unresolvedLegacyNames.filter((record) => record.legacyNameKey !== protectedRecord.legacyNameKey),
+    sourceRevisions: currentV2.sourceRevisions,
+    provenance: currentV2.provenance,
+  });
+  const protectedResult = applyTradeMasterReferenceManifestToBundleV2(protectedBase, referenceManifest,
+    { createdAt: "2026-10-02T07:20:43Z" });
+  const preserved = protectedResult.entities.find((entity) => entity.stableId === protectedEntity.stableId);
+  assert.equal(preserved.status, status, `${status} owner state remains protected`);
+  assert.equal(preserved.canonicalName, "소유자 보존 이름");
+  assert.equal(protectedResult.entities.some((entity) => entity.stableId === protectedClaim.stableId), false,
+    `${status} does not silently fall back to the bundled reference claim`);
+}
+const forgedUrl = structuredClone(referenceManifest);
+forgedUrl.claims[0].evidence[0].sourceUrl = "https://example.invalid/kr/fake";
+const canonicalJson = (value) => value === null || typeof value !== "object" ? JSON.stringify(value)
+  : Array.isArray(value) ? `[${value.map(canonicalJson).join(",")}]`
+    : `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+const manifestHash = (value) => {
+  const { referenceAuditHash: _hash, ...semantic } = value;
+  return createHash("sha256").update(canonicalJson(semantic), "utf8").digest("hex");
+};
+for (const mutate of [
+  (candidate) => { candidate.claims[0].evidence[0].sourceUrl = "https://bdocodex.com/us/item/800001/"; },
+  (candidate) => { candidate.claims[0].evidence[0].sourceKind = "BDOCODEX_EN"; },
+  (candidate) => { candidate.claims[0].evidence[0].verifiedProperties = []; },
+]) {
+  const malformed = structuredClone(referenceManifest);
+  mutate(malformed);
+  malformed.referenceAuditHash = manifestHash(malformed);
+  assert.equal(validateTradeMasterReferenceManifest(malformed).ok, false,
+    "re-sealing cannot legitimize unsupported source evidence");
+}
+forgedUrl.referenceAuditHash = manifestHash(forgedUrl);
+assert.equal(validateTradeMasterReferenceManifest(forgedUrl).ok, false, "an audit hash cannot legitimize a forged reference URL");
+const duplicateGroup = structuredClone(referenceManifest);
+duplicateGroup.unresolved[0].legacyNameKey = duplicateGroup.claims[0].legacyNameKey;
+duplicateGroup.referenceAuditHash = manifestHash(duplicateGroup);
+assert.equal(validateTradeMasterReferenceManifest(duplicateGroup).ok, false, "a source group cannot be both claimed and unresolved");
 const currentOverlaps = currentV2.unresolvedLegacyNames.filter((name) => name.legacyKind === "ISLAND"
   && new Set(name.occurrences.map((occurrence) => occurrence.scope)).size > 1);
 assert.equal(currentOverlaps.length, 11);
@@ -276,4 +374,4 @@ for (const relativePath of runtimeFiles) {
   assert.equal(source.includes("trade-master-bundle.js"), false, `${relativePath} must not import or wire M1`);
 }
 
-console.log(`PASS trade_master_bundle_regression: 241 occurrences, 230 unresolved legacy names, ${currentOverlaps.length} island scope overlaps, ${curationV2.entities.length} curated-fixture IDs retained without VERIFIED_CURATED elevation`);
+console.log(`PASS trade_master_bundle_regression: 241 occurrences, 230 source groups, ${referenceManifest.claims.length} reference claims, ${referenceManifest.unresolved.length} documented unresolved, ${currentOverlaps.length} island scope overlaps`);

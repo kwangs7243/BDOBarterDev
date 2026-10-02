@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 import sqlite3
 import uuid
 
@@ -14,6 +15,8 @@ from ..master_store import (
     MasterMutationConflict,
     MasterRevisionConflict,
     MasterStoreError,
+    validate_reference_bundle_against_manifest,
+    validate_reference_manifest,
     validate_master_bundle,
 )
 
@@ -31,6 +34,32 @@ def _store():
     if store is None:
         return None
     return store
+
+
+def _approved_reference_manifest():
+    manifest_path = current_app.config.get("MASTER_REFERENCE_MANIFEST_PATH")
+    if manifest_path is None:
+        manifest_path = Path(__file__).resolve().parents[2] / "frontend" / "data" / "trade-master-reference-manifest.json"
+    manifest_path = Path(manifest_path).resolve()
+    catalog_path = current_app.config.get("MASTER_REFERENCE_CATALOG_PATH")
+    if catalog_path is None:
+        catalog_path = manifest_path.parent / "trade-catalog.json"
+    catalog_bytes = Path(catalog_path).read_bytes()
+    catalog_hash = hashlib.sha256(catalog_bytes).hexdigest()
+    raw = manifest_path.read_bytes()
+    if len(raw) > MAX_MASTER_JSON_BYTES:
+        raise InvalidMasterBundle("approved reference manifest exceeds configured size limit")
+    try:
+        manifest = json.loads(raw.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise InvalidMasterBundle("approved reference manifest is not valid UTF-8 JSON") from error
+    return validate_reference_manifest(manifest, expected_catalog_sha256=catalog_hash)
+
+
+def _validate_reference_authority(bundle):
+    if not any(entity.get("status") == "VERIFIED_REFERENCE" for entity in bundle.get("entities", [])):
+        return
+    validate_reference_bundle_against_manifest(bundle, _approved_reference_manifest())
 
 
 def _body():
@@ -169,6 +198,7 @@ def propose_bundle():
         return _error("master_store_unavailable", "Master 저장소를 사용할 수 없습니다.", 503)
     try:
         bundle = validate_master_bundle(body["bundle"])
+        _validate_reference_authority(bundle)
         active = store.get_active_registry_version()
         if active != body["expectedRegistryVersion"]:
             raise MasterRevisionConflict("proposal base is stale")
@@ -206,6 +236,7 @@ def publish_bundle():
         return _error("master_store_unavailable", "Master 저장소를 사용할 수 없습니다.", 503)
     try:
         bundle = validate_master_bundle(body["bundle"])
+        _validate_reference_authority(bundle)
         expected_proposal = _proposal_hash(body["expectedRegistryVersion"], bundle)
         if body["proposalHash"] != expected_proposal:
             return _error("proposal_mismatch", "Proposal과 publish bundle이 일치하지 않습니다.", 422)

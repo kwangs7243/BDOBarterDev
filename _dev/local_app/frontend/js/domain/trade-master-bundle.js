@@ -9,8 +9,8 @@ const REGISTRY_PREFIX = "registry-v2:";
 const SPECIAL_CATEGORY = "LEGACY_SPECIAL_ITEM";
 const ENTITY_KINDS = new Set(["ITEM", "ISLAND"]);
 const LEGACY_KINDS = new Set(["MASTER_ITEM", "SPECIAL_ITEM", "ISLAND"]);
-const STATUSES = new Set(["LEGACY_UNVERIFIED", "VERIFIED_CURATED", "DISPUTED", "DEPRECATED"]);
-const NAME_STATUSES = new Set(["LEGACY_UNVERIFIED", "VERIFIED_CURATED", "DISPUTED", "DEPRECATED"]);
+const STATUSES = new Set(["LEGACY_UNVERIFIED", "VERIFIED_REFERENCE", "VERIFIED_CURATED", "DISPUTED", "DEPRECATED"]);
+const NAME_STATUSES = new Set(["LEGACY_UNVERIFIED", "VERIFIED_REFERENCE", "VERIFIED_CURATED", "DISPUTED", "DEPRECATED"]);
 const TOP_KEYS = Object.freeze([
   "schemaVersion", "registryVersion", "createdAt", "entities", "compatibilityMappings",
   "unresolvedLegacyNames", "sourceRevisions", "provenance", "hashBasis", "contentHash",
@@ -27,6 +27,9 @@ const NAME_ENTRY_KEYS = Object.freeze(["text", "status", "provenance"]);
 const COMPATIBILITY_KEYS = Object.freeze(["stableId", "legacyNameKeys", "sourceLocators"]);
 const UNRESOLVED_KEYS = Object.freeze([...LEGACY_NAME_KEYS, "reason"]);
 const SOURCE_REVISION_KEYS = Object.freeze(["sourceType", "revision", "sha256"]);
+const REFERENCE_MANIFEST_KEYS = Object.freeze(["schemaVersion", "policyVersion", "scope", "claims", "unresolved", "referenceAuditHash"]);
+const REFERENCE_SCOPE_KEYS = Object.freeze(["originalHtmlSha256", "catalogSha256", "sourceOccurrenceCount", "legacyGroupCount"]);
+const REFERENCE_CLAIM_KEYS = Object.freeze(["legacyNameKey", "stableId", "kind", "legacyKind", "canonicalName", "displayName", "tier", "category", "decision", "evidence"]);
 const CREATE_INPUT_KEYS = Object.freeze([
   "createdAt", "entities", "compatibilityMappings", "unresolvedLegacyNames", "sourceRevisions", "provenance",
 ]);
@@ -233,6 +236,80 @@ function issue(errors, path, message) {
   errors.push(`${path}: ${message}`);
 }
 
+function isValidReferenceEvidence(entry) {
+  if (!exactKeys(entry, ["sourceKind", "sourceUrl", "checkedAt", "externalId", "verifiedProperties"])) return false;
+  if (!nonempty(entry.sourceUrl) || !nonempty(entry.checkedAt) || !(entry.externalId === null || nonempty(entry.externalId))) return false;
+  const checked = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
+  if (!checked.test(entry.checkedAt) || Number.isNaN(Date.parse(entry.checkedAt))) return false;
+  try {
+    const url = new URL(entry.sourceUrl);
+    if (url.protocol !== "https:" || url.username || url.password) return false;
+    if (entry.sourceKind === "BDO_OFFICIAL_KR") {
+      if (!new Set(["kr.playblackdesert.com", "www.kr.playblackdesert.com"]).has(url.hostname)
+          || !url.pathname.startsWith("/ko-KR/")) return false;
+    } else if (entry.sourceKind === "BDOCODEX_KR") {
+      if (url.hostname !== "bdocodex.com" || !url.pathname.startsWith("/kr/")) return false;
+    } else return false;
+  } catch {
+    return false;
+  }
+  const allowed = new Set(["canonicalName", "displayName", "tier", "category", "identity"]);
+  return Array.isArray(entry.verifiedProperties) && entry.verifiedProperties.length > 0
+    && new Set(entry.verifiedProperties).size === entry.verifiedProperties.length
+    && entry.verifiedProperties.every((property) => allowed.has(property));
+}
+
+function validateReferenceProvenance(provenance, path, errors) {
+  if (!isRecord(provenance) || provenance.authority !== "VERIFIED_REFERENCE"
+      || provenance.referenceDecision !== "MATCHED" || !Array.isArray(provenance.referenceEvidence)
+      || provenance.referenceEvidence.length === 0
+      || !provenance.referenceEvidence.every(isValidReferenceEvidence)) {
+    issue(errors, path, "VERIFIED_REFERENCE requires matched Korean reference evidence");
+  }
+}
+
+function validateReferenceManifestInternal(manifest) {
+  const errors = [];
+  if (!exactKeys(manifest, REFERENCE_MANIFEST_KEYS)) return { ok: false, errors: ["manifest has invalid top-level fields"] };
+  if (manifest.schemaVersion !== 1 || manifest.policyVersion !== "trade-master-reference-v1") issue(errors, "manifest", "unsupported reference manifest version");
+  if (!exactKeys(manifest.scope, REFERENCE_SCOPE_KEYS)) issue(errors, "manifest.scope", "has invalid fields");
+  else {
+    for (const key of ["originalHtmlSha256", "catalogSha256"]) if (!/^[a-f0-9]{64}$/.test(manifest.scope[key] ?? "")) issue(errors, `manifest.scope.${key}`, "must be lowercase SHA-256");
+    if (!Number.isSafeInteger(manifest.scope.sourceOccurrenceCount) || manifest.scope.sourceOccurrenceCount < 0) issue(errors, "manifest.scope.sourceOccurrenceCount", "must be a nonnegative integer");
+    if (!Number.isSafeInteger(manifest.scope.legacyGroupCount) || manifest.scope.legacyGroupCount < 0) issue(errors, "manifest.scope.legacyGroupCount", "must be a nonnegative integer");
+  }
+  if (!Array.isArray(manifest.claims) || !Array.isArray(manifest.unresolved)) return { ok: false, errors: [...errors, "manifest claims and unresolved must be arrays"] };
+  const keys = new Set();
+  const ids = new Set();
+  manifest.claims.forEach((claim, index) => {
+    const path = `manifest.claims[${index}]`;
+    if (!exactKeys(claim, REFERENCE_CLAIM_KEYS)) { issue(errors, path, "has invalid fields"); return; }
+    if (!nonempty(claim.legacyNameKey) || keys.has(claim.legacyNameKey)) issue(errors, `${path}.legacyNameKey`, "must be unique and nonempty");
+    keys.add(claim.legacyNameKey);
+    if (typeof claim.stableId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(claim.stableId) || ids.has(claim.stableId)) issue(errors, `${path}.stableId`, "must be a unique pinned UUID v4");
+    ids.add(claim.stableId);
+    if (!ENTITY_KINDS.has(claim.kind) || !LEGACY_KINDS.has(claim.legacyKind)) issue(errors, path, "has invalid entity or legacy kind");
+    if ((claim.legacyKind === "ISLAND") !== (claim.kind === "ISLAND")) issue(errors, path, "legacy kind and entity kind disagree");
+    if (!nonempty(claim.canonicalName) || !nonempty(claim.displayName)) issue(errors, path, "canonicalName and displayName must be nonempty");
+    if (claim.legacyKind === "MASTER_ITEM" ? (!Number.isSafeInteger(claim.tier) || claim.tier < 1 || claim.tier > 7) : claim.tier !== null) issue(errors, `${path}.tier`, "does not match legacy kind");
+    if (claim.category !== (claim.legacyKind === "SPECIAL_ITEM" ? SPECIAL_CATEGORY : null)) issue(errors, `${path}.category`, "does not preserve legacy special-item category");
+    if (claim.decision !== "VERIFIED_REFERENCE" || !Array.isArray(claim.evidence) || !claim.evidence.length || !claim.evidence.every(isValidReferenceEvidence)) issue(errors, path, "must contain Korean direct reference evidence");
+  });
+  manifest.unresolved.forEach((entry, index) => {
+    const path = `manifest.unresolved[${index}]`;
+    if (!exactKeys(entry, ["legacyNameKey", "status", "evidence", "note"])) { issue(errors, path, "has invalid fields"); return; }
+    if (!nonempty(entry.legacyNameKey) || keys.has(entry.legacyNameKey)) issue(errors, `${path}.legacyNameKey`, "must be unique across claims and unresolved names");
+    keys.add(entry.legacyNameKey);
+    if (!["SOURCE_CONFLICT", "TIER_CONFLICT", "NO_DIRECT_REFERENCE"].includes(entry.status)) issue(errors, `${path}.status`, "is unsupported");
+    if (!Array.isArray(entry.evidence) || !nonempty(entry.note)) issue(errors, path, "requires evidence accounting and an explanation");
+  });
+  if (manifest.scope?.legacyGroupCount !== keys.size) issue(errors, "manifest.scope.legacyGroupCount", "does not equal accounted claim and unresolved group count");
+  const semantic = {};
+  for (const key of REFERENCE_MANIFEST_KEYS) if (key !== "referenceAuditHash") defineDataProperty(semantic, key, manifest[key]);
+  if (!/^[a-f0-9]{64}$/.test(manifest.referenceAuditHash ?? "") || sha256(canonicalStringify(semantic)) !== manifest.referenceAuditHash) issue(errors, "manifest.referenceAuditHash", "does not match canonical semantic content");
+  return { ok: errors.length === 0, errors };
+}
+
 function validateNameEntries(entries, path, errors) {
   if (!Array.isArray(entries)) {
     issue(errors, path, "must be an array");
@@ -248,6 +325,7 @@ function validateNameEntries(entries, path, errors) {
     if (!NAME_STATUSES.has(entry.status)) issue(errors, `${at}.status`, "has an unsupported name status");
     if (!isRecord(entry.provenance)) issue(errors, `${at}.provenance`, "must be a JSON object");
     else if (hasMachinePath(entry.provenance)) issue(errors, `${at}.provenance`, "cannot contain absolute filesystem paths");
+    else if (entry.status === "VERIFIED_REFERENCE") validateReferenceProvenance(entry.provenance, `${at}.provenance`, errors);
   });
 }
 
@@ -292,6 +370,7 @@ function validateEntity(entity, path, errors) {
   if (!ENTITY_KINDS.has(entity.kind)) issue(errors, `${path}.kind`, "must be ITEM or ISLAND");
   if (!(entity.canonicalName === null || nonempty(entity.canonicalName))) issue(errors, `${path}.canonicalName`, "must be null or nonempty text");
   if (entity.status === "VERIFIED_CURATED" && !nonempty(entity.canonicalName)) issue(errors, `${path}.canonicalName`, "is required for VERIFIED_CURATED");
+  if (entity.status === "VERIFIED_REFERENCE" && !nonempty(entity.canonicalName)) issue(errors, `${path}.canonicalName`, "is required for VERIFIED_REFERENCE");
   if (!STATUSES.has(entity.status)) issue(errors, `${path}.status`, "is unknown");
   if (!(entity.tier === null || (Number.isSafeInteger(entity.tier) && entity.tier >= 1 && entity.tier <= 7))) {
     issue(errors, `${path}.tier`, "must be null or an integer from 1 through 7");
@@ -308,6 +387,7 @@ function validateEntity(entity, path, errors) {
   }
   if (!isRecord(entity.provenance)) issue(errors, `${path}.provenance`, "must be a JSON object");
   else if (hasMachinePath(entity.provenance)) issue(errors, `${path}.provenance`, "cannot contain absolute filesystem paths");
+  else if (entity.status === "VERIFIED_REFERENCE") validateReferenceProvenance(entity.provenance, `${path}.provenance`, errors);
   if (!(entity.replacedBy === null || nonempty(entity.replacedBy))) issue(errors, `${path}.replacedBy`, "must be null or a stableId");
   return true;
 }
@@ -353,6 +433,9 @@ function validateBundleInternal(bundle) {
       if (record.legacyKind === "SPECIAL_ITEM" && entity.category !== SPECIAL_CATEGORY) issue(errors, `${path}.category`, `must preserve ${SPECIAL_CATEGORY} source membership`);
       if (entity.kind === "ISLAND" && record.legacyKind !== "ISLAND") issue(errors, path, "ISLAND may only contain island source names");
       if (record.authorityStatus === "VERIFIED_CURATED" && entity.status !== "VERIFIED_CURATED") {
+        issue(errors, `${path}.legacyNames[${legacyIndex}].authorityStatus`, "cannot exceed the owning entity authority");
+      }
+      if (record.authorityStatus === "VERIFIED_REFERENCE" && !["VERIFIED_REFERENCE", "VERIFIED_CURATED"].includes(entity.status)) {
         issue(errors, `${path}.legacyNames[${legacyIndex}].authorityStatus`, "cannot exceed the owning entity authority");
       }
       if (record.occurrences && Array.isArray(record.occurrences)) {
@@ -624,5 +707,108 @@ export function adaptRegistrySnapshotV1ToMasterBundleV2(snapshot, options = {}) 
       sourceSnapshotSha256: snapshotHash,
       curationRevision: snapshot.curation.revision,
     },
+  });
+}
+
+export function validateTradeMasterReferenceManifest(manifest) {
+  let cloned;
+  try { cloned = cloneJson(manifest, "reference manifest"); }
+  catch (error) { return { ok: false, errors: [error instanceof Error ? error.message : "manifest is not JSON data"] }; }
+  return validateReferenceManifestInternal(cloned);
+}
+
+export function applyTradeMasterReferenceManifestToBundleV2(baseBundle, manifest, options = {}) {
+  if (!exactKeys(options, ["createdAt"])) throw new TypeError("reference bundle options must contain exactly createdAt");
+  if (!nonempty(options.createdAt)) throw new TypeError("createdAt must be a nonempty caller-supplied string");
+  const base = cloneJson(baseBundle, "base Master bundle");
+  const baseValidation = validateBundleInternal(base);
+  if (!baseValidation.ok) throw new TypeError(`invalid base Master bundle: ${baseValidation.errors.join("; ")}`);
+  const source = validateTradeMasterReferenceManifest(manifest);
+  if (!source.ok) throw new TypeError(`invalid reference manifest: ${source.errors.join("; ")}`);
+  const catalogHash = manifest.scope.catalogSha256;
+  if (!base.sourceRevisions.some((revision) => revision.sha256 === catalogHash)) {
+    throw new TypeError("reference manifest catalog hash does not match the base bundle source revision");
+  }
+
+  const allRecords = [
+    ...base.entities.flatMap((entity) => entity.legacyNames),
+    ...base.unresolvedLegacyNames.map(({ reason: _reason, ...record }) => record),
+  ];
+  const sourceByKey = new Map(allRecords.map((record) => [record.legacyNameKey, record]));
+  const occurrenceCount = allRecords.reduce((sum, record) => sum + record.occurrences.length, 0);
+  if (sourceByKey.size !== manifest.scope.legacyGroupCount || occurrenceCount !== manifest.scope.sourceOccurrenceCount) {
+    throw new TypeError("reference manifest scope does not match exact base source accounting");
+  }
+  const entities = cloneJson(base.entities, "base entities");
+  const unresolvedByKey = new Map(base.unresolvedLegacyNames.map((record) => [record.legacyNameKey, cloneJson(record)]));
+  const mappings = cloneJson(base.compatibilityMappings, "base compatibility mappings");
+  const findings = [];
+  const ids = new Map(entities.map((entity) => [entity.stableId, entity]));
+
+  for (const claim of manifest.claims) {
+    const record = sourceByKey.get(claim.legacyNameKey);
+    if (!record) throw new TypeError(`reference claim references unknown legacyNameKey ${claim.legacyNameKey}`);
+    if (record.rawName !== claim.canonicalName || record.legacyKind !== claim.legacyKind || record.tier !== claim.tier) {
+      throw new TypeError(`reference claim disagrees with its exact legacy source group ${claim.legacyNameKey}`);
+    }
+    const existingOwner = entities.find((entity) => entity.legacyNames.some((name) => name.legacyNameKey === claim.legacyNameKey));
+    if (existingOwner) {
+      if (["VERIFIED_CURATED", "DISPUTED", "DEPRECATED"].includes(existingOwner.status)) continue;
+      if (existingOwner.status === "VERIFIED_REFERENCE" && existingOwner.stableId === claim.stableId) continue;
+      throw new TypeError(`reference claim cannot replace existing stable identity ${claim.legacyNameKey}`);
+    }
+    if (!unresolvedByKey.has(claim.legacyNameKey)) throw new TypeError(`reference claim source is not unresolved ${claim.legacyNameKey}`);
+    if (ids.has(claim.stableId)) throw new TypeError(`reference stableId already belongs to another entity ${claim.stableId}`);
+    const provenance = {
+      authority: "VERIFIED_REFERENCE",
+      referenceDecision: "MATCHED",
+      referenceEvidence: cloneJson(claim.evidence, `claim ${claim.legacyNameKey} evidence`),
+    };
+    const mappedRecord = { ...cloneJson(record), authorityStatus: "VERIFIED_REFERENCE" };
+    const entity = {
+      stableId: claim.stableId,
+      kind: claim.kind,
+      canonicalName: claim.canonicalName,
+      displayNames: [{ text: claim.displayName, status: "VERIFIED_REFERENCE", provenance: cloneJson(provenance) }],
+      aliases: [],
+      legacyNames: [mappedRecord],
+      tier: claim.kind === "ITEM" ? claim.tier : null,
+      category: claim.category,
+      status: "VERIFIED_REFERENCE",
+      provenance,
+      replacedBy: null,
+    };
+    entities.push(entity);
+    ids.set(entity.stableId, entity);
+    const locators = mappedRecord.occurrences.map((occurrence) => occurrence.locator);
+    mappings.push({ stableId: claim.stableId, legacyNameKeys: [claim.legacyNameKey], sourceLocators: locators });
+    unresolvedByKey.delete(claim.legacyNameKey);
+  }
+
+  for (const item of manifest.unresolved) {
+    if (!sourceByKey.has(item.legacyNameKey)) throw new TypeError(`unresolved reference result references unknown legacyNameKey ${item.legacyNameKey}`);
+    if (!unresolvedByKey.has(item.legacyNameKey)) {
+      const existing = entities.find((entity) => entity.legacyNames.some((name) => name.legacyNameKey === item.legacyNameKey));
+      if (existing && ["VERIFIED_CURATED", "DISPUTED", "DEPRECATED"].includes(existing.status)) continue;
+      if (existing) throw new TypeError(`unresolved finding conflicts with mapped entity ${item.legacyNameKey}`);
+      throw new TypeError(`unresolved result is absent from base unresolved names ${item.legacyNameKey}`);
+    }
+    findings.push({ legacyNameKey: item.legacyNameKey, status: item.status,
+      evidenceRefs: item.evidence.filter((entry) => typeof entry.sourceUrl === "string").map((entry) => entry.sourceUrl) });
+  }
+
+  const unresolvedLegacyNames = [...unresolvedByKey.values()];
+  const provenance = { ...cloneJson(base.provenance),
+    referenceAuditHash: manifest.referenceAuditHash,
+    referencePolicyVersion: manifest.policyVersion,
+    referenceFindings: findings,
+  };
+  return createMasterBundleV2({
+    createdAt: options.createdAt,
+    entities,
+    compatibilityMappings: mappings,
+    unresolvedLegacyNames,
+    sourceRevisions: base.sourceRevisions,
+    provenance,
   });
 }

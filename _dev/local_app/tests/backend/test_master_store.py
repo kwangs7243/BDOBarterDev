@@ -17,6 +17,8 @@ from local_app.backend.master_store import (
     MasterStore,
     MasterStoreError,
     master_bundle_content_hash,
+    validate_reference_bundle_against_manifest,
+    validate_reference_manifest,
     validate_master_bundle,
 )
 
@@ -286,6 +288,49 @@ class MasterStoreTests(unittest.TestCase):
         self.assertEqual(actual["bundle"]["contentHash"], bundle["contentHash"])
         self.assertEqual(actual["hash"], master_bundle_content_hash(bundle))
         self.assertNotEqual("e\u0301", "é")
+
+    def test_reference_manifest_and_reference_bundle_are_pinned_and_exact(self):
+        catalog_path = ROOT / "frontend" / "data" / "trade-catalog.json"
+        manifest_path = ROOT / "frontend" / "data" / "trade-master-reference-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        catalog_hash = hashlib.sha256(catalog_path.read_bytes()).hexdigest()
+        validated = validate_reference_manifest(manifest, expected_catalog_sha256=catalog_hash)
+        self.assertEqual(len(validated["claims"]), 87)
+        self.assertEqual(len(validated["unresolved"]), 143)
+
+        script = f'''
+          import fs from "node:fs";
+          import {{ pathToFileURL }} from "node:url";
+          const registry = await import(pathToFileURL({json.dumps(str(ROOT / "frontend/js/domain/trade-master-registry.js"))}));
+          const master = await import(pathToFileURL({json.dumps(str(M1_MODULE))}));
+          const catalogBytes = fs.readFileSync({json.dumps(str(catalog_path))});
+          const catalog = JSON.parse(catalogBytes.toString("utf8"));
+          const sourceHash = await import("node:crypto").then((m) => m.createHash("sha256").update(catalogBytes).digest("hex"));
+          const snapshot = registry.adaptLegacyCatalog(catalog, {{sourceRevision:"backend-reference-test-v1", sourceSha256:sourceHash}});
+          const base = master.adaptRegistrySnapshotV1ToMasterBundleV2(snapshot, {{createdAt:"2026-10-02T07:20:43Z"}});
+          const bundle = master.applyTradeMasterReferenceManifestToBundleV2(base, JSON.parse(fs.readFileSync({json.dumps(str(manifest_path))}, "utf8")), {{createdAt:"2026-10-02T07:20:43Z"}});
+          process.stdout.write(JSON.stringify(bundle));
+        '''
+        proc = subprocess.run(["node", "--input-type=module", "-e", script], text=True, encoding="utf-8",
+                              capture_output=True, check=False)
+        self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+        bundle = json.loads(proc.stdout)
+        validate_reference_bundle_against_manifest(bundle, validated)
+
+        forged_url = copy.deepcopy(bundle)
+        ref_entity = next(entity for entity in forged_url["entities"] if entity["status"] == "VERIFIED_REFERENCE")
+        ref_entity["provenance"]["referenceEvidence"][0]["sourceUrl"] = "https://example.invalid/kr/fake"
+        forged_url["contentHash"] = master_bundle_content_hash(forged_url)
+        forged_url["registryVersion"] = f"registry-v2:{forged_url['contentHash']}"
+        with self.assertRaises(InvalidMasterBundle):
+            validate_master_bundle(forged_url)
+
+        forged_audit = copy.deepcopy(bundle)
+        forged_audit["provenance"]["referenceAuditHash"] = "0" * 64
+        forged_audit["contentHash"] = master_bundle_content_hash(forged_audit)
+        forged_audit["registryVersion"] = f"registry-v2:{forged_audit['contentHash']}"
+        with self.assertRaisesRegex(InvalidMasterBundle, "approved reference manifest"):
+            validate_reference_bundle_against_manifest(forged_audit, validated)
         self.assertNotEqual(hashlib.sha256("e\u0301".encode()).digest(), hashlib.sha256("é".encode()).digest())
 
     def test_master_bundle_v2_fixed_golden_vector(self):
