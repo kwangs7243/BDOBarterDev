@@ -631,7 +631,7 @@ export async function mountTradeFinalReview(input) {
       const completion = buildFinalReviewCompletion({ ...completionInput(), confirmedAt });
       await onConfirm(completion);
       completed = true;
-      setMessage("검수 완료. 다음 단계에서 검수 자료를 저장하고 회차 적용을 선택할 수 있습니다.");
+      setMessage("최종 목록을 확인했습니다. 저장 상태는 화면 안내에서 확인하고, 회차 적용은 별도로 선택하세요.");
     } catch (error) {
       setMessage(error instanceof Error && error.message === "확인 시각은 UTC RFC3339 형식이어야 합니다."
         ? error.message : "결과를 처리하지 못했습니다. 다시 시도해 주세요.", true);
