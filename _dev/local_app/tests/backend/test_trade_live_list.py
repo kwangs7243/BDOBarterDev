@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from PIL import Image
-from local_app.tools.trade_live_ocr import apply_trade_rules, detect_live_rows, read_count, read_numeric, correct_name, recognize_live
+from local_app.tools.trade_live_ocr import _requirement_crop, apply_trade_rules, detect_live_rows, read_count, read_numeric, correct_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
@@ -60,6 +60,56 @@ class LiveListTests(unittest.TestCase):
         reader.read.side_effect = [("3", .95)] * 3 + [("62", .95)] * 2 + [("2", .95)] * 3
         with patch.dict("sys.modules", {"cv2": fake_cv2}):
             result = read_numeric(reader, Image.new("RGB", (20, 15), "white"), "yield", allowed_values=(2, 3))
+        self.assertTrue(result["reviewRequired"])
+
+    def test_stage1_output_cannot_fix_requirement_from_a_misidentified_input(self):
+        fields = self.rule_fields("1", "1")
+        fields["reqAmount"].update(corrected=500, reviewRequired=True)
+        apply_trade_rules(fields, {"1": 1})
+        self.assertEqual(fields["reqAmount"]["corrected"], 500)
+        self.assertTrue(fields["reqAmount"]["reviewRequired"])
+        self.assertNotEqual(fields["reqAmount"].get("valueSource"), "TRADE_RULE")
+
+    def test_requirement_crop_expands_only_when_its_digits_reach_the_edge(self):
+        complete = Image.new("RGB", (300, 100), "black")
+        for x in range(90, 95):
+            for y in range(60, 70):
+                complete.putpixel((x, y), (255, 255, 255))
+        self.assertEqual(_requirement_crop(complete).size, (12, 29))
+        clipped = Image.new("RGB", (300, 100), "black")
+        for x in range(97, 101):
+            for y in range(60, 70):
+                clipped.putpixel((x, y), (255, 255, 255))
+        expanded = _requirement_crop(clipped)
+        self.assertEqual(expanded.size, (16, 38))
+        self.assertEqual(expanded.getpixel((14, 10)), (255, 255, 255))
+
+    def test_requirement_crop_edge_cannot_be_certain_despite_matching_high_scores(self):
+        fake_cv2 = SimpleNamespace(connectedComponentsWithStats=lambda mask, _: (1, mask, [], None))
+        image = Image.new("RGB", (20, 15), "black")
+        for x in range(15, 20):
+            for y in range(5, 12):
+                image.putpixel((x, y), (255, 255, 255))
+        reader = Mock()
+        reader.read.return_value = ("11", .99)
+        with patch.dict("sys.modules", {"cv2": fake_cv2}):
+            result = read_numeric(reader, image, "reqAmount")
+        self.assertEqual(result["corrected"], 11)
+        self.assertTrue(result["reviewRequired"])
+        self.assertGreater(result["confidence"], .98)
+        self.assertTrue(json.loads(json.dumps(result))["reviewRequired"])
+
+    def test_requirement_enhancement_cannot_hide_conflicting_digits(self):
+        fake_cv2 = SimpleNamespace(connectedComponentsWithStats=lambda mask, _: (1, mask, [], None))
+        image = Image.new("RGB", (20, 15), "black")
+        for x in range(8, 13):
+            for y in range(5, 12):
+                image.putpixel((x, y), (255, 255, 255))
+        reader = Mock()
+        reader.read.side_effect = [("11", .99)] * 3 + [("10", .95)] * 5
+        with patch.dict("sys.modules", {"cv2": fake_cv2}):
+            result = read_numeric(reader, image, "reqAmount")
+        self.assertEqual(result["corrected"], 10)
         self.assertTrue(result["reviewRequired"])
 
     def test_real_rows_survive_image_scaling(self):

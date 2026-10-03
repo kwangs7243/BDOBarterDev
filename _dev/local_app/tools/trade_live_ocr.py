@@ -109,6 +109,15 @@ def _tight(image, mask, padding=3):
     return ImageOps.expand(image.crop(box), padding, fill="white")
 
 
+def _requirement_crop(row):
+    # Keep complete crops compact so extra item artwork cannot change their reading.
+    compact = _crop(row, (.287, .55, .328, .84))
+    mask = _ink(compact, numeric=True)
+    if mask.any() and not mask[:, -1].any() and not mask[-1, :].any():
+        return compact
+    return _crop(row, (.287, .55, .340, .93))
+
+
 def read_numeric(reader, crop, field, allowed_values=None):
     mask = _ink(crop, numeric=True)
     # Item artwork can be white too; the number is the rightmost baseline token.
@@ -162,9 +171,13 @@ def read_numeric(reader, crop, field, allowed_values=None):
                 certain = enhanced_agreement = True
     conflicts = originals + ([(int(text), score) for text, score in readings
                               if text.isdigit() and int(text) in allowed_values] if allowed_values is not None else [])
+    requirement_clipped = field == "reqAmount" and bool(mask[:, -1].any() or mask[-1, :].any())
+    requirement_conflict = field == "reqAmount" and any(
+        int(text) != value and int(text) >= 1 and score >= .5
+        for text, score in readings + original + enhanced if re.fullmatch(r"\d+", text))
     return {"rawOCR": readings[0][0], "corrected": value if certain else None,
             "reviewRequired": not certain or (not enhanced_agreement and any(candidate != value and score >= .5 for candidate, score in conflicts))
-                or (allowed_values is not None and len(votes) > 1), "confidence": confidence,
+                or (allowed_values is not None and len(votes) > 1) or requirement_clipped or requirement_conflict, "confidence": confidence,
             "variants": [{"text": text, "confidence": score} for text, score in readings + original + enhanced + (candidates if allowed_values else [])],
             **({"allowedValues": list(allowed_values), "valueSource": "CONSTRAINED_OCR"} if allowed_values else {})}
 
@@ -177,7 +190,7 @@ def trade_stages(fields, item_stages):
 def apply_trade_rules(fields, item_stages):
     source, destination = trade_stages(fields, item_stages)
     fixed = {}
-    if source in range(1, 8) or destination in {2, 3, 4, 5, 6, 7, "coin", "special"}:
+    if destination != 1 and (source in range(1, 8) or destination in {2, 3, 4, 5, 6, 7, "coin", "special"}):
         fixed["reqAmount"] = (1, "TRADE_ITEM_REQUIREMENT_ONE")
     if destination == 1 and source is None and (fields["fromItem"].get("corrected") or fields["fromItem"].get("rawOCR")):
         fixed["yield"] = (1, "LAND_TO_STAGE_1")
@@ -263,7 +276,7 @@ def recognize_live(captures, model_dir, batch_id):
         items, islands, item_stages = [], [], {}
     bounds = {"island": (.063, .05, .241, .48), "fromItem": (.340, .10, .558, .47),
               "toItem": (.714, .10, .931, .87), "count": (.064, .47, .233, .83),
-              "reqAmount": (.287, .55, .328, .84), "yield": (.665, .55, .710, .84)}
+              "reqAmount": (.287, .55, .340, .93), "yield": (.665, .55, .710, .84)}
     rows, capture_results = [], []
     for capture in captures:
         image = Image.open(capture["imagePath"]).convert("RGB")
@@ -276,6 +289,8 @@ def recognize_live(captures, model_dir, batch_id):
             for field in ("island", "fromItem", "toItem", "count", "reqAmount", "yield"):
                 crop = _crop(row, bounds[field])
                 try:
+                    if field == "reqAmount":
+                        crop = _requirement_crop(row)
                     if field == "count":
                         fields[field] = read_count(reader, crop)
                     elif field in NUMERIC:
