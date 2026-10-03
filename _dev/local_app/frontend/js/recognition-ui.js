@@ -106,8 +106,12 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
   const fieldLabels = ["섬", "교환 아이템", "필요 수량", "결과 아이템", "교환 횟수", "결과 수량"];
   const renderLiveList = (result) => {
-    for (const row of result.rows) for (const field of Object.values(row.fields)) {
-      if (!Object.hasOwn(field, "automaticCorrected")) field.automaticCorrected = field.corrected;
+    for (const row of result.rows) {
+      row.reviewFields ??= [];
+      for (const [name, field] of Object.entries(row.fields)) {
+        if (!Object.hasOwn(field, "automaticCorrected")) field.automaticCorrected = field.corrected;
+        if (field.reviewRequired && !row.reviewFields.includes(name)) row.reviewFields.push(name);
+      }
     }
     liveListResult = result;
     liveListSection.hidden = false;
@@ -124,44 +128,88 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     resultTable(raw, "인식 원문", fieldLabels, result.rows.map((row) =>
       ["island", "fromItem", "reqAmount", "toItem", "count", "yield"].map((name) => row.fields[name].rawOCR || "?")));
     details.append(summary, raw); liveListSection.append(details);
-    const uncertain = result.rows.flatMap((row, index) => Object.entries(row.fields)
-      .filter(([, field]) => field.reviewRequired).map(([name, field]) => ({ row, index, name, field })));
+    const reviewRows = result.rows.map((row, index) => ({ row, index })).filter(({ row }) => row.reviewFields.length);
     const applyNew = document.createElement("button"); applyNew.type = "button";
     applyNew.dataset.action = "apply-live-new"; applyNew.textContent = "최종 물교 리스트로 새 회차 시작";
     const applyAppend = document.createElement("button"); applyAppend.type = "button";
     applyAppend.dataset.action = "apply-live-append"; applyAppend.textContent = "현재 회차에 추가";
-    applyNew.disabled = applyAppend.disabled = uncertain.length > 0;
-    if (uncertain.length) {
+    const updateApplyState = () => {
+      const included = result.rows.filter((row) => !row.excluded);
+      applyNew.disabled = applyAppend.disabled = !included.length || included.some((row) => Object.values(row.fields).some((field) => field.reviewRequired));
+    };
+    updateApplyState();
+    if (reviewRows.length) {
       const review = document.createElement("section"); review.dataset.role = "live-list-review";
-      const title = document.createElement("h3"); title.textContent = `확인 필요한 값만 수정 · ${uncertain.length}곳`;
+      const title = document.createElement("h3"); title.textContent = `확인 목록 · ${reviewRows.length}행`;
+      const guidance = document.createElement("p"); guidance.textContent = "각 행을 리스트에 넣을지 직접 선택하세요. 포함할 행의 확인 필요한 값만 수정하면 됩니다.";
+      const counts = document.createElement("p"); counts.className = "trade-review-counts"; counts.setAttribute("role", "status");
       const form = document.createElement("form");
-      const inputs = uncertain.map((entry) => {
-        const label = document.createElement("label");
-        const caption = document.createElement("span"); caption.textContent = `${entry.index + 1}행 · ${entry.row.fields.island.corrected ?? entry.row.fields.island.rawOCR} · ${fieldLabels[["island", "fromItem", "reqAmount", "toItem", "count", "yield"].indexOf(entry.name)]}`;
-        const input = document.createElement("input"); input.required = true;
-        input.dataset.row = String(entry.index); input.dataset.field = entry.name;
-        input.setAttribute("aria-label", caption.textContent);
-        const numeric = ["reqAmount", "count", "yield"].includes(entry.name);
-        input.type = numeric ? "number" : "text";
-        if (numeric) { input.step = "1"; input.min = entry.name === "count" ? "0" : "1"; }
-        input.value = entry.field.corrected ?? (numeric ? "" : entry.field.rawOCR);
-        label.append(caption, input); form.append(label);
-        return { ...entry, input, numeric };
+      const inputs = [];
+      const updateSelection = () => {
+        const excluded = result.rows.filter((row) => row.excluded).length;
+        const unresolved = result.rows.filter((row) => !row.excluded).reduce((total, row) => total + Object.values(row.fields).filter((field) => field.reviewRequired).length, 0);
+        counts.textContent = `최종 리스트 포함 ${result.rows.length - excluded}행 · 제외 ${excluded}행 · 확인할 값 ${unresolved}곳`;
+        tradeRecognitionStatus.textContent = `물교 ${result.rows.length}행 · 포함 ${result.rows.length - excluded}행 · 제외 ${excluded}행 · 확인 필요 ${unresolved}곳.`;
+        updateApplyState();
+      };
+      reviewRows.forEach(({ row, index }) => {
+        const card = document.createElement("section"); card.className = "trade-review-row"; card.dataset.row = String(index);
+        const header = document.createElement("div"); header.className = "trade-review-row-header";
+        const heading = document.createElement("strong"); heading.textContent = `${index + 1}행 · ${row.fields.island.corrected ?? row.fields.island.rawOCR}`;
+        const rowStatus = document.createElement("span"); rowStatus.className = "trade-review-row-status";
+        const choice = document.createElement("label"); choice.className = "trade-review-choice";
+        const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = !row.excluded;
+        checkbox.dataset.action = "include-live-row"; checkbox.dataset.row = String(index);
+        checkbox.setAttribute("aria-label", `${index + 1}행 최종 리스트에 포함`);
+        const choiceText = document.createElement("span"); choice.append(checkbox, choiceText); header.append(heading, rowStatus, choice);
+        const overview = document.createElement("p"); overview.className = "trade-review-overview";
+        overview.textContent = `${row.fields.fromItem.corrected ?? row.fields.fromItem.rawOCR} → ${row.fields.toItem.corrected ?? row.fields.toItem.rawOCR} · 요구 ${row.fields.reqAmount.corrected ?? "?"} / 결과 ${row.fields.yield.corrected ?? "?"} · 남은 ${row.fields.count.corrected ?? "?"}회`;
+        const fields = document.createElement("div"); fields.className = "trade-review-fields";
+        card.append(header, overview, fields); form.append(card);
+        const rowInputs = row.reviewFields.map((name) => {
+          const entry = { row, index, name, field: row.fields[name] };
+          const label = document.createElement("label");
+          const caption = document.createElement("span"); caption.textContent = fieldLabels[["island", "fromItem", "reqAmount", "toItem", "count", "yield"].indexOf(entry.name)];
+          const input = document.createElement("input"); input.required = true;
+          input.dataset.row = String(entry.index); input.dataset.field = entry.name;
+          input.setAttribute("aria-label", `${index + 1}행 · ${caption.textContent}`);
+          const numeric = ["reqAmount", "count", "yield"].includes(entry.name);
+          input.type = numeric ? "number" : "text";
+          if (numeric) { input.step = "1"; input.min = entry.name === "count" ? "0" : "1"; }
+          input.value = entry.field.reviewDraft ?? entry.field.corrected ?? (numeric ? "" : entry.field.rawOCR);
+          input.addEventListener("input", () => { entry.field.reviewDraft = input.value; entry.field.reviewRequired = true; updateSelection(); });
+          const source = document.createElement("small"); source.textContent = `인식 원문: ${entry.field.rawOCR || "미인식"}${entry.field.allowedValues ? ` · 허용: ${entry.field.allowedValues.join(" / ")}` : ""}`;
+          label.append(caption, input, source); fields.append(label);
+          return { ...entry, input, numeric };
+        });
+        inputs.push(...rowInputs);
+        const updateRow = () => {
+          card.classList.toggle("trade-review-excluded", Boolean(row.excluded));
+          const tableRow = liveListSection.querySelector(".trade-recognition-table tbody").rows[index];
+          tableRow.classList.toggle("trade-review-excluded", Boolean(row.excluded));
+          choiceText.textContent = row.excluded ? "리스트에서 제외" : "리스트에 포함";
+          rowStatus.textContent = row.excluded ? "제외 선택" : row.reviewFields.some((name) => row.fields[name].reviewRequired) ? "값 확인 필요" : "확인 완료";
+          rowInputs.forEach(({ input }) => { input.disabled = Boolean(row.excluded); });
+          updateSelection();
+        };
+        checkbox.addEventListener("change", () => { row.excluded = !checkbox.checked; updateRow(); });
+        fields.addEventListener("input", updateRow);
+        updateRow();
       });
-      const confirm = document.createElement("button"); confirm.type = "submit"; confirm.textContent = "수정 내용 확인"; form.append(confirm);
+      const confirm = document.createElement("button"); confirm.type = "submit"; confirm.className = "primary"; confirm.textContent = "포함한 행의 수정 내용 확인"; form.append(confirm);
       const error = document.createElement("p"); error.setAttribute("role", "status");
       let feedbackId = null;
       let feedbackValues = null;
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const values = inputs.map((entry) => entry.numeric ? Number(entry.input.value) : entry.input.value.trim());
-        const invalid = inputs.findIndex((entry, i) => entry.input.value.trim() === "" || (entry.numeric
+        const invalid = inputs.findIndex((entry, i) => !entry.row.excluded && (entry.input.value.trim() === "" || (entry.numeric
           ? !Number.isSafeInteger(values[i]) || values[i] < (entry.name === "count" ? 0 : 1)
             || entry.field.allowedValues && !entry.field.allowedValues.includes(values[i])
-          : !values[i]));
+          : !values[i])));
         if (invalid !== -1) { error.textContent = "이름과 수량을 확인하세요. 1→2·2→3의 결과 수량은 2 또는 3입니다."; inputs[invalid].input.focus(); return; }
         if (confirm.disabled) return;
-        const corrections = inputs.flatMap((entry, i) => entry.field.corrected === values[i]
+        const corrections = inputs.flatMap((entry, i) => entry.row.excluded || entry.field.corrected === values[i]
           || entry.field.automaticCorrected === values[i] ? [] : [{
           captureId: entry.row.captureId, ordinal: entry.row.ordinal, rowBox: entry.row.rowBox,
           field: entry.name, box: entry.field.box, rawOCR: entry.field.rawOCR,
@@ -172,40 +220,54 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
           const key = JSON.stringify(corrections);
           if (key !== feedbackValues) { feedbackId = crypto.randomUUID(); feedbackValues = key; }
           confirm.disabled = true;
+          for (const control of form.elements) control.disabled = true;
           tradeRecognitionPending = true;
           updateRecognitionControls(); renderTradeQueue();
           try { await saveTradeCorrections(tradeQueue.items, result, corrections, feedbackId); }
           catch (failure) { error.textContent = failure.message; return; }
-          finally { confirm.disabled = false; tradeRecognitionPending = false; updateRecognitionControls(); renderTradeQueue(); }
+          finally {
+            for (const control of form.elements) control.disabled = false;
+            inputs.forEach(({ row, input }) => { input.disabled = Boolean(row.excluded); });
+            tradeRecognitionPending = false; updateRecognitionControls(); renderTradeQueue();
+          }
         }
-        inputs.forEach((entry, i) => Object.assign(entry.field, { corrected: values[i], reviewRequired: false, valueSource: "USER_REVIEW" }));
+        inputs.forEach((entry, i) => {
+          if (entry.row.excluded) return;
+          Object.assign(entry.field, { corrected: values[i], reviewRequired: false, valueSource: "USER_REVIEW" });
+          delete entry.field.reviewDraft;
+        });
         renderLiveList(result);
       });
-      review.append(title, form, error); liveListSection.append(review);
+      review.append(title, guidance, counts, form, error); liveListSection.prepend(review);
     }
     const apply = async (mode, button) => {
+      const includedRows = result.rows.filter((row) => !row.excluded);
       if (mode === "new" && state.session.scannedTrades !== null && !window.confirm("현재 회차를 이 최종 물교 목록으로 바꿀까요?")) return;
       button.disabled = true;
       try {
-        const rows = result.rows.map((row) => Object.fromEntries(Object.entries(row.fields).map(([key, field]) => [key, field.corrected])));
+        const rows = includedRows.map((row) => Object.fromEntries(Object.entries(row.fields).map(([key, field]) => [key, field.corrected])));
         const applied = await applyLiveTradeRows(rows, mode);
         await whenPersistenceIdle();
         tradeRecognitionStatus.textContent = `최종 물교 ${applied.trades.length}행을 현재 회차에 적용했습니다. 물교 목록에서 스케줄을 생성할 수 있습니다.`;
       } catch (error) {
         for (const outcome of error.outcomes ?? []) {
-          const row = result.rows[outcome.index];
+          const row = includedRows[outcome.index];
           for (const field of outcome.field ? [outcome.field] : ["island", "fromItem", "toItem"]) {
             if (row?.fields[field]) row.fields[field].reviewRequired = true;
           }
         }
         if (error.outcomes?.length) renderLiveList(result);
-        tradeRecognitionStatus.textContent = error.message;
+        tradeRecognitionStatus.textContent = error.outcomes?.length
+          ? `물교 목록에 적용할 수 없는 행: ${error.outcomes.map((outcome) => `${result.rows.indexOf(includedRows[outcome.index]) + 1}행 ${outcome.field ?? outcome.status}`).join(", ")}. 이름 또는 기존 목록 충돌을 확인하세요.`
+          : error.message;
       }
-      finally { button.disabled = false; }
+      finally { updateApplyState(); }
     };
     applyNew.addEventListener("click", () => void apply("new", applyNew));
     applyAppend.addEventListener("click", () => void apply("append", applyAppend));
-    liveListSection.append(applyNew, applyAppend);
+    const actions = document.createElement("div"); actions.className = "trade-live-actions";
+    actions.append(applyNew, applyAppend);
+    liveListSection.prepend(actions);
     tradeRecognitionResultRegion.hidden = false;
     tradeRecognitionRegion.style.flex = "0 0 auto";
     recognitionDiagnostics.hidden = true;

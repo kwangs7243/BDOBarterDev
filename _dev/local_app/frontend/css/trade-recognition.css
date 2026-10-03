@@ -1,7 +1,7 @@
 .trade-recognition-panel{margin:1rem 0;padding:.8rem;border:1px solid #394354;border-radius:8px;background:#111923}
 .trade-recognition-toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .trade-recognition-toolbar h3{margin:.1rem 0}.trade-recognition-toolbar p{margin:.25rem 0;color:#aeb9c8}
-.trade-recognition-result{max-height:42vh;overflow:auto;margin-top:.8rem;border-top:1px solid #394354;padding-top:.6rem}
+.trade-recognition-result{max-height:60vh;overflow:auto;margin-top:.8rem;border-top:1px solid #394354;padding-top:.6rem}
 .trade-recognition-table-wrap{max-width:100%;overflow:auto}
 .trade-recognition-table{width:100%;min-width:850px;border-collapse:collapse;font-size:.9rem}
 .trade-recognition-table th,.trade-recognition-table td{padding:.45rem .55rem;border-bottom:1px solid #303b4a;text-align:left;vertical-align:top}
@@ -14,6 +14,29 @@
 .trade-recognition-status{min-width:0}
 [data-role="trade-recognition-diagnostics"] pre{max-height:16rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.75rem}
 [data-role="trade-live-list"] th{top:0}
+[data-role="live-list-review"]{padding:.85rem;border:1px solid #6486ac;border-radius:10px;background:#182636;margin-bottom:.8rem}
+[data-role="live-list-review"] h3{margin:0 0 .35rem;color:#f1f6fb}
+[data-role="live-list-review"]>p{margin:.35rem 0 .7rem;color:#ccd9e7;font-size:.85rem}
+[data-role="live-list-review"] .trade-review-counts{color:#a5ddff;font-weight:600}
+.trade-review-row{padding:.8rem;margin-bottom:.65rem;background:#101c29;border:1px solid #42566e;border-radius:8px}
+.trade-review-row-header{display:flex;justify-content:space-between;align-items:center;gap:.7rem;flex-wrap:wrap}
+.trade-review-row-header strong{color:#f2f5fa}
+.trade-review-row-status{color:#b7cadd;font-size:.75rem;margin-right:auto}
+.trade-review-choice{display:flex;align-items:center;gap:.45rem;cursor:pointer;color:#bde5ff;font-weight:600;font-size:.85rem}
+.trade-review-choice input{width:1.1rem;height:1.1rem;accent-color:#67bbf2;margin:0}
+.trade-review-overview{margin:.5rem 0 .65rem;color:#cbd7e4;font-size:.85rem;overflow-wrap:anywhere}
+.trade-review-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.7rem}
+.trade-review-fields label{display:flex;flex-direction:column;gap:.3rem;min-width:0;color:#e3ecf5;font-size:.85rem}
+.trade-review-fields input{box-sizing:border-box;width:100%;min-height:2.3rem;padding:.45rem .6rem;border:1px solid #7596bc;border-radius:5px;background:#0b1520;color:#fff;font-size:1rem}
+.trade-review-fields input:focus-visible{outline:2px solid #7dd3fc;outline-offset:2px}
+.trade-review-fields small{color:#aebfd2;font-size:.75rem;overflow-wrap:anywhere}
+.trade-review-excluded{background:#20242c;border-color:#51545b}
+.trade-review-excluded .trade-review-choice{color:#f2bf93}
+.trade-review-excluded .trade-review-fields{opacity:.55}
+.trade-recognition-table .trade-review-excluded td{color:#98a3b0}
+.trade-recognition-table .trade-review-excluded td:first-child::after{content:"\A리스트 제외";color:#f2bf93}
+.trade-live-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin:0 0 .75rem;padding:.4rem 0;position:sticky;top:0;z-index:2;background:#111923}
+[data-role="live-list-review"] [role="status"]:empty{display:none}
 button:focus-visible,[role=tab]:focus-visible,summary:focus-visible{outline:2px solid #7dd3fc;outline-offset:2px}
 @media(max-width:650px){.trade-recognition-toolbar{align-items:flex-start;flex-direction:column}.trade-recognition-result{max-height:38vh}.trade-recognition-table{min-width:780px}}
 @media(max-width:600px){.trade-capture-dialog .dialog-body{padding:.5rem}}

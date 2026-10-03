@@ -109,6 +109,12 @@ try {
   const first = await recognize(0, 6);
   assert.deepEqual(first.rows[0].map((text) => text.split("\n")[0]), ["파라타마 섬", "대추야자", "500", "고대 항아리 파편", "10", "1"]);
   assert.match(first.rows[0][1], /확인 필요/, "unmatched land material remains visible as raw OCR");
+  assert.equal(await evaluate(`(() => {
+    const review=document.querySelector('[data-role=live-list-review]');
+    const region=review.parentElement.parentElement.getBoundingClientRect();
+    const card=review.querySelector('.trade-review-row').getBoundingClientRect();
+    return Boolean(review.compareDocumentPosition(review.parentElement.querySelector('.trade-recognition-table-wrap')) & Node.DOCUMENT_POSITION_FOLLOWING) && card.top>=region.top && card.bottom<=region.bottom;
+  })()`),true,'first review card is visible before the full list at 130% zoom');
 
   assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').parentElement.scrollTop"), 0);
   const screenshot = await send("Page.captureScreenshot", { format: "png" });
@@ -145,29 +151,75 @@ try {
   await recognize(0,6);
   const oracle = JSON.parse(await readFile(join(root,"local_app/tests/fixtures/trade-recognition/정답.json"),"utf8"));
   const truth = mapping[0].oracleRows.map((i)=>oracle[i]);
+  await evaluate("document.querySelectorAll('[data-action=include-live-row]').forEach(input=>input.click())");
+  assert.equal(await evaluate("document.querySelector('[data-action=apply-live-new]').disabled"),true,'empty final list cannot be applied');
+  assert.match(await evaluate("document.querySelector('.trade-review-counts').textContent"),/포함 0행 · 제외 6행/);
+  await evaluate("document.querySelectorAll('[data-action=include-live-row]').forEach(input=>input.click())");
   await evaluate(`window.__correctionWrites=[]; window.__correctionOriginal=window.fetch.bind(window); window.fetch=(url,options)=>{if(url==='/api/recognition/trade-corrections')window.__correctionWrites.push(JSON.parse(options.body.get('feedback')));return window.__correctionOriginal(url,options)};
-    [...document.querySelectorAll('[data-role=live-list-review] input')].forEach(input=>{input.value=${JSON.stringify(truth)}[Number(input.dataset.row)][input.dataset.field]});`);
+    [...document.querySelectorAll('[data-role=live-list-review] input[data-field]')].forEach(input=>{input.value=${JSON.stringify(truth)}[Number(input.dataset.row)][input.dataset.field];input.dispatchEvent(new Event('input',{bubbles:true}));});`);
   assert.equal(await evaluate("document.querySelector('[data-action=apply-live-new]').disabled"),true);
-  const selectiveCount=await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length");
+  const selectiveCount=await evaluate("document.querySelectorAll('[data-role=live-list-review] input[data-field]').length");
   assert.ok(selectiveCount>0&&selectiveCount<36);
+  await evaluate(`const excludedField=document.querySelector('[data-role=live-list-review] input[data-row="0"][data-field]');
+    excludedField.value='입력 보존 확인';excludedField.dispatchEvent(new Event('input',{bubbles:true}));
+    document.querySelector('[data-action=include-live-row][data-row="0"]').click();`);
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field]').disabled"),true);
+  await evaluate("document.querySelector('[data-action=include-live-row][data-row=\"0\"]').click()");
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field]').value"),'입력 보존 확인');
+  await evaluate(`excludedField.value='';excludedField.dispatchEvent(new Event('input',{bubbles:true}));
+    document.querySelector('[data-action=include-live-row][data-row="0"]').click();`);
   await evaluate("document.querySelector('[data-role=live-list-review] form').requestSubmit()");
   await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'selective fields confirmed');
-  assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length"),0);
+  assert.equal(await evaluate("document.querySelector('[data-action=include-live-row][data-row=\"0\"]').checked"),false,'excluded choice survives confirmation');
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field]').value"),'','excluded draft survives rerender');
+  assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input[data-field]').length"),selectiveCount,'review choices remain editable after confirmation');
   const correctionWrites=await evaluate("window.__correctionWrites");
   assert.equal(correctionWrites.length,1);
   assert.ok(correctionWrites[0].corrections.some(row=>row.field==='fromItem'&&row.finalValue==='영롱한 비취'));
   assert.ok(correctionWrites[0].corrections.every(row=>row.automaticCorrected!==row.finalValue&&row.box.width>0));
+  assert.ok(correctionWrites[0].corrections.every(row=>row.finalValue!=='입력 보존 확인'&&row.finalValue!==''),'excluded fields are not correction samples');
+  await evaluate("document.querySelector('[data-action=include-live-row][data-row=\"0\"]').click()");
+  assert.equal(await evaluate("document.querySelector('[data-action=apply-live-new]').disabled"),true,'reincluded unresolved row requires confirmation');
+  await evaluate(`document.querySelectorAll('[data-role=live-list-review] input[data-row="0"][data-field]').forEach(input=>{
+    input.value=${JSON.stringify(truth)}[0][input.dataset.field];input.dispatchEvent(new Event('input',{bubbles:true}));
+  }); document.querySelector('[data-role=live-list-review] form').requestSubmit();`);
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'reincluded row confirmed');
+  await evaluate("document.querySelector('[data-action=include-live-row][data-row=\"0\"]').click()");
+  assert.match(await evaluate("document.querySelector('.trade-review-counts').textContent"),/포함 5행 · 제외 1행 · 확인할 값 0곳/);
+  const exclusionScreenshot=await send('Page.captureScreenshot',{format:'png'});
+  await writeFile(join(output,'review-excluded.png'),Buffer.from(exclusionScreenshot.data,'base64'));
+  await evaluate(`(async()=>{const {applyLiveTradeRows}=await import('/assets/js/trade-ui.js');return applyLiveTradeRows([${JSON.stringify(truth[1])}],'append');})()`);
+  await evaluate(`const rejectedInput=document.querySelector('[data-role=live-list-review] input[data-row="1"][data-field="fromItem"]');
+    rejectedInput.value='존재하지 않는 검증 아이템';rejectedInput.dispatchEvent(new Event('input',{bubbles:true}));
+    document.querySelector('[data-role=live-list-review] form').requestSubmit();`);
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-append]').disabled"),'conflicting name submitted for importer check');
+  await evaluate("document.querySelector('[data-action=apply-live-append]').click()");
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('적용할 수 없는 행')"),'importer rejects conflicting included row');
+  assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"),/2행 conflict/,'filtered importer index is reported as the original row');
+  assert.equal(await evaluate("document.querySelector('.trade-review-row[data-row=\"1\"] .trade-review-row-status').textContent"),'값 확인 필요','importer flags the correct included row');
+  assert.equal(await evaluate("document.querySelector('.trade-review-row[data-row=\"0\"] .trade-review-row-status').textContent"),'제외 선택','importer does not reopen the excluded row');
+  await evaluate(`const correctedInput=document.querySelector('[data-role=live-list-review] input[data-row="1"][data-field="fromItem"]');
+    correctedInput.value=${JSON.stringify(truth[1].fromItem)};correctedInput.dispatchEvent(new Event('input',{bubbles:true}));
+    document.querySelector('[data-role=live-list-review] form').requestSubmit();`);
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-append]').disabled"),'importer-rejected row corrected');
   await evaluate("document.querySelector('[data-action=apply-live-append]').click()");
   await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('현재 회차에 적용했습니다')"),'corrected list appended');
   const appended=await (await fetch(`${baseUrl}api/bootstrap`)).json();
-  assert.equal(appended.workingSession.scannedTrades.length,12);
+  assert.equal(appended.workingSession.scannedTrades.length,11);
+  assert.ok(!appended.workingSession.scannedTrades.some(row=>row.island===truth[0].island&&row.fromItem===truth[0].fromItem),'excluded row is absent from appended list');
+  await evaluate("window.confirm=()=>true; document.querySelector('[data-action=apply-live-new]').click()");
+  await waitFor(async()=> (await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession.scannedTrades.length===5,'included rows used for new session');
+  const replaced=await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  assert.ok(!replaced.workingSession.scannedTrades.some(row=>row.island===truth[0].island&&row.fromItem===truth[0].fromItem));
   await send('Page.reload');
   await waitFor(async()=>evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"),'reload saved session');
-  assert.deepEqual((await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession,appended.workingSession);
+  assert.deepEqual((await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession,replaced.workingSession);
   assert.equal(crashes.length, 0); assert.equal((await fetch(`${baseUrl}api/health`)).ok, true);
   const report = { browserRealImageVisibleTable: "PASS", missingActiveMaster: "PASS", masterApiFailure: "PASS",
     rawOCRVisibleIfCorrectionFails: "PASS", fixedQuantitiesWithoutReview: "PASS", twoOrThreeRecognition: "PASS",
     databaseSessionModified: "YES_IN_ISOLATED_DB_AFTER_APPLY", finalLiveListPersisted: "PASS", selectiveReview: selectiveCount, appCrash: "NO", images: 5, correctionFeedback: "PASS", appendAndReload: "PASS",
+    reviewVisibility: "PASS", rowIncludeExclude: "PASS", excludedDraftAndValidation: "PASS", excludedFeedback: "PASS",
+    includedNewAndAppend: "PASS", reinclusion: "PASS", emptyListBlocked: "PASS", filteredImporterReview: "PASS",
     viewport: "1920x1080", bodyZoom: "130%", first, second, fixed, variable, highStage };
   await writeFile(join(output, "browser.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
