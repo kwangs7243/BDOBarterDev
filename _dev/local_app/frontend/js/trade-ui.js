@@ -1,6 +1,6 @@
 import { reviewExcludedTrades } from "./trade-import-review.js";
 import { state } from "./state.js";
-import { resetWorkingSession } from "./persistence.js";
+import { resetWorkingSession, saveWorkingSession } from "./persistence.js";
 import { getItemTier, parseTradeJsonText, processParsedTrades } from "./domain/trade-import.js";
 
 let catalogPromise;
@@ -65,6 +65,37 @@ function applyInput(mode) {
 }
 
 function changed() { invalidateSchedule(); renderTradeList(); window.dispatchEvent(new CustomEvent("bdo:session-changed")); window.dispatchEvent(new CustomEvent("bdo:trade-list-changed")); }
+
+export async function applyLiveTradeRows(rows, mode = "new") {
+  if (window.__bdoScheduleRuntime?.pending) throw new Error("완료 저장을 먼저 확인하세요.");
+  if (!catalog) await initTradeSessionUI(setStatusFn);
+  if (!Array.isArray(rows) || !rows.length || rows.some((row) =>
+    ["island", "fromItem", "toItem"].some((key) => typeof row[key] !== "string" || !row[key].trim())
+    || ["reqAmount", "count", "yield"].some((key) => !Number.isSafeInteger(row[key]) || row[key] < (key === "count" ? 0 : 1)))) {
+    throw new Error("확인이 필요한 이름과 수량을 먼저 수정하세요.");
+  }
+  if (mode === "append" && state.session.scannedTrades === null) throw new Error("먼저 새 회차를 시작하세요.");
+  const previous = mode === "append" ? state.session.scannedTrades : [];
+  const result = processParsedTrades(rows, previous, catalog);
+  if (result.rejectedCount) {
+    const rejected = result.outcomes.filter((row) => !["accepted", "duplicate"].includes(row.status));
+    const error = new Error(`물교 목록에 적용할 수 없는 행: ${rejected.map((row) => `${row.index + 1}행 ${row.field ?? row.status}`).join(", ")}. 이름 또는 기존 목록 충돌을 확인하세요.`);
+    error.outcomes = rejected;
+    throw error;
+  }
+  if (mode === "new") {
+    state.session = { id: crypto.randomUUID(), scannedTrades: result.trades, schedule: null, completed: null,
+      remainingParley: Number(state.settings.parley.defaultBudget),
+      config: structuredClone({ ship: state.settings.ship, parley: state.settings.parley, tuning: state.settings.tuning }),
+      timers: null, selection: { briefMode: "speed", selectedScheduleSlot: 1 }, drag: null, diagnostics: result };
+  } else {
+    state.session.scannedTrades = result.trades; invalidateSchedule(); state.session.diagnostics = result;
+  }
+  renderTradeList();
+  window.dispatchEvent(new CustomEvent("bdo:trade-list-changed"));
+  await saveWorkingSession();
+  return result;
+}
 function addInput(row, field, type = 'text', min) {
   const td = document.createElement('td'); td.classList.add("trade-field-" + field);
   const input = document.createElement('input'); input.type = type; input.value = row[field] ?? ''; input.setAttribute('aria-label', field + ' · ' + (row.island || '새 행'));

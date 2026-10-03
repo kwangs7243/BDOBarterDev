@@ -28,17 +28,21 @@ class LiveListTests(unittest.TestCase):
                 self.assertEqual(fields["yield"]["rawOCR"], "62")
                 self.assertEqual(fields["yield"]["valueSource"], "TRADE_RULE")
 
-    def test_variable_land_coin_and_unidentified_trades_are_not_fixed(self):
+    def test_land_result_fixed_and_variable_results_still_read(self):
         stages = {str(stage): stage for stage in range(1, 8)}
-        for source, destination in (("land", "1"), ("1", "2"), ("2", "3"), ("4", "coin"), ("4", "general")):
+        fields = apply_trade_rules(self.rule_fields("land", "1"), stages)
+        self.assertIsNone(fields["reqAmount"]["corrected"])
+        self.assertEqual(fields["yield"]["corrected"], 1)
+        self.assertFalse(fields["yield"]["reviewRequired"])
+        for source, destination in (("1", "2"), ("2", "3"), ("4", "coin"), ("4", "general")):
             fields = self.rule_fields(source, destination)
             fields["yield"].update(corrected=100, reviewRequired=True)
             apply_trade_rules(fields, stages)
             self.assertEqual(fields["yield"]["corrected"], 100)
             self.assertTrue(fields["yield"]["reviewRequired"])
-            self.assertEqual(fields["reqAmount"]["corrected"], None if source == "land" else 1)
+            self.assertEqual(fields["reqAmount"]["corrected"], 1)
         fields = apply_trade_rules(self.rule_fields("3", "4", ambiguous=True), stages)
-        self.assertIsNone(fields["reqAmount"]["corrected"])
+        self.assertEqual(fields["reqAmount"]["corrected"], 1)
         self.assertIsNone(fields["yield"]["corrected"])
 
     def test_two_or_three_requires_recognition_and_preserves_conflicts(self):

@@ -133,10 +133,24 @@ try {
   const rulesScreenshot = await send("Page.captureScreenshot", { format: "png" });
   await writeFile(join(output, "rules-table.png"), Buffer.from(rulesScreenshot.data, "base64"));
   assert.deepEqual(await (await fetch(`${baseUrl}__test__/database-snapshot`)).json(), before, "main/master/sidecar DBs unchanged");
+  assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length"),0,'automatic fixed rows do not need editing');
+  await evaluate("document.querySelector('[data-action=apply-live-new]').click()");
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('현재 회차에 적용했습니다')"),'final live list applied');
+  const persisted=await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  assert.equal(persisted.workingSession.scannedTrades.length,6);
+  assert.ok(persisted.workingSession.scannedTrades.every(row=>row.reqAmount===1&&row.yield===1));
+  await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
+  await recognize(0,6);
+  assert.equal(await evaluate("document.querySelector('[data-action=apply-live-new]').disabled"),true);
+  const selectiveCount=await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length");
+  assert.ok(selectiveCount>0&&selectiveCount<36);
+  await evaluate("document.querySelector('[data-role=live-list-review] form').requestSubmit()");
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'selective fields confirmed');
+  assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length"),0);
   assert.equal(crashes.length, 0); assert.equal((await fetch(`${baseUrl}api/health`)).ok, true);
   const report = { browserRealImageVisibleTable: "PASS", missingActiveMaster: "PASS", masterApiFailure: "PASS",
     rawOCRVisibleIfCorrectionFails: "PASS", fixedQuantitiesWithoutReview: "PASS", twoOrThreeRecognition: "PASS",
-    databaseSessionModified: "NO", appCrash: "NO", images: 5,
+    databaseSessionModified: "YES_IN_ISOLATED_DB_AFTER_APPLY", finalLiveListPersisted: "PASS", selectiveReview: selectiveCount, appCrash: "NO", images: 5,
     viewport: "1920x1080", bodyZoom: "130%", first, second, fixed, variable, highStage };
   await writeFile(join(output, "browser.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));

@@ -9,6 +9,7 @@ import { buildReviewedTradeSessionStage } from "./domain/trade-session-staging.j
 import { confirmWorkingSessionSnapshot, refreshPersistentState, sendWorkingSessionSnapshot, whenPersistenceIdle } from "./persistence.js";
 import { runTradeFinalFlow } from "./trade-final-shadow.js";
 import { loadLegacySeed } from "./trade-master-ui.js";
+import { applyLiveTradeRows } from "./trade-ui.js";
 
 const FINAL_CORRECTION_POLICY = Object.freeze({ policyVersion: "trade-final-correction-v1", boundedMatchPolicy: "V1_UNIQUE_BOUNDED_0.75" });
 const legacyReviewFirstCompatibility = new URLSearchParams(window.location.search).get("tradeCompatibility") === "REVIEW_FIRST";
@@ -582,6 +583,68 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     resultTable(raw, "인식 원문", fieldLabels, result.rows.map((row) =>
       ["island", "fromItem", "reqAmount", "toItem", "count", "yield"].map((name) => row.fields[name].rawOCR || "?")));
     details.append(summary, raw); liveListSection.append(details);
+    const uncertain = result.rows.flatMap((row, index) => Object.entries(row.fields)
+      .filter(([, field]) => field.reviewRequired).map(([name, field]) => ({ row, index, name, field })));
+    const applyNew = document.createElement("button"); applyNew.type = "button";
+    applyNew.dataset.action = "apply-live-new"; applyNew.textContent = "최종 물교 리스트로 새 회차 시작";
+    const applyAppend = document.createElement("button"); applyAppend.type = "button";
+    applyAppend.dataset.action = "apply-live-append"; applyAppend.textContent = "현재 회차에 추가";
+    applyNew.disabled = applyAppend.disabled = uncertain.length > 0;
+    if (uncertain.length) {
+      const review = document.createElement("section"); review.dataset.role = "live-list-review";
+      const title = document.createElement("h3"); title.textContent = `확인 필요한 값만 수정 · ${uncertain.length}곳`;
+      const form = document.createElement("form");
+      const inputs = uncertain.map((entry) => {
+        const label = document.createElement("label");
+        const caption = document.createElement("span"); caption.textContent = `${entry.index + 1}행 · ${entry.row.fields.island.corrected ?? entry.row.fields.island.rawOCR} · ${fieldLabels[["island", "fromItem", "reqAmount", "toItem", "count", "yield"].indexOf(entry.name)]}`;
+        const input = document.createElement("input"); input.required = true;
+        input.dataset.row = String(entry.index); input.dataset.field = entry.name;
+        input.setAttribute("aria-label", caption.textContent);
+        const numeric = ["reqAmount", "count", "yield"].includes(entry.name);
+        input.type = numeric ? "number" : "text";
+        if (numeric) { input.step = "1"; input.min = entry.name === "count" ? "0" : "1"; }
+        input.value = entry.field.corrected ?? (numeric ? "" : entry.field.rawOCR);
+        label.append(caption, input); form.append(label);
+        return { ...entry, input, numeric };
+      });
+      const confirm = document.createElement("button"); confirm.type = "submit"; confirm.textContent = "수정 내용 확인"; form.append(confirm);
+      const error = document.createElement("p"); error.setAttribute("role", "status");
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const values = inputs.map((entry) => entry.numeric ? Number(entry.input.value) : entry.input.value.trim());
+        const invalid = inputs.findIndex((entry, i) => entry.input.value.trim() === "" || (entry.numeric
+          ? !Number.isSafeInteger(values[i]) || values[i] < (entry.name === "count" ? 0 : 1)
+            || entry.field.allowedValues && !entry.field.allowedValues.includes(values[i])
+          : !values[i]));
+        if (invalid !== -1) { error.textContent = "이름과 수량을 확인하세요. 1→2·2→3의 결과 수량은 2 또는 3입니다."; inputs[invalid].input.focus(); return; }
+        inputs.forEach((entry, i) => Object.assign(entry.field, { corrected: values[i], reviewRequired: false, valueSource: "USER_REVIEW" }));
+        renderLiveList(result);
+      });
+      review.append(title, form, error); liveListSection.append(review);
+    }
+    const apply = async (mode, button) => {
+      if (mode === "new" && state.session.scannedTrades !== null && !window.confirm("현재 회차를 이 최종 물교 목록으로 바꿀까요?")) return;
+      button.disabled = true;
+      try {
+        const rows = result.rows.map((row) => Object.fromEntries(Object.entries(row.fields).map(([key, field]) => [key, field.corrected])));
+        const applied = await applyLiveTradeRows(rows, mode);
+        await whenPersistenceIdle();
+        tradeRecognitionStatus.textContent = `최종 물교 ${applied.trades.length}행을 현재 회차에 적용했습니다. 물교 목록에서 스케줄을 생성할 수 있습니다.`;
+      } catch (error) {
+        for (const outcome of error.outcomes ?? []) {
+          const row = result.rows[outcome.index];
+          for (const field of outcome.field ? [outcome.field] : ["island", "fromItem", "toItem"]) {
+            if (row?.fields[field]) row.fields[field].reviewRequired = true;
+          }
+        }
+        if (error.outcomes?.length) renderLiveList(result);
+        tradeRecognitionStatus.textContent = error.message;
+      }
+      finally { button.disabled = false; }
+    };
+    applyNew.addEventListener("click", () => void apply("new", applyNew));
+    applyAppend.addEventListener("click", () => void apply("append", applyAppend));
+    liveListSection.append(applyNew, applyAppend);
     tradeRecognitionResultRegion.hidden = false;
     tradeRecognitionRegion.style.flex = "0 0 auto";
     finalResultSummary.hidden = true;

@@ -127,12 +127,28 @@ def read_numeric(reader, crop, field, allowed_values=None):
         value = originals[0][0]
         confidence = max(score for _, score in originals)
         certain = confidence >= .75
+    enhanced = []
+    enhanced_agreement = False
+    if allowed_values is None:
+        baseline = ImageOps.expand(crop.crop((0, round(crop.height * .15), crop.width, crop.height)), 3, fill="black")
+        enhanced = [reader.read(baseline), reader.read(ImageOps.invert(baseline)), reader.read(ImageOps.invert(crop))]
+        lower = [(int(text), score) for text, score in enhanced[:2] if re.fullmatch(r"\d+", text) and int(text) >= 1]
+        if len(lower) == 2 and lower[0][0] == lower[1][0] and min(score for _, score in lower) >= .8:
+            value, confidence = lower[0][0], min(score for _, score in lower)
+            certain = enhanced_agreement = True
+        else:
+            color_votes = [(int(text), score) for text, score in original + enhanced[2:]
+                           if re.fullmatch(r"\d+", text) and int(text) >= 1 and score >= .6]
+            if len(color_votes) >= 2 and len({candidate for candidate, _ in color_votes}) == 1 and max(score for _, score in color_votes) >= .75:
+                value = color_votes[0][0]
+                confidence = max(score for _, score in color_votes)
+                certain = enhanced_agreement = True
     conflicts = originals + ([(int(text), score) for text, score in readings
                               if text.isdigit() and int(text) in allowed_values] if allowed_values is not None else [])
     return {"rawOCR": readings[0][0], "corrected": value if certain else None,
-            "reviewRequired": not certain or any(candidate != value and score >= .5 for candidate, score in conflicts)
+            "reviewRequired": not certain or (not enhanced_agreement and any(candidate != value and score >= .5 for candidate, score in conflicts))
                 or (allowed_values is not None and len(votes) > 1), "confidence": confidence,
-            "variants": [{"text": text, "confidence": score} for text, score in readings + original + (candidates if allowed_values else [])],
+            "variants": [{"text": text, "confidence": score} for text, score in readings + original + enhanced + (candidates if allowed_values else [])],
             **({"allowedValues": list(allowed_values), "valueSource": "CONSTRAINED_OCR"} if allowed_values else {})}
 
 
@@ -144,9 +160,11 @@ def trade_stages(fields, item_stages):
 def apply_trade_rules(fields, item_stages):
     source, destination = trade_stages(fields, item_stages)
     fixed = {}
-    if source in range(1, 8):
+    if source in range(1, 8) or destination in {2, 3, 4, 5, 6, 7, "coin", "special"}:
         fixed["reqAmount"] = (1, "TRADE_ITEM_REQUIREMENT_ONE")
-    if (source, destination) == (3, 4):
+    if destination == 1 and source is None and (fields["fromItem"].get("corrected") or fields["fromItem"].get("rawOCR")):
+        fixed["yield"] = (1, "LAND_TO_STAGE_1")
+    elif (source, destination) == (3, 4):
         fixed["yield"] = (2, "STAGE_3_TO_4")
     elif (source, destination) in {(4, 5), (5, 6), (6, 7)}:
         fixed["yield"] = (1, f"STAGE_{source}_TO_{destination}")
@@ -223,6 +241,7 @@ def recognize_live(captures, model_dir, batch_id):
         items = list(dict.fromkeys([name for names in catalog["masterData"].values() for name in names] + catalog["specialItems"]))
         islands = list(dict.fromkeys(catalog["islands"] + catalog["t6Islands"] + catalog["t7Islands"]))
         item_stages = {name: int(stage) for stage, names in catalog["masterData"].items() for name in names}
+        item_stages.update({name: "coin" if "까마귀" in name else "special" for name in catalog["specialItems"]})
     except (OSError, ValueError, KeyError, TypeError):
         items, islands, item_stages = [], [], {}
     bounds = {"island": (.063, .05, .241, .48), "fromItem": (.340, .10, .558, .47),
@@ -236,13 +255,16 @@ def recognize_live(captures, model_dir, batch_id):
                                 "width": image.width, "height": image.height})
         for ordinal, (top, bottom) in enumerate(boxes):
             row = image.crop((0, top, image.width, bottom))
-            fields = {}
+            fields = {key: {"rawOCR": "", "corrected": None, "reviewRequired": True, "confidence": None} for key in NUMERIC}
             for field in ("island", "fromItem", "toItem", "count", "reqAmount", "yield"):
                 crop = _crop(row, bounds[field])
                 try:
                     if field == "count":
                         fields[field] = read_count(reader, crop)
                     elif field in NUMERIC:
+                        apply_trade_rules(fields, item_stages)
+                        if fields[field].get("valueSource") == "TRADE_RULE":
+                            continue
                         source, destination = trade_stages(fields, item_stages)
                         allowed = (2, 3) if field == "yield" and (source, destination) in {(1, 2), (2, 3)} else None
                         fields[field] = read_numeric(reader, crop, field, allowed_values=allowed)
