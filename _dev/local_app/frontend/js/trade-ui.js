@@ -66,7 +66,7 @@ function applyInput(mode) {
 
 function changed() { invalidateSchedule(); renderTradeList(); window.dispatchEvent(new CustomEvent("bdo:session-changed")); window.dispatchEvent(new CustomEvent("bdo:trade-list-changed")); }
 function addInput(row, field, type = 'text', min) {
-  const td = document.createElement('td');
+  const td = document.createElement('td'); td.classList.add("trade-field-" + field);
   const input = document.createElement('input'); input.type = type; input.value = row[field] ?? ''; input.setAttribute('aria-label', field + ' · ' + (row.island || '새 행'));
   if (type === 'number') { input.step = '1'; if (min !== undefined) input.min = String(min); }
   let itemPrefix = null;
@@ -90,20 +90,28 @@ function renderTradeList() {
   const resetButton = document.querySelector("#reset-session");
   if (trades === null) {
     parley.value = ""; parley.disabled = true; tradeCount.textContent = "회차 없음"; toggle.disabled = true; toggle.textContent = "전체 비활성"; resetButton.disabled = true;
-    const empty = el("div", undefined, "empty"); empty.append(el("p", "물교목록이 없습니다. 새 회차 JSON을 입력하거나 다른 회차를 불러오세요."));
-    const open = el("button", "JSON 입력"); open.type = "button"; open.className = "primary"; open.addEventListener("click", () => document.getElementById("json-import-dialog").showModal());
-    empty.append(open); root.replaceChildren(empty); return;
+    const empty = el("div", undefined, "empty session-empty-state");
+    empty.append(el("h3", "현재 회차가 없습니다."));
+    empty.append(el("p", "물교 화면을 가져와 인식하거나 JSON을 입력해 새 회차를 시작할 수 있습니다."));
+    const actions = el("div", undefined, "empty-session-actions");
+    const capture = el("button", "물교 화면 가져오기"); capture.type = "button"; capture.className = "primary"; capture.addEventListener("click", () => document.querySelector("#open-trade-capture").click());
+    const open = el("button", "JSON 입력"); open.type = "button"; open.addEventListener("click", () => document.querySelector("#open-json-import").click());
+    actions.append(capture, open); empty.append(actions); root.replaceChildren(empty); return;
   }
-  parley.disabled = false; parley.value = state.session.remainingParley ?? ""; resetButton.disabled = false; tradeCount.textContent = `물교 ${trades.filter((trade) => !trade.deleted).length}행`;
+  parley.disabled = false; parley.value = state.session.remainingParley ?? ""; resetButton.disabled = false;
+  const deletedCount = trades.filter((trade) => trade.deleted).length;
+  const enabledCount = trades.filter((trade) => !trade.deleted && !trade.disabled).length;
+  const disabledCount = trades.filter((trade) => !trade.deleted && trade.disabled).length;
+  tradeCount.textContent = "물교 " + trades.length + "행 · 사용 " + enabledCount + " · 제외 " + disabledCount + " · 삭제됨 " + deletedCount;
   const active = trades.filter((trade) => !trade.deleted); toggle.disabled = active.length === 0; toggle.textContent = active.some((trade) => !trade.disabled) ? "전체 비활성" : "전체 활성";
-  root.replaceChildren(); const table = document.createElement("table"); const head = document.createElement("thead"); const headingRow = document.createElement("tr");
-  for (const heading of ["섬", "소모품", "필요 수량", "획득품", "횟수", "수율", "상태", "행"]) headingRow.append(el("th", heading)); head.append(headingRow); table.append(head);
+  root.replaceChildren(); const table = document.createElement("table"); table.className = "trade-session-table"; const head = document.createElement("thead"); const headingRow = document.createElement("tr");
+  for (const [index, heading] of ["섬", "소모품", "필요 수량", "획득품", "횟수", "수율", "상태", "행"].entries()) { const cell = el("th", heading); cell.className = "trade-column-" + (index + 1); headingRow.append(cell); } head.append(headingRow); table.append(head);
   const body = document.createElement("tbody");
   trades.forEach((trade, index) => {
     const row = document.createElement("tr"); row.dataset.index = String(index); row.className = `trade-row${trade.deleted ? " trade-deleted" : ""}${trade.disabled ? " trade-disabled" : ""}`;
     for (const [field, type, min] of [["island", "text"], ["fromItem", "text"], ["reqAmount", "number", 1], ["toItem", "text"], ["count", "number", 0], ["yield", "number", 1]]) row.append(addInput(trade, field, type, min));
-    const stateCell = document.createElement("td"); const label = el("label", undefined, "trade-toggle"); const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = !trade.disabled; checkbox.setAttribute("aria-label", `활성화 · ${trade.island || index + 1}행`);
-    checkbox.addEventListener("change", () => { if (window.__bdoScheduleRuntime?.pending) { checkbox.checked = !trade.disabled; setStatusFn("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; } trade.disabled = !checkbox.checked; changed(); }); label.append(checkbox, el("span", trade.disabled ? "OFF" : "ON")); stateCell.append(label); row.append(stateCell);
+    const stateCell = document.createElement("td"); stateCell.className = "trade-row-state"; const label = el("label", undefined, "trade-toggle"); const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = !trade.disabled; checkbox.setAttribute("aria-label", "사용 · " + (trade.island || index + 1) + "행");
+    checkbox.addEventListener("change", () => { if (window.__bdoScheduleRuntime?.pending) { checkbox.checked = !trade.disabled; setStatusFn("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; } trade.disabled = !checkbox.checked; changed(); }); label.append(checkbox, el("span", trade.disabled ? "제외" : "사용")); stateCell.append(label); if (trade.deleted) stateCell.append(el("span", "삭제됨", "trade-deleted-label")); row.append(stateCell);
     const actionCell = document.createElement("td"); const toggleDeleted = el("button", trade.deleted ? "복원" : "삭제"); toggleDeleted.type = "button"; toggleDeleted.addEventListener("click", () => { if (window.__bdoScheduleRuntime?.pending) { setStatusFn("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; } trade.deleted = !trade.deleted; changed(); }); actionCell.append(toggleDeleted); row.append(actionCell); body.append(row);
   });
   table.append(body); root.append(table);

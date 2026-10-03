@@ -1,1 +1,67 @@
 .hidden{display:none!important}.trade-row input{width:8rem}.trade-row input[type=number]{width:4.3rem}.trade-row.trade-deleted{opacity:.48}.trade-row.trade-deleted td:not(:last-child){text-decoration:line-through}.trade-row.trade-disabled{opacity:.62}.trade-toggle{display:flex;align-items:center;gap:.2rem;white-space:nowrap}.trade-toggle input{width:auto!important}.trade-toggle span{font-size:.68rem}#trade-import-status[data-kind=error]{color:#fca5a5}#trade-import-status[data-kind=success]{color:#86efac}
+
+.session-heading{align-items:flex-start}
+.session-input-actions{display:flex;align-items:center;justify-content:flex-end;gap:.35rem;flex-wrap:wrap}
+.session-input-actions>button,.session-management button{font-size:.76rem;padding:.3rem .46rem}
+.session-management{position:relative;flex:none}
+.session-management-actions{position:absolute;right:0;top:calc(100% + .25rem);z-index:10;display:flex;gap:.35rem;min-width:max-content;padding:.4rem;border:1px solid #4b5563;border-radius:5px;background:#111827;box-shadow:0 6px 18px #0008}
+.session-toolbar{align-items:flex-end;gap:.55rem;padding:.35rem 0 .5rem}
+.session-budget,.session-plan-actions,.session-map-actions{display:flex;align-items:center;gap:.3rem}
+.session-plan-actions,.session-map-actions{position:relative;padding-top:.65rem}
+.session-action-label{position:absolute;top:-.1rem;left:.1rem;color:#9ca3af;font-size:.64rem;line-height:1}
+.session-budget{padding:.2rem .4rem;border:1px solid #374151;border-radius:5px;background:#172333}
+.session-toolbar #remaining-parley{width:7.2rem}
+.session-plan-actions #open-schedule{font-weight:650}
+.session-map-actions button{font-size:.72rem;padding:.27rem .36rem}
+.session-toolbar>.status-note{flex:1 1 100%;min-height:1.2rem}
+.session-empty-state{display:grid;justify-items:start;gap:.35rem;padding:1.2rem .8rem;border:1px dashed #52627a;border-radius:7px;background:#172333;color:#cbd5e1}
+.session-empty-state h3,.session-empty-state p{margin:0}
+.session-empty-state h3{color:#e5e7eb;font-size:.95rem}
+.empty-session-actions{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.2rem}
+.session-management[open] summary{border-color:#7c93ad}
+.trade-session-table{table-layout:fixed;min-width:760px}
+.trade-session-table th:nth-child(1),.trade-session-table td.trade-field-island{width:15%}
+.trade-session-table th:nth-child(2),.trade-session-table td.trade-field-fromItem{width:19%}
+.trade-session-table th:nth-child(3),.trade-session-table td.trade-field-reqAmount{width:10%}
+.trade-session-table th:nth-child(4),.trade-session-table td.trade-field-toItem{width:19%}
+.trade-session-table th:nth-child(5),.trade-session-table td.trade-field-count{width:8%}
+.trade-session-table th:nth-child(6),.trade-session-table td.trade-field-yield{width:8%}
+.trade-session-table th:nth-child(7),.trade-session-table td.trade-row-state{width:11%}
+.trade-session-table th:nth-child(8),.trade-session-table td:last-child{width:10%}
+.trade-session-table th{padding:.38rem .3rem;background:#202f43;border-bottom-color:#52627a}
+.trade-session-table td{background:#1b2737}
+.trade-session-table td input{max-width:100%}
+.trade-row-state{white-space:nowrap}
+.trade-toggle{gap:.28rem}
+.trade-toggle span,.trade-deleted-label{font-size:.69rem;font-weight:650}
+.trade-deleted-label{display:block;color:#fca5a5}
+.trade-row.trade-disabled{opacity:.78}
+.trade-row.trade-deleted{opacity:.58}
+.trade-row.trade-deleted td input,.trade-row.trade-deleted td button{filter:saturate(.55)}
+@media(max-width:1050px){
+  .session-heading{gap:.55rem}
+  .session-input-actions{justify-content:flex-start}
+  .session-panel{min-height:28rem}
+  .inventory-panel{min-height:25rem}
+}
+@media(max-width:760px){
+  .session-input-actions{width:100%;justify-content:flex-start}
+  .session-input-actions>button{flex:1 1 auto}
+  .session-management{flex:0 0 auto}
+  .session-toolbar{align-items:flex-start}
+  .session-budget,.session-plan-actions,.session-map-actions{flex-wrap:wrap}
+  .session-toolbar>.status-note{min-width:100%}
+  .trade-list-scroll{max-width:100%;overscroll-behavior-x:contain}
+}
+.inventory-panel .inventory-null-hint{margin:.15rem 0 .45rem;color:#9ca3af;font-size:.7rem}
+.inventory-panel .tier-section{margin:.5rem 0 0;padding:.42rem;border:1px solid #3b4b60;border-left-width:3px;border-radius:5px;background:#172333}
+.inventory-panel .tier-heading{display:flex;align-items:center;justify-content:space-between;gap:.35rem}
+.inventory-panel .tier-heading h3{margin:0 0 .25rem;font-size:.82rem}
+.inventory-panel .tier-bulk-tools{gap:.3rem;margin:.2rem 0 .35rem;padding:.15rem 0 .35rem;border-bottom:1px solid #34445a}
+.inventory-panel .tier-bulk-tools label{font-size:.68rem;color:#b8c5d5}
+.inventory-panel .tier-bulk-tools input{width:5rem;padding:.2rem .3rem}
+.inventory-panel .tier-bulk-tools button{padding:.22rem .35rem;font-size:.68rem}
+.inventory-panel .table-wrap{border:1px solid #34445a;border-radius:4px;background:#131d2a}
+.inventory-panel .table-wrap table{font-size:.76rem}
+.inventory-panel .table-wrap th{background:#202f43}
+@media(max-width:1050px){.inventory-panel .tier-section{margin-top:.4rem}}

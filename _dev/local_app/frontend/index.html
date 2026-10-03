@@ -18,31 +18,39 @@
 </head>
 <body>
   <header class="app-header">
-    <div class="brand"><h1>물물교환</h1><span id="runtime-status" role="status">저장 상태를 불러오는 중입니다.</span></div>
-    <div class="compact-settings">
+    <div class="brand"><h1>BDO 물교</h1><span id="runtime-status" role="status">저장 상태를 불러오는 중입니다.</span></div>
+    <div class="compact-settings" aria-label="자주 쓰는 설정">
       <div id="ship-root" class="compact-setting"></div>
       <div id="parley-root" class="compact-setting"></div>
       <div id="presets-root" class="compact-presets"></div>
-      <button id="open-tuning" type="button">계산 튜닝</button>
-      <button id="open-map-tools" type="button">지도·항로</button>
-      <button id="open-trade-master" type="button">마스터 관리</button>
-      <button id="reload-state" type="button" title="영구 설정 다시 읽기">↻</button>
+    </div>
+    <div class="header-utilities">
+      <details class="header-tools">
+        <summary>도구</summary>
+        <div class="header-tool-actions" aria-label="보조 도구">
+          <button id="open-tuning" type="button">계산 튜닝</button>
+          <button id="open-map-tools" type="button">지도·항로</button>
+          <button id="open-trade-master" type="button">마스터 관리</button>
+          <button id="reload-state" type="button" title="영구 설정 다시 읽기" aria-label="영구 설정 다시 읽기">설정 다시 읽기</button>
+        </div>
+      </details>
+      <section id="screen-capture-session" class="screen-capture-session" aria-label="화면 공유 연결">
+        <span id="screen-capture-status" role="status" aria-live="polite">화면 연결 안 됨</span>
+        <div class="screen-capture-actions"><button id="connect-screen-capture" type="button">화면 연결</button><button id="disconnect-screen-capture" type="button" disabled>연결 끊기</button></div>
+      </section>
     </div>
   </header>
-  <section id="screen-capture-session" class="screen-capture-session" aria-label="화면 공유 연결">
-    <span id="screen-capture-status" role="status" aria-live="polite">화면 연결 안 됨</span>
-    <div class="screen-capture-actions"><button id="connect-screen-capture" type="button">화면 연결</button><button id="disconnect-screen-capture" type="button" disabled>연결 끊기</button></div>
-  </section>
   <main id="app-content" aria-busy="true" class="workspace">
+    <section class="panel session-panel" id="trade-session-panel">
+      <div class="panel-heading session-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="session-input-actions"><button id="open-trade-capture" class="primary" type="button">물교 화면 가져오기</button><button id="open-json-import" type="button">JSON 입력</button><button id="add-manual-trade" type="button">행 추가</button><details class="session-management"><summary>회차 관리</summary><div class="session-management-actions"><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></details></div></div>
+      <div class="session-toolbar"><div class="session-budget"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"></div><div class="session-plan-actions"><span class="session-action-label">계획</span><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button></div><div class="session-map-actions"><span class="session-action-label">지도</span><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button></div><span id="trade-import-status" class="status-note" role="status"></span></div>
+      <div id="trade-list-root" class="trade-list-scroll"></div>
+    </section>
     <section class="panel inventory-panel" id="mainPanel">
-      <div class="panel-heading"><div><h2>창고</h2><span class="hint">1~5단 · 빈칸은 미입력, 0은 확인된 0개</span></div><button id="open-warehouse-scan" class="primary" type="button">창고 스캔</button></div>
+      <div class="panel-heading"><div><h2>창고</h2><span class="hint">현재 재고와 목표 재고</span></div><button id="open-warehouse-scan" type="button">창고 스캔</button></div>
+      <p class="inventory-null-hint">빈칸 = 미확인 · 0 = 확인된 0개</p>
       <div id="inventory-root"></div>
       <details class="tier-rule-details"><summary>단계 규칙</summary><div id="tier-rules-root"></div></details>
-    </section>
-    <section class="panel session-panel" id="trade-session-panel">
-      <div class="panel-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="actions compact-actions"><button id="open-json-import" class="primary" type="button">JSON 입력</button><button id="open-trade-capture" type="button">물교 화면 가져오기</button><button id="add-manual-trade" type="button">행 추가</button><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></div>
-      <div class="session-toolbar"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button><span id="trade-import-status" class="status-note" role="status"></span></div>
-      <div id="trade-list-root" class="trade-list-scroll"></div>
     </section>
   </main>
 

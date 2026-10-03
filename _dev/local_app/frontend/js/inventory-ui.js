@@ -15,8 +15,8 @@ export function renderInventory(root, setStatus) {
   const order = inventoryDisplayOrder();
   for (let tier = 1; tier <= 5; tier += 1) {
     const section = el("section", "tier-section"); section.dataset.tier = String(tier);
-    section.append(el("h3", "", `${tier}단 (${order[String(tier)].length}종)`));
-    const bulk = el("div", "inline-field");
+    const heading = el("div", "tier-heading"); heading.append(el("h3", "", String(tier) + "단 (" + order[String(tier)].length + "종)")); section.append(heading);
+    const bulk = el("div", "inline-field tier-bulk-tools");
     const bulkLabel = el("label", "", "이 단계 목표 일괄 적용");
     const bulkInput = numberInput("", `${tier}단 일괄 목표`);
     const bulkButton = el("button", "", "전체에 적용"); bulkButton.type = "button";

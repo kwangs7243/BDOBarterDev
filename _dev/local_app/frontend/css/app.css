@@ -3,3 +3,43 @@
 
 
 .engine-debug-mode,.engine-debug-sortie{border:1px solid #374151;border-radius:5px;margin:.35rem 0;padding:.4rem}.engine-debug-mode>summary,.engine-debug-sortie>summary{cursor:pointer;font-weight:700}.engine-debug-scroll{max-height:16rem;overflow:auto;margin:.35rem 0}.engine-debug-scroll table{min-width:620px;font-size:.72rem}.engine-debug-scroll th{position:sticky;top:0}.engine-debug-math{font-family:Consolas,monospace;font-size:.68rem;white-space:pre-wrap;overflow-wrap:anywhere;color:#aebbd0}.engine-debug-step{border-top:1px solid #374151;padding:.35rem 0}.engine-debug-step>strong{font-size:.76rem}.engine-candidate-list{display:grid;gap:.25rem;padding-left:1.5rem}.engine-candidate{display:grid;grid-template-columns:minmax(9rem,1fr) auto auto;gap:.3rem;align-items:baseline;background:#111827;border:1px solid #374151;border-radius:4px;padding:.3rem;font-size:.72rem}.engine-candidate.selected{border-color:#ca8a04;background:#292211}.engine-candidate p{grid-column:1/-1;margin:.1rem 0}.brief-config-mode{display:flex;align-items:center;gap:.25rem;font-size:.7rem;color:#cbd5e1}.brief-config-mode select{font-size:.7rem;padding:.2rem}.briefing-secondary-tools{max-height:4.5rem;overflow:auto;margin:.2rem 0}.briefing-secondary-tools .mv-free-route{padding:.25rem;gap:.3rem}.compact-setting .setting-scope{font-size:.66rem;color:#9ca3af;white-space:nowrap}
+
+:focus-visible{outline:2px solid #7dd3fc;outline-offset:2px}
+body{min-width:0;min-height:100vh}
+.app-header{display:grid;grid-template-columns:minmax(12rem,auto) minmax(0,1fr);grid-template-areas:"brand settings" "utilities utilities";align-items:center;gap:.45rem .8rem}
+.app-header>.brand{grid-area:brand;min-width:0;flex-wrap:wrap;align-items:center;gap:.2rem .65rem}
+.brand #runtime-status{display:inline-flex;align-items:center;min-height:1.5rem;padding:.1rem .4rem;border:1px solid #475569;border-radius:999px;background:#172333}
+.app-header>.compact-settings{grid-area:settings;justify-content:flex-end;flex-wrap:wrap}
+.header-utilities{grid-area:utilities;display:flex;align-items:center;justify-content:space-between;gap:.6rem;min-width:0;padding-top:.35rem;border-top:1px solid #374151}
+.header-tools{position:relative;flex:none}
+.header-tools>summary,.session-management>summary{cursor:pointer;list-style:none;border:1px solid #4b5563;border-radius:4px;background:#273449;padding:.3rem .55rem;color:#dce8f7}
+.header-tools>summary::-webkit-details-marker,.session-management>summary::-webkit-details-marker{display:none}
+.header-tools>summary::after,.session-management>summary::after{content:" ▾";color:#93c5fd}
+.header-tool-actions{display:flex;gap:.35rem;flex-wrap:wrap}
+.header-tools[open] .header-tool-actions{position:absolute;top:calc(100% + .25rem);left:0;z-index:30;min-width:12rem;padding:.45rem;border:1px solid #4b5563;border-radius:6px;background:#111827;box-shadow:0 8px 24px #0009}
+.header-tool-actions button,#reload-state{white-space:nowrap}
+.app-header .screen-capture-session{position:static;top:auto;z-index:auto;display:flex;align-items:center;justify-content:flex-start;gap:.6rem;flex-wrap:wrap;padding:0;border:0;background:transparent}
+.app-header .screen-capture-actions{display:flex;gap:.3rem}
+.app-header .screen-capture-actions button{padding:.28rem .5rem}
+main.workspace{grid-template-columns:minmax(0,1.8fr) minmax(20rem,1fr);height:calc(100vh - 10.7rem);min-height:0;gap:.65rem}
+.inventory-panel,.session-panel{max-height:none}
+@media(max-width:1050px){
+  .app-header{display:flex;align-items:stretch;flex-direction:column;gap:.45rem}
+  .app-header>.brand{width:100%}
+  .app-header>.compact-settings{width:100%;justify-content:flex-start}
+  .header-utilities{width:100%;justify-content:space-between}
+  main.workspace{grid-template-columns:minmax(0,1fr);height:auto;min-height:calc(100vh - 8rem)}
+  .session-panel{order:0}
+  .inventory-panel{order:1}
+}
+@media(max-width:760px){
+  body{width:100%;overflow-x:hidden}
+  .app-header,.workspace,.workspace>.panel{min-width:0;max-width:100%}
+  .header-utilities{align-items:flex-start;flex-direction:column}
+  .app-header .screen-capture-session{width:100%;justify-content:space-between}
+  .compact-settings{align-items:flex-start}
+  .compact-setting{max-width:100%;flex-wrap:wrap}
+  .compact-presets{flex-wrap:wrap}
+  main.workspace{width:100%;gap:.5rem}
+  .workspace .panel{padding:.5rem}
+}

@@ -107,7 +107,7 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength==='1'"), "one explicit Trade draft captured");
   const tradeState = await evaluate("JSON.stringify({label:document.querySelector('.capture-draft-item').textContent,draft:document.querySelector('.capture-draft-item [class=capture-draft-state]').textContent,rows:document.querySelector('#trade-list-root').textContent})").then(JSON.parse);
   assert.match(tradeState.label, /화면/);
-  assert.match(tradeState.draft, /인식 미실행/);
+  assert.match(tradeState.draft, /인식 대기/);
   assert.equal(tradeState.rows, tradeRowsBefore, "Trade capture does not create or modify trade rows");
   await evaluate("document.querySelector('#trade-capture-dialog [data-close-trade-capture]').click()");
   assert.equal(await evaluate("document.querySelector('#screen-capture-session').dataset.state"), "CONNECTED", "closing Trade keeps the shared screen stream");
