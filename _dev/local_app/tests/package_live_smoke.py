@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import hashlib
 import json
 import os
+import sqlite3
 from pathlib import Path
 import subprocess
 import tempfile
@@ -21,7 +23,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures/trade-recognition"
 
 def request(path, data=None, content_type="application/json"):
     headers = {"Origin": BASE, "Content-Type": content_type}
-    with urlopen(Request(BASE + path, data=data, headers=headers), timeout=120) as response:
+    with urlopen(Request(BASE + path, data=data, headers=headers), timeout=150) as response:
         return json.load(response)
 
 
@@ -68,6 +70,8 @@ def main():
     parser.add_argument("--exe", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
+    args.out = args.out.resolve()
+    args.out.parent.mkdir(parents=True, exist_ok=True)
     try:
         request("/api/health")
     except (OSError, URLError):
@@ -86,6 +90,13 @@ def main():
             runtime = request("/api/recognition/trade-runtime")["runtime"]
             assert runtime["available"] and runtime["mode"] == "PACKAGED_LOCAL_RUNTIME", runtime
             before = request("/api/bootstrap")
+            assert before["schemaVersion"] == 4 and before["revision"] == 0
+            databases = list(Path(temporary).rglob("*.sqlite3"))
+            assert len(databases) == 1 and databases[0].name == "bdo.sqlite3", databases
+            with closing(sqlite3.connect(databases[0])) as connection:
+                tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            assert tables == {"inventory", "settings", "app_meta", "working_session", "saved_schedule_slot",
+                              "mutation_receipt", "warehouse_scan", "warehouse_feedback", "trade_correction"}, tables
             duplicate = subprocess.Popen([str(args.exe.resolve())], cwd=temporary, env=environment,
                                          creationflags=subprocess.CREATE_NO_WINDOW)
             assert duplicate.wait(timeout=20) == 0
@@ -93,11 +104,35 @@ def main():
             result = request("/api/recognition/trade-live-list", body, content_type)["result"]
             expected = [oracle[index] for entry in mapping for index in entry["oracleRows"]]
             assert len(result["rows"]) == len(expected) == 80
+            ocr_duration_ms = result["runtime"]["durationMs"]
             numeric = {name: sum(row["fields"][name]["corrected"] == truth[name]
                                 for row, truth in zip(result["rows"], expected))
                        for name in ("reqAmount", "count", "yield")}
             assert all(value == 80 for value in numeric.values()), numeric
+            fully_correct = sum(all(row["fields"][name]["corrected"] == truth[name] for name in truth)
+                                for row, truth in zip(result["rows"], expected))
+            assert fully_correct >= 76, fully_correct
             assert request("/api/bootstrap") == before, "Recognition changed the working session or stock"
+            browser_environment = {**environment, "BDO_EXTERNAL_APP": "1", "BDO_TEST_URL": BASE + "/",
+                                   "PYTHON": str(Path(os.sys.executable)),
+                                   "BDO_LIVE_REPORT_DIR": str(args.out.parent / "browser")}
+            browser_checks = []
+            for script in ("browser_trade_live_list.mjs", "browser_warehouse_scan.mjs", "browser_scheduler.mjs"):
+                completed = subprocess.run([r"C:\Program Files\nodejs\node.exe", str(Path(__file__).parent / script)],
+                                           cwd=Path(__file__).resolve().parents[2], env=browser_environment,
+                                           creationflags=subprocess.CREATE_NO_WINDOW, capture_output=True,
+                                           text=True, encoding="utf-8", timeout=300)
+                (args.out.parent / (script + ".log")).write_text(completed.stdout + completed.stderr, encoding="utf-8")
+                assert completed.returncode == 0, f"{script}: {completed.stderr[-2000:]}"
+                browser_checks.append(script)
+            before = request("/api/bootstrap")
+            with closing(sqlite3.connect(databases[0])) as connection:
+                corrections = connection.execute("SELECT image_png, details_json FROM trade_correction").fetchall()
+                assert corrections and all(row[0] and json.loads(row[1])["corrections"] for row in corrections)
+                scans = connection.execute("SELECT count(*) FROM warehouse_scan").fetchone()[0]
+                feedback = connection.execute("SELECT feedback_json FROM warehouse_feedback").fetchall()
+                assert scans > 0 and any(json.loads(row[0])["rows"] for row in feedback)
+                persisted_feedback = list(connection.iterdump())
             request("/api/app/shutdown", b"{}")
             assert process.wait(timeout=20) == 0
             restarted = subprocess.Popen([str(args.exe.resolve())], cwd=temporary, env=environment,
@@ -105,7 +140,13 @@ def main():
             process = restarted
             wait_for(lambda: request("/api/health").get("ok"))
             assert request("/api/bootstrap") == before, "Packaged restart changed persisted data"
+            with closing(sqlite3.connect(databases[0])) as connection:
+                assert list(connection.iterdump()) == persisted_feedback
             report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numericExact": numeric,
+                      "fullyCorrectRows": fully_correct, "ocrDurationMs": ocr_duration_ms,
+                      "freshSchema": 4, "tables": sorted(tables),
+                      "browserProductFlows": browser_checks, "tradeCorrectionCaptures": len(corrections),
+                      "warehouseScans": scans, "warehouseFeedbackApplications": len(feedback),
                       "externalOcrEnvironmentRemoved": True, "singleInstance": True,
                       "restartPersistence": True, "exeSha256": hashlib.sha256(args.exe.read_bytes()).hexdigest()}
             args.out.parent.mkdir(parents=True, exist_ok=True)

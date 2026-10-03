@@ -38,7 +38,7 @@ def warehouse_scan():
 @scan_api.get("/warehouse-dataset")
 def warehouse_dataset():
     """Export a consistent local snapshot; unverified guesses never become labels."""
-    from ..warehouse_evidence import label_verification
+    from ..warehouse_feedback import label_verification
     import json
     import tempfile
     import zipfile
@@ -85,7 +85,7 @@ def warehouse_dataset():
             with bundle.open("samples.jsonl", "w") as target:
                 import shutil
                 shutil.copyfileobj(samples, target)
-            bundle.writestr("manifest.json", json.dumps({"formatVersion": 2, "scanCount": count, "itemLabels": "Explicit four-way item/quantity checks are verified independently. Legacy match/different checks verify only the item. Automatic output, unchecked and excluded rows are not ground truth.", "quantityLabels": "Original output and final human values are separate. Only explicit four-way checks verify quantity labels; unknown OCR quantities never count as a match.", "trainingPerformed": False}, ensure_ascii=False))
+            bundle.writestr("manifest.json", json.dumps({"formatVersion": 2, "scanCount": count, "itemLabels": "Only current explicit human item/quantity checks are verified. Unmodified automatic MATCH output is not stored as human feedback.", "quantityLabels": "Original output and final human values are separate. Only explicit four-way checks verify quantity labels; unknown OCR quantities never count as a match.", "trainingPerformed": False}, ensure_ascii=False))
         archive.seek(0)
         response = send_file(archive, mimetype="application/zip", as_attachment=True, download_name="warehouse-recognition-dataset.zip", max_age=0)
         response.call_on_close(archive.close)

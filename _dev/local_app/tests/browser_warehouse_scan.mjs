@@ -16,7 +16,8 @@ const reviewFixture = resolve(root, "local_app/tests/fixtures/warehouse_patch/mi
 const sitePackages = process.env.BDO_EXTRA_SITE_PACKAGES;
 const prelude = sitePackages ? `import sys; sys.path.append(${JSON.stringify(sitePackages)}); ` : "";
 const pythonCode = `${prelude}import os,threading; from local_app.backend.app import create_app; app=create_app(r'${database}', testing=True); app.add_url_rule('/__test__/shutdown',view_func=lambda:(threading.Timer(.2,lambda:os._exit(0)).start() or {'ok':True}),methods=['POST']); app.run(host='127.0.0.1', port=18767, use_reloader=False, threaded=True)`;
-let server = spawn(python, ["-c", pythonCode], { cwd: root, stdio: "ignore", windowsHide: true });
+const external = process.env.BDO_EXTERNAL_APP === "1";
+let server = external ? null : spawn(python, ["-c", pythonCode], { cwd: root, stdio: "ignore", windowsHide: true });
 let chrome;
 let socket;
 let send;
@@ -87,7 +88,7 @@ try {
   await evaluate("document.querySelector('#warehouse-scan-dialog [data-action=capture-roi]').click()");
   await waitFor(async()=>await evaluate("Number(document.querySelector('#warehouse-scan-dialog').dataset.queueLength)>0"),'ROI capture queued');
   await evaluate("document.querySelector('#warehouse-scan-dialog [data-action=cancel]').click();clearInterval(window.__warehouseFrame)");
-  if(!await evaluate("window.__warehouseStream.getTracks().every(t=>t.readyState==='ended')")) throw Error('warehouse stream left open');
+  await waitFor(async()=>await evaluate("window.__warehouseStream.getTracks().every(t=>t.readyState==='ended')"),'warehouse stream disconnected after dialog close');
   console.log(JSON.stringify({ok:true,selectiveReview:uncertain.length,automaticMatches:Object.keys(scan.patch.items).length,seedDiagnostics:seeds.map(s=>({name:s.bestCandidate,decision:s.decision,gap:s.scoreGap})),inventorySavedOnce:true,roiResizeAndCapture:true,streamClosed:true},null,2));
 
   async function uploadAndScan(viaDrop = false, imagePath = fixture) {
@@ -113,7 +114,7 @@ try {
     return evaluate("JSON.stringify((() => [...document.querySelectorAll('.patch-correction-row')].map(row => { const item=row.querySelector('.patch-correction-item'); const control=item.closest('.autocomplete-control'); control.querySelector('.autocomplete-toggle').click(); control.querySelector('.autocomplete-option').click(); const quantity=row.querySelector('.patch-correction-quantity'); if(quantity.value===''){quantity.value='0';quantity.dispatchEvent(new Event('input',{bubbles:true}));} return item.value; }))())").then(JSON.parse);
   }
 } finally {
-  await fetch(`${baseUrl}__test__/shutdown`,{method:"POST"}).catch(()=>{});
+  if (!external) await fetch(`${baseUrl}__test__/shutdown`,{method:"POST"}).catch(()=>{});
   try { if (socket?.readyState === WebSocket.OPEN) await Promise.race([send("Browser.close"), delay(1000)]); } catch {}
   try { socket?.close(); } catch {}
   for (const process of [chrome, server]) {

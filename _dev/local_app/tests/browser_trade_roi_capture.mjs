@@ -53,7 +53,7 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.open && document.querySelector('[data-role=trade-preview-video]').videoWidth===640"), "Trade live preview");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-preview-video]').srcObject===window.__roiMock.streams[0]"), true, "Trade preview uses the shared stream");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-roi]').hidden"), false);
-  assert.equal(await evaluate("document.querySelectorAll('[data-roi-handle]').length"), 8);
+  assert.equal(await evaluate("document.querySelectorAll('[data-role=trade-roi] [data-roi-handle]').length"), 8);
   const initialRoi = await evaluate("JSON.stringify({left:parseFloat(document.querySelector('[data-role=trade-roi]').style.left),top:parseFloat(document.querySelector('[data-role=trade-roi]').style.top),width:parseFloat(document.querySelector('[data-role=trade-roi]').style.width),height:parseFloat(document.querySelector('[data-role=trade-roi]').style.height),content:(()=>{const v=document.querySelector('[data-role=trade-preview-video]'),e=document.querySelector('[data-role=trade-preview-stage]'),s=e.getBoundingClientRect(),w0=e.clientWidth,h0=e.clientHeight,scale=Math.min(w0/v.videoWidth,h0/v.videoHeight),w=v.videoWidth*scale,h=v.videoHeight*scale;return {left:e.clientLeft+(w0-w)/2,top:e.clientTop+(h0-h)/2,width:w,height:h}})()})").then(JSON.parse);
   assert.ok(Math.abs(initialRoi.top - (initialRoi.content.top + initialRoi.content.height*.1)) < 1, `normalized default ROI follows letterboxed content rect ${JSON.stringify(initialRoi)}`);
   const beforeMoveLeft = initialRoi.left;
@@ -78,7 +78,7 @@ try {
   assert.ok(first.id && first.batch && first.width < 640 && first.height < 360, "queue preview dimensions represent the cropped ROI");
   assert.equal(first.width, first.evidence.sourceRect.width); assert.equal(first.height, first.evidence.sourceRect.height);
   assert.equal(first.evidence.sourceFrame.width, 640); assert.equal(first.evidence.sourceFrame.height, 360);
-  assert.match(first.label,/선택 영역/); assert.match(first.status,/인식 미실행/);
+  assert.match(first.label,/선택 영역/); assert.match(first.status,/인식 대기/);
   await evaluate("window.__roiMock.source.getContext('2d').fillStyle='#42a66b';window.__roiMock.source.getContext('2d').fillRect(0,0,640,360)");
   await evaluate("document.querySelector('[data-action=capture-trade-roi]').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength==='2'"), "second ROI capture queued");

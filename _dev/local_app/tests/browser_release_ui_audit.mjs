@@ -13,8 +13,7 @@ const python = process.env.PYTHON ?? "python";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const profile = await mkdtemp(join(tmpdir(), "bdo-release-ui-audit-"));
 const database = join(profile, "isolated.sqlite3");
-const masterDatabase = join(profile, "master", "master.sqlite3");
-const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', master_database_path=r'${masterDatabase}', testing=True).run(host='127.0.0.1', port=${port}, use_reloader=False, threaded=True)`;
+const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=${port}, use_reloader=False, threaded=True)`;
 let server;
 let chrome;
 let socket;
@@ -128,7 +127,7 @@ try {
     const unnamedButtons=[...document.querySelectorAll('button')].filter(b=>b.getClientRects().length&&!b.disabled&&!b.getAttribute('aria-hidden')&&!((b.getAttribute('aria-label')||b.textContent||b.title||'').trim())).map(b=>b.outerHTML.slice(0,180));
     const brokenFor=[...document.querySelectorAll('label[for]')].filter(l=>!document.getElementById(l.htmlFor)).map(l=>l.htmlFor);
     const tabs=[...document.querySelectorAll('[role=tab]')].map(t=>({name:(t.getAttribute('aria-label')||t.textContent).trim(),selected:t.getAttribute('aria-selected'),controls:t.getAttribute('aria-controls')}));
-    return {duplicateIds:ids.filter((id,i)=>ids.indexOf(id)!==i),dialogs,brokenLabels,unnamedButtons,brokenFor,tabs,staleMaster:document.querySelector('.trade-master-safety')?.textContent,finalMessage:document.querySelector('#trade-final-review-dialog')?.textContent};
+    return {duplicateIds:ids.filter((id,i)=>ids.indexOf(id)!==i),dialogs,brokenLabels,unnamedButtons,brokenFor,tabs};
   })())`);
   const staticAudit = JSON.parse(structure);
   assert.deepEqual(staticAudit.duplicateIds, [], "HTML has no duplicate IDs");
@@ -167,7 +166,6 @@ try {
     ["schedule-dialog", "#open-schedule", "#schedule-dialog [data-close-dialog]"],
     ["tuning-dialog", "#open-tuning", "#tuning-dialog [data-close-dialog]"],
     ["map-tools-dialog", "#open-map-tools", "#map-tools-dialog [data-close-dialog]"],
-    ["trade-master-dialog", "#open-trade-master", "#trade-master-dialog [data-master-close]"],
     ["warehouse-scan-dialog", "#open-warehouse-scan", "#warehouse-scan-dialog [data-action=close]"],
   ]) {
     await click(opener);
@@ -183,11 +181,6 @@ try {
   await click("#open-engine-diagnostics"); await waitOpen("engine-diagnostics-dialog");
   await close("engine-diagnostics-dialog", "#engine-diagnostics-dialog [data-close-dialog]");
   await close("schedule-dialog", "#schedule-dialog [data-close-dialog]");
-
-  await evaluate("document.getElementById('trade-final-review-dialog').showModal()");
-  const finalReview = await evaluate(`(()=>{const d=document.getElementById('trade-final-review-dialog'),id=d.getAttribute('aria-labelledby'),title=document.getElementById(id);return {title:title?.textContent.trim(),hiddenTitle:getComputedStyle(title).clip!=='auto',bounds:(()=>{const r=d.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1})()}})()`);
-  assert.ok(finalReview.title && finalReview.bounds, "full-screen final review has an accessible title and fits the viewport");
-  await evaluate("document.getElementById('trade-final-review-dialog').close()");
 
   await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await evaluate("document.documentElement.style.setProperty('--app-zoom','1.1');window.__bdoApplyAppZoom?.()");
@@ -208,7 +201,7 @@ try {
     activeTabs: staticAudit.tabs.length,
     completedFeatureStaleWording: "NONE",
     responsiveViewports: viewports,
-    majorDialogs: ["capture", "JSON", "briefing", "tuning", "map", "Master", "diagnostics", "warehouse", "final review"],
+    majorDialogs: ["capture", "JSON", "briefing", "tuning", "map", "diagnostics", "warehouse"],
     appZoom: "PASS",
     consoleFatal: 0,
     failedLocalRequests: 0,

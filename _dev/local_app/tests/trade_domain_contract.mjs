@@ -8,7 +8,6 @@ import {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const catalog = JSON.parse(await readFile(resolve(root, "local_app/frontend/data/trade-catalog.json"), "utf8"));
-const validationTool = await readFile(resolve(root, "local_app/frontend/js/trade-recognition-review.js"), "utf8");
 const fields = ["island", "fromItem", "reqAmount", "toItem", "count", "yield"];
 const allItems = [...new Set([...Object.values(catalog.masterData).flat(), ...catalog.specialItems])];
 const validTrade = (overrides = {}) => ({
@@ -107,8 +106,6 @@ assert.equal(conflict.trades.length, 1, "existing row is retained on conflict");
 const accepted = normalize(validTrade()).trades[0];
 assert.deepEqual(Object.keys(accepted).sort(), [...fields].sort());
 assert.equal(accepted.count, 4);
-assert.match(validationTool, /count: "남은 교환 횟수"/);
-assert.doesNotMatch(validationTool, /count: "(?:보유 수량|재고 수량|inventory count)"/i);
 assert.equal(getItemTier("순수한 진주 결정", catalog.masterData, catalog.specialItems), "mat");
 assert.equal(getItemTier("까마귀 주화", catalog.masterData, catalog.specialItems), "coin");
 for (const special of ["화려한 진주 결정", "까마귀 주화"]) {

@@ -80,12 +80,6 @@ main.workspace{grid-template-columns:minmax(0,1.8fr) minmax(20rem,1fr);height:ca
 .tool-dialog-raw summary{cursor:pointer;color:var(--sea-muted,#a9b9cb);font-weight:700}
 .tool-dialog-status{min-height:1.25rem}
 #diagnostics-copy-status:empty{margin:0;min-height:0}
-.trade-master-dialog .trade-master-shell{height:calc(100% - 3.7rem)}
-.trade-master-dialog .trade-master-summary>div:nth-child(4),.trade-master-dialog .trade-master-summary>div:nth-child(2){border-color:#3d6680}
-.trade-master-dialog .trade-master-summary>div:nth-child(4) strong{color:#f2d275;font-size:1.08rem}
-.trade-master-dialog .trade-master-storage-note{min-height:1.1em}
-.trade-master-dialog [data-master-save]:not(:disabled){background:#155c91;border-color:#438bd5;font-weight:700}
-.trade-master-dialog [data-master-save]:disabled{opacity:.58}
 .app-dialog :focus-visible{outline:2px solid #73d8ca;outline-offset:2px}
 @media(max-width:1050px){
   .tool-dialog-toolbar{align-items:stretch}
@@ -96,9 +90,6 @@ main.workspace{grid-template-columns:minmax(0,1.8fr) minmax(20rem,1fr);height:ca
   .map-tools-dialog .dialog-body{overflow:auto}
 }
 @media(max-width:850px){
-  .trade-master-dialog .trade-master-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(9rem,.7fr) minmax(16rem,1.3fr);overflow:auto}
-  .trade-master-dialog .trade-master-list-panel{min-height:9rem}
-  .trade-master-dialog .trade-master-editor-panel{min-height:16rem}
 }
 @media(max-width:760px){
   .tool-dialog-titlebar{align-items:flex-start;gap:.45rem}

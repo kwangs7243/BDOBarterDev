@@ -149,22 +149,6 @@ class WorkingSessionTests(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertIsNone(self.bootstrap()["scheduleSlots"]["2"])
 
-    def test_schema_one_migration_is_additive_and_repeatable(self):
-        self.send("PATCH", "/api/inventory", {"kind": "manual", "patch": {"items": {"갈퀴 꽃 씨앗 주머니": {"stock": 0, "target": 79}}}})
-        before = self.bootstrap()
-        with closing(sqlite3.connect(self.path)) as db:
-            for table in ("working_session", "saved_schedule_slot", "mutation_receipt"):
-                db.execute(f"DROP TABLE {table}")
-            db.execute("UPDATE app_meta SET schema_version = 1")
-            db.commit()
-        store = self.app.extensions["bdo_storage"]
-        store.initialize()
-        store.initialize()
-        after = store.bootstrap()
-        self.assertEqual(after["schemaVersion"], 3)
-        self.assertEqual(after["inventory"], before["inventory"])
-        self.assertEqual(after["settings"], before["settings"])
-        self.assertEqual(after["revision"], before["revision"])
 
     def test_future_schema_is_refused_without_reset(self):
         with closing(sqlite3.connect(self.path)) as db:

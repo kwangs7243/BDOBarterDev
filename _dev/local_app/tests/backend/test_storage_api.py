@@ -57,10 +57,10 @@ class StorageApiTests(unittest.TestCase):
         self.assertTrue(expected.is_file())
         self.assertTrue((local_app_data / "BDOBarter" / "data").is_dir())
 
-    def test_health_static_bootstrap_and_version_three_schema(self):
+    def test_health_static_bootstrap_and_current_schema(self):
         health = self.client.get("/api/health", base_url=self.local)
         self.assertEqual(health.status_code, 200)
-        self.assertEqual(health.get_json()["schemaVersion"], 3)
+        self.assertEqual(health.get_json()["schemaVersion"], 4)
         page = self.client.get("/", base_url=self.local)
         self.assertEqual(page.status_code, 200)
         self.assertIn("/assets/js/state.js", page.get_data(as_text=True))
@@ -70,7 +70,7 @@ class StorageApiTests(unittest.TestCase):
         self.assertEqual(snapshot["revision"], 0)
         with closing(sqlite3.connect(self.database)) as db:
             names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-        self.assertEqual(names, {"inventory", "settings", "app_meta", "working_session", "saved_schedule_slot", "mutation_receipt", "warehouse_scan", "warehouse_feedback"})
+        self.assertEqual(names, {"inventory", "settings", "app_meta", "working_session", "saved_schedule_slot", "mutation_receipt", "warehouse_scan", "warehouse_feedback", "trade_correction"})
 
     def test_inventory_partial_patch_and_restart_persistence(self):
         initial = self.bootstrap()

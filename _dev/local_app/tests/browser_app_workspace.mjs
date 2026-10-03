@@ -60,7 +60,7 @@ try {
   await send("DOM.enable");
   await waitFor(async () => (await evaluate("document.querySelectorAll('.inventory-row').length")) === 70, "inventory render");
 
-  const ids = ["runtime-status","ship-root","parley-root","presets-root","open-tuning","open-map-tools","open-trade-master","reload-state","screen-capture-session","screen-capture-status","connect-screen-capture","disconnect-screen-capture","mainPanel","open-warehouse-scan","inventory-root","trade-session-panel","session-trade-count","open-json-import","open-trade-capture","add-manual-trade","toggle-all-trades","reset-session","remaining-parley","open-schedule","open-map-speed","open-map-balance","trade-import-status","trade-list-root"];
+  const ids = ["runtime-status","ship-root","parley-root","presets-root","open-tuning","open-map-tools","reload-state","screen-capture-session","screen-capture-status","connect-screen-capture","disconnect-screen-capture","mainPanel","open-warehouse-scan","inventory-root","trade-session-panel","session-trade-count","open-json-import","open-trade-capture","add-manual-trade","toggle-all-trades","reset-session","remaining-parley","open-schedule","open-map-speed","open-map-balance","trade-import-status","trade-list-root"];
   const structure = JSON.parse(await evaluate("JSON.stringify({ids:" + JSON.stringify(ids) + ".map(id=>[id,!!document.getElementById(id)]),order:[...document.querySelector('.workspace').children].map(node=>node.id),headings:[...document.querySelectorAll('.workspace h2')].map(node=>node.textContent),aria:[document.querySelector('#runtime-status').getAttribute('role'),document.querySelector('#screen-capture-status').getAttribute('aria-live')]})"));
   assert(structure.ids.every(entry => entry[1]), "all protected shell IDs remain");
   assert.deepEqual(structure.order, ["trade-session-panel", "mainPanel"], "DOM order prioritizes current session");
@@ -83,7 +83,7 @@ try {
   await evaluate("document.querySelector('.header-tools>summary').click()");
   const headerTools = JSON.parse(await evaluate("JSON.stringify({open:document.querySelector('.header-tools').open,tools:[...document.querySelectorAll('.header-tool-actions button')].map(button=>button.id),reload:document.querySelector('#reload-state').getAttribute('aria-label'),screen:document.querySelector('.header-utilities #screen-capture-session')!==null})"));
   assert.equal(headerTools.open, true);
-  assert.deepEqual(headerTools.tools, ["open-tuning","open-map-tools","open-trade-master","reload-state"]);
+  assert.deepEqual(headerTools.tools, ["open-tuning","open-map-tools","reload-state"]);
   assert.equal(headerTools.reload, "영구 설정 다시 읽기");
   assert.equal(headerTools.screen, true);
 

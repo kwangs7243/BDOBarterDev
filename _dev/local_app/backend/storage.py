@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any, Callable
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
 SETTINGS_SECTIONS = ("inventoryOrder", "tierRules", "ship", "parley", "shipPresets", "tuning", "navigation", "mapSlots", "mapBase", "viewer")
 
@@ -120,9 +120,8 @@ class Storage:
                     )"""
                 )
                 row = connection.execute("SELECT schema_version FROM app_meta WHERE id = 1").fetchone()
-                if row is not None and row["schema_version"] not in (1, 2, SCHEMA_VERSION):
+                if row is not None and row["schema_version"] != SCHEMA_VERSION:
                     raise RuntimeError(f"unsupported database schema version: {row['schema_version']}")
-                # Additive migration: the existing inventory/settings rows are never replaced.
                 connection.execute("""CREATE TABLE IF NOT EXISTS working_session (
                     id INTEGER PRIMARY KEY CHECK (id = 1),
                     payload_json TEXT NOT NULL, revision INTEGER NOT NULL
@@ -143,11 +142,16 @@ class Storage:
                     mutation_id TEXT PRIMARY KEY, scan_id TEXT NOT NULL REFERENCES warehouse_scan(scan_id),
                     created_at TEXT NOT NULL, feedback_json TEXT NOT NULL, applied_items_json TEXT NOT NULL
                 )""")
+                connection.execute("""CREATE TABLE IF NOT EXISTS trade_correction (
+                    feedback_id TEXT NOT NULL, capture_id TEXT NOT NULL,
+                    request_hash TEXT NOT NULL, created_at TEXT NOT NULL,
+                    image_png BLOB NOT NULL, details_json TEXT NOT NULL,
+                    PRIMARY KEY (feedback_id, capture_id)
+                )""")
                 connection.execute(
                     "INSERT OR IGNORE INTO app_meta (id, schema_version, revision, last_mutation_id, last_mutation_hash) VALUES (1, ?, 0, NULL, NULL)",
                     (SCHEMA_VERSION,),
                 )
-                connection.execute("UPDATE app_meta SET schema_version = ? WHERE id = 1", (SCHEMA_VERSION,))
                 for name, tier in self.catalog.items():
                     target = 80 if tier <= 4 else 5
                     connection.execute(
@@ -261,9 +265,9 @@ class Storage:
     def update_inventory(self, updates: dict[str, dict[str, int]], mutation_id: str, base_revision: int, request_hash: str, feedback: dict | None = None) -> tuple[int, bool]:
         def apply(connection: sqlite3.Connection) -> None:
             if feedback is not None:
-                from .warehouse_evidence import validate_feedback
-                validate_feedback(connection, feedback, updates, self.catalog)
-                connection.execute("INSERT INTO warehouse_feedback VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?, ?)", (mutation_id, feedback["scanId"], json.dumps(feedback, ensure_ascii=False), json.dumps(updates, ensure_ascii=False)))
+                from .warehouse_feedback import validate_feedback
+                corrected_feedback = validate_feedback(connection, feedback, updates, self.catalog)
+                connection.execute("INSERT INTO warehouse_feedback VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?, ?)", (mutation_id, feedback["scanId"], json.dumps(corrected_feedback, ensure_ascii=False), json.dumps(updates, ensure_ascii=False)))
             for name, fields in updates.items():
                 assignments = ", ".join(f"{column} = ?" for column in fields)
                 values = list(fields.values()) + [name]
@@ -328,3 +332,36 @@ class Storage:
             connection.execute("INSERT INTO warehouse_scan VALUES (?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?, ?, ?)",
                                (scan_id, image, json.dumps(report, ensure_ascii=False, allow_nan=False), json.dumps(provenance, ensure_ascii=False)))
         return scan_id
+
+    def record_trade_corrections(self, feedback, captures):
+        """Keep human corrections independently of the working-state revision."""
+        import hashlib
+        encoded = json.dumps(feedback, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        digest = hashlib.sha256(encoded.encode("utf-8"))
+        for capture in captures:
+            digest.update(capture["imageBytes"])
+        request_hash = digest.hexdigest()
+        with closing(self.connect()) as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                previous = connection.execute("SELECT request_hash FROM trade_correction WHERE feedback_id = ?",
+                                              (feedback["feedbackId"],)).fetchone()
+                if previous:
+                    if previous["request_hash"] != request_hash:
+                        raise MutationConflict("correction feedback ID was reused for different values")
+                    connection.rollback()
+                    return False
+                for capture in captures:
+                    details = {"metadata": capture["metadata"], "engineId": feedback["engineId"],
+                               "modelVersion": feedback["modelVersion"], "workerVersion": feedback["workerVersion"],
+                               "corrections": [row for row in feedback["corrections"]
+                                               if row["captureId"] == capture["captureId"]]}
+                    connection.execute("""INSERT INTO trade_correction VALUES
+                        (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?, ?)""",
+                        (feedback["feedbackId"], capture["captureId"], request_hash, capture["imageBytes"],
+                         json.dumps(details, ensure_ascii=False, allow_nan=False)))
+                connection.commit()
+                return True
+            except Exception:
+                connection.rollback()
+                raise

@@ -8,11 +8,8 @@ from PIL import Image
 from local_app.backend.recognition_contracts import (
     MAX_IMAGE_BYTES,
     RecognitionContractError,
-    UNSUPPORTED_FLAGS,
     validate_capture_metadata,
     validate_capture_payload,
-    validate_config_update,
-    validate_feedback_payload,
 )
 
 
@@ -42,22 +39,6 @@ def capture_metadata(*, width=4, height=3, task="warehouse"):
     }
 
 
-def profile():
-    return {
-        "version": 1,
-        "id": str(uuid.uuid4()),
-        "profileVersion": 1,
-        "taskType": "warehouse",
-        "sourceType": "file",
-        "referenceFrame": {"width": 1920, "height": 1080},
-        "region": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0},
-        "anchorSetId": "unapproved-anchor-set",
-        "anchorSetHash": "a" * 64,
-        "anchorOffsets": {},
-        "canonicalGeometry": {},
-        "observed": {"windowsDpi": None, "gameResolution": None, "gameUiScale": None},
-        "verifiedStratumIds": [],
-    }
 
 
 class RecognitionContractTests(unittest.TestCase):
@@ -123,41 +104,8 @@ class RecognitionContractTests(unittest.TestCase):
             validate_capture_payload(json.dumps(capture_metadata()), b"x" * (MAX_IMAGE_BYTES + 1), content_type="image/png")
         self.assertEqual(image.exception.status, 413)
 
-    def test_profile_region_and_unknown_fields_are_validated(self):
-        valid = profile()
-        from local_app.backend.recognition_contracts import validate_profile
-        self.assertEqual(validate_profile(valid)["profileVersion"], 1)
-        invalid = profile()
-        invalid["region"]["w"] = 1.1
-        with self.assertRaises(RecognitionContractError):
-            validate_profile(invalid)
-        invalid = profile()
-        invalid["releaseApproved"] = True
-        with self.assertRaises(RecognitionContractError):
-            validate_profile(invalid)
 
-    def test_config_defaults_cannot_become_authority_and_flags_are_closed(self):
-        config = {"version": 1, "expectedConfigRevision": 0,
-                  "flags": {key: False for key in UNSUPPORTED_FLAGS}, "profiles": [profile()]}
-        self.assertEqual(len(validate_config_update(config)["profiles"]), 1)
-        enabled = dict(config)
-        enabled["flags"] = {**config["flags"], "warehouseV2": True}
-        with self.assertRaises(RecognitionContractError) as error:
-            validate_config_update(enabled)
-        self.assertEqual(error.exception.code, "unsupported_feature")
-        unknown = dict(config)
-        unknown["flags"] = {**config["flags"], "unknown": True}
-        with self.assertRaises(RecognitionContractError):
-            validate_config_update(unknown)
 
-    def test_explicit_feedback_accepts_true_zero_but_not_boolean_quantity(self):
-        payload = {"version": 1, "labelMutationId": str(uuid.uuid4()), "rows": [
-            {"unitId": "R1C1", "fields": {"quantity": {"value": 0, "verification": "explicit", "reason": "confirmed"}}}
-        ]}
-        self.assertEqual(validate_feedback_payload(payload)["rows"][0]["fields"]["quantity"]["value"], 0)
-        payload["rows"][0]["fields"]["quantity"]["value"] = True
-        with self.assertRaises(RecognitionContractError):
-            validate_feedback_payload(payload)
 
 
 if __name__ == "__main__":

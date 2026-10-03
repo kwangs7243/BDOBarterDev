@@ -8,11 +8,8 @@
   <link rel="stylesheet" href="/assets/css/warehouse-scan.css">
   <link rel="stylesheet" href="/assets/css/trade-roi.css">
   <link rel="stylesheet" href="/assets/css/trade-recognition.css">
-  <link rel="stylesheet" href="/assets/css/trade-recognition-review.css">
   <link rel="stylesheet" href="/assets/css/patch-review.css">
   <link rel="stylesheet" href="/assets/css/trade-session.css">
-  <link rel="stylesheet" href="/assets/css/trade-master.css">
-  <link rel="stylesheet" href="/assets/css/trade-final-review.css">
   <link rel="stylesheet" href="/assets/css/schedule.css">
   <link rel="stylesheet" href="/assets/css/nautical-theme.css">
 </head>
@@ -30,7 +27,6 @@
         <div class="header-tool-actions" aria-label="보조 도구">
           <button id="open-tuning" type="button">계산 튜닝</button>
           <button id="open-map-tools" type="button">지도·항로</button>
-          <button id="open-trade-master" type="button">마스터 관리</button>
           <button id="reload-state" type="button" title="영구 설정 다시 읽기" aria-label="영구 설정 다시 읽기">설정 다시 읽기</button>
         </div>
       </details>
@@ -98,56 +94,6 @@
         <div data-role="trade-recognition-result" class="trade-recognition-result" hidden></div>
       </section>
       <div class="actions"><button type="button" data-close-trade-capture>닫기</button></div>
-    </div>
-  </dialog>
-
-  <dialog id="trade-recognition-review-dialog" class="app-dialog trade-recognition-review-dialog" aria-labelledby="trade-review-title">
-    <div class="dialog-titlebar"><h2 id="trade-review-title">물교 인식 결과 검수</h2><button type="button" data-close-trade-review aria-label="검수 창 닫기">×</button></div>
-    <div class="trade-review-workspace" data-role="trade-review-workspace" hidden></div>
-    <div class="trade-review-window-actions"><button type="button" data-action="return-trade-capture">캡처 화면으로 돌아가기</button></div>
-  </dialog>
-
-  <dialog id="trade-final-review-dialog" class="trade-final-review-dialog" aria-labelledby="trade-final-review-title">
-    <div class="trade-final-review-dialog-heading"><h2 id="trade-final-review-title">물교 최종 검수</h2><button type="button" data-action="close" aria-label="최종 검수 닫기">닫기</button></div>
-    <div data-role="trade-final-review-root"></div>
-  </dialog>
-
-  <dialog id="trade-master-dialog" class="app-dialog trade-master-dialog" aria-labelledby="trade-master-title">
-    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="trade-master-title">물교 마스터 관리</h2><p class="tool-dialog-context">현재 저장된 기준을 확인하고 다음 인식에 사용할 Master를 관리합니다.</p></div><button type="button" data-master-close aria-label="마스터 관리 닫기">×</button></div>
-    <div class="trade-master-shell">
-      <header class="trade-master-header">
-        <div class="trade-master-safety"><strong>활성 Master 관리</strong><span>저장된 변경은 다음 인식부터 사용되며, 이미 진행 중인 검수에는 소급 적용되지 않습니다.</span></div>
-        <div class="trade-master-summary" aria-label="마스터 현황">
-          <div><span>원본 위치</span><strong data-master-summary="occurrences">확인 전</strong></div>
-          <div><span>검토 대상 이름</span><strong data-master-summary="names">확인 전</strong></div>
-          <div><span>검증된 entity</span><strong data-master-summary="verified">확인 전</strong></div>
-          <div><span>미해결</span><strong data-master-summary="unresolved">확인 전</strong></div>
-          <div><span>저장된 변경</span><strong data-master-summary="saved">0</strong></div>
-        </div>
-        <p class="trade-master-storage-note" data-master-storage-state role="status" aria-live="polite">Master 저장 상태를 확인하는 중입니다.</p>
-        <p class="trade-master-unsaved" data-master-unsaved role="status" aria-live="polite">저장되지 않은 초안은 없습니다.</p>
-        <p class="trade-master-error" data-master-error role="alert" hidden></p>
-      </header>
-      <div class="trade-master-workspace">
-        <section class="trade-master-list-panel" aria-label="마스터 이름 목록">
-          <label class="trade-master-search-label" for="trade-master-search">이름 검색</label>
-          <input id="trade-master-search" data-master-search type="search" autocomplete="off" placeholder="원본·초안 이름, 표시명, 별칭 검색">
-          <div class="trade-master-filters" role="group" aria-label="종류 필터">
-            <button type="button" data-master-filter="ALL" aria-pressed="true">전체</button>
-            <button type="button" data-master-filter="ITEM" aria-pressed="false">품목</button>
-            <button type="button" data-master-filter="ISLAND" aria-pressed="false">섬</button>
-          </div>
-          <p class="trade-master-list-count" data-master-list-count role="status"></p>
-          <div class="trade-master-list" data-master-list role="listbox" aria-label="legacy Master 이름"></div>
-        </section>
-        <section class="trade-master-editor-panel" data-master-editor aria-label="선택한 이름 검토" aria-live="polite">
-          <div class="trade-master-empty">왼쪽 목록에서 검토할 이름을 선택하세요.</div>
-        </section>
-      </div>
-      <footer class="trade-master-footer">
-        <div><strong>저장 전 초안</strong><span>이 페이지를 새로고침하면 사라집니다. 창을 닫았다 다시 열면 현재 페이지 안에서는 유지됩니다.</span></div>
-        <button type="button" data-master-save disabled title="저장 상태 확인 후 활성화됩니다.">검수한 마스터 저장</button>
-      </footer>
     </div>
   </dialog>
 

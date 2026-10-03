@@ -12,7 +12,24 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageOps
 
-from local_app.backend.services.trade_recognition import _edge_profile, _separator_peaks
+def _edge_profile(rgb: np.ndarray, threshold: int) -> np.ndarray:
+    delta = np.max(np.abs(np.diff(rgb.astype(np.int16), axis=0)), axis=2)
+    return np.mean(delta >= threshold, axis=1, dtype=np.float64)
+
+
+def _separator_peaks(profile: np.ndarray, support_threshold: float) -> list[int]:
+    peaks: list[int] = []
+    for index, support in enumerate(profile):
+        if support < support_threshold:
+            continue
+        left = profile[index - 1] if index else -1.0
+        right = profile[index + 1] if index + 1 < len(profile) else -1.0
+        if support >= left and support >= right:
+            peaks.append(index + 1)
+    return peaks
+
+
+
 
 FIELDS = ("island", "fromItem", "reqAmount", "toItem", "count", "yield")
 NUMERIC = {"reqAmount", "count", "yield"}
@@ -277,6 +294,11 @@ def recognize_live(captures, model_dir, batch_id):
                     fields[field] = {"rawOCR": "", "corrected": None, "reviewRequired": True,
                                      "confidence": None, "error": type(error).__name__}
             apply_trade_rules(fields, item_stages)
+            for key, (x0, y0, x1, y1) in bounds.items():
+                left, upper = round(x0 * row.width), round(y0 * row.height)
+                right, lower = round(x1 * row.width), round(y1 * row.height)
+                fields[key]["box"] = {"x": left, "y": top + upper,
+                                      "width": right - left, "height": lower - upper}
             rows.append({"captureId": capture["captureId"], "ordinal": ordinal,
                          "rowBox": {"x": 0, "y": top, "width": image.width, "height": bottom - top},
                          "fields": fields})

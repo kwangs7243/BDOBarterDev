@@ -13,8 +13,7 @@ const python = process.env.PYTHON ?? "python";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const profile = await mkdtemp(join(tmpdir(), "bdo-secondary-tools-"));
 const database = join(profile, "isolated.sqlite3");
-const masterDatabase = join(profile, "master", "master.sqlite3");
-const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', master_database_path=r'${masterDatabase}', testing=True).run(host='127.0.0.1', port=${port}, use_reloader=False, threaded=True)`;
+const pythonCode = `from local_app.backend.app import create_app; create_app(r'${database}', testing=True).run(host='127.0.0.1', port=${port}, use_reloader=False, threaded=True)`;
 let server;
 let chrome;
 let socket;
@@ -128,12 +127,11 @@ try {
   await send("Runtime.enable");
   await waitFor(async () => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('.inventory-row').length === 70"), "app workspace ready");
 
-  const requiredIds = ["open-schedule", "open-tuning", "brief-open-tuning", "open-map-tools", "open-map-speed", "open-map-balance", "brief-map-speed", "brief-map-balance", "open-trade-master", "open-engine-diagnostics", "schedule-dialog", "tuning-dialog", "map-tools-dialog", "trade-master-dialog", "engine-diagnostics-dialog"];
+  const requiredIds = ["open-schedule", "open-tuning", "brief-open-tuning", "open-map-tools", "open-map-speed", "open-map-balance", "brief-map-speed", "brief-map-balance", "open-engine-diagnostics", "schedule-dialog", "tuning-dialog", "map-tools-dialog", "engine-diagnostics-dialog"];
   assert.deepEqual(await evaluate(`(${JSON.stringify(requiredIds)}).map(id=>!!document.getElementById(id))`), requiredIds.map(() => true), "all secondary tool and opener IDs remain");
   assert.equal(await evaluate("document.querySelectorAll('#schedule-dialog .dialog-titlebar [data-close-dialog]').length"), 1);
   assert.equal(await evaluate("document.querySelectorAll('#tuning-dialog .dialog-titlebar [data-close-dialog]').length"), 1);
   assert.equal(await evaluate("document.querySelectorAll('#map-tools-dialog .dialog-titlebar [data-close-dialog]').length"), 1);
-  assert.equal(await evaluate("document.querySelectorAll('#trade-master-dialog [data-master-close]').length"), 1);
   assert.equal(await evaluate("document.querySelectorAll('#engine-diagnostics-dialog .dialog-titlebar [data-close-dialog]').length"), 1);
 
   for (const [width, height] of [[1440, 900], [1024, 768], [768, 720]]) {
@@ -165,20 +163,6 @@ try {
     if (width <= 1050) assert.equal(map.cols.trim().split(/\s+/).length, 1, `map uses one column at ${width}`);
     await assertViewport(width, height, [{ id: "map-tools-dialog" }]);
     await close("map-tools-dialog");
-
-    await clickHeaderTool("#open-trade-master");
-    await waitFor(async () => evaluate("document.querySelector('#trade-master-dialog').open"), "Master dialog");
-    await waitFor(async () => evaluate("document.querySelectorAll('#trade-master-dialog [data-master-list] [role=option]').length === 230"), "production Master preview list");
-    const master = await evaluate("(()=>({title:document.querySelector('#trade-master-title').textContent,storage:document.querySelector('.trade-master-storage-note').textContent,stale:/미지원\\s*·\\s*M3 예정|저장 기능은 다음 단계에서 활성화됩니다/.test(document.querySelector('#trade-master-dialog').innerText),saveDisabled:document.querySelector('[data-master-save]').disabled,exportDisabled:document.querySelector('[data-master-export]')?.disabled,workspace:getComputedStyle(document.querySelector('.trade-master-workspace')).gridTemplateColumns,search:!!document.querySelector('#trade-master-search'),list:document.querySelector('[data-master-list]')?.getAttribute('role'),options:document.querySelectorAll('[data-master-list] [role=option]').length,editor:!!document.querySelector('[data-master-editor]')}))()");
-    assert.equal(master.title, "물교 마스터 관리");
-    assert.equal(master.stale, false, "stale M3 text is absent after runtime open");
-    assert.match(master.storage, /Master 저장소|저장 시/);
-    assert.equal(master.saveDisabled, true, "empty isolated Master store does not enable a false save action");
-    assert.equal(master.exportDisabled, true, "export remains disabled without an active Master");
-    assert.ok(master.search && master.list === "listbox" && master.options > 0 && master.editor);
-    if (width <= 850) assert.equal(master.workspace.trim().split(/\s+/).length, 1, `Master list/editor stack at ${width}`);
-    await assertViewport(width, height, [{ id: "trade-master-dialog" }]);
-    await close("trade-master-dialog");
 
     await open("schedule-dialog", "#open-schedule");
     const schedule = await evaluate("(()=>({heading:document.querySelector('#briefing-title').textContent,primary:document.querySelector('#generate-schedule').textContent,modeRole:document.querySelector('.brief-mode-tabs').getAttribute('role'),modes:[...document.querySelectorAll('[data-brief-mode]')].map(x=>[x.dataset.briefMode,x.getAttribute('role'),x.getAttribute('aria-selected')]),slotLabel:document.querySelector('.briefing-saved-schedule .tool-dialog-group-label')?.textContent,aux:document.querySelector('.briefing-secondary-tools .tool-dialog-group-label')?.textContent,status:document.querySelector('#schedule-status').getAttribute('role'),cols:getComputedStyle(document.querySelector('#schedule-columns')).gridTemplateColumns,freeRoot:!!document.querySelector('#free-route-root .mv-free-route'),diagnostics:document.querySelector('.schedule-diagnostics').open}))()");

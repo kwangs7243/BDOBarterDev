@@ -14,7 +14,8 @@ const database = join(profile, "isolated.sqlite3");
 const sitePackages = process.env.BDO_EXTRA_SITE_PACKAGES;
 const pythonPrelude = sitePackages ? `import sys; p=${JSON.stringify(sitePackages)}; sys.path.remove(p); sys.path.append(p); ` : "";
 const pythonCode = `${pythonPrelude}import os,threading; from local_app.backend.app import create_app; app=create_app(r'${database}', testing=True); app.add_url_rule('/__test__/shutdown',view_func=lambda:(threading.Timer(.2,lambda:os._exit(0)).start() or {'ok':True}),methods=['POST']); app.run(host='127.0.0.1', port=18768, use_reloader=False, threaded=True)`;
-let server = spawn(python, ["-c", pythonCode], { stdio: "ignore", windowsHide: true, cwd: root });
+const external = process.env.BDO_EXTERNAL_APP === "1";
+let server = external ? null : spawn(python, ["-c", pythonCode], { stdio: "ignore", windowsHide: true, cwd: root });
 let chrome; let socket;
 try {
   await waitFor(async () => { try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "isolated local server");
@@ -134,7 +135,7 @@ try {
   console.log(JSON.stringify({enteredParleyExactCompletion:exactCases,actualRemainder4to5:remainderCase,editedParleyInsufficientCompletionBlocked:blocked},null,2));
   console.log(JSON.stringify({ ok: true, browser: "Chrome headless", sameInputReferenceOutputExact: true, comparedScenarios: ["inner trade", "crow coin", "tier 7"], scheduleGenerated: generatedState, timerToggle: true, manualRouteReorder: true, manualCountAdjustment: true, waypointAddedAndCompletedWithMaterialPatch: true, completionResult: JSON.parse(sessionResult), lostResponseRetryUsedSameRequest: true, duplicateCompletionBlocked: true, inventoryUpdatedOnce: true, completionInvocationCounts: { waypoint: 1, tradeAfterResponseLossAndDuplicateClick: 1, tradeAfter409Rebase: conflictResult.calls }, actual409RebasedDelta: { source: conflictResult.source, target: conflictResult.target }, sessionRestoredOnReload: true, persistentInventorySurvivedReload: true, temporaryDatabase: true }, null, 2));
 } finally {
-  await fetch(`${baseUrl}__test__/shutdown`,{method:"POST"}).catch(()=>{});
+  if (!external) await fetch(`${baseUrl}__test__/shutdown`,{method:"POST"}).catch(()=>{});
   try { if(socket?.readyState===WebSocket.OPEN)await send("Browser.close"); } catch {} try { socket?.close(); } catch {} try { chrome?.kill(); } catch {} try { server?.kill(); } catch {}
   await delay(300); if (profile.startsWith(tmpdir())) await rm(profile, { recursive: true, force: true,maxRetries:10,retryDelay:500 });
 }

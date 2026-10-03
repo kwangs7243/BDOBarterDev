@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const output = resolve(process.env.BDO_LIVE_REPORT_DIR ?? join(root, "recognition-local/hotfix-live-list"));
-const baseUrl = "http://127.0.0.1:18783/";
+const baseUrl = process.env.BDO_TEST_URL ?? "http://127.0.0.1:18783/";
+const external = process.env.BDO_EXTERNAL_APP === "1";
 const profile = await mkdtemp(join(tmpdir(), "bdo-live-list-"));
 const mapping = JSON.parse(await readFile(join(root, "local_app/tests/fixtures/trade-recognition/live-list-mapping.json"), "utf8"));
 const pythonCode = `
@@ -45,12 +46,12 @@ const stop = async (child) => {
 };
 try {
   await mkdir(output, { recursive: true });
-  server = spawn(process.env.PYTHON ?? "python", ["-B", "-c", pythonCode], {
+  if (!external) server = spawn(process.env.PYTHON ?? "python", ["-B", "-c", pythonCode], {
     cwd: root, windowsHide: true, stdio: ["ignore", "ignore", "pipe"],
     env: { ...process.env, LOCALAPPDATA: profile, PYTHONDONTWRITEBYTECODE: "1", PYTHONUTF8: "1" },
   });
-  let serverErrors = ""; server.stderr.on("data", (data) => { serverErrors += data.toString(); });
-  await waitFor(async () => { if (server.exitCode !== null) throw new Error(serverErrors); try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "server");
+  let serverErrors = ""; server?.stderr.on("data", (data) => { serverErrors += data.toString(); });
+  await waitFor(async () => { if (server && server.exitCode !== null) throw new Error(serverErrors); try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "server");
   chrome = spawn(process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", [
     "--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking",
     "--disable-crash-reporter", "--disable-breakpad",
@@ -87,9 +88,10 @@ try {
   await waitFor(async () => (await evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')")) === "false", "app ready");
   await evaluate("document.body.style.zoom='1.3'; document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('[data-role=trade-runtime-status]').textContent==='로컬 인식 사용 가능'"), "real local OCR runtime");
-  const master = await (await fetch(`${baseUrl}api/master/active`)).json();
-  assert.equal(master.activeRegistryVersion, null); assert.equal(master.bundle, null);
-  const before = await (await fetch(`${baseUrl}__test__/database-snapshot`)).json();
+  assert.equal((await fetch(`${baseUrl}api/master/active`)).status, 404);
+  assert.equal(await evaluate("document.querySelector('#open-trade-master')"), null);
+  const snapshotUrl = `${baseUrl}${external ? "api/bootstrap" : "__test__/database-snapshot"}`;
+  const before = await (await fetch(snapshotUrl)).json();
   const recognize = async (imageIndex, expectedRows) => {
     const document = await send("DOM.getDocument");
     const input = await send("DOM.querySelector", { nodeId: document.root.nodeId, selector: "#trade-capture-files" });
@@ -107,7 +109,7 @@ try {
   const first = await recognize(0, 6);
   assert.deepEqual(first.rows[0].map((text) => text.split("\n")[0]), ["파라타마 섬", "대추야자", "500", "고대 항아리 파편", "10", "1"]);
   assert.match(first.rows[0][1], /확인 필요/, "unmatched land material remains visible as raw OCR");
-  assert.equal(await evaluate("document.querySelector('.trade-review-storage').checkVisibility()"), false);
+
   assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').parentElement.scrollTop"), 0);
   const screenshot = await send("Page.captureScreenshot", { format: "png" });
   await writeFile(join(output, "visible-table.png"), Buffer.from(screenshot.data, "base64"));
@@ -132,7 +134,7 @@ try {
   }
   const rulesScreenshot = await send("Page.captureScreenshot", { format: "png" });
   await writeFile(join(output, "rules-table.png"), Buffer.from(rulesScreenshot.data, "base64"));
-  assert.deepEqual(await (await fetch(`${baseUrl}__test__/database-snapshot`)).json(), before, "main/master/sidecar DBs unchanged");
+  assert.deepEqual(await (await fetch(snapshotUrl)).json(), before, "main/master/sidecar DBs unchanged");
   assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length"),0,'automatic fixed rows do not need editing');
   await evaluate("document.querySelector('[data-action=apply-live-new]').click()");
   await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('현재 회차에 적용했습니다')"),'final live list applied');
@@ -141,21 +143,36 @@ try {
   assert.ok(persisted.workingSession.scannedTrades.every(row=>row.reqAmount===1&&row.yield===1));
   await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
   await recognize(0,6);
+  const oracle = JSON.parse(await readFile(join(root,"local_app/tests/fixtures/trade-recognition/정답.json"),"utf8"));
+  const truth = mapping[0].oracleRows.map((i)=>oracle[i]);
+  await evaluate(`window.__correctionWrites=[]; window.__correctionOriginal=window.fetch.bind(window); window.fetch=(url,options)=>{if(url==='/api/recognition/trade-corrections')window.__correctionWrites.push(JSON.parse(options.body.get('feedback')));return window.__correctionOriginal(url,options)};
+    [...document.querySelectorAll('[data-role=live-list-review] input')].forEach(input=>{input.value=${JSON.stringify(truth)}[Number(input.dataset.row)][input.dataset.field]});`);
   assert.equal(await evaluate("document.querySelector('[data-action=apply-live-new]').disabled"),true);
   const selectiveCount=await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length");
   assert.ok(selectiveCount>0&&selectiveCount<36);
   await evaluate("document.querySelector('[data-role=live-list-review] form').requestSubmit()");
   await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'selective fields confirmed');
   assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input').length"),0);
+  const correctionWrites=await evaluate("window.__correctionWrites");
+  assert.equal(correctionWrites.length,1);
+  assert.ok(correctionWrites[0].corrections.some(row=>row.field==='fromItem'&&row.finalValue==='영롱한 비취'));
+  assert.ok(correctionWrites[0].corrections.every(row=>row.automaticCorrected!==row.finalValue&&row.box.width>0));
+  await evaluate("document.querySelector('[data-action=apply-live-append]').click()");
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('현재 회차에 적용했습니다')"),'corrected list appended');
+  const appended=await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  assert.equal(appended.workingSession.scannedTrades.length,12);
+  await send('Page.reload');
+  await waitFor(async()=>evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"),'reload saved session');
+  assert.deepEqual((await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession,appended.workingSession);
   assert.equal(crashes.length, 0); assert.equal((await fetch(`${baseUrl}api/health`)).ok, true);
   const report = { browserRealImageVisibleTable: "PASS", missingActiveMaster: "PASS", masterApiFailure: "PASS",
     rawOCRVisibleIfCorrectionFails: "PASS", fixedQuantitiesWithoutReview: "PASS", twoOrThreeRecognition: "PASS",
-    databaseSessionModified: "YES_IN_ISOLATED_DB_AFTER_APPLY", finalLiveListPersisted: "PASS", selectiveReview: selectiveCount, appCrash: "NO", images: 5,
+    databaseSessionModified: "YES_IN_ISOLATED_DB_AFTER_APPLY", finalLiveListPersisted: "PASS", selectiveReview: selectiveCount, appCrash: "NO", images: 5, correctionFeedback: "PASS", appendAndReload: "PASS",
     viewport: "1920x1080", bodyZoom: "130%", first, second, fixed, variable, highStage };
   await writeFile(join(output, "browser.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } finally {
-  await fetch(`${baseUrl}__test__/shutdown`, { method: "POST", signal: AbortSignal.timeout(3000) }).catch(() => {});
+  if (!external) await fetch(`${baseUrl}__test__/shutdown`, { method: "POST", signal: AbortSignal.timeout(3000) }).catch(() => {});
   if (socket?.readyState === WebSocket.OPEN && send) await send("Browser.close").catch(() => {});
   socket?.close();
   await new Promise((done) => setTimeout(done, 500));

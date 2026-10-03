@@ -40,7 +40,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--baseline", type=Path)
     args = parser.parse_args()
     fixtures = Path(__file__).parent / "fixtures/trade-recognition"
     mapping = json.loads((fixtures / "live-list-mapping.json").read_text(encoding="utf-8"))
@@ -50,28 +49,17 @@ def main():
         assert hashlib.sha256((fixtures / image["image"]).read_bytes()).hexdigest() == image["sha256"]
     assert sorted(index for image in mapping for index in image["oracleRows"]) == list(range(len(oracle)))
     started = time.monotonic()
-    if args.baseline:
-        baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
-        from local_app.tools.trade_live_ocr import correct_name, NUMERIC
-        catalog = json.loads((ROOT / "local_app/frontend/data/trade-catalog.json").read_text(encoding="utf-8"))
-        items = [name for names in catalog["masterData"].values() for name in names] + catalog["specialItems"]
-        result = {"rows": []}
-        for row in baseline["draftRows"]:
-            fields = {}
-            for field, data in row["fields"].items():
-                raw = data.get("rawText") or ""
-                value = data.get("rawNumericCandidate") if field in NUMERIC else correct_name(raw, catalog["islands"] if field == "island" else items)[0]
-                fields[field] = {"rawOCR": raw, "corrected": value}
-            result["rows"].append({**row, "fields": fields})
-    else:
-        result = recognize_live([{**image, "imagePath": fixtures / image["image"]} for image in mapping],
-                                args.model_dir, "accuracy")
+    result = recognize_live([{**image, "imagePath": fixtures / image["image"]} for image in mapping],
+                            args.model_dir, "accuracy")
     report = {**evaluate(result, mapping, oracle), "durationSeconds": round(time.monotonic() - started, 2),
               "result": result}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({key: value for key, value in report.items() if key != "result"}, ensure_ascii=False, indent=2))
-    return int(report["metrics"]["missingRows"] > 0 or report["metrics"]["extraRows"] > 0)
+    metrics = report["metrics"]
+    return int(metrics["missingRows"] != 0 or metrics["extraRows"] != 0
+               or any(metrics[field + "Exact"] != 80 for field in ("reqAmount", "count", "yield"))
+               or metrics["fullyCorrectRows"] < 76)
 
 
 if __name__ == "__main__":

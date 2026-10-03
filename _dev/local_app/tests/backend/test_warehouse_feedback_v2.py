@@ -54,15 +54,15 @@ class FeedbackV2Tests(unittest.TestCase):
         response = self.client.get("/api/warehouse-dataset")
         with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
             samples = [json.loads(line) for line in archive.read("samples.jsonl").splitlines()]
-            for index in [0,1,2,3,5]:
+            for index in [1,2,3,5]:
                 label = samples[index]["humanFeedback"][0]
                 self.assertTrue(label["verifiedItemLabel"])
                 self.assertTrue(label["verifiedQuantityLabel"])
                 self.assertEqual(label["user"], rows[index])
                 self.assertEqual(samples[index]["modelOutput"], self.slots[index])
                 self.assertEqual(len(samples[index]["humanFeedback"]), 1)
-            self.assertFalse(samples[4]["humanFeedback"][0]["verifiedQuantityLabel"])
-            self.assertFalse(samples[4]["humanFeedback"][0]["verifiedItemLabel"])
+            self.assertEqual(samples[0]["humanFeedback"], [])
+            self.assertEqual(samples[4]["humanFeedback"], [])
             self.assertEqual(json.loads(archive.read("manifest.json"))["formatVersion"], 2)
         response.close()
         actual = {r["programName"]: r["stock"] for r in self.client.get("/api/bootstrap").get_json()["inventory"]}
@@ -78,12 +78,3 @@ class FeedbackV2Tests(unittest.TestCase):
         body = self.body(); body["feedback"]["rows"][-1] = body["feedback"]["rows"][0]
         self.assertEqual(self.client.patch("/api/inventory", json=body).status_code, 422)
         self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
-
-    def test_legacy_feedback_and_export_remain_readable(self):
-        body = {"mutationId": "legacy", "baseRevision": 0, "kind": "warehouse",
-                "patch": {"type": "master_inventory_patch", "version": 1, "items": dict(self.report["patch"]["items"])},
-                "feedback": {"scanId": self.scan_id, "rows": [{"slot": self.slots[-1]["slot"], "name": None,
-                            "quantity": None, "excluded": True, "itemCheck": "unchecked"}]}}
-        self.assertEqual(self.client.patch("/api/inventory", json=body).status_code, 200)
-        response = self.client.get("/api/warehouse-dataset")
-        self.assertEqual(response.status_code, 200); response.close()

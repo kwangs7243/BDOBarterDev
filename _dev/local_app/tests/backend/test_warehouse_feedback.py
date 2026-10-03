@@ -13,7 +13,7 @@ from local_app.backend.app import create_app
 
 ROOT = Path(__file__).resolve().parents[4]
 
-class WarehouseEvidenceTests(unittest.TestCase):
+class WarehouseFeedbackTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.database = Path(self.temp.name) / "data.sqlite3"
@@ -41,14 +41,18 @@ class WarehouseEvidenceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.result = response.get_json()
         self.report = self.result["report"]
-        self.rows = [{"slot": slot["slot"], "name": None, "quantity": None, "excluded": True, "itemCheck": "unchecked"}
-                     for slot in self.report["slots"] if slot["decision"] not in {"MATCH", "EMPTY", "TIER5_IGNORE"}]
+        self.rows = [{"slot": slot["slot"], "name": None, "quantity": None, "excluded": True, "agreement": "unchecked"}
+                     for slot in self.report["slots"] if slot["decision"] not in {"EMPTY", "TIER5_IGNORE"}]
+        for row in self.rows:
+            slot = next(s for s in self.report["slots"] if s["slot"] == row["slot"])
+            if slot["decision"] == "MATCH":
+                row.update(name=slot["finalItem"], quantity=slot["quantity"]["value"], excluded=False)
         self.items = dict(self.result["patch"]["items"])
         self.assertGreater(len(self.rows), 0)
     def tearDown(self):
         self.temp.cleanup()
     def body(self, mid="apply", revision=0):
-        return {"mutationId": mid, "baseRevision": revision, "kind": "warehouse", "patch": {"type": "master_inventory_patch", "version": 1, "items": self.items}, "feedback": {"scanId": self.report["scanId"], "rows": self.rows}}
+        return {"mutationId": mid, "baseRevision": revision, "kind": "warehouse", "patch": {"type": "master_inventory_patch", "version": 1, "items": self.items}, "feedback": {"version": 2, "scanId": self.report["scanId"], "rows": self.rows}}
     def labels(self):
         with closing(sqlite3.connect(self.database)) as connection, connection:
             return connection.execute("SELECT count(*) FROM warehouse_feedback").fetchone()[0]
@@ -64,12 +68,12 @@ class WarehouseEvidenceTests(unittest.TestCase):
     def test_seed_guess_confirmation_and_correction_are_separate_from_original(self):
         slot = next(slot for slot in self.report["slots"] if slot["slot"] == "R5C8")
         row = next(row for row in self.rows if row["slot"] == slot["slot"])
-        row.update(name=slot["bestCandidate"], quantity=23, excluded=False, itemCheck="match")
+        row.update(name=slot["bestCandidate"], quantity=23, excluded=False, agreement="item_only")
         self.items[row["name"]] = self.items.get(row["name"], 0) + 23
-        other = next(value for value in self.rows if value["slot"] != slot["slot"])
+        other = next(value for value in self.rows if value["excluded"] and value["slot"] != slot["slot"])
         guess = next(value.get("bestCandidate") for value in self.report["slots"] if value["slot"] == other["slot"])
         name = next(name for name in self.items if name != guess)
-        other.update(name=name, quantity=0, excluded=False, itemCheck="different")
+        other.update(name=name, quantity=0, excluded=False, agreement="both_different")
         self.items.setdefault(name, 0)
         response = self.client.patch("/api/inventory", json=self.body())
         self.assertEqual(response.status_code, 200, response.get_json())
@@ -109,21 +113,8 @@ class WarehouseEvidenceTests(unittest.TestCase):
         self.assertEqual(self.client.patch("/api/inventory", json=self.body()).status_code, 422)
         self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
         self.assertEqual(self.labels(), 0)
-        self.rows[0]["itemCheck"] = []
+        self.rows[0]["agreement"] = []
         self.assertEqual(self.client.patch("/api/inventory", json=self.body()).status_code, 422)
     def test_stale_review_does_not_save_labels(self):
         self.assertEqual(self.client.patch("/api/inventory", json=self.body(revision=99)).status_code, 409)
         self.assertEqual(self.labels(), 0)
-    def test_schema_two_upgrade_preserves_inventory_and_is_repeatable(self):
-        name = next(iter(self.items))
-        self.client.patch("/api/inventory", json={"mutationId": "before", "baseRevision": 0, "kind": "manual", "patch": {"items": {name: {"stock": 0, "target": 91}}}})
-        with closing(sqlite3.connect(self.database)) as c, c:
-            c.execute("DROP TABLE warehouse_feedback")
-            c.execute("DROP TABLE warehouse_scan")
-            c.execute("UPDATE app_meta SET schema_version=2")
-        create_app(self.database, testing=True)
-        upgraded = create_app(self.database, testing=True).test_client().get("/api/bootstrap").get_json()
-        self.assertEqual(upgraded["schemaVersion"], 3)
-        self.assertEqual(upgraded["revision"], 1)
-        row = next(row for row in upgraded["inventory"] if row["programName"] == name)
-        self.assertEqual((row["stock"], row["target"]), (0, 91))

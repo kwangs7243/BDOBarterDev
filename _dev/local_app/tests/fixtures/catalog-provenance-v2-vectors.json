@@ -1,6 +1,0 @@
-{
-  "schemaVersion": 1,
-  "catalogText": "{\"masterData\":{\"1\":[\"품목 A\"],\"2\":[],\"3\":[],\"4\":[],\"5\":[],\"6\":[],\"7\":[]},\"specialItems\":[],\"islands\":[\"섬 A\"],\"t6Islands\":[],\"t7Islands\":[]}\n",
-  "expectedSha256": "f58018c93fef035dc10db7e0357aa95a56d5da41137ef8b24be164f3c69d7cdf",
-  "invalidCatalogText": "{\"masterData\":{},\"specialItems\":[],\"islands\":[],\"t6Islands\":[],\"t7Islands\":[]}\n"
-}
