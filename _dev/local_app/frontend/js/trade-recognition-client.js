@@ -9,17 +9,19 @@ const ERROR_MESSAGES = {
   duplicate_capture_id: "중복된 캡처가 있습니다. 대기 이미지는 유지했습니다.",
   image_too_large: "이미지 용량이 너무 큽니다. 대기 이미지는 유지했습니다.",
   invalid_image: "캡처 이미지가 올바르지 않습니다. 기존 이미지는 유지했습니다.",
-  frame_mismatch: "캡처 이미지가 올바르지 않습니다. 기존 이미지는 유지했습니다.",
+  frame_mismatch: "전송한 이미지와 크기 정보가 다릅니다. 기존 이미지는 유지했습니다.",
   invalid_task_type: "물교 캡처가 아닌 이미지가 포함되어 있습니다. 대기 이미지는 유지했습니다.",
 };
 
 const FIELD_KEYS = ["island", "fromItem", "reqAmount", "toItem", "count", "yield"];
 
 export class TradeRecognitionError extends Error {
-  constructor(code, message = ERROR_MESSAGES[code] ?? "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.") {
+  constructor(code, message = ERROR_MESSAGES[code] ?? "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.", diagnostics = {}) {
     super(message);
     this.name = "TradeRecognitionError";
     this.code = code;
+    this.stage = diagnostics.stage ?? (code === "contract_violation" ? "RAW_OCR" : "REQUEST_BUILD");
+    this.diagnostics = { ...diagnostics, stage: this.stage, code };
   }
 }
 
@@ -128,7 +130,7 @@ export async function recognizeTradeBatch(captures) {
   const body = await responseJson(response);
   if (!response.ok) {
     const code = typeof body?.error?.code === "string" ? body.error.code : "recognition_failed";
-    throw new TradeRecognitionError(code);
+    throw new TradeRecognitionError(code, undefined, { ...body?.diagnostics, httpStatus: response.status, backendCode: code, backendMessage: body?.error?.message });
   }
   return validateResult(body, captures.map((capture) => capture.metadata.captureId), batchId);
 }
@@ -287,7 +289,10 @@ export async function recognizeTradeBatchV2(captures) {
         || typeof capture.metadata.captureId !== "string" || !capture.metadata.captureId
         || !supportedSourceTypes.has(capture.metadata.sourceType)
         || !validateSourceFidelity(capture.metadata.fidelity) || typeof capture.reencoded !== "boolean") {
-      throw new TradeRecognitionError("invalid_image");
+      throw new TradeRecognitionError("invalid_image", undefined, { stage: "REQUEST_BUILD",
+        captureId: capture?.metadata?.captureId, sourceType: capture?.metadata?.sourceType,
+        blobType: capture?.blob?.type, blobSize: capture?.blob?.size,
+        frame: capture?.metadata?.frame, fidelity: capture?.metadata?.fidelity });
     }
   }
   if (typeof globalThis.crypto?.randomUUID !== "function") throw new TradeRecognitionError("request_id_unavailable");
@@ -310,7 +315,7 @@ export async function recognizeTradeBatchV2(captures) {
   const body = await responseJson(response);
   if (!response.ok) {
     const code = typeof body?.error?.code === "string" ? body.error.code : "recognition_failed";
-    throw new TradeRecognitionError(code);
+    throw new TradeRecognitionError(code, undefined, { ...body?.diagnostics, httpStatus: response.status, backendCode: code, backendMessage: body?.error?.message });
   }
   return validateRawEvidenceResult(body, captures.map((capture) => capture.metadata.captureId), batchId);
 }

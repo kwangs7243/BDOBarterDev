@@ -157,6 +157,39 @@ class TradeBatchApiTests(unittest.TestCase):
             self.assertEqual(response.status_code, 422)
             self.assertEqual(response.get_json()["error"]["code"], "invalid_batch")
 
+    def test_v2_variable_dimensions_and_mixed_batch(self):
+        from local_app.tests.backend.test_trade_batch_runtime import _raw_v2_snapshot
+        sizes = [(997, 466), (1301, 777), (811, 503)]
+        seen = []
+        def recognize(batch_id, captures):
+            seen.append([capture["metadata"]["frame"] for capture in captures])
+            for capture in captures:
+                with Image.open(io.BytesIO(capture["imageBytes"])) as decoded:
+                    self.assertEqual(capture["metadata"]["frame"], {"width": decoded.width, "height": decoded.height})
+            return {"rawEvidence": _raw_v2_snapshot(batch_id, captures), "runtime": {}}
+        items = [self._capture(width=width, height=height) for width, height in sizes]
+        with patch.object(self.runtime, "recognize_raw_v2", side_effect=recognize) as worker:
+            for item in items:
+                response, _ = self._post_v2([item])
+                self.assertEqual(response.status_code, 200, response.get_json())
+            response, _ = self._post_v2(items)
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertEqual(worker.call_count, 4)
+        self.assertEqual(seen[-1], [{"width": w, "height": h} for w, h in sizes])
+
+    def test_v2_frame_mismatch_reports_decoded_dimensions_without_worker(self):
+        descriptor, image = self._capture(width=997, height=466)
+        descriptor["metadata"]["frame"]["width"] = 1000
+        with patch.object(self.runtime, "recognize_raw_v2") as worker:
+            response, _ = self._post_v2([(descriptor, image)])
+        self.assertEqual(response.status_code, 422)
+        body = response.get_json()
+        self.assertEqual(body["error"]["code"], "frame_mismatch")
+        self.assertEqual(body["diagnostics"]["stage"], "SERVER_IMAGE_VALIDATE")
+        self.assertEqual(body["diagnostics"]["frame"], {"width": 1000, "height": 466})
+        self.assertEqual(body["diagnostics"]["decodedFrame"], {"width": 997, "height": 466})
+        worker.assert_not_called()
+
     def test_unsupported_batch_version_is_rejected(self):
         item = self._capture()
         response = self._post([item], batch_overrides={"version": 3})

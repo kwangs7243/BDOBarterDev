@@ -100,7 +100,7 @@ assert.deepEqual(rig.states.slice(2, 4), ["CAPTURING", "CONNECTED"]);
 assert.equal(warehouseCapture.metadata.taskType, "warehouse");
 assert.equal(warehouseCapture.metadata.sourceType, "browser-stream");
 assert.deepEqual(warehouseCapture.metadata.frame, { width: 640, height: 360 });
-assert.deepEqual(warehouseCapture.metadata.fidelity, { sourceWidth: 1920, sourceHeight: 1080, rescaled: null, evidence: "track-settings" });
+assert.deepEqual(warehouseCapture.metadata.fidelity, { sourceWidth: 1920, sourceHeight: 1080, rescaled: true, evidence: "track-settings" });
 assert.equal(warehouseCapture.blob.type, "image/png");
 assert.deepEqual([rig.canvases[0].width, rig.canvases[0].height], [0, 0], "canvas backing store is cleared after encoding");
 assert.deepEqual(rig.canvases[0].draw.slice(1), [0, 0, 640, 360], "the exact decoded video dimensions are drawn without scaling");

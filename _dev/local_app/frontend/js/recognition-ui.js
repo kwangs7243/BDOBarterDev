@@ -8,6 +8,7 @@ import { buildFinalReviewObservationRequest } from "./domain/trade-final-evidenc
 import { buildReviewedTradeSessionStage } from "./domain/trade-session-staging.js";
 import { confirmWorkingSessionSnapshot, refreshPersistentState, sendWorkingSessionSnapshot, whenPersistenceIdle } from "./persistence.js";
 import { runTradeFinalFlow } from "./trade-final-shadow.js";
+import { loadLegacySeed } from "./trade-master-ui.js";
 
 const FINAL_CORRECTION_POLICY = Object.freeze({ policyVersion: "trade-final-correction-v1", boundedMatchPolicy: "V1_UNIQUE_BOUNDED_0.75" });
 const legacyReviewFirstCompatibility = new URLSearchParams(window.location.search).get("tradeCompatibility") === "REVIEW_FIRST";
@@ -59,7 +60,16 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   finalResultSummary.className = "trade-final-result-summary";
   finalResultSummary.dataset.role = "trade-final-result-summary";
   finalResultSummary.hidden = true;
-  tradeRecognitionResultRegion.append(finalResultSummary, reviewLauncher);
+  const rawResultSection = document.createElement("section");
+  rawResultSection.dataset.role = "trade-raw-ocr";
+  const correctedResultSection = document.createElement("section");
+  correctedResultSection.dataset.role = "trade-corrected-result";
+  const recognitionDiagnostics = document.createElement("details");
+  recognitionDiagnostics.dataset.role = "trade-recognition-diagnostics";
+  recognitionDiagnostics.hidden = true;
+  tradeRecognitionStatus.after(recognitionDiagnostics);
+  tradeRecognitionResultRegion.append(rawResultSection, correctedResultSection, finalResultSummary, reviewLauncher);
+  reviewLauncher.hidden = true;
   const reviewStorage = document.createElement("section");
   reviewStorage.className = "trade-review-storage";
   const evidenceHeading = document.createElement("h3");
@@ -111,6 +121,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeRuntimeAvailable = false;
   let tradeRecognitionPending = false;
   let tradeRecognitionResult = null;
+  let rawRecognitionResult = null;
+  let usingBaselineMaster = false;
   let tradeRecognitionResultRevision = null;
   let tradeReviewController = null;
   let tradeFinalFlow = null;
@@ -154,9 +166,14 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const response = await fetch("/api/master/active", { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) throw new Error(`활성 Master를 읽지 못했습니다 (${response.status}).`);
     const active = await response.json();
-    const bundle = active?.bundle;
-    if (active?.ok !== true || typeof active.activeRegistryVersion !== "string" || !active.activeRegistryVersion.trim()
-        || !bundle || bundle.schemaVersion !== 2 || bundle.registryVersion !== active.activeRegistryVersion) {
+    let bundle = active?.bundle;
+    usingBaselineMaster = false;
+    if (active?.ok === true && active.activeRegistryVersion === null && bundle === null) {
+      bundle = await loadLegacySeed();
+      usingBaselineMaster = true;
+    }
+    if (!usingBaselineMaster && (active?.ok !== true || typeof active.activeRegistryVersion !== "string" || !active.activeRegistryVersion.trim()
+        || !bundle || bundle.schemaVersion !== 2 || bundle.registryVersion !== active.activeRegistryVersion)) {
       throw new Error("활성 Master Bundle2가 없습니다. Master를 검수·저장한 뒤 다시 시도하세요.");
     }
     const validation = validateMasterBundleV2(bundle);
@@ -520,6 +537,55 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     finalResultSummary.hidden = false;
     reviewLauncher.textContent = "최종 검수 다시 열기";
   };
+  const showDiagnostics = (value) => {
+    const summary = document.createElement("summary"); summary.textContent = `인식 진단 · ${value.stage} · ${value.code}`;
+    const details = document.createElement("pre"); details.textContent = JSON.stringify(value, null, 2);
+    recognitionDiagnostics.replaceChildren(summary, details);
+    recognitionDiagnostics.hidden = false;
+  };
+  const resultTable = (section, title, headers, rows) => {
+    const heading = document.createElement("h3"); heading.textContent = title;
+    const wrap = document.createElement("div"); wrap.className = "trade-recognition-table-wrap";
+    const table = document.createElement("table"); table.className = "trade-recognition-table";
+    const head = table.createTHead().insertRow();
+    headers.forEach((label) => { const cell = document.createElement("th"); cell.textContent = label; head.append(cell); });
+    const body = table.createTBody();
+    rows.forEach((values) => {
+      const row = body.insertRow();
+      values.forEach((value) => { const cell = row.insertCell(); cell.textContent = value === null || value === undefined ? "미확인" : String(value); });
+    });
+    wrap.append(table); section.replaceChildren(heading, wrap);
+  };
+  const fieldLabels = ["섬", "교환 아이템", "필요 수량", "결과 아이템", "교환 횟수", "결과 수량"];
+  const renderRawResult = (result) => {
+    rawRecognitionResult = result;
+    const raw = result.rawEvidence;
+    const captureNumbers = new Map(raw.captures.map((capture) => [capture.captureId, capture.captureOrdinal]));
+    resultTable(rawResultSection, "원문 OCR", ["행 / 캡처", ...fieldLabels], raw.sourceRows.map((row, index) => [
+      `${index + 1} / 캡처 ${captureNumbers.get(row.captureId)} · 원본 행 ${row.ordinal + 1}`,
+      ...row.fields.map((field) => `rawText: ${field.rawText ?? "미확인"}${["reqAmount", "count", "yield"].includes(field.field) ? `\nrawNumeric: ${field.rawNumeric ?? "미확인"}` : ""}\n${field.readerStatus}\nconfidence: ${field.confidence ?? "미확인"}`),
+    ]));
+    if (raw.sourceRows.length === 0) {
+      const message = document.createElement("p"); message.textContent = "이미지는 정상 처리했습니다. 인식된 물교 행이 없습니다.";
+      rawResultSection.append(message);
+    }
+    correctedResultSection.textContent = "보정 결과를 준비하고 있습니다.";
+    tradeRecognitionResultRegion.hidden = false;
+    tradeRecognitionRegion.style.flex = "0 0 auto";
+    rawResultSection.scrollIntoView({ block: "nearest" });
+    showDiagnostics({ stage: raw.sourceRows.length ? "RAW_OCR" : "ROW_DETECTION", code: raw.sourceRows.length ? "raw_ocr_received" : "no_rows",
+      runtime: result.runtime, captures: raw.captures, edgeSegments: raw.edgeSegments });
+  };
+  const renderCorrectedResult = (projection) => {
+    const sourceNumbers = new Map(rawRecognitionResult.rawEvidence.sourceRows.map((row, index) => [row.sourceRowId, index + 1]));
+    resultTable(correctedResultSection, "보정 결과", ["행 / 원문 행", ...fieldLabels, "classification / Master match"], projection.rows.map((row, index) => [
+      `${index + 1} / ${row.sourceRefs.map((ref) => sourceNumbers.get(ref.sourceRowId)).join(", ")}`,
+      ...row.fields.map((field) => field.finalValue ?? field.correctedValue),
+      `${row.classification}\n${row.fields.filter((field) => ["island", "fromItem", "toItem"].includes(field.field)).map((field) => `${fieldLabels[["island", "fromItem", "reqAmount", "toItem", "count", "yield"].indexOf(field.field)]}: ${field.valueState} · ${field.identity?.authorityStatus ?? "미매칭"} · ${field.correctionReasons.join(", ")}`).join("\n")}`,
+    ]));
+    const masterStatus = document.createElement("p"); masterStatus.textContent = usingBaselineMaster ? "기본 Master 사용 중" : "사용자 활성 Master 사용 중";
+    correctedResultSection.querySelector("h3").after(masterStatus);
+  };
   const initializeRoi = () => {
     if (!roiInitialized && tradePreview.videoWidth > 0 && tradePreview.videoHeight > 0) {
       tradeRoi = { ...DEFAULT_TRADE_ROI };
@@ -529,6 +595,12 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
 
   const renderTradeRecognitionResult = () => {
+    if (rawRecognitionResult && !tradeFinalFlow && !legacyReviewFirstCompatibility) {
+      tradeRecognitionResultRegion.hidden = false;
+      finalResultSummary.hidden = true;
+      reviewLauncher.hidden = true;
+      return Promise.resolve({ status: "raw" });
+    }
     if (tradeFinalFlow && !legacyReviewFirstCompatibility) {
       tradeRecognitionResultRegion.hidden = false;
       finalResultSummary.hidden = false;
@@ -606,6 +678,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeReviewController = controller;
       reviewRoot.querySelector(".trade-review-main").append(reviewStorage);
       reviewLauncher.textContent = `인식 결과 ${controller.projection.rows.length}행 · 검수 창 열기`;
+      reviewLauncher.hidden = false;
       openReviewDialog();
       return { status: "mounted" };
     }).catch((error) => {
@@ -680,6 +753,9 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeReviewController = null;
     }
     tradeRecognitionResult = null;
+    rawRecognitionResult = null;
+    rawResultSection.replaceChildren(); correctedResultSection.replaceChildren();
+    recognitionDiagnostics.hidden = true; reviewLauncher.hidden = true;
     tradeRecognitionResultRevision = null;
     renderTradeRecognitionResult();
     tradeRecognitionStatus.textContent = message;
@@ -816,6 +892,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeStatus.textContent = `선택 영역 ${capture.metadata.frame.width}×${capture.metadata.frame.height}을 추가했습니다. 인식은 아직 실행되지 않았습니다.`;
     } catch (error) {
       tradeStatus.textContent = explain(error);
+      showDiagnostics({ stage: "CAPTURE_DECODE", code: error?.code ?? "capture_failed" });
       if (tradeQueue.items.every((item) => item.metadata.sourceType !== "browser-stream")) tradeBatchId = null;
     } finally { renderScreenState(); }
   });
@@ -828,6 +905,9 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     if (tradeFinalFlow) { tradeFinalFlow.destroy(); tradeFinalFlow = null; tradeReviewController = null; }
     tradeRecognitionResult = null;
     tradeRecognitionResultRevision = null;
+    rawRecognitionResult = null;
+    rawResultSection.replaceChildren(); correctedResultSection.replaceChildren();
+    recognitionDiagnostics.hidden = true; reviewLauncher.hidden = true;
     renderTradeRecognitionResult();
     renderTradeQueue();
     tradeStatus.textContent = "대기 이미지를 모두 삭제했습니다. 화면 연결과 영역은 유지됩니다.";
@@ -839,7 +919,9 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const requestRevision = tradeQueueRevision;
     const captures = [...tradeQueue.items];
     tradeRecognitionPending = true;
+    let errorStage = "REQUEST_BUILD";
     finalResultSummary.hidden = true;
+    reviewLauncher.hidden = true;
     tradeRecognitionStatus.textContent = "이미지를 분석하고 있습니다. 준비된 이미지는 유지됩니다.";
     updateRecognitionControls();
     renderTradeQueue();
@@ -866,13 +948,31 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         }
         return;
       }
+      const recognitionStartedAt = new Date().toISOString();
+      const recognitionStartedMs = Date.now();
+      const rawResult = await recognizeTradeBatchV2(captures);
+      const recognitionFinishedAt = new Date().toISOString();
+      const latencyMs = Math.max(0, Date.now() - recognitionStartedMs);
+      if (requestRevision !== tradeQueueRevision) return;
+      renderRawResult(rawResult);
+      if (rawResult.rawEvidence.sourceRows.length === 0) {
+        const title = document.createElement("h3"); title.textContent = "보정 결과";
+        const message = document.createElement("p"); message.textContent = "보정할 물교 행이 없습니다.";
+        correctedResultSection.replaceChildren(title, message);
+        tradeRecognitionStatus.textContent = "이미지는 정상 처리했습니다. 인식된 물교 행이 없습니다. 인식 진단을 확인해 주세요.";
+        return;
+      }
+      tradeRecognitionStatus.textContent = "원문 OCR을 받았습니다. 보정 결과를 준비하고 있습니다.";
+      errorStage = "MASTER_CORRECTION";
       const masterBundle = await loadPinnedMasterBundle();
+      errorStage = "FINAL_PIPELINE";
       const finalFlow = await runTradeFinalFlow({
         captures,
         masterBundle,
         root: tradeReviewRoot,
         reviewRevision: requestRevision,
         correctionPolicy: FINAL_CORRECTION_POLICY,
+        adapters: { recognizeTradeBatchV2: async () => rawResult },
         getConfirmedAt: async () => new Date().toISOString(),
         onConfirm: async (completion) => {
           if (tradeObservationJob) {
@@ -919,18 +1019,25 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         return;
       }
       tradeFinalFlow = finalFlow;
+      finalFlow.audit = { recognitionStartedAt, recognitionFinishedAt, latencyMs, gameVersion: null };
       tradeRecognitionResultRevision = requestRevision;
       tradeReviewController = finalFlow.reviewController;
       tradeReviewRoot.hidden = false;
       tradeReviewRoot.append(reviewStorage);
       renderFinalResultSummary(finalFlow.pipeline.projection);
+      renderCorrectedResult(finalFlow.pipeline.projection);
       tradeRecognitionResultRegion.hidden = false;
-      openReviewDialog();
+      reviewLauncher.hidden = false;
       tradeRecognitionStatus.textContent = finalFlow.rawEvidence.sourceRows.length === 0
-        ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
-        : "최종 검수 화면을 준비했습니다. 검수를 마친 뒤 검수 자료 저장과 회차 적용을 각각 진행할 수 있습니다.";
+        ? "이미지는 정상 처리했습니다. 인식된 물교 행이 없습니다. 인식 진단을 확인해 주세요."
+        : "원문 OCR과 보정 결과를 표시했습니다. 필요하면 최종 검수를 열어 확인하세요.";
     } catch (error) {
       tradeRecognitionStatus.textContent = error?.message || "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.";
+      showDiagnostics({ ...error?.diagnostics, stage: error?.stage ?? errorStage, code: error?.code ?? "correction_failed" });
+      if (rawRecognitionResult && !legacyReviewFirstCompatibility) {
+        tradeRecognitionResultRegion.hidden = false;
+        correctedResultSection.textContent = "보정 결과를 준비하지 못했습니다. 원문 OCR은 그대로 확인할 수 있습니다.";
+      }
     } finally {
       tradeRecognitionPending = false;
       updateRecognitionControls();
@@ -1003,6 +1110,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         appendTradeCaptures([capture]);
       } catch (error) {
         tradeStatus.textContent = explain(error);
+        showDiagnostics({ stage: "CAPTURE_DECODE", code: error?.code ?? "capture_failed" });
       }
     }
   });
@@ -1015,7 +1123,10 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       return { taskType: "warehouse", accept: warehouseCaptureUI.acceptCaptures, reportError: warehouseCaptureUI.reportCaptureError };
     }
     if (dialog === tradeDialog) {
-      return { taskType: "trade", accept: appendTradeCaptures, reportError: (error) => { tradeStatus.textContent = explain(error); } };
+      return { taskType: "trade", accept: appendTradeCaptures, reportError: (error) => {
+        tradeStatus.textContent = explain(error);
+        showDiagnostics({ stage: "CAPTURE_DECODE", code: error?.code ?? "capture_failed" });
+      } };
     }
     return null;
   };

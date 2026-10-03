@@ -27,7 +27,7 @@ function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
-async function loadLegacySeed() {
+export async function loadLegacySeed() {
   const response = await fetch("/assets/data/trade-catalog.json", {
     credentials: "same-origin",
     cache: "no-cache",

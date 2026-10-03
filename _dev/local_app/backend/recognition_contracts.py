@@ -28,10 +28,11 @@ UNSUPPORTED_FLAGS = {
 
 
 class RecognitionContractError(ValueError):
-    def __init__(self, code: str, message: str, status: int = 422):
+    def __init__(self, code: str, message: str, status: int = 422, *, details: dict | None = None):
         super().__init__(message)
         self.code = code
         self.status = status
+        self.details = details
 
 
 def _object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -1039,7 +1040,8 @@ def validate_capture_payload(metadata_raw: str | bytes, image_bytes: bytes, *, c
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
         raise RecognitionContractError("invalid_image", "The uploaded image is not a valid PNG.") from None
     if metadata["frame"] != {"width": width, "height": height}:
-        raise RecognitionContractError("frame_mismatch", "Frame dimensions must match the decoded PNG.")
+        raise RecognitionContractError("frame_mismatch", "Frame dimensions must match the decoded PNG.",
+                                       details={"frame": metadata["frame"], "decodedFrame": {"width": width, "height": height}})
     return metadata, width, height
 
 

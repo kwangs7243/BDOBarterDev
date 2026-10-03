@@ -146,22 +146,31 @@ try {
     await waitFor(async()=>evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength==='2'"),"two queued captures");
   };
   await addCaptures(90);
+  await fetch(`${baseUrl}__test__/mode/success`,{method:"POST"});
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]')?.textContent && !document.querySelector('[data-role=trade-recognition-status]').textContent.includes('이미지를 분석하고 있습니다')"),"Master failure settled");
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-diagnostics]')?.textContent.includes('MASTER_CORRECTION')"),"Master failure settled");
   const masterFailureStatus=await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent");
   assert.match(masterFailureStatus,/활성 Master/,JSON.stringify({status:masterFailureStatus,ui:await evaluate("window.__act1"),runtime:await(await fetch(`${baseUrl}__test__/state`)).json()}));
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"),"2");
-  assert.deepEqual(await (await fetch(`${baseUrl}__test__/state`)).json(),{v1:0,v2:0,mode:"error"});
+  assert.deepEqual(await (await fetch(`${baseUrl}__test__/state`)).json(),{v1:0,v2:1,mode:"success"});
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-raw-ocr] table tbody').rows.length"),6);
+  await fetch(`${baseUrl}__test__/mode/error`,{method:"POST"});
   await evaluate("window.__act1.blockMaster=false;document.querySelector('[data-action=recognize-trade]').click()");
   await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]')?.textContent && !document.querySelector('[data-role=trade-recognition-status]').textContent.includes('이미지를 분석하고 있습니다')"),"v2 error settled");
-  let runtimeState=await(await fetch(`${baseUrl}__test__/state`)).json();assert.equal(runtimeState.v1,0);assert.equal(runtimeState.v2,1);
+  let runtimeState=await(await fetch(`${baseUrl}__test__/state`)).json();assert.equal(runtimeState.v1,0);assert.equal(runtimeState.v2,2);
   assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"),/실패/);
   assert.equal(await evaluate("window.__act1.v1"),0);assert.equal(await evaluate("window.__act1.observationBodies.length"),0);
 
   await fetch(`${baseUrl}__test__/mode/success`,{method:"POST"});
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=open-trade-review]').hidden"),"immediate raw and corrected results");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').open"),true);
+  assert.equal(await evaluate("document.querySelector('#trade-recognition-review-dialog').open"),false);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-corrected-result] table tbody').rows.length"),4);
+  assert.match(await evaluate("document.querySelector('[data-role=trade-corrected-result]').innerText"),/사용자 활성 Master 사용 중/);
+  await evaluate("document.querySelector('[data-action=open-trade-review]').click()");
   await waitFor(async()=>evaluate("document.querySelector('.trade-final-review-shell') && document.querySelector('#trade-recognition-review-dialog')?.open"),"FinalReview3 primary mount");
-  assert.equal(await evaluate("window.__act1.v2"),2);assert.equal(await evaluate("window.__act1.v1"),0);
+  assert.equal(await evaluate("window.__act1.v2"),3);assert.equal(await evaluate("window.__act1.v1"),0);
   assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-primary [data-metric=\"최종 행\"] strong').textContent"),"4");
   assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-details [data-metric=\"캡처\"] strong').textContent"),"2");
   assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-details [data-metric=\"원본 행\"] strong').textContent"),"6");
@@ -182,7 +191,7 @@ try {
   assert.equal(currentActive,bundleA.registryVersion);
   const publishedB=await publishBundle(bundleB,bundleA.registryVersion);
   assert.notEqual(bundleB.registryVersion,bundleA.registryVersion);
-  assert.equal(await evaluate("window.__act1.masterGets"),3,"one failed plus one pin per successful/attempted recognition; review must not re-fetch active Master");
+  assert.equal(await evaluate("window.__act1.masterGets"),2,"one failed plus one successful Master pin; failed OCR must not fetch Master");
 
   await evaluate("document.querySelector('.trade-final-review-shell [data-action=close]').click()");
   await waitFor(async()=>evaluate("!document.querySelector('#trade-recognition-review-dialog')?.open"),"close final review without clearing source");
@@ -265,6 +274,8 @@ try {
   assert.equal(await evaluate("document.querySelector('[data-role=trade-runtime-status]').textContent==='로컬 인식 사용 가능'"),true,appendRuntime);
   await addCaptures(120);
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=open-trade-review]').hidden"),"APPEND immediate results");
+  await evaluate("document.querySelector('[data-action=open-trade-review]').click()");
   await waitFor(async()=>evaluate("document.querySelector('.trade-final-review-shell') && document.querySelector('#trade-recognition-review-dialog')?.open"),"second final review for APPEND");
   const rows2=await evaluate("JSON.stringify([...document.querySelectorAll('.trade-final-review-list-item')].map(x=>({id:x.dataset.itemId,text:x.innerText})))").then(JSON.parse);
   assert.equal(rows2.length,3,"duplicate-image ordinal mapping produces three logical rows for APPEND");
@@ -282,7 +293,7 @@ try {
   assert.equal(appendedBootstrap.workingSession?.scannedTrades?.length,4);
   assert.ok((await(await fetch(`${baseUrl}api/recognition/trade-review-observations/${firstReceipt.observationId}`)).json()).ok);
   assert.ok((await(await fetch(`${baseUrl}api/recognition/trade-review-observations/${secondReceipt.observationId}`)).json()).ok);
-  runtimeState=await(await fetch(`${baseUrl}__test__/state`)).json();assert.equal(runtimeState.v1,0);assert.equal(runtimeState.v2,3);
+  runtimeState=await(await fetch(`${baseUrl}__test__/state`)).json();assert.equal(runtimeState.v1,0);assert.equal(runtimeState.v2,4);
   assert.equal(await evaluate("window.__act1.v1"),0);assert.equal(await evaluate("window.__act1.truth"),0);
   assert.equal(await evaluate("window.__act1.masterGets"),1,"no active Master re-fetch after the single pin for APPEND");
   assert.equal(await evaluate("window.__act1.cropMetadata.every(item=>item.schemaVersion===3&&item.cropRefId&&item.pixelSha256&&item.sha256)"),true);

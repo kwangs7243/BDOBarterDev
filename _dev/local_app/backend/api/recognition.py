@@ -360,7 +360,12 @@ def post_trade_batch():
         except RecognitionContractError as error:
             code = "invalid_image" if error.code == "unsupported_media_type" else error.code
             status = 415 if error.code == "unsupported_media_type" else error.status
-            return _error(code, str(error), status)
+            return _error(code, str(error), status, diagnostics={
+                "stage": "SERVER_IMAGE_VALIDATE", "captureId": wrapper_id,
+                "sourceType": descriptor["metadata"].get("sourceType") if isinstance(descriptor["metadata"], dict) else None,
+                "blobType": upload.content_type, "blobSize": len(image_bytes),
+                **(error.details or {}),
+            })
         if metadata["captureId"] != wrapper_id:
             return _error("invalid_batch", "Wrapper and metadata capture IDs must match.", 422)
         raw_capture = {"captureId": wrapper_id, "metadata": metadata, "imageBytes": image_bytes}
@@ -377,7 +382,8 @@ def post_trade_batch():
         else:
             result = runtime.recognize_raw_v2(batch_id, raw_captures)
     except TradeBatchRuntimeError as error:
-        return _error(error.code, str(error), error.status, retryable=error.retryable)
+        return _error(error.code, str(error), error.status, retryable=error.retryable,
+                      diagnostics={"stage": "OCR_RUNTIME"})
     if batch_version == 2:
         raw_evidence = result.get("rawEvidence") if isinstance(result, dict) else None
         runtime_metadata = result.get("runtime") if isinstance(result, dict) else None

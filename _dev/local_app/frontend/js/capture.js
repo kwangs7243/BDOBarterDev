@@ -522,7 +522,7 @@ export class ScreenCaptureSession {
       const fidelity = {
         sourceWidth: hasTrackDimensions ? sourceWidth : null,
         sourceHeight: hasTrackDimensions ? sourceHeight : null,
-        rescaled: null,
+        rescaled: hasTrackDimensions ? sourceWidth !== width || sourceHeight !== height : null,
         evidence: hasTrackDimensions ? "track-settings" : "unknown",
       };
       const capturedAt = this.#now();
@@ -617,7 +617,7 @@ export class ScreenCaptureSession {
       const metadata = {
         version: 1, captureId: this.#uuid(), batchId, taskType: normalizedContext.taskType, sourceType: "browser-stream", capturedAt: capturedAtIso,
         frame: { width: sourceRect.width, height: sourceRect.height },
-        fidelity: { sourceWidth: hasTrackDimensions ? sourceWidth : null, sourceHeight: hasTrackDimensions ? sourceHeight : null, rescaled: null, evidence: hasTrackDimensions ? "track-settings" : "unknown" },
+        fidelity: { sourceWidth: hasTrackDimensions ? sourceWidth : null, sourceHeight: hasTrackDimensions ? sourceHeight : null, rescaled: hasTrackDimensions ? sourceWidth !== frameWidth || sourceHeight !== frameHeight : null, evidence: hasTrackDimensions ? "track-settings" : "unknown" },
         profileId: normalizedContext.profileId, profileVersion: normalizedContext.profileVersion,
         context: { baseRevision: normalizedContext.baseRevision, sessionId: normalizedContext.sessionId, sessionRevision: normalizedContext.sessionRevision },
         observed: { browserDpr: Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : null, windowsDpi: null, gameResolution: null, gameUiScale: null },
