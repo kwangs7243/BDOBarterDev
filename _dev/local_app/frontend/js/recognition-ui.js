@@ -574,7 +574,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         const field = row.fields[name];
         const numeric = ["reqAmount", "count", "yield"].includes(name);
         const value = field.corrected ?? (numeric ? "?" : field.rawOCR || "?");
-        return `${value}${field.reviewRequired ? "\n확인 필요" : ""}`;
+        return `${value}${field.reviewRequired ? `\n확인 필요${field.allowedValues ? ` (${field.allowedValues.join("·")})` : ""}` : ""}`;
       })));
     const details = document.createElement("details");
     const summary = document.createElement("summary"); summary.textContent = "인식 원문 보기";
@@ -968,8 +968,9 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         if (requestRevision !== tradeQueueRevision) return;
         renderLiveList(result);
         tradeRecognitionResultRevision = requestRevision;
+        const reviewCount = result.rows.reduce((total, row) => total + Object.values(row.fields).filter((field) => field.reviewRequired).length, 0);
         tradeRecognitionStatus.textContent = result.rows.length
-          ? `물교 ${result.rows.length}행을 표시했습니다. 확인 필요 값은 원본과 비교해 주세요.`
+          ? `물교 ${result.rows.length}행 · 확인 필요 ${reviewCount}곳. 고정 수량은 교환 규칙으로 반영했습니다.`
           : "물교 행을 찾지 못했습니다. 물교 표 전체가 포함되도록 입력해 주세요.";
         return;
       }

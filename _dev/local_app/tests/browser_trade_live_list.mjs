@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -12,7 +12,7 @@ const profile = await mkdtemp(join(tmpdir(), "bdo-live-list-"));
 const mapping = JSON.parse(await readFile(join(root, "local_app/tests/fixtures/trade-recognition/live-list-mapping.json"), "utf8"));
 const pythonCode = `
 from pathlib import Path
-import sqlite3,hashlib,json
+import sqlite3,hashlib,json,os,threading
 from flask import jsonify
 from local_app.backend.app import create_app
 app=create_app(r'${join(profile, "main.sqlite3")}',testing=True)
@@ -23,9 +23,13 @@ def snapshot():
         with sqlite3.connect(path) as conn:
             result[str(path.relative_to(Path(r'${profile}')))]=hashlib.sha256('\\n'.join(conn.iterdump()).encode()).hexdigest()
     return jsonify(result)
+@app.post('/__test__/shutdown')
+def shutdown_test_server():
+    threading.Timer(.2, lambda: os._exit(0)).start()
+    return jsonify(ok=True)
 app.run(host='127.0.0.1',port=18783,use_reloader=False,threaded=True)
 `;
-let server, chrome, socket;
+let server, chrome, socket, send;
 const waitFor = async (predicate, label, timeout = 45000) => {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -66,7 +70,7 @@ try {
     const value = JSON.parse(event.data); const task = pending.get(value.id); if (!task) return;
     pending.delete(value.id); value.error ? task.reject(new Error(value.error.message)) : task.resolve(value.result);
   });
-  const send = (method, params = {}) => new Promise((resolveResult, reject) => {
+  send = (method, params = {}) => new Promise((resolveResult, reject) => {
     const requestId = ++id;
     const timer=setTimeout(()=>{pending.delete(requestId);reject(new Error(`Chrome command timeout: ${method}; ${chromeErrors}`));},15000);
     pending.set(requestId, { resolve:(value)=>{clearTimeout(timer);resolveResult(value);}, reject:(error)=>{clearTimeout(timer);reject(error);} });
@@ -113,13 +117,35 @@ try {
   assert.equal(await evaluate("window.__masterCalls"), 0, "display does not depend on Master API");
   await evaluate("document.querySelector('[data-role=trade-live-list] details').open=true");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list] details section').checkVisibility()"), true);
+  await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
+  const fixed = await recognize(7, 5);
+  for (const row of fixed.rows) {
+    assert.equal(row[2], "1"); assert.equal(row[5], "2");
+  }
+  await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
+  const variable = await recognize(5, 5);
+  assert.deepEqual(variable.rows.map((row) => row[5]), ["2", "2", "2", "2", "2"]);
+  await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
+  const highStage = await recognize(11, 6);
+  for (const row of highStage.rows) {
+    assert.equal(row[2], "1"); assert.equal(row[5], "1");
+  }
+  const rulesScreenshot = await send("Page.captureScreenshot", { format: "png" });
+  await writeFile(join(output, "rules-table.png"), Buffer.from(rulesScreenshot.data, "base64"));
   assert.deepEqual(await (await fetch(`${baseUrl}__test__/database-snapshot`)).json(), before, "main/master/sidecar DBs unchanged");
   assert.equal(crashes.length, 0); assert.equal((await fetch(`${baseUrl}api/health`)).ok, true);
   const report = { browserRealImageVisibleTable: "PASS", missingActiveMaster: "PASS", masterApiFailure: "PASS",
-    rawOCRVisibleIfCorrectionFails: "PASS", databaseSessionModified: "NO", appCrash: "NO", images: 2,
-    viewport: "1920x1080", bodyZoom: "130%", first, second };
+    rawOCRVisibleIfCorrectionFails: "PASS", fixedQuantitiesWithoutReview: "PASS", twoOrThreeRecognition: "PASS",
+    databaseSessionModified: "NO", appCrash: "NO", images: 5,
+    viewport: "1920x1080", bodyZoom: "130%", first, second, fixed, variable, highStage };
   await writeFile(join(output, "browser.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } finally {
-  socket?.close(); await stop(chrome); await stop(server); await rm(profile, { recursive: true, force: true });
+  await fetch(`${baseUrl}__test__/shutdown`, { method: "POST", signal: AbortSignal.timeout(3000) }).catch(() => {});
+  if (socket?.readyState === WebSocket.OPEN && send) await send("Browser.close").catch(() => {});
+  socket?.close();
+  await new Promise((done) => setTimeout(done, 500));
+  await stop(chrome); await stop(server);
+  if (dirname(resolve(profile)) !== resolve(tmpdir()) || !basename(profile).startsWith("bdo-live-list-")) throw new Error("Unsafe test cleanup path");
+  await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
 }

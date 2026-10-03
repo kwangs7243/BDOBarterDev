@@ -33,7 +33,7 @@ class LocalReader:
                                             providers=["CPUExecutionProvider"])
         self.input_name = self.session.get_inputs()[0].name
 
-    def read(self, image: Image.Image, digits: bool = False):
+    def read(self, image: Image.Image, digits: bool = False, allowed_digits: str | None = None):
         import cv2
 
         rgb = np.asarray(image.convert("RGB"))[:, :, ::-1]
@@ -44,7 +44,7 @@ class LocalReader:
         tensor[0, :, :, :resized_width] = (resized.transpose(2, 0, 1) / 255 - .5) / .5
         probabilities = self.session.run(None, {self.input_name: tensor})[0][0]
         if digits:
-            allowed = [0] + [i for i, char in enumerate(self.characters) if char in "0123456789" and char]
+            allowed = [0] + [i for i, char in enumerate(self.characters) if char in (allowed_digits or "0123456789") and char]
             indexes = np.array(allowed)[probabilities[:, allowed].argmax(axis=1)]
         else:
             indexes = probabilities.argmax(axis=1)
@@ -92,7 +92,7 @@ def _tight(image, mask, padding=3):
     return ImageOps.expand(image.crop(box), padding, fill="white")
 
 
-def read_numeric(reader, crop, field):
+def read_numeric(reader, crop, field, allowed_values=None):
     mask = _ink(crop, numeric=True)
     # Item artwork can be white too; the number is the rightmost baseline token.
     import cv2
@@ -109,21 +109,50 @@ def read_numeric(reader, crop, field):
                 ImageOps.invert(tight)]
     readings = [reader.read(variant, digits=True) for variant in variants]
     original = [reader.read(crop), reader.read(ImageOps.grayscale(crop))]
-    valid = [(int(text), score) for text, score in readings if re.fullmatch(r"\d+", text)
-             and (field == "count" or int(text) >= 1)]
+    candidates = readings
+    if allowed_values is not None:
+        candidates = [reader.read(variant, digits=True, allowed_digits="".join(map(str, allowed_values)))
+                      for variant in variants]
+    valid = [(int(text), score) for text, score in candidates if re.fullmatch(r"\d+", text)
+             and (field == "count" or int(text) >= 1)
+             and (allowed_values is None or int(text) in allowed_values)]
     votes = Counter(value for value, score in valid if score >= .5)
     value, vote = votes.most_common(1)[0] if votes else (None, 0)
     confidence = max((score for candidate, score in valid if candidate == value), default=0)
     certain = vote >= 2 and confidence >= .7
     originals = [(int(text), score) for text, score in original if re.fullmatch(r"\d+", text)
-                 and (field == "count" or int(text) >= 1)]
+                 and (field == "count" or int(text) >= 1)
+                 and (allowed_values is None or int(text) in allowed_values)]
     if not certain and len(originals) == 2 and originals[0][0] == originals[1][0] and min(score for _, score in originals) >= .5:
         value = originals[0][0]
         confidence = max(score for _, score in originals)
         certain = confidence >= .75
+    conflicts = originals + ([(int(text), score) for text, score in readings
+                              if text.isdigit() and int(text) in allowed_values] if allowed_values is not None else [])
     return {"rawOCR": readings[0][0], "corrected": value if certain else None,
-            "reviewRequired": not certain or any(candidate != value and score >= .5 for candidate, score in originals), "confidence": confidence,
-            "variants": [{"text": text, "confidence": score} for text, score in readings + original]}
+            "reviewRequired": not certain or any(candidate != value and score >= .5 for candidate, score in conflicts)
+                or (allowed_values is not None and len(votes) > 1), "confidence": confidence,
+            "variants": [{"text": text, "confidence": score} for text, score in readings + original + (candidates if allowed_values else [])],
+            **({"allowedValues": list(allowed_values), "valueSource": "CONSTRAINED_OCR"} if allowed_values else {})}
+
+
+def trade_stages(fields, item_stages):
+    return tuple(item_stages.get(fields[key].get("corrected")) if not fields[key]["reviewRequired"] else None
+                 for key in ("fromItem", "toItem"))
+
+
+def apply_trade_rules(fields, item_stages):
+    source, destination = trade_stages(fields, item_stages)
+    fixed = {}
+    if source in range(1, 8):
+        fixed["reqAmount"] = (1, "TRADE_ITEM_REQUIREMENT_ONE")
+    if (source, destination) == (3, 4):
+        fixed["yield"] = (2, "STAGE_3_TO_4")
+    elif (source, destination) in {(4, 5), (5, 6), (6, 7)}:
+        fixed["yield"] = (1, f"STAGE_{source}_TO_{destination}")
+    for key, (value, rule) in fixed.items():
+        fields[key].update(corrected=value, reviewRequired=False, valueSource="TRADE_RULE", rule=rule)
+    return fields
 
 
 def _normalize(text):
@@ -193,8 +222,9 @@ def recognize_live(captures, model_dir, batch_id):
         catalog = json.loads((Path(__file__).resolve().parents[1] / "frontend/data/trade-catalog.json").read_text(encoding="utf-8"))
         items = list(dict.fromkeys([name for names in catalog["masterData"].values() for name in names] + catalog["specialItems"]))
         islands = list(dict.fromkeys(catalog["islands"] + catalog["t6Islands"] + catalog["t7Islands"]))
+        item_stages = {name: int(stage) for stage, names in catalog["masterData"].items() for name in names}
     except (OSError, ValueError, KeyError, TypeError):
-        items, islands = [], []
+        items, islands, item_stages = [], [], {}
     bounds = {"island": (.063, .05, .241, .48), "fromItem": (.340, .10, .558, .47),
               "toItem": (.714, .10, .931, .87), "count": (.064, .47, .233, .83),
               "reqAmount": (.287, .55, .328, .84), "yield": (.665, .55, .710, .84)}
@@ -207,13 +237,15 @@ def recognize_live(captures, model_dir, batch_id):
         for ordinal, (top, bottom) in enumerate(boxes):
             row = image.crop((0, top, image.width, bottom))
             fields = {}
-            for field in FIELDS:
+            for field in ("island", "fromItem", "toItem", "count", "reqAmount", "yield"):
                 crop = _crop(row, bounds[field])
                 try:
                     if field == "count":
                         fields[field] = read_count(reader, crop)
                     elif field in NUMERIC:
-                        fields[field] = read_numeric(reader, crop, field)
+                        source, destination = trade_stages(fields, item_stages)
+                        allowed = (2, 3) if field == "yield" and (source, destination) in {(1, 2), (2, 3)} else None
+                        fields[field] = read_numeric(reader, crop, field, allowed_values=allowed)
                     else:
                         raw, score = read_name(reader, crop)
                         value, review = correct_name(raw, islands if field == "island" else items)
@@ -222,6 +254,7 @@ def recognize_live(captures, model_dir, batch_id):
                 except Exception as error:
                     fields[field] = {"rawOCR": "", "corrected": None, "reviewRequired": True,
                                      "confidence": None, "error": type(error).__name__}
+            apply_trade_rules(fields, item_stages)
             rows.append({"captureId": capture["captureId"], "ordinal": ordinal,
                          "rowBox": {"x": 0, "y": top, "width": image.width, "height": bottom - top},
                          "fields": fields})

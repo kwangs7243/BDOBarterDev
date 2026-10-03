@@ -1,15 +1,63 @@
 import json
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PIL import Image
-from local_app.tools.trade_live_ocr import detect_live_rows, read_count, correct_name, recognize_live
+from local_app.tools.trade_live_ocr import apply_trade_rules, detect_live_rows, read_count, read_numeric, correct_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
 
 class LiveListTests(unittest.TestCase):
+    def rule_fields(self, source, destination, ambiguous=False):
+        return {"fromItem": {"corrected": source, "reviewRequired": ambiguous},
+                "toItem": {"corrected": destination, "reviewRequired": False},
+                "reqAmount": {"rawOCR": "7", "corrected": None, "reviewRequired": True},
+                "yield": {"rawOCR": "62", "corrected": None, "reviewRequired": True}}
+
+    def test_fixed_ratios_preserve_ocr_and_clear_numeric_review(self):
+        stages = {str(stage): stage for stage in range(1, 8)}
+        for source, destination, amount in ((3, 4, 2), (4, 5, 1), (5, 6, 1), (6, 7, 1)):
+            with self.subTest(source=source, destination=destination):
+                fields = apply_trade_rules(self.rule_fields(str(source), str(destination)), stages)
+                self.assertEqual(fields["reqAmount"]["corrected"], 1)
+                self.assertEqual(fields["yield"]["corrected"], amount)
+                self.assertFalse(fields["yield"]["reviewRequired"])
+                self.assertEqual(fields["yield"]["rawOCR"], "62")
+                self.assertEqual(fields["yield"]["valueSource"], "TRADE_RULE")
+
+    def test_variable_land_coin_and_unidentified_trades_are_not_fixed(self):
+        stages = {str(stage): stage for stage in range(1, 8)}
+        for source, destination in (("land", "1"), ("1", "2"), ("2", "3"), ("4", "coin"), ("4", "general")):
+            fields = self.rule_fields(source, destination)
+            fields["yield"].update(corrected=100, reviewRequired=True)
+            apply_trade_rules(fields, stages)
+            self.assertEqual(fields["yield"]["corrected"], 100)
+            self.assertTrue(fields["yield"]["reviewRequired"])
+            self.assertEqual(fields["reqAmount"]["corrected"], None if source == "land" else 1)
+        fields = apply_trade_rules(self.rule_fields("3", "4", ambiguous=True), stages)
+        self.assertIsNone(fields["reqAmount"]["corrected"])
+        self.assertIsNone(fields["yield"]["corrected"])
+
+    def test_two_or_three_requires_recognition_and_preserves_conflicts(self):
+        fake_cv2 = SimpleNamespace(connectedComponentsWithStats=lambda mask, _: (1, mask, [], None))
+        for constrained, expected, review in ((["2", "2", "2"], 2, False), (["3", "3", "3"], 3, False),
+                                              (["2", "3", "2"], 2, True), (["23", "23", "23"], None, True)):
+            reader = Mock()
+            reader.read.side_effect = [("62", .95)] * 5 + [(value, .95) for value in constrained]
+            with self.subTest(constrained=constrained), patch.dict("sys.modules", {"cv2": fake_cv2}):
+                result = read_numeric(reader, Image.new("RGB", (20, 15), "white"), "yield", allowed_values=(2, 3))
+            self.assertEqual(result["corrected"], expected)
+            self.assertEqual(result["reviewRequired"], review)
+            self.assertEqual(result["rawOCR"], "62")
+        reader = Mock()
+        reader.read.side_effect = [("3", .95)] * 3 + [("62", .95)] * 2 + [("2", .95)] * 3
+        with patch.dict("sys.modules", {"cv2": fake_cv2}):
+            result = read_numeric(reader, Image.new("RGB", (20, 15), "white"), "yield", allowed_values=(2, 3))
+        self.assertTrue(result["reviewRequired"])
+
     def test_real_rows_survive_image_scaling(self):
         mapping = json.loads((FIXTURES / "live-list-mapping.json").read_text(encoding="utf-8"))
         for capture in mapping:
