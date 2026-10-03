@@ -1,7 +1,6 @@
 import { refreshPersistentState, saveWarehouseInventory } from "./persistence.js";
 import { createAutocomplete } from "./autocomplete.js";
 import { state } from "./state.js";
-import { inventoryDisplayOrder } from "./inventory-ui.js";
 
 const make = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -23,10 +22,14 @@ function currentStocks() {
 }
 
 function correctionSlots() {
-  return reviewSlots().filter((slot) => slot.decision !== "MATCH");
+  return reviewSlots();
 }
 
 function reviewSlots() {
+  return applicableSlots().filter((slot) => slot.decision !== "MATCH");
+}
+
+function applicableSlots() {
   return (context.report.slots ?? []).filter((slot) => !["EMPTY", "TIER5_IGNORE"].includes(slot.decision));
 }
 
@@ -60,7 +63,7 @@ function validCorrection(slot, value) {
 
 function effectivePatch() {
   const items = {};
-  for (const slot of reviewSlots()) {
+  for (const slot of applicableSlots()) {
     const value = ensureCorrection(slot);
     if (!validCorrection(slot, value)) return null;
     if (value.excluded) continue;
@@ -80,7 +83,7 @@ function updateApplyState() {
   const missing = slots.filter((slot) => !validCorrection(slot, ensureCorrection(slot))).length;
   const unchecked = slots.filter((slot) => { const value = ensureCorrection(slot); return !value.excluded && value.agreement === "unchecked"; }).length;
   const count = dialog.querySelector("[data-role='review-count']");
-  if (count) count.textContent = `인식 성공 ${slots.length - correctionSlots().length}칸 · 미인식 ${correctionSlots().length}칸 · 입력·일치 선택 오류 ${missing}칸 · 일치 여부 미확인 ${unchecked}칸`;
+  if (count) count.textContent = `자동 확정 ${applicableSlots().length - slots.length}칸 · 확인 필요 ${slots.length}칸 · 입력 오류 ${missing}칸 · 일치 여부 미확인 ${unchecked}칸`;
 }
 
 function renderCorrectionRow(slot, index, itemOptions) {
@@ -158,14 +161,12 @@ function render() {
   const header = make("header", "patch-review-header");
   const titleArea = make("div");
   const title = make("h2", "", "마스터 창고 재고 검토"); title.id = "patch-review-title"; titleArea.append(title);
-  titleArea.append(make("p", "patch-review-summary", "성공·미인식 결과 모두 품목과 수량을 수정할 수 있습니다. 일치 여부는 원본 판독값과 비교해 선택하세요. 미확인 상태는 학습 정답으로 취급하지 않습니다."));
+  titleArea.append(make("p", "patch-review-summary", "확인 필요한 슬롯만 표시합니다. 정상 인식된 품목과 수량은 최종 재고에 자동으로 포함됩니다."));
   const count = make("p", "patch-review-count", ""); count.dataset.role = "review-count"; titleArea.append(count); header.append(titleArea);
   const close = make("button", "icon-button", "닫기"); close.type = "button"; close.dataset.action = "cancel"; close.setAttribute("aria-label", "검토 닫기"); header.append(close);
   const body = make("main", "patch-review-body");
   const itemOptions = state.inventory.filter((item) => item.tier >= 1 && item.tier <= 4);
-  const order = inventoryDisplayOrder();
-  const groups = [4, 3, 2, 1].map((tier) => ({ title: `${tier}단 · 인식 성공`, slots: slots.filter((slot) => slot.decision === "MATCH" && itemOptions.find((item) => item.programName === originalName(slot))?.tier === tier).sort((a, b) => order[String(tier)].indexOf(originalName(a)) - order[String(tier)].indexOf(originalName(b))) }));
-  groups.push({ title: `미인식 슬롯 · 직접 확인 ${correctionSlots().length}칸`, slots: correctionSlots() });
+  const groups = [{ title: `확인 필요 ${slots.length}칸`, slots }];
   for (const group of groups) {
     if (!group.slots.length) continue;
     const section = make("section", "patch-review-tier patch-correction-section");
@@ -251,7 +252,7 @@ async function applyPatch(event) {
     const feedback = context.report.scanId ? {
       version: 2,
       scanId: context.report.scanId,
-      rows: reviewSlots().map(slot => {
+      rows: applicableSlots().map(slot => {
         const value = ensureCorrection(slot);
         return { slot: slot.slot, name: value.excluded ? null : value.name, quantity: value.excluded ? null : Number(value.quantity), excluded: value.excluded, agreement: value.excluded ? "unchecked" : value.agreement };
       }),

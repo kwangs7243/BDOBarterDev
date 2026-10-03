@@ -1,6 +1,6 @@
 import { api } from "./api.js";
 import { state } from "./state.js";
-import { CaptureQueue, PreviewRegistry, captureFromFile } from "./capture.js";
+import { CaptureQueue, PreviewRegistry, captureFromFile, ScreenCaptureSession, DEFAULT_TRADE_ROI, normalizeRegion, displayedVideoContentRect, moveNormalizedRegion, resizeNormalizedRegion } from "./capture.js";
 
 const make = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -36,6 +36,11 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     <section class="warehouse-dialog-shell">
       <header class="warehouse-dialog-header"><div><h2 id="warehouse-dialog-title">마스터 창고 스캔</h2><p>파일, 놓기 또는 붙여넣기로 이미지를 입력합니다. PNG 원본은 다시 저장하지 않습니다.</p></div><button type="button" class="icon-button" data-action="close" aria-label="닫기">닫기</button></header>
       <main class="warehouse-dialog-content">
+        <section class="trade-roi-panel" aria-label="창고 캡처 범위">
+          <div class="trade-roi-actions"><button type="button" data-action="connect-screen">화면 연결</button><button type="button" data-action="disconnect-screen">연결 종료</button><button type="button" data-action="reset-roi">범위 초기화</button><button type="button" data-action="capture-roi" disabled>선택 영역 캡처</button></div>
+          <p>화면을 연결한 뒤 초록색 영역을 이동하고 가장자리를 끌어 창고 범위를 지정하세요.</p>
+          <div class="trade-preview-stage"><video muted autoplay playsinline></video><div class="trade-roi-box" hidden><button type="button" class="trade-roi-move" data-roi-move aria-label="창고 영역 이동"></button>${["n", "s", "e", "w", "ne", "nw", "se", "sw"].map(handle => `<button type="button" class="trade-roi-handle ${handle}" data-roi-handle="${handle}" aria-label="창고 영역 ${handle} 크기 조절"></button>`).join("")}</div></div>
+        </section>
         <label class="warehouse-drop-zone" for="warehouse-image"><strong>이미지를 여기에 놓거나 파일을 선택하세요</strong><span>PNG/JPEG/WebP/GIF · 최대 20 MiB · 32메가픽셀 · 애니메이션 제외</span><input id="warehouse-image" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif"></label>
         <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
         <p class="warehouse-file-name" aria-live="polite">대기 이미지가 없습니다.</p>
@@ -111,6 +116,52 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   };
   const reportCaptureError = (error) => { message.textContent = captureErrorText(error); };
 
+  const screenSession = new ScreenCaptureSession();
+  const stage = dialog.querySelector(".trade-preview-stage");
+  const video = stage.querySelector("video");
+  const roiBox = stage.querySelector(".trade-roi-box");
+  const captureButton = dialog.querySelector('[data-action="capture-roi"]');
+  let region = { ...DEFAULT_TRADE_ROI };
+  const renderRoi = () => {
+    const content = displayedVideoContentRect(video, stage);
+    roiBox.hidden = !content || !screenSession.connected || !dialog.open;
+    if (roiBox.hidden) return;
+    const bounds = stage.getBoundingClientRect();
+    region = normalizeRegion(region);
+    Object.assign(roiBox.style, { left: `${content.left - bounds.left + region.x * content.width}px`, top: `${content.top - bounds.top + region.y * content.height}px`, width: `${region.width * content.width}px`, height: `${region.height * content.height}px` });
+    roiBox.dataset.normalized = JSON.stringify(region);
+  };
+  screenSession.attachPreview(video);
+  screenSession.subscribe(() => { captureButton.disabled = screenSession.state !== "CONNECTED"; renderRoi(); });
+  video.addEventListener("resize", renderRoi);
+  const resizeObserver = new ResizeObserver(renderRoi); resizeObserver.observe(stage);
+  dialog.querySelector('[data-action="connect-screen"]').addEventListener("click", () => {
+    screenSession.connectScreen().then(() => { renderRoi(); message.textContent = "창고 캡처 범위를 지정하세요."; }).catch(reportCaptureError);
+  });
+  dialog.querySelector('[data-action="disconnect-screen"]').addEventListener("click", () => screenSession.disconnectScreen());
+  dialog.querySelector('[data-action="reset-roi"]').addEventListener("click", () => { region = { ...DEFAULT_TRADE_ROI }; renderRoi(); });
+  captureButton.addEventListener("click", async () => {
+    try { acceptCaptures([await screenSession.captureRegion(captureContext(), region)]); }
+    catch (error) { reportCaptureError(error); }
+  });
+  roiBox.addEventListener("pointerdown", event => {
+    if (screenSession.state !== "CONNECTED") return;
+    const content = displayedVideoContentRect(video, stage);
+    const handle = event.target.closest("[data-roi-handle]")?.dataset.roiHandle;
+    if (!content || (!handle && !event.target.closest("[data-roi-move]"))) return;
+    event.preventDefault();
+    const start = { x: event.clientX, y: event.clientY, region: { ...region } };
+    const minimumWidth = Math.min(.95, 80 / content.width), minimumHeight = Math.min(.95, 60 / content.height);
+    event.target.setPointerCapture?.(event.pointerId);
+    const move = next => {
+      const dx = (next.clientX - start.x) / content.width, dy = (next.clientY - start.y) / content.height;
+      region = handle ? resizeNormalizedRegion(start.region, handle, dx, dy, minimumWidth, minimumHeight) : moveNormalizedRegion(start.region, dx, dy, minimumWidth, minimumHeight);
+      renderRoi();
+    };
+    const finish = () => { roiBox.removeEventListener("pointermove", move); roiBox.removeEventListener("pointerup", finish); roiBox.removeEventListener("pointercancel", finish); };
+    roiBox.addEventListener("pointermove", move); roiBox.addEventListener("pointerup", finish, { once: true }); roiBox.addEventListener("pointercancel", finish, { once: true });
+  });
+
   openButton.addEventListener("click", () => {
     message.textContent = "파일을 선택·놓거나 붙여넣기 버튼에 포커스를 둔 뒤 Ctrl+V를 사용하세요.";
     input.disabled = false;
@@ -153,6 +204,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   });
   dialog.querySelectorAll('[data-action="close"], [data-action="cancel"]').forEach((button) => button.addEventListener("click", () => dialog.close()));
   dialog.addEventListener("close", () => {
+    screenSession.disconnectScreen("dialog-close");
     if (previewUrl) previews.revoke(previewUrl);
     previewUrl = null;
     preview.removeAttribute("src");
@@ -192,7 +244,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
       }
       keepQueueOnClose = true;
       dialog.close();
-      setStatus(`확정 ${confirmed}개 품목과 미확정 슬롯 ${uncertain}개를 함께 검토합니다.`, "info");
+      setStatus(`자동 확정 ${confirmed}개 품목 · 확인 필요한 슬롯 ${uncertain}개만 수정하세요.`, "info");
       onPatch(result.patch, result.report, imageBlob);
     } catch (error) {
       message.textContent = error.message;
@@ -214,6 +266,8 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     reportCaptureError,
     getQueueLength: () => queue.length,
     cleanup: () => {
+      screenSession.disconnectScreen("cleanup");
+      resizeObserver.disconnect();
       previews.clear();
       queue.clear();
     },
