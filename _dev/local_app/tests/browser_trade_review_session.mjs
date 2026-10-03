@@ -295,14 +295,14 @@ try {
   await evaluate(`(()=>{window.__sessionPutBodies=[];window.__sessionPutResponses=[];window.__loseNextSessionPut=true;window.__failNextSessionBootstrap=true;const original=window.fetch.bind(window);window.fetch=async(input,init={})=>{const url=typeof input==='string'?input:input.url;if(url.endsWith('/api/working-session')&&init.method==='PUT'){window.__sessionPutBodies.push(init.body);const response=await original(input,init);window.__sessionPutResponses.push(await response.clone().json());if(window.__loseNextSessionPut){window.__loseNextSessionPut=false;throw new TypeError('simulated committed response loss')}return response}if(url.endsWith('/api/bootstrap')&&window.__failNextSessionBootstrap){window.__failNextSessionBootstrap=false;throw new TypeError('simulated readback outage')}return original(input,init)}})()`);
   await evaluate("(()=>{window.__sessionChangedEvents=0;window.addEventListener('bdo:session-changed',()=>window.__sessionChangedEvents++)})()");
   await evaluate("(()=>{const button=document.querySelector('[data-action=commit-session-stage]');button.click();button.click()})()");
-  await waitFor(async () => evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent.includes('COMMIT_RESPONSE_UNKNOWN')"), "session response-loss state");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=session-apply-status]')?.dataset.state==='COMMIT_RESPONSE_UNKNOWN'"), "session response-loss state");
   const unknownState = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify({local:state.session.scannedTrades,durable:state.workingSession,pending:window.__bdoScheduleRuntime.pending}))").then(JSON.parse);
   assert.equal(unknownState.local, null, "response loss never applies the session locally");
   assert.equal(unknownState.durable, null, "ordinary local state remains at the last confirmed bootstrap");
   assert.equal(unknownState.pending, true, "external pending guard remains active during response uncertainty");
   assert.ok((await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession, "server committed despite lost response");
   await evaluate("document.querySelector('[data-action=retry-session-commit]').click()");
-  await waitFor(async () => evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent.includes('COMMIT_CONFIRMED_READBACK_PENDING')"), "committed readback-pending state");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=session-apply-status]')?.dataset.state==='COMMIT_CONFIRMED_READBACK_PENDING'"), "committed readback-pending state");
   const pendingReadbackState = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify({local:state.session.scannedTrades,durable:state.workingSession,pending:window.__bdoScheduleRuntime.pending}))").then(JSON.parse);
   assert.equal(pendingReadbackState.local, null, "idempotent PUT replay does not apply before successful readback");
   assert.equal(pendingReadbackState.pending, true);
@@ -313,7 +313,7 @@ try {
   await evaluate("document.querySelector('[data-action=retry-session-readback]').click()");
   await new Promise((resolveWait) => setTimeout(resolveWait, 300));
   const readbackStatus = await evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent||''");
-  if (!readbackStatus.includes("APPLIED") && !readbackStatus.includes("저장된 회차를 다시 읽어 확인")) throw new Error(`verified readback did not apply: ${readbackStatus}`);
+  if (!readbackStatus.includes("회차에 저장했고 다시 읽어 확인했습니다")) throw new Error(`verified readback did not apply: ${readbackStatus}`);
   const firstApplied = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.ok(firstApplied.workingSession && firstApplied.workingSession.scannedTrades.length > 0);
   assert.equal(firstApplied.workingSession.schedule, null);
@@ -333,7 +333,7 @@ try {
   await evaluate("document.querySelector('[data-action=apply-reviewed-append]').click()");
   await new Promise((resolveWait) => setTimeout(resolveWait, 1500));
   const duplicateApplyStatus = await evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent||''");
-  if (!duplicateApplyStatus.includes("회차 적용 상태: NO_CHANGE")) throw new Error(`same-batch APPEND did not become NO_CHANGE: ${duplicateApplyStatus}`);
+  if ((await evaluate("document.querySelector('[data-role=session-apply-status]')?.dataset.state")) !== "NO_CHANGE") throw new Error(`same-batch APPEND did not become NO_CHANGE: ${duplicateApplyStatus}`);
   sessionWriteRequests = (await (await fetch(`${baseUrl}__test__/requests`)).json()).filter((item) => item.method === "PUT" && item.path === "/api/working-session");
   assert.equal(sessionWriteRequests.length, 2, "all exact6 duplicates add no new PUT beyond the response-loss replay");
   await evaluate("document.querySelector('[data-action=cancel-session-stage]').click()");
@@ -351,7 +351,7 @@ try {
     body: JSON.stringify({ mutationId: "r009-stale-settings-bump", baseRevision: beforeStaleStage.revision, settings: { parley: beforeStaleStage.settings.parley } }) });
   assert.equal(settingsBump.status, 200, "isolated settings revision advances after staging");
   await evaluate("document.querySelector('[data-action=commit-session-stage]').click()");
-  await waitFor(async () => evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent.includes('회차 적용 상태: STALE')"), "first-attempt 409 stale status");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=session-apply-status]')?.dataset.state==='STALE'"), "first-attempt 409 stale status");
   const staleLocal = await evaluate("import('/assets/js/state.js').then(({state})=>JSON.stringify({local:state.session.id,durable:state.workingSession.id,pending:window.__bdoScheduleRuntime.pending}))").then(JSON.parse);
   assert.equal(staleLocal.local, firstApplied.workingSession.id);
   assert.equal(staleLocal.durable, firstApplied.workingSession.id);

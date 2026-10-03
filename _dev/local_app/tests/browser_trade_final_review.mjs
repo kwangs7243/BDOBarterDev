@@ -177,8 +177,18 @@ try {
   await evaluate(`(async()=>{window.__u1Projection=${projectionJson};window.__u1RawEvidence=${rawEvidenceJson};window.__u1Completion=null;window.__u1ConfirmCalls=0;window.__u1NowCalls=0;window.__u1Hash=window.__u1Projection.projectionHash;window.__u1Pixels=structuredClone(window.__u1Projection.pixelAvailability);window.__u1ApiCalls=0;window.__u1Urls=new Set();window.__u1Revoked=[];const oldCreate=URL.createObjectURL.bind(URL),oldRevoke=URL.revokeObjectURL.bind(URL);URL.createObjectURL=(blob)=>{const url=oldCreate(blob);window.__u1Urls.add(url);return url};URL.revokeObjectURL=(url)=>{window.__u1Revoked.push(url);window.__u1Urls.delete(url);oldRevoke(url)};const pngBlob=async()=>{const canvas=document.createElement('canvas');canvas.width=1;canvas.height=1;canvas.getContext('2d').fillRect(0,0,1,1);return await new Promise(resolve=>canvas.toBlob(resolve,'image/png'))};window.__u1Source={buildPixelAvailability:async()=>structuredClone(window.__u1Pixels),createDisplayRowCrop:async()=>({width:140,height:30,blob:await pngBlob()}),createDisplayCrop:async()=>({width:20,height:10,blob:await pngBlob()}),createDisplayCapture:async()=>({frame:{width:140,height:30},blob:await pngBlob()})};window.__u1Import=import('/assets/js/trade-final-review.js');window.__u1Mount=async(projection)=>{window.__u1Controller?.destroy();window.__u1Completion=null;window.__u1Projection=projection;window.__u1Hash=projection.projectionHash;window.__u1Pixels=structuredClone(projection.pixelAvailability);const module=await window.__u1Import;document.querySelector('#trade-final-review-dialog').showModal();window.__u1Controller=await module.mountTradeFinalReview({root:document.querySelector('[data-role=trade-final-review-root]'),projection,rawEvidence:window.__u1RawEvidence,sourceEvidence:window.__u1Source,reviewRevision:7,getCurrentProjectionHash:async()=>window.__u1Hash,getCurrentPixelAvailability:async()=>structuredClone(window.__u1Pixels),getConfirmedAt:async()=>{window.__u1NowCalls++;return '2026-10-03T01:02:03Z'},onConfirm:async(completion)=>{window.__u1ConfirmCalls++;window.__u1Completion=completion}})};await window.__u1Mount(window.__u1Projection)})()`);
   await waitFor(async () => evaluate("!document.querySelector('[data-action=confirm]').disabled"), "initial source availability check");
   assert.equal(await evaluate("document.querySelector('[role=tab][data-tab=problem]').getAttribute('aria-selected')"), "true");
+  assert.equal(await evaluate("document.querySelectorAll('.trade-final-review-summary-item').length"), 8, "all eight metrics remain visible in grouped summary");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-primary').getAttribute('aria-label')"), "주요 결과");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-details').getAttribute('aria-label')"), "세부 정보");
+  assert.equal(await evaluate("document.querySelector('#trade-final-review-dialog').getAttribute('aria-labelledby')"), "trade-final-review-title");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-confirmation').textContent.includes('회차에는 아직 적용되지 않습니다')"), true);
+  assert.equal(await evaluate("document.querySelector('[data-action=confirm]').textContent"), "검수 완료");
   assert.equal(await evaluate("document.querySelectorAll('.trade-final-review-field').length"), 6);
   assert.equal(await evaluate("document.querySelector('[aria-label=\"남은 횟수 최종 값\"]').value"), "0");
+  assert.equal(await evaluate("document.querySelector('[aria-label=\"필요 수량 최종 값\"]').disabled"), true, "review values are readable before explicit edit");
+  assert.equal(await evaluate("document.querySelector('[data-action=toggle-edit]').textContent"), "수정하기");
+  await evaluate("document.querySelector('[data-action=toggle-edit]').click()");
+  assert.equal(await evaluate("document.querySelector('[aria-label=\"필요 수량 최종 값\"]').disabled"), false, "explicit row edit enables correction controls");
   assert.equal(await evaluate("document.querySelectorAll('[data-action=confirm]').length"), 1);
   assert.equal(await evaluate("document.querySelector('.trade-final-review-diagnostics > summary').textContent"), "왜 이렇게 보정됐나");
   await waitFor(async () => evaluate("document.querySelector('.trade-final-review-source img') !== null"), "verified row crop display");
@@ -207,6 +217,9 @@ try {
   await evaluate(`(async()=>{window.__u1RawEvidence=${rawEvidenceJson};window.__u1Projection=${projectionJson};await window.__u1Mount(window.__u1Projection)})()`);
 
   await evaluate(`(async()=>{const projection=window.__u1Projection;const m=await import('/assets/js/domain/trade-final-evidence.js');const i={recognitionBatchId:projection.recognitionBatchId,rawEvidenceHash:projection.rawEvidenceHash,masterBinding:structuredClone(projection.masterBinding),correctionVersion:projection.correctionVersion,reconciliation:structuredClone(projection.reconciliation),pixelAvailability:structuredClone(projection.pixelAvailability),rows:structuredClone(projection.rows),edgeWorkItems:[]};i.rows[0].classification='FINAL_READY';i.rows[0].classificationReasons=[];await window.__u1Mount(m.buildFinalProjection3(i))})()`);
+  await evaluate("document.querySelector('[role=tab][data-tab=all]').click()");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-list-item .status-FINAL_READY').textContent"), "추가 확인 없음");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-ready-note').textContent.includes('사람 정답으로 독립 검증')"), true);
   assert.equal(await evaluate("document.querySelector('[aria-label=\"남은 횟수 최종 값\"]').disabled"), true, "ready rows start read-only");
   await evaluate("document.querySelector('[data-action=toggle-edit]').click()");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"남은 횟수 최종 값\"]').disabled"), false);
@@ -225,6 +238,7 @@ try {
   await evaluate(`(async()=>{const projection=window.__u1Projection;const m=await import('/assets/js/domain/trade-final-evidence.js');const i={recognitionBatchId:projection.recognitionBatchId,rawEvidenceHash:projection.rawEvidenceHash,masterBinding:structuredClone(projection.masterBinding),correctionVersion:projection.correctionVersion,reconciliation:structuredClone(projection.reconciliation),pixelAvailability:structuredClone(projection.pixelAvailability),rows:structuredClone(projection.rows),edgeWorkItems:[]};i.rows[0].classification='CONFLICT';i.rows[0].classificationReasons=['RECONCILIATION_CONFLICT'];const f=i.rows[0].fields.find(x=>x.field==='yield');f.finalValue=null;f.selectedCandidateIndex=null;f.valueState='CONFLICT';f.riskReasons=['RECONCILIATION_CONFLICT'];f.alternatives=[{value:48,sourceRefs:[{sourceRowId:'draft-example-1',captureId:'capture-example-1',ordinal:0}],riskReasons:['RECONCILIATION_CONFLICT']},{value:148,sourceRefs:[{sourceRowId:'draft-example-1',captureId:'capture-example-1',ordinal:0}],riskReasons:['RECONCILIATION_CONFLICT']}];await window.__u1Mount(m.buildFinalProjection3(i))})()`);
   assert.equal(await evaluate("document.querySelector('[aria-label=\"획득 수량 최종 값\"]').value"), "", "conflict is not silently selected");
   assert.equal(await evaluate("document.querySelectorAll('.trade-final-review-alternative').length"), 2);
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-list-item .status-CONFLICT').textContent"), "결과 충돌");
   await evaluate("document.querySelector('.trade-final-review-alternative [data-action=choose-alternative]').click()");
   assert.equal(await evaluate("document.querySelector('[aria-label=\"획득 수량 최종 값\"]').value"), "48");
   await evaluate("document.querySelector('[data-action=mark-unknown][data-field=yield]')?.click() || document.querySelector('[data-field=yield] [data-action=mark-unknown]').click()");
@@ -261,7 +275,7 @@ try {
   assert.equal(await evaluate("document.querySelector('.trade-final-review-source img')"), null, "late row image cannot replace the selected edge details");
   await evaluate("window.__u1Source.createDisplayRowCrop=window.__u1NormalRowCrop");
 
-  for (const [width, height] of [[1280, 720], [1440, 900], [1920, 1080]]) {
+  for (const [width, height] of [[1440, 900], [1024, 768], [768, 720]]) {
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1.3, mobile: false });
     assert.equal(await evaluate("(()=>{const d=document.querySelector('#trade-final-review-dialog'),r=d.getBoundingClientRect();return r.left>=0&&r.right<=window.innerWidth&&d.scrollWidth<=d.clientWidth})()"), true, `workspace has no horizontal overflow at ${width}x${height}`);
     assert.equal(await evaluate("document.querySelector('.trade-final-review-footer').getBoundingClientRect().bottom <= window.innerHeight"), true, `footer visible at ${width}x${height}`);

@@ -110,13 +110,16 @@ try {
   const tradeListBefore = await evaluate("document.querySelector('#trade-list-root').textContent");
   await evaluate("document.querySelector('#open-trade-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.open"), "trade capture context");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-title').textContent"), "물교 화면 가져오기");
+  assert.equal(await evaluate("document.querySelector('#trade-recognition-title').textContent"), "물교 결과 만들기");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-queue-summary]').textContent"), "준비된 이미지 0개");
   const tradeDialogNode = await send("DOM.getDocument");
   const tradeInputNode = await send("DOM.querySelector", { nodeId: tradeDialogNode.root.nodeId, selector: "#trade-capture-files" });
   await send("DOM.setFileInputFiles", { nodeId: tradeInputNode.nodeId, files: [fixture] });
   await waitFor(async () => (await evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength")) === "1", "trade file captured as draft");
   console.log("browser capture: trade PNG draft PASS");
   const tradeState = await evaluate("JSON.stringify({text:document.querySelector('.capture-draft-item').textContent,images:document.querySelectorAll('.capture-draft-item img').length,list:document.querySelector('#trade-list-root').textContent})").then(JSON.parse);
-  assert.match(tradeState.text, /인식 미실행/);
+  assert.match(tradeState.text, /인식 대기/);
   assert.equal(tradeState.images, 1);
   assert.equal(tradeState.list, tradeListBefore, "trade draft does not change the existing trade list");
   await evaluate("(async()=>{const canvas=document.createElement('canvas');canvas.width=8;canvas.height=6;const context=canvas.getContext('2d');const pixels=context.createImageData(8,6);for(let i=0;i<pixels.data.length;i+=4){pixels.data[i]=(i*3)%256;pixels.data[i+1]=(i*7)%256;pixels.data[i+2]=(i*11)%256;pixels.data[i+3]=255;}context.putImageData(pixels,0,0);const jpeg=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.9));const file=new File([jpeg],'capture.jpg',{type:'image/jpeg'});const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});const sourceCanvas=document.createElement('canvas');sourceCanvas.width=bitmap.width;sourceCanvas.height=bitmap.height;const sourceContext=sourceCanvas.getContext('2d');sourceContext.drawImage(bitmap,0,0);window.__jpegSourcePixels=[...sourceContext.getImageData(0,0,bitmap.width,bitmap.height).data];window.__jpegSourceDimensions=[bitmap.width,bitmap.height];bitmap.close();const transfer=new DataTransfer();transfer.items.add(file);const input=document.querySelector('#trade-capture-files');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));canvas.width=0;canvas.height=0;sourceCanvas.width=0;sourceCanvas.height=0;})()");
@@ -127,16 +130,16 @@ try {
   assert.deepEqual(jpegResult.dimensions, jpegResult.sourceDimensions);
   assert.equal(jpegResult.pixelsEqual, true, "lossless PNG keeps the browser-decoded source pixels");
   assert.match(jpegResult.label, /PNG 변환/);
-  await evaluate("document.querySelectorAll('#trade-capture-dialog [aria-label=\"물교 이미지 초안 제거\"]')[0].click(); document.querySelector('#trade-capture-dialog [aria-label=\"물교 이미지 초안 제거\"]')?.click()");
+  await evaluate("document.querySelectorAll('#trade-capture-dialog [aria-label=\"물교 캡처 이미지 제거\"]')[0].click(); document.querySelector('#trade-capture-dialog [aria-label=\"물교 캡처 이미지 제거\"]')?.click()");
   await waitFor(async () => (await evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength")) === "0", "trade file drafts removed");
   await evaluate(`(() => { const target=document.querySelector('#trade-capture-dialog [data-capture-paste-target]'); target.focus(); const file=new File([new Uint8Array(${JSON.stringify([...hashFixture])})],'clipboard.png',{type:'image/png'}); const transfer=new DataTransfer(); transfer.items.add(file); const event=new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:transfer}); window.__tradePasteEvent=event; target.dispatchEvent(event); })()`);
   await waitFor(async () => (await evaluate("document.querySelector('#trade-capture-dialog')?.dataset.queueLength")) === "1", "trade clipboard image becomes a draft");
   assert.equal(await evaluate("window.__tradePasteEvent.defaultPrevented"), true, "active trade capture handles image paste");
   const tradeClipboardDraft = await evaluate("JSON.stringify({text:document.querySelector('.capture-draft-item').textContent,list:document.querySelector('#trade-list-root').textContent})").then(JSON.parse);
   assert.match(tradeClipboardDraft.text, /클립보드/);
-  assert.match(tradeClipboardDraft.text, /인식 미실행/);
+  assert.match(tradeClipboardDraft.text, /인식 대기/);
   assert.equal(tradeClipboardDraft.list, tradeListBefore, "trade clipboard draft does not modify trade rows");
-  await evaluate("document.querySelector('#trade-capture-dialog [aria-label=\"물교 이미지 초안 제거\"]').click(); document.querySelector('#trade-capture-dialog [data-close-trade-capture]').click()");
+  await evaluate("document.querySelector('#trade-capture-dialog [aria-label=\"물교 캡처 이미지 제거\"]').click(); document.querySelector('#trade-capture-dialog [data-close-trade-capture]').click()");
   await waitFor(async () => await evaluate("!document.querySelector('#trade-capture-dialog')?.open && !document.querySelector('#trade-capture-dialog img')?.src"), "trade preview cleanup");
 
   const after = await (await fetch(`${baseUrl}api/bootstrap`)).json();

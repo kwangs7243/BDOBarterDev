@@ -5,8 +5,8 @@ const LABELS = Object.freeze({ island: "교환 장소", fromItem: "주는 품목
   toItem: "받는 품목", count: "남은 횟수", yield: "획득 수량" });
 const NUMERIC = Object.freeze({ reqAmount: { min: 1, label: "1 이상 정수" },
   count: { min: 0, label: "0 이상 정수" }, yield: { min: 1, label: "1 이상 정수" } });
-const STATUS = Object.freeze({ FINAL_READY: "검증 완료", NEEDS_REVIEW: "확인 필요",
-  NEEDS_RECAPTURE: "다시 캡처 필요", CONFLICT: "서로 다른 결과 확인 필요" });
+const STATUS = Object.freeze({ FINAL_READY: "추가 확인 없음", NEEDS_REVIEW: "확인 필요",
+  NEEDS_RECAPTURE: "다시 캡처 필요", CONFLICT: "결과 충돌" });
 const REASON_LABELS = Object.freeze({ MASTER_UNRESOLVED: "기준 이름을 확인해야 합니다.",
   MASTER_DISAGREEMENT: "기준 이름과 인식 결과가 다릅니다.", NUMERIC_COMPLETENESS_UNVERIFIED: "숫자 전체가 읽혔는지 확인해야 합니다.",
   RECONCILIATION_CONFLICT: "겹친 캡처의 결과가 다릅니다.", FIELD_CLIPPED: "필드가 잘려 다시 캡처해야 합니다.",
@@ -103,7 +103,7 @@ export async function mountTradeFinalReview(input) {
   root.innerHTML = `
     <div class="trade-final-review-shell">
       <header class="trade-final-review-header">
-        <div class="trade-final-review-title-row"><div><p class="trade-final-review-eyebrow">물교 최종 결과</p><h2>문제 행부터 확인하세요</h2></div><button type="button" class="trade-final-review-button" data-action="close" aria-label="검수 닫기">닫기</button></div>
+        <div class="trade-final-review-title-row"><div><p class="trade-final-review-eyebrow">물교 최종 검수</p><h2>확인이 필요한 항목부터 검토하세요.</h2><p class="trade-final-review-intro">문제가 없는 결과는 그대로 유지됩니다. 자동 분류는 사람의 정답 확인을 뜻하지 않습니다.</p></div><button type="button" class="trade-final-review-button" data-action="close" aria-label="최종 검수 닫기">닫기</button></div>
         <div class="trade-final-review-summary" data-role="summary" aria-label="검수 요약"></div>
         <div class="trade-final-review-state" data-role="stale" role="status" aria-live="polite" hidden></div>
       </header>
@@ -119,7 +119,7 @@ export async function mountTradeFinalReview(input) {
       </main>
       <footer class="trade-final-review-footer">
         <p data-role="message" role="status" aria-live="polite"></p>
-        <button type="button" class="trade-final-review-button trade-final-review-primary" data-action="confirm" disabled>최종 목록 확인</button>
+        <div class="trade-final-review-confirmation"><p>검수를 완료해도 회차에는 아직 적용되지 않습니다.</p><button type="button" class="trade-final-review-button trade-final-review-primary" data-action="confirm" disabled>검수 완료</button></div>
       </footer>
     </div>`;
 
@@ -172,16 +172,27 @@ export async function mountTradeFinalReview(input) {
   }
   function updateSummary() {
     const counts = Object.fromEntries(Object.keys(STATUS).map((key) => [key, projection.rows.filter((row) => row.classification === key).length]));
-    const values = [
-      ["캡처", rawEvidence.captures.length], ["원본 행", rawEvidence.sourceRows.length], ["최종 행", projection.rows.length],
-      ["검증 완료", counts.FINAL_READY], ["확인 필요", counts.NEEDS_REVIEW],
-      ["다시 캡처 필요", counts.NEEDS_RECAPTURE], ["서로 다른 결과", counts.CONFLICT], ["잘린 영역", projection.edgeWorkItems.length],
+    const primary = [
+      ["최종 행", projection.rows.length], ["확인 필요", counts.NEEDS_REVIEW],
+      ["다시 캡처 필요", counts.NEEDS_RECAPTURE], ["충돌", counts.CONFLICT],
     ];
-    refs.summary.replaceChildren(...values.map(([label, value]) => {
-      const cell = node("div", "trade-final-review-summary-item");
-      cell.append(node("span", "", label), node("strong", "", value));
-      return cell;
-    }));
+    const secondary = [
+      ["캡처", rawEvidence.captures.length], ["원본 행", rawEvidence.sourceRows.length],
+      ["자동 검증", counts.FINAL_READY], ["잘린 영역", projection.edgeWorkItems.length],
+    ];
+    const group = (className, label, values) => {
+      const section = node("section", className);
+      section.setAttribute("aria-label", label);
+      for (const [name, value] of values) {
+        const cell = node("div", "trade-final-review-summary-item");
+        cell.dataset.metric = name;
+        cell.append(node("span", "", name), node("strong", "", value));
+        section.append(cell);
+      }
+      return section;
+    };
+    refs.summary.replaceChildren(group("trade-final-review-summary-primary", "주요 결과", primary),
+      group("trade-final-review-summary-details", "세부 정보", secondary));
   }
   function summarizeRow(row) {
     const values = Object.fromEntries(row.fields.map((field) => [field.field, field.finalValue]));
@@ -372,13 +383,13 @@ export async function mountTradeFinalReview(input) {
     const state = rowState.get(row.projectionRowId);
     const title = node("div", "trade-final-review-fields-heading");
     title.append(node("h3", "", `행 ${projection.rows.indexOf(row) + 1}`), node("span", `trade-final-review-badge status-${row.classification}`, STATUS[row.classification] ?? "확인 필요"));
-    if (row.classification === "FINAL_READY") {
+    if (row.classification !== "NEEDS_RECAPTURE") {
       title.append(button(state.editing ? "수정 마치기" : "수정하기", "toggle-edit"));
     }
     refs.fields.append(title);
     const statusReasons = row.classificationReasons.map(reasonLabel).join(" ");
     if (statusReasons) refs.fields.append(node("p", "trade-final-review-reasons", statusReasons));
-    if (row.classification === "FINAL_READY") refs.fields.append(node("p", "trade-final-review-ready-note", "자동 검증을 통과한 최종 후보입니다. 수정하지 않아도 목록 확인에 포함됩니다."));
+    if (row.classification === "FINAL_READY") refs.fields.append(node("p", "trade-final-review-ready-note", "현재 기준에서 추가 확인이 필요하지 않은 상태입니다. 사람 정답으로 독립 검증되었다는 뜻은 아닙니다."));
     for (const field of row.fields) renderField(field, row, state, token);
     renderRowDisposition(row, state);
     const diagnostic = node("details", "trade-final-review-diagnostics");
@@ -392,11 +403,11 @@ export async function mountTradeFinalReview(input) {
     wrapper.dataset.field = field.field;
     const heading = node("div", "trade-final-review-field-heading");
     heading.append(node("h4", "", LABELS[field.field]));
-    if (field.valueState === "CONFLICT") heading.append(node("span", "trade-final-review-badge status-CONFLICT", "서로 다른 결과 확인 필요"));
+    if (field.valueState === "CONFLICT") heading.append(node("span", "trade-final-review-badge status-CONFLICT", "결과 충돌 · 확인 필요"));
     else if (field.riskReasons.length) heading.append(node("span", "trade-final-review-badge", "확인 사유 있음"));
     wrapper.append(heading);
     const locked = row.classification === "NEEDS_RECAPTURE" || state.disposition === "RECAPTURE_REQUIRED";
-    const editable = !locked && (row.classification !== "FINAL_READY" || state.editing);
+    const editable = !locked && state.editing;
     if (NUMERIC[field.field]) {
       const label = node("label", "trade-final-review-input-label", "최종 값");
       const input = node("input", "trade-final-review-input");
@@ -620,7 +631,7 @@ export async function mountTradeFinalReview(input) {
       const completion = buildFinalReviewCompletion({ ...completionInput(), confirmedAt });
       await onConfirm(completion);
       completed = true;
-      setMessage("최종 목록 확인이 완료되었습니다.");
+      setMessage("검수 완료. 다음 단계에서 검수 자료를 저장하고 회차 적용을 선택할 수 있습니다.");
     } catch (error) {
       setMessage(error instanceof Error && error.message === "확인 시각은 UTC RFC3339 형식이어야 합니다."
         ? error.message : "결과를 처리하지 못했습니다. 다시 시도해 주세요.", true);
@@ -667,7 +678,7 @@ export async function mountTradeFinalReview(input) {
       const fieldName = actionButton.dataset.field; const index = Number(actionButton.dataset.index);
       const alternative = row.fields.find((field) => field.field === fieldName)?.alternatives[index];
       const fieldState = state.fields.get(fieldName);
-      if (alternative && fieldState && !fieldState.unknown) { fieldState.value = alternative.value; fieldState.editing = true; renderSelected(); }
+      if (alternative && fieldState && !fieldState.unknown) { fieldState.value = alternative.value; state.editing = true; renderSelected(); }
       return;
     }
     if (action === "exclude-row" && row && state) { state.disposition = "EXCLUDE"; state.reasonError = false; renderSelected(); return; }

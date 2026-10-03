@@ -147,13 +147,13 @@ try {
   };
   await addCaptures(90);
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]')?.textContent && !document.querySelector('[data-role=trade-recognition-status]').textContent.includes('로컬 인식 중')"),"Master failure settled");
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]')?.textContent && !document.querySelector('[data-role=trade-recognition-status]').textContent.includes('이미지를 분석하고 있습니다')"),"Master failure settled");
   const masterFailureStatus=await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent");
   assert.match(masterFailureStatus,/활성 Master/,JSON.stringify({status:masterFailureStatus,ui:await evaluate("window.__act1"),runtime:await(await fetch(`${baseUrl}__test__/state`)).json()}));
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"),"2");
   assert.deepEqual(await (await fetch(`${baseUrl}__test__/state`)).json(),{v1:0,v2:0,mode:"error"});
   await evaluate("window.__act1.blockMaster=false;document.querySelector('[data-action=recognize-trade]').click()");
-  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]')?.textContent && !document.querySelector('[data-role=trade-recognition-status]').textContent.includes('로컬 인식 중')"),"v2 error settled");
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]')?.textContent && !document.querySelector('[data-role=trade-recognition-status]').textContent.includes('이미지를 분석하고 있습니다')"),"v2 error settled");
   let runtimeState=await(await fetch(`${baseUrl}__test__/state`)).json();assert.equal(runtimeState.v1,0);assert.equal(runtimeState.v2,1);
   assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"),/실패/);
   assert.equal(await evaluate("window.__act1.v1"),0);assert.equal(await evaluate("window.__act1.observationBodies.length"),0);
@@ -162,15 +162,36 @@ try {
   await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
   await waitFor(async()=>evaluate("document.querySelector('.trade-final-review-shell') && document.querySelector('#trade-recognition-review-dialog')?.open"),"FinalReview3 primary mount");
   assert.equal(await evaluate("window.__act1.v2"),2);assert.equal(await evaluate("window.__act1.v1"),0);
-  assert.equal(await evaluate("document.querySelectorAll('.trade-final-review-summary-item')[0].innerText.includes('2')"),true);
-  assert.equal(await evaluate("document.querySelectorAll('.trade-final-review-summary-item')[1].innerText.includes('6')"),true);
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-primary [data-metric=\"최종 행\"] strong').textContent"),"4");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-details [data-metric=\"캡처\"] strong').textContent"),"2");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-details [data-metric=\"원본 행\"] strong').textContent"),"6");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-summary-primary [data-metric=\"충돌\"] strong').textContent"),"1");
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-title-row').innerText.includes('물교 최종 검수')"),true);
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-confirmation').innerText.includes('회차에는 아직 적용되지 않습니다')"),true);
+  assert.equal(await evaluate("document.querySelector('.trade-final-review-dialog-heading button').getBoundingClientRect().width"),0,"duplicate shell close control is visually hidden");
   const summaryText=await evaluate("JSON.stringify([...document.querySelectorAll('.trade-final-review-summary-item')].map(x=>x.innerText))").then(JSON.parse);
   assert.ok(summaryText.some((text)=>text.includes("최종 행")&&text.includes("4")),JSON.stringify(summaryText));
+  assert.equal(await evaluate("document.querySelector('#trade-capture-title').textContent"),"물교 화면 가져오기");
+  assert.equal(await evaluate("document.querySelector('#trade-recognition-title').textContent"),"물교 결과 만들기");
+  assert.equal(await evaluate("document.querySelector('[data-action=recognize-trade]').textContent"),"인식 결과 만들기");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-queue-summary]').textContent.includes('준비된 이미지 2개')"),true);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-final-result-summary]').hidden"),false);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-final-result-summary]').innerText.includes('최종 결과 준비됨')"),true);
+  assert.equal(await evaluate("document.querySelector('[data-action=open-trade-review]').textContent"),"최종 검수 다시 열기");
   const currentActive=(await(await fetch(`${baseUrl}api/master/active`)).json()).activeRegistryVersion;
   assert.equal(currentActive,bundleA.registryVersion);
   const publishedB=await publishBundle(bundleB,bundleA.registryVersion);
   assert.notEqual(bundleB.registryVersion,bundleA.registryVersion);
   assert.equal(await evaluate("window.__act1.masterGets"),3,"one failed plus one pin per successful/attempted recognition; review must not re-fetch active Master");
+
+  await evaluate("document.querySelector('.trade-final-review-shell [data-action=close]').click()");
+  await waitFor(async()=>evaluate("!document.querySelector('#trade-recognition-review-dialog')?.open"),"close final review without clearing source");
+  await evaluate("document.querySelector('#open-trade-capture').click()");
+  await waitFor(async()=>evaluate("document.querySelector('#trade-capture-dialog')?.open"),"return to capture and reopen review");
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"),"2","closing review retains queued capture images");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-final-result-summary]').hidden"),false,"closing review retains final result summary");
+  await evaluate("document.querySelector('[data-action=open-trade-review]').click()");
+  await waitFor(async()=>evaluate("document.querySelector('#trade-recognition-review-dialog')?.open"),"reopen retained FinalReview3");
 
   const rows=await evaluate("JSON.stringify([...document.querySelectorAll('.trade-final-review-list-item')].map(x=>({id:x.dataset.itemId,text:x.innerText})))").then(JSON.parse);
   const conflict=rows.find((row)=>row.text.includes('해상 전투 식량'));
@@ -199,6 +220,8 @@ try {
   await waitFor(async()=>evaluate("window.__act1.observationBodies.length===2 && document.querySelector('[data-action=apply-reviewed-new]')"),"saved Observation3 and DTO refresh");
   assert.equal(await evaluate("window.__act1.observationBodies[0]===window.__act1.observationBodies[1]"),true,"retry reuses exact immutable Observation3 body");
   assert.equal(await evaluate("Boolean(document.querySelector('[data-action=apply-reviewed-new]'))"),true,"v3 DTO control is present after save");
+  assert.equal(await evaluate("document.querySelector('.trade-review-storage-status').textContent.includes('검수 자료 저장 완료')"),true,"evidence save has its own completion wording");
+  assert.equal(await evaluate("document.querySelector('.trade-review-session-note').textContent.includes('회차에는 아직 적용되지 않습니다')"),true,"evidence save is distinguished from session apply");
   const receipt=await evaluate("JSON.stringify(window.__act1.receipt)").then(JSON.parse);
   const stored=await(await fetch(`${baseUrl}api/recognition/trade-review-observations/${receipt.observationId}`)).json();
   assert.equal(stored.ok,true);
@@ -219,7 +242,7 @@ try {
   await evaluate("document.querySelector('[data-action=apply-reviewed-new]').click()");
   await waitFor(async()=>evaluate("document.querySelector('[data-action=commit-session-stage]')?.hidden===false"),"NEW stage ready");
   await evaluate("document.querySelector('[data-action=commit-session-stage]').click()");
-  try { await waitFor(async()=>evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent.includes('APPLIED')"),"NEW DB-first commit and readback",15000); }
+  try { await waitFor(async()=>evaluate("document.querySelector('[data-role=session-apply-status]')?.dataset.state==='APPLIED'"),"NEW DB-first commit and readback",15000); }
   catch(error) { throw new Error(`${error.message}; session=${await evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent")}; job=${await evaluate("JSON.stringify(document.querySelector('.trade-review-session-apply')?.innerText)")}`); }
   const firstReceipt=await evaluate("JSON.stringify(window.__act1.receipt)").then(JSON.parse);
   const firstBootstrap=await(await fetch(`${baseUrl}api/bootstrap`)).json();
@@ -252,7 +275,7 @@ try {
   try { await waitFor(async()=>evaluate("document.querySelector('[data-action=commit-session-stage]')?.hidden===false"),"APPEND stage ready"); }
   catch(error) { throw new Error(`${error.message}; status=${await evaluate("JSON.stringify({apply:document.querySelector('[data-role=session-apply-status]')?.textContent,buttons:[...document.querySelectorAll('[data-action^=apply-reviewed]')].map(b=>[b.dataset.action,b.disabled,b.hidden]),stage:document.querySelector('[data-action=commit-session-stage]')?.hidden,job:document.querySelector('.trade-review-session-apply')?.innerText,review:document.querySelector('#trade-final-review-dialog')?.open})")}`); }
   await evaluate("document.querySelector('[data-action=commit-session-stage]').click()");
-  await waitFor(async()=>evaluate("document.querySelector('[data-role=session-apply-status]')?.textContent.includes('APPLIED')"),"APPEND DB-first commit and readback",45000);
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=session-apply-status]')?.dataset.state==='APPLIED'"),"APPEND DB-first commit and readback",45000);
   const secondReceipt=await evaluate("JSON.stringify(window.__act1.receipt)").then(JSON.parse);
   const appendedBootstrap=await(await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.equal(appendedBootstrap.workingSession?.diagnostics?.mode,"APPEND");

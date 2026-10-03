@@ -45,6 +45,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const tradeRoiReset = tradeDialog.querySelector("[data-action='reset-trade-roi']");
   const tradeRecognitionButton = tradeDialog.querySelector("[data-action='recognize-trade']");
   const tradeRuntimeStatus = tradeDialog.querySelector("[data-role='trade-runtime-status']");
+  const tradeQueueSummary = tradeDialog.querySelector("[data-role='trade-queue-summary']");
   const tradeRecognitionStatus = tradeDialog.querySelector("[data-role='trade-recognition-status']");
   const tradeRecognitionRegion = tradeDialog.querySelector("[data-role='trade-recognition']");
   const tradeRecognitionResultRegion = tradeDialog.querySelector("[data-role='trade-recognition-result']");
@@ -52,15 +53,25 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const tradeReviewRoot = tradeReviewDialog.querySelector("[data-role='trade-review-workspace']");
   const reviewLauncher = document.createElement("button");
   reviewLauncher.type = "button";
-  reviewLauncher.textContent = "검수 창 열기";
+  reviewLauncher.textContent = "최종 검수 열기";
   reviewLauncher.dataset.action = "open-trade-review";
-  tradeRecognitionResultRegion.append(reviewLauncher);
+  const finalResultSummary = document.createElement("section");
+  finalResultSummary.className = "trade-final-result-summary";
+  finalResultSummary.dataset.role = "trade-final-result-summary";
+  finalResultSummary.hidden = true;
+  tradeRecognitionResultRegion.append(finalResultSummary, reviewLauncher);
   const reviewStorage = document.createElement("section");
   reviewStorage.className = "trade-review-storage";
+  const evidenceHeading = document.createElement("h3");
+  evidenceHeading.textContent = "1. 검수 자료 저장";
   const reviewStatus = document.createElement("p");
+  reviewStatus.className = "trade-review-storage-status";
   reviewStatus.setAttribute("role", "status");
   reviewStatus.setAttribute("aria-live", "polite");
-  reviewStorage.append(reviewStatus);
+  const sessionNotApplied = document.createElement("p");
+  sessionNotApplied.className = "trade-review-session-note";
+  sessionNotApplied.textContent = "검수 자료가 저장되어도 회차에는 아직 적용되지 않습니다.";
+  reviewStorage.append(evidenceHeading, reviewStatus, sessionNotApplied);
   new MutationObserver(() => { reviewStatus.textContent = tradeRecognitionStatus.textContent; }).observe(tradeRecognitionStatus, { childList: true, characterData: true, subtree: true });
   const resizeTradeReviewDialog = () => {
     const scale = Number(getComputedStyle(document.body).zoom) || 1;
@@ -157,26 +168,43 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const saved = tradeSavedObservation;
     if (!saved) { sessionApplyPanel.hidden = true; return; }
     sessionApplyPanel.hidden = false;
-    const title = document.createElement("h3"); title.textContent = "검수한 물교를 회차에 반영";
+    const title = document.createElement("h3"); title.textContent = "2. 회차 적용 선택";
     const status = document.createElement("p"); status.dataset.role = "session-apply-status";
     const retry = document.createElement("button"); retry.type = "button"; retry.dataset.action = "retry-session-commit";
     const checkAgain = document.createElement("button"); checkAgain.type = "button"; checkAgain.dataset.action = "retry-session-readback";
     const reset = document.createElement("button"); reset.type = "button"; reset.dataset.action = "cancel-session-stage"; reset.textContent = "적용 준비 취소";
-    const commit = document.createElement("button"); commit.type = "button"; commit.dataset.action = "commit-session-stage"; commit.textContent = "이 내용으로 회차 저장";
+    const commit = document.createElement("button"); commit.type = "button"; commit.dataset.action = "commit-session-stage"; commit.textContent = "3. 이 내용으로 회차 저장";
     const controls = document.createElement("div"); controls.className = "trade-review-session-controls";
     const newButton = document.createElement("button"); newButton.type = "button"; newButton.dataset.action = "apply-reviewed-new"; newButton.textContent = "새 회차로 적용";
     const appendButton = document.createElement("button"); appendButton.type = "button"; appendButton.dataset.action = "apply-reviewed-append"; appendButton.textContent = "현재 회차에 추가";
     const batch = reviewedBatch;
     let message = "저장된 검수 자료를 확인하는 중입니다.";
+    let batchErrorDetails = [];
     if (batch) {
-      if (batch.batchErrors?.length) message = `최종 DTO를 만들 수 없어 회차 적용을 막았습니다: ${batch.batchErrors.map((item) => typeof item === "string" ? item : (item.code ?? item.detail ?? JSON.stringify(item))).join(", ")}`;
-      else if (batch.status === "NOT_READY") message = `보류 ${batch.heldRows.length}행이 남아 있습니다. 해당 행을 직접 제외하거나 검수 자료를 다시 확인하세요.`;
+      if (batch.batchErrors?.length) {
+        message = "저장된 검수 자료를 회차에 사용할 수 없습니다. 검수 내용을 다시 확인해 주세요.";
+        batchErrorDetails = batch.batchErrors.map((item) => typeof item === "string" ? item : (item.code ?? item.detail ?? JSON.stringify(item)));
+      }
+      else if (batch.status === "NOT_READY") message = `확인이 끝나지 않은 행 ${batch.heldRows.length}개가 남아 있습니다. 직접 제외하거나 검수 자료를 다시 확인하세요.`;
       else if (batch.summary.outputRowCount === 0) message = "적용할 물교 행이 없습니다.";
       else message = `검수 ${batch.summary.reviewedRowCount}행 · 최종 목록 ${batch.summary.outputRowCount}행 · 명시 제외 ${batch.summary.explicitlyExcludedRowCount}행 · 중복 통합 ${batch.coverage.duplicateCollapsedRowCount}행`;
     }
     if (sessionCommitJob?.status === "READY") message = `${sessionCommitJob.mode === "NEW" ? "새 회차" : "현재 회차에 추가"} 준비 완료 · 추가 ${sessionCommitJob.stage.summary.appendedRowCount}행 · 기존 중복 제외 ${sessionCommitJob.stage.summary.existingDuplicateSkippedCount}행`;
-    else if (sessionCommitJob) message = `회차 적용 상태: ${sessionCommitJob.status}`;
+    else if (sessionCommitJob) message = ({ COMMIT_PENDING: "회차에 저장하고 있습니다.", COMMIT_RESPONSE_UNKNOWN: "저장 응답을 확인하지 못했습니다. 같은 요청으로 재시도할 수 있습니다.",
+      COMMIT_CONFIRMED_READBACK_PENDING: "저장 결과를 다시 확인하고 있습니다.", APPLIED: "회차에 저장했고 다시 읽어 확인했습니다.",
+      NO_CHANGE: "현재 회차와 같아 변경하지 않았습니다.", STALE: "회차가 변경되어 적용을 멈췄습니다. 최신 내용을 확인해 주세요.",
+      FAILED: "회차 저장에 실패했습니다. 검수 자료는 보존되어 있습니다." })[sessionCommitJob.status] ?? "회차 적용 상태를 확인해 주세요.";
     status.textContent = message;
+    if (sessionCommitJob?.status) status.dataset.state = sessionCommitJob.status;
+    else delete status.dataset.state;
+    let errorDetailsNode = null;
+    if (batchErrorDetails.length) {
+      errorDetailsNode = document.createElement("details");
+      const summary = document.createElement("summary"); summary.textContent = "오류 진단 보기";
+      const list = document.createElement("ul");
+      for (const detail of batchErrorDetails) { const item = document.createElement("li"); item.textContent = detail; list.append(item); }
+      errorDetailsNode.append(summary, list);
+    }
     const decisionRows = batch && !batch.batchErrors?.length
       ? [...(batch.heldRows || []).map((row) => ({ ...row, excluded: false })), ...(batch.excludedRows || []).map((row) => ({ ...row, excluded: true }))] : [];
     if (decisionRows.length) {
@@ -191,13 +219,14 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
           else reviewedExclusions.delete(row.projectionRowId);
           void refreshReviewedBatch();
         });
-        const reasonText = (row.heldReasons || []).map((item) => item.code).join(", ") || "확인 필요";
+        const reasonText = row.heldReasons?.length ? "적용 전에 확인할 사유가 있습니다" : "확인 필요";
         const values = row.humanFinalValues || {};
         const summary = [values.island, values.fromItem, values.toItem, values.reqAmount, values.count, values.yield].map((value) => value ?? "모름").join(" · ");
         label.append(checkbox, document.createTextNode(` 최종 회차에서 제외 · ${reasonText} · ${summary}`));
         sessionApplyPanel.append(label);
       }
     } else sessionApplyPanel.append(title, status);
+    if (errorDetailsNode) sessionApplyPanel.append(errorDetailsNode);
     const ready = batch?.status === "READY" && !(batch.batchErrors?.length) && batch.summary.outputRowCount > 0 && !sessionCommitJob;
     newButton.disabled = !ready || sessionCommitInFlight || window.__bdoScheduleRuntime?.pending;
     appendButton.disabled = !ready || !state.workingSession || sessionCommitInFlight || window.__bdoScheduleRuntime?.pending;
@@ -248,7 +277,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       window.__bdoScheduleRuntime?.setExternalSessionMutationPending(false);
       window.__bdoRenderAll?.();
       renderSessionApplyPanel();
-      updateSessionApplyStatus("저장된 회차를 다시 읽어 확인하고 화면에 적용했습니다. 검수 evidence는 변경하지 않았습니다.");
+      updateSessionApplyStatus("회차에 저장했고 다시 읽어 확인했습니다. 검수 자료는 그대로 보존됩니다.");
     } catch (error) {
       if (error.readbackMismatch) {
         job.status = "FAILED";
@@ -385,7 +414,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       reviewedExclusions = new Map();
       renderSessionApplyPanel();
       void refreshReviewedBatch();
-      setTradeStorageStatus("검수 내용이 로컬 evidence 저장소에 기록됐습니다. 회차 목록에는 적용되지 않았습니다.", { download: true });
+      setTradeStorageStatus("검수 자료 저장 완료. 회차에는 아직 적용되지 않았습니다.", { download: true });
       await postSelectedTradeCrops(job);
     } catch {
       setTradeStorageStatus("저장 응답을 확인하지 못했습니다. 같은 요청 ID와 내용으로 재시도하거나 자료를 내려받으세요.", { retry: true, download: true });
@@ -437,7 +466,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       } else {
         tradeObservationJob = null;
         if (job.payload.schemaVersion === 3) tradeFinalFlow?.sourceEvidence?.clear?.();
-        setTradeStorageStatus("검수와 선택된 원본 영역 저장이 완료됐습니다. 회차 목록에는 적용되지 않았습니다.", { download: true });
+        setTradeStorageStatus("검수 자료와 선택한 원본 영역 저장 완료. 회차에는 아직 적용되지 않았습니다.", { download: true });
       }
     } catch {
       setTradeStorageStatus("검수 내용은 저장됐지만 원본 영역을 만들지 못했습니다. 같은 선택 영역 저장을 재시도할 수 있습니다.", { retry: true, download: true });
@@ -466,6 +495,31 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeRoiBox.style.height = `${tradeRoi.height * content.height}px`;
     tradeRoiBox.dataset.normalized = JSON.stringify(tradeRoi);
   };
+
+  const renderFinalResultSummary = (projection) => {
+    const counts = Object.fromEntries(["FINAL_READY", "NEEDS_REVIEW", "NEEDS_RECAPTURE", "CONFLICT"]
+      .map((status) => [status, projection.rows.filter((row) => row.classification === status).length]));
+    finalResultSummary.replaceChildren();
+    const title = document.createElement("strong");
+    title.textContent = "최종 결과 준비됨";
+    const values = [
+      ["최종 결과", projection.rows.length],
+      ["확인 필요", counts.NEEDS_REVIEW],
+      ["다시 캡처 필요", counts.NEEDS_RECAPTURE],
+      ["충돌", counts.CONFLICT],
+    ];
+    const metrics = document.createElement("dl");
+    metrics.className = "trade-final-result-metrics";
+    for (const [label, value] of values) {
+      const item = document.createElement("div");
+      const name = document.createElement("dt"); name.textContent = label;
+      const count = document.createElement("dd"); count.textContent = String(value);
+      item.append(name, count); metrics.append(item);
+    }
+    finalResultSummary.append(title, metrics);
+    finalResultSummary.hidden = false;
+    reviewLauncher.textContent = "최종 검수 다시 열기";
+  };
   const initializeRoi = () => {
     if (!roiInitialized && tradePreview.videoWidth > 0 && tradePreview.videoHeight > 0) {
       tradeRoi = { ...DEFAULT_TRADE_ROI };
@@ -475,6 +529,12 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
 
   const renderTradeRecognitionResult = () => {
+    if (tradeFinalFlow && !legacyReviewFirstCompatibility) {
+      tradeRecognitionResultRegion.hidden = false;
+      finalResultSummary.hidden = false;
+      reviewLauncher.textContent = "최종 검수 다시 열기";
+      return Promise.resolve({ status: "mounted" });
+    }
     if (tradeRecognitionResult && tradeReviewForResult === tradeRecognitionResult) {
       tradeRecognitionResultRegion.hidden = false;
       if (tradeReviewController) return Promise.resolve({ status: "mounted" });
@@ -489,6 +549,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeReviewRoot.replaceChildren();
     tradeRecognitionResultRegion.hidden = !tradeRecognitionResult;
     if (!tradeRecognitionResult) {
+      finalResultSummary.hidden = true;
       tradeReviewRoot.hidden = true;
       if (tradeReviewDialog.open) tradeReviewDialog.close();
       // Keep the immutable persistence job available after queue invalidation.
@@ -544,7 +605,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       }
       tradeReviewController = controller;
       reviewRoot.querySelector(".trade-review-main").append(reviewStorage);
-      reviewLauncher.textContent = `인식 결과 ${controller.projection.rows.length}행 준비됨 · 검수 창 열기`;
+      reviewLauncher.textContent = `인식 결과 ${controller.projection.rows.length}행 · 검수 창 열기`;
       openReviewDialog();
       return { status: "mounted" };
     }).catch((error) => {
@@ -586,7 +647,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
   const updateRecognitionControls = () => {
     tradeRecognitionButton.disabled = tradeRecognitionPending || Boolean(tradeObservationJob) || !tradeRuntimeAvailable || tradeQueue.length === 0;
-    tradeRecognitionButton.textContent = tradeRecognitionPending ? "로컬 인식 중…" : "로컬 인식 실행";
+    tradeRecognitionButton.textContent = tradeRecognitionPending ? "인식 결과 만드는 중…" : "인식 결과 만들기";
     tradeRecognitionButton.setAttribute("aria-busy", String(tradeRecognitionPending));
     tradeRecognitionRegion.setAttribute("aria-busy", String(tradeRecognitionPending));
     tradeScreenCaptureButton.disabled = tradeRecognitionPending || screenSession.state !== "CONNECTED" || !tradeDialog.open;
@@ -641,24 +702,24 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       item.dataset.batchId = capture.metadata.batchId ?? "";
       if (capture.regionEvidence) item.dataset.regionEvidence = JSON.stringify(capture.regionEvidence);
       const image = document.createElement("img");
-      image.alt = "물교 이미지 초안 미리보기";
+      image.alt = "물교 캡처 이미지 미리보기";
       image.src = tradePreviews.create(capture.blob);
       const details = document.createElement("div");
       details.className = "capture-draft-details";
       const heading = document.createElement("strong");
-      const regionLabel = capture.regionEvidence ? "선택 영역" : "이미지 초안";
+      const regionLabel = capture.regionEvidence ? "선택 영역" : "캡처 이미지";
       heading.textContent = `${regionLabel} · ${capture.metadata.frame.width}×${capture.metadata.frame.height}`;
       const meta = document.createElement("span");
       const sourceLabel = capture.metadata.sourceType === "clipboard" ? "클립보드" : capture.metadata.sourceType === "browser-stream" ? "화면" : "파일";
       meta.textContent = `${sourceLabel} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`;
       const status = document.createElement("span");
       status.className = "capture-draft-state";
-      status.textContent = "초안 · 인식 미실행";
+      status.textContent = "인식 대기";
       details.append(heading, meta, status);
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "제거";
-      remove.setAttribute("aria-label", "물교 이미지 초안 제거");
+      remove.setAttribute("aria-label", "물교 캡처 이미지 제거");
       remove.disabled = tradeRecognitionPending;
       remove.addEventListener("click", () => {
         if (tradeRecognitionPending) return;
@@ -666,7 +727,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         if (tradeQueue.items.every((item) => item.metadata.sourceType !== "browser-stream")) tradeBatchId = null;
         tradeQueueRevision += 1;
         invalidateRecognitionResult();
-        tradeStatus.textContent = "이미지 초안을 제거했습니다.";
+        tradeStatus.textContent = "캡처 이미지를 제거했습니다.";
         renderTradeQueue();
       });
       item.append(image, details, remove);
@@ -674,6 +735,13 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     }
     tradeDialog.dataset.queueLength = String(tradeQueue.length);
     tradeDialog.dataset.queueBytes = String(tradeQueue.bytes);
+    const sourceCounts = tradeQueue.items.reduce((counts, capture) => {
+      const key = capture.metadata.sourceType === "browser-stream" ? "화면" : capture.metadata.sourceType === "clipboard" ? "붙여넣기" : "파일";
+      counts[key] = (counts[key] ?? 0) + 1;
+      return counts;
+    }, {});
+    const sourceSummary = Object.entries(sourceCounts).map(([name, count]) => `${name} ${count}`).join(" · ");
+    tradeQueueSummary.textContent = `준비된 이미지 ${tradeQueue.length}개${sourceSummary ? ` · ${sourceSummary}` : ""}`;
     tradeClearButton.disabled = tradeRecognitionPending || tradeQueue.length === 0;
     updateRecognitionControls();
   };
@@ -683,7 +751,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeQueueRevision += 1;
     invalidateRecognitionResult();
     renderTradeQueue();
-    tradeStatus.textContent = `${captures.length}개 이미지를 초안으로 보관했습니다. 인식이나 물교 목록 생성은 수행하지 않았습니다.`;
+    tradeStatus.textContent = `${captures.length}개 이미지를 추가했습니다. 인식은 아직 실행되지 않았습니다.`;
   };
 
   const renderScreenState = ({ state: screenState = screenSession.state, reason = screenSession.reason } = {}) => {
@@ -745,7 +813,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     try {
       const capture = await screenSession.captureRegion(captureContext("trade"), tradeRoi, tradeBatchId);
       appendTradeCaptures([capture]);
-      tradeStatus.textContent = `선택 영역 ${capture.metadata.frame.width}×${capture.metadata.frame.height}을 초안으로 보관했습니다. 인식은 실행하지 않았습니다.`;
+      tradeStatus.textContent = `선택 영역 ${capture.metadata.frame.width}×${capture.metadata.frame.height}을 추가했습니다. 인식은 아직 실행되지 않았습니다.`;
     } catch (error) {
       tradeStatus.textContent = explain(error);
       if (tradeQueue.items.every((item) => item.metadata.sourceType !== "browser-stream")) tradeBatchId = null;
@@ -771,7 +839,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const requestRevision = tradeQueueRevision;
     const captures = [...tradeQueue.items];
     tradeRecognitionPending = true;
-    tradeRecognitionStatus.textContent = "로컬 인식 중… 대기 이미지는 유지됩니다.";
+    finalResultSummary.hidden = true;
+    tradeRecognitionStatus.textContent = "이미지를 분석하고 있습니다. 준비된 이미지는 유지됩니다.";
     updateRecognitionControls();
     renderTradeQueue();
     try {
@@ -854,12 +923,12 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeReviewController = finalFlow.reviewController;
       tradeReviewRoot.hidden = false;
       tradeReviewRoot.append(reviewStorage);
-      reviewLauncher.textContent = `최종 인식 결과 ${finalFlow.pipeline.projection.rows.length}행 · 검수 창 열기`;
+      renderFinalResultSummary(finalFlow.pipeline.projection);
       tradeRecognitionResultRegion.hidden = false;
       openReviewDialog();
       tradeRecognitionStatus.textContent = finalFlow.rawEvidence.sourceRows.length === 0
         ? "인식은 완료했지만 완전한 물교 행이 없습니다. 경계 후보와 원본을 확인해 주세요."
-        : "최종 보정 결과를 검수 창에 표시했습니다. 회차 목록에는 아직 적용되지 않았습니다.";
+        : "최종 검수 화면을 준비했습니다. 검수를 마친 뒤 검수 자료 저장과 회차 적용을 각각 진행할 수 있습니다.";
     } catch (error) {
       tradeRecognitionStatus.textContent = error?.message || "로컬 인식 요청에 실패했습니다. 대기 이미지는 유지했습니다.";
     } finally {
@@ -921,11 +990,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const files = [...(tradeInput.files ?? [])];
     tradeInput.value = "";
     if (tradeQueue.length + files.length > captureLimits.MAX_BATCH_FRAMES) {
-      tradeStatus.textContent = `대기 이미지는 최대 ${captureLimits.MAX_BATCH_FRAMES}개입니다. 기존 초안은 유지했습니다.`;
+      tradeStatus.textContent = `대기 이미지는 최대 ${captureLimits.MAX_BATCH_FRAMES}개입니다. 기존 이미지는 유지했습니다.`;
       return;
     }
     if (tradeQueue.bytes + files.reduce((sum, file) => sum + file.size, 0) > captureLimits.MAX_BATCH_BYTES) {
-      tradeStatus.textContent = "대기 이미지의 전체 용량은 20 MiB 이하여야 합니다. 기존 초안은 유지했습니다.";
+      tradeStatus.textContent = "대기 이미지의 전체 용량은 20 MiB 이하여야 합니다. 기존 이미지는 유지했습니다.";
       return;
     }
     for (const file of files) {

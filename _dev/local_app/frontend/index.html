@@ -40,7 +40,7 @@
       <details class="tier-rule-details"><summary>단계 규칙</summary><div id="tier-rules-root"></div></details>
     </section>
     <section class="panel session-panel" id="trade-session-panel">
-      <div class="panel-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="actions compact-actions"><button id="open-json-import" class="primary" type="button">JSON 입력</button><button id="open-trade-capture" type="button">이미지 초안</button><button id="add-manual-trade" type="button">행 추가</button><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></div>
+      <div class="panel-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="actions compact-actions"><button id="open-json-import" class="primary" type="button">JSON 입력</button><button id="open-trade-capture" type="button">물교 화면 가져오기</button><button id="add-manual-trade" type="button">행 추가</button><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></div>
       <div class="session-toolbar"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button><span id="trade-import-status" class="status-note" role="status"></span></div>
       <div id="trade-list-root" class="trade-list-scroll"></div>
     </section>
@@ -52,9 +52,9 @@
   </dialog>
 
   <dialog id="trade-capture-dialog" class="app-dialog small-dialog trade-capture-dialog" aria-labelledby="trade-capture-title" data-capture-context="trade">
-    <div class="dialog-titlebar"><h2 id="trade-capture-title">물교 이미지 초안</h2><button type="button" data-close-trade-capture aria-label="닫기">×</button></div>
+    <div class="dialog-titlebar"><h2 id="trade-capture-title">물교 화면 가져오기</h2><button type="button" data-close-trade-capture aria-label="닫기">×</button></div>
     <div class="dialog-body">
-      <p class="hint">화면을 연결한 뒤 물교 목록 영역에 박스를 맞추고 스크롤하면서 필요한 만큼 반복 캡처할 수 있습니다. 대기 이미지는 로컬에서 인식 초안으로 확인할 수 있으며, 검토 전까지 목록에 적용되지 않습니다.</p>
+      <p class="hint">화면을 연결하거나 파일·이미지를 가져온 뒤 물교 목록이 보이는 영역을 캡처하세요. 준비된 이미지는 인식 후 최종 검수할 수 있으며, 회차에는 직접 적용하기 전까지 반영되지 않습니다.</p>
       <section class="trade-roi-panel" aria-label="물교 화면 캡처 영역">
         <p class="capture-status" data-role="trade-preview-status" role="status" aria-live="polite">화면이 연결되지 않았습니다. 위의 ‘화면 연결’을 먼저 사용하세요.</p>
         <div class="trade-preview-stage" data-role="trade-preview-stage">
@@ -83,8 +83,8 @@
       <ol class="capture-draft-list" data-role="capture-list"></ol>
       <section class="trade-recognition-panel" data-role="trade-recognition" aria-labelledby="trade-recognition-title" aria-busy="false">
         <div class="trade-recognition-toolbar">
-          <div><h3 id="trade-recognition-title">인식 초안 검토</h3><p data-role="trade-runtime-status" role="status" aria-live="polite">로컬 인식 엔진 확인 전</p></div>
-          <button type="button" data-action="recognize-trade" disabled>로컬 인식 실행</button>
+          <div><h3 id="trade-recognition-title">물교 결과 만들기</h3><p data-role="trade-runtime-status" role="status" aria-live="polite">로컬 인식 엔진 확인 전</p><p class="trade-queue-summary" data-role="trade-queue-summary" aria-live="polite">준비된 이미지 0개</p></div>
+          <button type="button" data-action="recognize-trade" disabled>인식 결과 만들기</button>
         </div>
         <p data-role="trade-recognition-status" role="status" aria-live="polite"></p>
         <div data-role="trade-recognition-result" class="trade-recognition-result" hidden></div>
@@ -100,7 +100,7 @@
   </dialog>
 
   <dialog id="trade-final-review-dialog" class="trade-final-review-dialog" aria-labelledby="trade-final-review-title">
-    <div class="trade-final-review-dialog-heading"><h2 id="trade-final-review-title">물교 결과 확인</h2><button type="button" data-action="close" aria-label="검수 닫기">닫기</button></div>
+    <div class="trade-final-review-dialog-heading"><h2 id="trade-final-review-title">물교 최종 검수</h2><button type="button" data-action="close" aria-label="최종 검수 닫기">닫기</button></div>
     <div data-role="trade-final-review-root"></div>
   </dialog>
 

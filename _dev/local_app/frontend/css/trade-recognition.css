@@ -13,4 +13,24 @@
 .trade-recognition-evidence{margin:.55rem 0;color:#c1cad5}.trade-recognition-evidence ul{padding-left:1.2rem}
 .trade-recognition-actions{margin:.7rem 0}
 .trade-capture-dialog [data-action="recognize-trade"]{white-space:nowrap}
+.trade-capture-dialog .dialog-body{max-height:calc(100dvh - 4rem)}
+.trade-capture-dialog .trade-recognition-toolbar{border-top:1px solid #394354;padding-top:.65rem}
+.trade-queue-summary{margin:.2rem 0;color:#d7e0e9;font-size:.78rem}
+.trade-final-result-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.45rem;padding:.55rem .65rem;border:1px solid #41627a;border-radius:6px;background:#142637;color:#e7f3fc}
+.trade-final-result-summary[hidden]{display:none}
+.trade-final-result-metrics{display:flex;flex-wrap:wrap;gap:.25rem .8rem;margin:0}
+.trade-final-result-metrics>div{display:flex;gap:.3rem;align-items:baseline}
+.trade-final-result-metrics dt{color:#b8c8d8;font-size:.74rem}
+.trade-final-result-metrics dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+.trade-recognition-status{min-width:0}
+.trade-review-storage{display:grid;gap:.3rem;margin-top:.65rem;padding:.6rem;border:1px solid #3d5266;border-radius:6px;background:#152231}
+.trade-review-storage>h3,.trade-review-session-apply>h3{margin:.05rem 0;font-size:.85rem}
+.trade-review-storage-status,.trade-review-session-note{margin:0;color:#c8d5e2;font-size:.76rem}
+.trade-review-session-note{color:#f1dba5}
+.trade-review-session-apply{display:grid;gap:.35rem;margin-top:.35rem;padding:.55rem;border-top:1px solid #43576a}
+.trade-review-session-apply [data-role=session-apply-status]{margin:0;color:#d9e3ed;font-size:.76rem}
+.trade-review-session-controls{display:flex;flex-wrap:wrap;gap:.35rem}
+.trade-review-held-exclusion{overflow-wrap:anywhere}
+button:focus-visible,[role=tab]:focus-visible,summary:focus-visible{outline:2px solid #7dd3fc;outline-offset:2px}
 @media(max-width:650px){.trade-recognition-toolbar{align-items:flex-start;flex-direction:column}.trade-recognition-result{max-height:38vh}.trade-recognition-table{min-width:780px}}
+@media(max-width:600px){.trade-final-result-summary{grid-template-columns:1fr}.trade-final-result-summary .trade-final-result-metrics{gap:.25rem .55rem}.trade-capture-dialog .dialog-body{padding:.5rem}}
