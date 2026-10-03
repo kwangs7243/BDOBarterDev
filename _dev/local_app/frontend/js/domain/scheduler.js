@@ -30,7 +30,7 @@ function runAlgorithmAllModes(silent = false) {
         const _maxP   = parseInt(document.getElementById('maxParley')?.value)     || 0;
         const _normW  = parseInt(document.getElementById('normalWeight')?.value)  || 0;
         const _maxW   = parseInt(document.getElementById('maxWeight')?.value)     || 0;
-        const _perP   = APP_CONFIG.PARLEY_PER_TRADE || 0;
+        const _perP = Math.min(...vTrades.map(t => getItemTier(t.toItem) === 'coin' ? APP_CONFIG.CROW_PARLEY : APP_CONFIG.PARLEY_PER_TRADE).filter(cost => cost > 0));
 
         if (invalidYieldTrades.length > 0) {
             alert(`⚠️ 수율이 없거나 올바른 양의 정수가 아닌 교환 ${invalidYieldTrades.length}건은 계산에서 보류했습니다.\n\n교환 목록의 수율을 확인해 주세요.`);
@@ -58,8 +58,8 @@ function runAlgorithmAllModes(silent = false) {
             return;
         }
         // (4) 교섭력이 1회 교환 비용 이하 — 사실상 스케줄을 짤 만큼 교환 불가
-        if (_perP > 0 && _maxP <= _perP) {
-            alert(`⚖️ 교섭력이 부족합니다.\n\n현재 교섭력(${_maxP.toLocaleString()})이 1회 교환 비용(${_perP.toLocaleString()}) 이하라\n스케줄을 짤 만큼 교환할 수 없습니다.\n\n교섭력을 더 채우거나, 교환 1회 비용 설정을 확인해 주세요.`);
+        if (Number.isFinite(_perP) && _maxP < _perP) {
+            alert(`⚖️ 교섭력이 부족합니다.\n\n현재 교섭력(${_maxP.toLocaleString()})이 1회 교환 비용(${_perP.toLocaleString()})보다 적습니다.\n\n교섭력을 더 채우거나, 교환 1회 비용 설정을 확인해 주세요.`);
             return;
         }
         // (5) 무게 한계 미입력/0 — 짐을 실을 수 없음
@@ -83,13 +83,6 @@ function runAlgorithmAllModes(silent = false) {
         
         let effectiveCount = t.count;
         let __isRandomCoin = false; // 화이트리스트 밖 4회 까주(랜덤 발생) 플래그
-        if (toTier === 5 && fromTier === 4) {
-            if (effectiveCount >= 5) {
-                effectiveCount = 5; // 5회 이상 남았으면 딱 5회만 깔끔하게 교환!
-            } else {
-                effectiveCount = 0; // 1~4회 남은 찌꺼기는 가차 없이 버림 (스케줄에서 완전 배제)
-            }
-        }
         if (toTier === 'coin') {
             // 까주 횟수는 섬 기반 분류: 화이트리스트(명시 4섬 + 마고리아/isOcean)=1회, 그 외=4회
             const CROW_1X_ISLANDS = ['까마귀의 둥지','더코 섬','카슈마 섬','할마드 섬'];
@@ -100,7 +93,6 @@ function runAlgorithmAllModes(silent = false) {
                 _isOceanIsle = !!(_c && _c.isOcean);
             } catch (e) {}
             const _is1x = CROW_1X_ISLANDS.includes(_isl) || _isOceanIsle;
-            effectiveCount = _is1x ? 1 : 4;
             __isRandomCoin = !_is1x; // 화이트리스트 밖 = 4회 랜덤 까주
         }
 

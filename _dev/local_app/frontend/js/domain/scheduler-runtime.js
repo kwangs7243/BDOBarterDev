@@ -88,6 +88,22 @@ function wrapCompletion(original) {
       showToast("이전 완료의 재고 저장이 대기 중입니다. 재시도 버튼을 사용하세요.");
       return;
     }
+    syncLegacyState(window.__bdoAppState);
+    const count = trade.execC;
+    const cost = Number(document.getElementById(trade.isCoin ? "parleyCrow" : "parleyPerTrade").value);
+    const budget = Number(document.getElementById("maxParley").value);
+    const originalTrade = scannedTrades[trade.originalIndex ?? args[4]];
+    if (!Number.isSafeInteger(count) || count <= 0 || !Number.isSafeInteger(cost) || cost < 0
+        || !Number.isSafeInteger(budget) || budget < count * cost
+        || originalTrade && (originalTrade.deleted || originalTrade.count < count)) {
+      showToast("현재 교섭력 또는 남은 교환 횟수가 부족합니다. 스케줄을 다시 계산하세요.");
+      return;
+    }
+    if (trade.fromTier !== 0 && (!Number.isSafeInteger(inventory[trade.fromClean]?.stock)
+        || inventory[trade.fromClean].stock < count * trade.reqA)) {
+      showToast("소모품 재고가 부족합니다. 앞선 교환 완료 또는 창고 재고를 확인하세요.");
+      return;
+    }
     const before = Object.fromEntries(Object.entries(inventory).map(([name, item]) => [name, item.stock]));
     window.__bdoCompletionInvocationObserver?.("completeTrade");
     original.apply(this, args);

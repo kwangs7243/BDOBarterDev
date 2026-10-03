@@ -35,6 +35,19 @@ window.adjustTradeCount = function(e, mode, sortieIdx, tradeIdx, delta) {
     // 횟수 조정 (0 미만으로 떨어지는 것 방지)
     let newCount = Math.max(0, trade.execC + delta);
     if (newCount === trade.execC) return;
+    if (newCount > trade.execC) {
+        const remaining = scannedTrades[trade.originalIndex]?.count ?? trade.origC;
+        const others = arrRef.flatMap(s => s.trades).filter(t => t !== trade && !t.completed && !t.isWaypoint);
+        const allocated = others.filter(t => t.originalIndex === trade.originalIndex).reduce((n, t) => n + t.execC, 0);
+        const normalCost = Number(document.getElementById('parleyPerTrade').value);
+        const coinCost = Number(document.getElementById('parleyCrow').value);
+        const cost = t => t.isCoin ? coinCost : normalCost;
+        const total = others.reduce((n, t) => n + t.execC * cost(t), 0) + newCount * cost(trade);
+        if (allocated + newCount > remaining || total > Number(document.getElementById('maxParley').value)) {
+            showToast("남은 교환 횟수 또는 현재 교섭력을 초과해 늘릴 수 없습니다.");
+            return;
+        }
+    }
     trade.execC = newCount;
 
     // 1~4. 적재/교섭력/연쇄/무게/시간 재계산 + 재렌더 (경유지 isWaypoint 인지 — 공용 헬퍼)
