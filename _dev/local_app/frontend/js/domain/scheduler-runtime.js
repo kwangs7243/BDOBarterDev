@@ -99,7 +99,8 @@ function wrapCompletion(original) {
       showToast("현재 교섭력 또는 남은 교환 횟수가 부족합니다. 스케줄을 다시 계산하세요.");
       return;
     }
-    if (trade.fromTier !== 0 && (!Number.isSafeInteger(inventory[trade.fromClean]?.stock)
+    // The warehouse catalog tracks tiers 1-5; tier 6 cargo is outside that catalog.
+    if (trade.fromTier >= 1 && trade.fromTier <= 5 && (!Number.isSafeInteger(inventory[trade.fromClean]?.stock)
         || inventory[trade.fromClean].stock < count * trade.reqA)) {
       showToast("소모품 재고가 부족합니다. 앞선 교환 완료 또는 창고 재고를 확인하세요.");
       return;

@@ -25,6 +25,19 @@ function applyShipToSession(payload, setStatus) {
   window.__bdoRenderAll?.();
 }
 
+function applyParleyToSession(payload, setStatus) {
+  if (state.session.scannedTrades === null) return;
+  state.session.config ||= { ship: structuredClone(state.settings.ship), parley: structuredClone(state.settings.parley), tuning: structuredClone(state.settings.tuning) };
+  state.session.config.parley = structuredClone(payload);
+  window.dispatchEvent(new CustomEvent("bdo:session-changed"));
+  if (state.session.schedule && window.__bdoScheduleRuntime.generateSchedule(state, setStatus)) {
+    window.renderModeColumn?.("col-speed", state.session.schedule.speed, "speed");
+    window.renderModeColumn?.("col-balance", state.session.schedule.balance, "balance");
+  }
+  window.__bdoRenderAll?.();
+  setStatus("교환 비용을 이번 회차에 적용했습니다. 현재 교섭력은 유지했습니다.", "success");
+}
+
 export function renderTierRules(root, setStatus, refresh) {
   root.replaceChildren();
   const rules = state.settings.tierRules;
@@ -86,10 +99,16 @@ export function renderSettings(_root, setStatus, refresh) {
   });
 
   const parleyRoot = document.querySelector("#parley-root"); parleyRoot.replaceChildren();
-  parleyRoot.title = "영구 기본값이며 새 회차에 적용됩니다. 현재 회차에는 영향을 주지 않습니다.";
-  const parley = settings.parley; const parleyFields = node("div", "form-grid");
-  parleyFields.append(field("새 회차 기본", number("parley-budget", parley.defaultBudget)), field("일반 비용", number("parley-normal", parley.normalCost)), field("주화 비용", number("parley-crow", parley.crowCost)));
-  const saveParley = saveButton("저장", () => { try { persist("parley", { defaultBudget: readNumber("parley-budget"), normalCost: readNumber("parley-normal"), crowCost: readNumber("parley-crow") }, setStatus, "교섭력 설정", refresh); } catch (error) { setStatus(error.message, "error"); } });
+  parleyRoot.title = "새 회차 기본값은 다음 회차에 적용됩니다. 일반·주화 비용은 저장하면 현재 회차에도 적용됩니다.";
+  const parley = settings.parley; const activeParley = state.session.config?.parley ?? parley; const parleyFields = node("div", "form-grid");
+  parleyFields.append(field("새 회차 기본", number("parley-budget", parley.defaultBudget)), field("일반 비용", number("parley-normal", activeParley.normalCost)), field("주화 비용", number("parley-crow", activeParley.crowCost)));
+  const saveParley = saveButton("저장", async () => {
+    if (window.__bdoScheduleRuntime?.pending) { setStatus("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; }
+    try {
+      const payload = { defaultBudget: readNumber("parley-budget"), normalCost: readNumber("parley-normal"), crowCost: readNumber("parley-crow") };
+      if (await persist("parley", payload, setStatus, "교섭력 설정", refresh)) applyParleyToSession(payload, setStatus);
+    } catch (error) { setStatus(error.message, "error"); }
+  });
   parleyRoot.append(parleyFields, actionBar(saveParley));
 
   const presetsRoot = document.querySelector("#presets-root"); presetsRoot.replaceChildren();

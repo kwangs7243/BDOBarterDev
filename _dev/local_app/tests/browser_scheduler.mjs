@@ -132,6 +132,86 @@ try {
   const remainderCase=await evaluate(`(async()=>{const {state}=await import('/assets/js/state.js');await import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle());state.session.scannedTrades=[{island:'베이루와 섬',fromItem:'만병통치약',toItem:'팔각 문양 보관함',reqAmount:1,count:2,yield:1,disabled:false,deleted:false}];state.inventory.find(i=>i.programName==='만병통치약').stock=10;state.session.remainingParley=20000;window.__bdoScheduleRuntime.generateSchedule(state,()=>{});return state.session.schedule.speed.flatMap(s=>s.trades).reduce((n,t)=>n+t.execC,0)})()`);
   if(remainderCase!==2)throw Error('4->5 remaining trades dropped: '+remainderCase);
   const blocked=await evaluate(`(async()=>{const {state}=await import('/assets/js/state.js');await import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle());const s=state.session.schedule.speed[0],t=s.trades[0];const n=t.execC;window.adjustTradeCount({stopPropagation(){}},'speed',0,0,1);if(t.execC!==n)throw Error('manual increase exceeded current budget');document.querySelector('#remaining-parley').value=5000;document.querySelector('#remaining-parley').dispatchEvent(new Event('change'));await import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle());const before=await fetch('/api/bootstrap').then(r=>r.json());window.completeTrade(document.createElement('button'),'speed',0,0,t.originalIndex);await import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle());const after=await fetch('/api/bootstrap').then(r=>r.json());if(t.completed||before.revision!==after.revision||JSON.stringify(before.inventory)!==JSON.stringify(after.inventory)||state.session.remainingParley!==5000)throw Error('completion ignored edited current parley');return true})()`);
+  await evaluate(`import('/assets/js/state.js').then(({state})=>{
+    state.session.remainingParley=125000;window.__bdoRenderAll();
+    document.querySelector('#parley-budget').value=1500002;
+    document.querySelector('#parley-normal').value=10293;
+    document.querySelector('#parley-crow').value=15600;
+    document.querySelector('#parley-root button').click();
+  })`);
+  await waitFor(() => evaluate("window.__bdoAppState.session.config.parley.normalCost===10293 && window.__bdoAppState.session.config.parley.crowCost===15600"), "saved costs applied to active session");
+  await evaluate("import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle())");
+  await evaluate("document.querySelector('#ship-normal').value=22689;document.querySelector('#ship-max').value=40259;document.querySelector('#ship-speed').value=175;document.querySelector('#ship-root button').click()");
+  await waitFor(() => evaluate("window.__bdoAppState.session.config.ship.speed===175"), "saved ship applied to active session");
+  await evaluate("import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle())");
+  await send("Page.reload", { ignoreCache: true });
+  await waitFor(() => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false' && window.__bdoAppState?.session?.config?.ship?.speed===175"), "active settings restored");
+  const appliedSettings=await evaluate(`(()=>{
+    const s=window.__bdoAppState.session;
+    if(s.remainingParley!==125000 || s.config.parley.normalCost!==10293 || s.config.parley.crowCost!==15600
+       || Number(document.querySelector('#normalWeight').value)!==22689 || Number(document.querySelector('#maxWeight').value)!==40259
+       || window.APP_CONFIG.SHIP_SPEED!==175 || Number(document.querySelector('#parleyPerTrade').value)!==10293
+       || Number(document.querySelector('#parleyCrow').value)!==15600)throw Error('saved settings not used by engine');
+    for(const sorties of Object.values(s.schedule))for(const sortie of sorties){
+      const cost=sortie.trades.filter(t=>!t.isWaypoint).reduce((n,t)=>n+t.execC*(t.isCoin?15600:10293),0);
+      if(sortie.parleyUsed!==cost)throw Error('existing schedule not repriced');
+    }
+    return {normalCost:s.config.parley.normalCost,crowCost:s.config.parley.crowCost,remaining:s.remainingParley,ship:s.config.ship};
+  })()`);
+  const completionKinds=[];
+  for(const [label,fromTier,toTier,reqA,mult,island,mode] of [
+    ['land',0,1,10,1,'베이루와 섬','speed'],['1-2',1,2,1,3,'베이루와 섬','balance'],
+    ['2-3',2,3,1,2,'베이루와 섬','speed'],['3-4',3,4,1,2,'베이루와 섬','speed'],
+    ['4-5',4,5,1,1,'베이루와 섬','speed'],['5-6',5,6,1,1,'하코번 섬','speed'],
+    ['6-7',6,7,1,1,'올비아 해안','balance'],['coin-fixed',4,'coin',1,100,'까마귀의 둥지','speed'],
+    ['coin-random',4,'coin',1,75,'베이루와 섬','balance'],['material',4,'mat',1,10,'베이루와 섬','speed']
+  ]){
+    const result=await evaluate(`(async()=>{
+      const {state}=await import('/assets/js/state.js');const p=await import('/assets/js/persistence.js');await p.whenPersistenceIdle();
+      const source=${fromTier}===0?'통나무':window.masterData[${fromTier}][0].name;
+      const target=${JSON.stringify(toTier)}==='coin'?'까마귀 주화':${JSON.stringify(toTier)}==='mat'?'진주 결정':window.masterData[${JSON.stringify(toTier)}][0].name;
+      await p.saveInventory(Object.fromEntries(state.inventory.map(i=>[i.programName,{stock:i.programName===source?100:0}])));
+      const t={island:${JSON.stringify(island)},fromClean:source,toClean:target,fromTier:${fromTier},toTier:${JSON.stringify(toTier)},isCoin:${toTier==='coin'},isSpec:${toTier==='mat'},isRandomCoin:${label==='coin-random'},execC:2,reqA:${reqA},mult:${mult},originalIndex:0};
+      state.session.scannedTrades=[{island:t.island,fromItem:source,toItem:target,reqAmount:t.reqA,count:2,yield:t.mult}];
+      state.session.schedule={speed:[],balance:[]};state.session.schedule[${JSON.stringify(mode)}]=[{trades:[t],totalTime:0,startWeight:0,parleyUsed:2*${toTier==='coin'?15600:10293}}];
+      state.session.remainingParley=125000;window.__bdoScheduleRuntime.syncLegacyState(state);
+      window.completeTradeAndTimer(document.createElement('button'),${JSON.stringify(mode)},0,0,0,t.island,target);
+      await new Promise((ok,fail)=>{const end=Date.now()+10000;const poll=()=>window.__bdoScheduleRuntime.pending===null?ok():Date.now()>end?fail(Error('completion pending')):setTimeout(poll,50);poll()});
+      const saved=await fetch('/api/bootstrap').then(r=>r.json());
+      const remaining=125000-2*${toTier==='coin'?15600:10293};
+      if(!t.completed || state.session.remainingParley!==remaining || saved.workingSession.remainingParley!==remaining
+         || !saved.workingSession.scannedTrades[0].deleted || saved.workingSession.scannedTrades[0].count!==0)throw Error('completion deduction missing for '+${JSON.stringify(label)});
+      const input=saved.inventory.find(i=>i.programName===source),output=saved.inventory.find(i=>i.programName===target);
+      if(input && input.stock!==100-2*t.reqA || output && output.stock!==2*t.mult)throw Error('inventory delta incorrect for '+${JSON.stringify(label)});
+      const revision=saved.revision;
+      window.completeTradeAndTimer(document.createElement('button'),${JSON.stringify(mode)},0,0,0,t.island,target);await p.whenPersistenceIdle();
+      if((await fetch('/api/bootstrap').then(r=>r.json())).revision!==revision)throw Error('duplicate completion deducted twice');
+      return {kind:${JSON.stringify(label)},remaining,persisted:saved.workingSession.remainingParley,sourceStock:input?.stock,targetStock:output?.stock};
+    })()`);
+    completionKinds.push(result);
+  }
+  const tier7Completed=await evaluate(`(async()=>{
+    const {state}=await import('/assets/js/state.js');const p=await import('/assets/js/persistence.js');await p.whenPersistenceIdle();
+    await p.saveInventory(Object.fromEntries(state.inventory.map(i=>[i.programName,{stock:i.programName==='정체불명의 암석'?100:0}])));
+    state.session.config.ship.mode='t7_2region';state.session.remainingParley=20586;
+    state.session.scannedTrades=[
+      {island:'하코번 섬',fromItem:'정체불명의 암석',toItem:'발렌시아 모래 방패',reqAmount:1,count:1,yield:1},
+      {island:'올비아 해안',fromItem:'발렌시아 모래 방패',toItem:'최고급 하이델산 포도주',reqAmount:1,count:1,yield:1}
+    ];
+    window.__bdoScheduleRuntime.generateSchedule(state,()=>{});
+    const sorties=state.session.schedule.speed,ts=sorties.flatMap(s=>s.trades).filter(t=>!t.isWaypoint);
+    if(ts.length!==2 || sorties.reduce((n,s)=>n+s.parleyUsed,0)!==20586)throw Error('tier7 planned cost incorrect');
+    for(let si=0;si<sorties.length;si++)for(let ti=0;ti<sorties[si].trades.length;ti++){
+      const t=sorties[si].trades[ti];if(t.isWaypoint)continue;
+      window.completeTradeAndTimer(document.createElement('button'),'speed',si,ti,t.originalIndex,t.island,t.toClean);
+      await new Promise((ok,fail)=>{const end=Date.now()+10000;const poll=()=>window.__bdoScheduleRuntime.pending===null?ok():Date.now()>end?fail(Error('completion pending')):setTimeout(poll,50);poll()});
+    }
+    const saved=await fetch('/api/bootstrap').then(r=>r.json());
+    if(ts.some(t=>!t.completed) || state.session.remainingParley!==0 || saved.workingSession.remainingParley!==0
+       || saved.inventory.find(i=>i.programName==='정체불명의 암석').stock!==99)throw Error('tier7 completion missing');
+    return {plannedTrades:ts.length,plannedCost:20586,remaining:saved.workingSession.remainingParley,tier5Stock:99};
+  })()`);
+  console.log(JSON.stringify({activeSettingsAppliedAndReloaded:appliedSettings,completionKinds,tier7Completed},null,2));
   console.log(JSON.stringify({enteredParleyExactCompletion:exactCases,actualRemainder4to5:remainderCase,editedParleyInsufficientCompletionBlocked:blocked},null,2));
   console.log(JSON.stringify({ ok: true, browser: "Chrome headless", sameInputReferenceOutputExact: true, comparedScenarios: ["inner trade", "crow coin", "tier 7"], scheduleGenerated: generatedState, timerToggle: true, manualRouteReorder: true, manualCountAdjustment: true, waypointAddedAndCompletedWithMaterialPatch: true, completionResult: JSON.parse(sessionResult), lostResponseRetryUsedSameRequest: true, duplicateCompletionBlocked: true, inventoryUpdatedOnce: true, completionInvocationCounts: { waypoint: 1, tradeAfterResponseLossAndDuplicateClick: 1, tradeAfter409Rebase: conflictResult.calls }, actual409RebasedDelta: { source: conflictResult.source, target: conflictResult.target }, sessionRestoredOnReload: true, persistentInventorySurvivedReload: true, temporaryDatabase: true }, null, 2));
 } finally {
