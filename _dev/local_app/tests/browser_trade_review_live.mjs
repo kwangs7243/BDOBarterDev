@@ -1,20 +1,24 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { semanticEvaluationSha256 } from "../tools/trade_review_evaluation.mjs";
+import { adaptLegacyCatalog } from "../frontend/js/domain/trade-master-registry.js";
+import { adaptRegistrySnapshotV1ToMasterBundleV2, applyTradeMasterReferenceManifestToBundleV2 } from "../frontend/js/domain/trade-master-bundle.js";
+import { computeCatalogProvenanceV2 } from "../frontend/js/domain/trade-catalog-provenance.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const REPO = path.resolve(ROOT, "..");
 const APP_ROOT = path.join(ROOT, "local_app");
-const R011_ROOT = path.join(ROOT, "recognition-local", "live-validation", "r011");
-const EXPECTED_BASELINE = "9d413d6dd013b2b98c72bb71486590e9d47e7a36";
+const L1_ROOT = path.join(ROOT, "recognition-local", "live-validation", "l1-final");
+const L1_BASELINE_PARENT = "c08b8ae5a3914a2e95515bfc895c9f470d6de8d9";
 const EXPECTED_MAIN = "f13b8e15af392f167d153c873448a4b2abec5a0c";
-const EVALUATION_POLICY = "trade-review-evaluation-v1";
-const RAW_EVALUATION = "trade-raw-eval-v1";
-const MAPPING_POLICY = "reviewed-trade-dto-mapping-v1";
+const EVALUATION_POLICY = "trade-final-review-evaluation-v3";
+const MAPPING_POLICY = "reviewed-trade-dto-mapping-v3";
+const OPERATIONAL_DECISIONS = new Set(["CANDIDATE_RETAINED", "USER_EDITED", "USER_MARKED_UNKNOWN"]);
 const FIELDS = ["island", "fromItem", "reqAmount", "toItem", "count", "yield"];
 const PROTECTED_DIRTY = new Set();
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
@@ -22,12 +26,12 @@ let interrupted = false;
 process.on("SIGINT", () => { interrupted = true; process.stderr.write("\n중단 요청을 받았습니다. 현재까지의 case 기록을 보존하고 종료합니다.\n"); });
 
 function usage() {
-  return `R011-A 독립 실사 harness
+  return `ARCH-A1B-L1 current FinalReview3 실사 harness
 
 사용법:
   node _dev/local_app/tests/browser_trade_review_live.mjs --help
-  node _dev/local_app/tests/browser_trade_review_live.mjs --preflight [--run-dir <ignored r011 path>] [--device-scale-factor <수치>]
-  node _dev/local_app/tests/browser_trade_review_live.mjs --live --run-dir <ignored r011 path> --case-id <고유 ID> \\
+  node _dev/local_app/tests/browser_trade_review_live.mjs --preflight [--run-dir <ignored L1 path>] [--device-scale-factor <수치>]
+  node _dev/local_app/tests/browser_trade_review_live.mjs --live --run-dir <ignored L1 path> --case-id <고유 ID> \\
     --input-mode STREAM|FILE|PASTE --cohort INDEPENDENT [--display-width <정수>] [--display-height <정수>] \\
     [--windows-scale-percent <수치>] [--chrome-zoom-percent <수치>] [--device-scale-factor <수치>] \\
     [--notes <설명>] [--human-timeout-minutes <분>]
@@ -38,7 +42,7 @@ function usage() {
 --live가 시작되면 Chrome에서 화면을 연결하고 ROI를 지정한 뒤, 게임을 직접 스크롤하며 필요한 만큼 캡처하세요.
 캡처를 마치면 화면의 ‘로컬 인식 실행’을 누르세요. 프로그램은 자동 스크롤하지 않으며 이후 터미널 입력도 필요하지 않습니다.
 
---live에서는 사용자가 실제 BDO 화면을 직접 캡처하고 인식 결과의 모든 행/필드를 검수해야 합니다.
+--live는 현재 FinalReview3/Observation3/Export3 경로의 별도 L1 기록용입니다. 사용자가 실제 BDO 화면을 직접 캡처하고 모든 행/필드를 검수해야 합니다.
 이 도구는 후보 정답을 입력하거나 행을 제외하거나 회차 적용 버튼을 대신 누르지 않습니다.
 인식 요청 시작 시점의 캡처 evidence와 저장된 observation export의 source provenance를 비교해 기록합니다.
 이전 R011 evidence와 source/bitmap 해시가 일치하는 캡처는 independent로 분류하지 않습니다.
@@ -47,7 +51,7 @@ function usage() {
 환경 인자를 모르면 생략해도 됩니다. 인자는 사용자가 아는 실제 값을 기록하는 용도이며, 생략 값은 null로 남습니다.
 기존 --display-scale-percent는 의미가 모호한 deprecated alias이며 --windows-scale-percent로 대체되었습니다.
 CDP deviceScaleFactor/browser DPR은 Windows 배율이나 Chrome zoom이 아닙니다. --live의 기본은 native rendering입니다.
-이 harness의 준비 완료는 R011 usability 승인, auto-accept 승인, release/package 승인을 뜻하지 않습니다.\n`;
+이 harness의 준비 완료는 owner usability, auto-accept, release/package 승인을 뜻하지 않습니다.\n`;
 }
 
 function parseArgs(argv) {
@@ -74,11 +78,11 @@ function git(args) {
   return result.stdout.trim();
 }
 
-function assertInsideR011(target) {
+function assertInsideL1(target) {
   const resolved = path.resolve(target);
-  const relative = path.relative(R011_ROOT, resolved);
+  const relative = path.relative(L1_ROOT, resolved);
   if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-    throw new Error(`산출물 경로는 ${R011_ROOT} 아래여야 합니다: ${resolved}`);
+    throw new Error(`산출물 경로는 ${L1_ROOT} 아래여야 합니다: ${resolved}`);
   }
   return resolved;
 }
@@ -87,8 +91,8 @@ function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex")
 function isoNow() { return new Date().toISOString(); }
 function cleanPythonDefault() { return path.join(ROOT, "recognition-local", "r006-env-recovery", "venv314", "Scripts", "python.exe"); }
 function selectedPython() {
-  const candidate = process.env.R011_PYTHON || cleanPythonDefault();
-  if (!path.isAbsolute(candidate)) throw new Error("R011_PYTHON은 절대 경로여야 합니다.");
+  const candidate = process.env.L1_PYTHON || process.env.R011_PYTHON || cleanPythonDefault();
+  if (!path.isAbsolute(candidate)) throw new Error("L1_PYTHON은 절대 경로여야 합니다.");
   return candidate;
 }
 function selectedChrome() {
@@ -144,11 +148,13 @@ async function startServer({ pythonPath, workspace, port }) {
   await mkdir(workspace, { recursive: true });
   const mainDb = path.join(workspace, "isolated-main.sqlite3");
   const sidecar = path.join(workspace, "isolated-recognition.sqlite3");
+  const masterDb = path.join(workspace, "isolated-master", "master.sqlite3");
   const code = `import sys\nfrom waitress import serve\nfrom local_app.backend.app import create_app\n` +
-    `app=create_app(sys.argv[1], recognition_database_path=sys.argv[2], testing=True)\n` +
+    `app=create_app(sys.argv[1], recognition_database_path=sys.argv[2], master_database_path=sys.argv[3], testing=True)\n` +
     `if app.extensions.get('recognition_store') is None: raise RuntimeError('isolated recognition sidecar unavailable')\n` +
-    `serve(app, host='127.0.0.1', port=int(sys.argv[3]), threads=4)\n`;
-  const child = spawn(pythonPath, ["-B", "-c", code, mainDb, sidecar, String(port)], {
+    `if app.extensions.get('master_store') is None: raise RuntimeError('isolated Master store unavailable')\n` +
+    `serve(app, host='127.0.0.1', port=int(sys.argv[4]), threads=4)\n`;
+  const child = spawn(pythonPath, ["-B", "-c", code, mainDb, sidecar, masterDb, String(port)], {
     cwd: ROOT, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, LOCALAPPDATA: path.join(workspace, "localappdata"),
       PYTHONDONTWRITEBYTECODE: "1", PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" },
@@ -166,16 +172,59 @@ async function startServer({ pythonPath, workspace, port }) {
     const health = await (await fetch(`${baseUrl}api/health`)).json();
     const bootstrap = await (await fetch(`${baseUrl}api/bootstrap`)).json();
     if (!health.ok || bootstrap.workingSession !== null) throw new Error("초기 격리 DB가 비어 있지 않거나 health 검증이 실패했습니다.");
+    const masterBundle = await buildRepositoryBaselineMasterBundle();
+    const masterReceipt = await publishIsolatedMasterBundle(baseUrl, masterBundle);
+    const activeMasterResponse = await fetch(`${baseUrl}api/master/active`, { cache: "no-store" });
+    const activeMaster = await activeMasterResponse.json();
+    if (!activeMasterResponse.ok || activeMaster.ok !== true || activeMaster.bundle?.contentHash !== masterBundle.contentHash
+      || activeMaster.activeRegistryVersion !== masterBundle.registryVersion) {
+      throw new Error(`격리 preflight Master Bundle2 readback 실패: ${JSON.stringify({ activeMaster: activeMasterResponse.status, receipt: masterReceipt })}`);
+    }
     const runtimeResponse = await fetch(`${baseUrl}api/recognition/trade-runtime`);
     const runtimePayload = await runtimeResponse.json();
     if (!runtimeResponse.ok || runtimePayload.ok !== true || !runtimePayload.runtime) throw new Error("실제 recognition runtime 상태 API가 실패했습니다.");
     const runtime = runtimePayload.runtime;
-    return { child, baseUrl, mainDb, sidecar, health, runtime, initialRevision: health.revision,
+    return { child, baseUrl, mainDb, sidecar, masterDb, masterBundle, masterReceipt, health, runtime, initialRevision: health.revision,
       stopOutput: () => output };
   } catch (error) {
     child.kill();
     throw new Error(`${error.message}\n${output}`);
   }
+}
+
+async function buildRepositoryBaselineMasterBundle() {
+  const catalogBytes = await readFile(path.join(APP_ROOT, "frontend", "data", "trade-catalog.json"));
+  const catalog = computeCatalogProvenanceV2(catalogBytes);
+  const registry = adaptLegacyCatalog(catalog.catalog, { sourceRevision: `catalog-provenance-v2:${catalog.sha256}`,
+    sourceSha256: catalog.sha256, curatedMappings: null });
+  const baseline = adaptRegistrySnapshotV1ToMasterBundleV2(registry, {
+    createdAt: "2026-10-03T00:00:00Z",
+    catalogProvenance: { schemaVersion: catalog.schemaVersion, hashBasis: catalog.hashBasis, sha256: catalog.sha256 },
+  });
+  const manifest = JSON.parse(await readFile(path.join(APP_ROOT, "frontend", "data", "trade-master-reference-manifest-v2.json"), "utf8"));
+  return applyTradeMasterReferenceManifestToBundleV2(baseline, manifest, {
+    createdAt: "2026-10-03T00:00:00Z", catalogBytes,
+  });
+}
+
+async function publishIsolatedMasterBundle(baseUrl, bundle) {
+  const origin = baseUrl.replace(/\/$/, "");
+  const proposalResponse = await fetch(`${baseUrl}api/master/proposal`, { method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origin },
+    body: JSON.stringify({ version: 1, expectedRegistryVersion: null, bundle }) });
+  const proposal = await proposalResponse.json();
+  if (!proposalResponse.ok || proposal.ok !== true || typeof proposal.proposal?.proposalHash !== "string") {
+    throw new Error(`격리 Master proposal 실패: HTTP ${proposalResponse.status} ${JSON.stringify(proposal)}`);
+  }
+  const publishResponse = await fetch(`${baseUrl}api/master/publish`, { method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origin },
+    body: JSON.stringify({ version: 1, mutationId: randomUUID(), expectedRegistryVersion: null,
+      ownerApproved: true, proposalHash: proposal.proposal.proposalHash, bundle }) });
+  const receipt = await publishResponse.json();
+  if (!publishResponse.ok || receipt.ok !== true) {
+    throw new Error(`격리 Master publish 실패: HTTP ${publishResponse.status} ${JSON.stringify(receipt)}`);
+  }
+  return receipt;
 }
 
 async function stopChild(child, force = false) {
@@ -228,6 +277,8 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
   const requestMeta = new Map();
   const observationReplies = [];
   const recognitionRequests = [];
+  const truthLabelPosts = [];
+  const cropPosts = [];
   const targetFailures = [];
   const protocolMessages = [];
   socket.addEventListener("open", () => { observations.opened = true; });
@@ -242,15 +293,35 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
       observations.eventCount += 1; observations.lastMethod = message.method;
       if (message.method === "Network.requestWillBeSent") {
         const request = message.params.request;
-        requestMeta.set(message.params.requestId, { url: request.url, method: request.method });
+        let requestBody = null; try { requestBody = request.postData ? JSON.parse(request.postData) : null; } catch {}
+        const meta = { url: request.url, method: request.method, requestBody };
+        requestMeta.set(message.params.requestId, meta);
         if (request.method === "POST" && /\/api\/recognition\/trade-batch(?:\?|$)/.test(request.url)) {
           recognitionRequests.push({ requestId: message.params.requestId, url: request.url,
-            method: request.method, observedAt: new Date().toISOString() });
+            method: request.method, version: requestBody?.version ?? null, observedAt: new Date().toISOString() });
+        }
+        if (request.method === "POST" && /\/truth-labels(?:\?|$)/.test(request.url)) {
+          truthLabelPosts.push({ requestId: message.params.requestId, url: request.url, observedAt: new Date().toISOString() });
+        }
+        if (request.method === "POST" && /\/crop(?:s|\?|$)/.test(request.url)) {
+          cropPosts.push({ requestId: message.params.requestId, url: request.url, body: requestBody, observedAt: new Date().toISOString() });
+        }
+        if (request.method === "POST" && (meta.requestBody == null)
+          && (/\/api\/recognition\/trade-batch(?:\?|$)/.test(request.url)
+            || /\/api\/recognition\/trade-review-observations\/?$/.test(request.url))) {
+          void send("Network.getRequestPostData", { requestId: message.params.requestId }).then((result) => {
+            try { meta.requestBody = JSON.parse(result.postData); } catch { return; }
+            const recognition = recognitionRequests.find((item) => item.requestId === message.params.requestId);
+            if (recognition) recognition.version = meta.requestBody.version ?? null;
+            const observation = observationReplies.find((item) => item.requestId === message.params.requestId);
+            if (observation) observation.requestBody = meta.requestBody;
+          }).catch(() => {});
         }
       } else if (message.method === "Network.responseReceived") {
         const request = requestMeta.get(message.params.requestId);
         if (request?.method === "POST" && /\/api\/recognition\/trade-review-observations\/?$/.test(request.url)) {
-          observationReplies.push({ requestId: message.params.requestId, status: message.params.response.status, body: null, error: null });
+          observationReplies.push({ requestId: message.params.requestId, status: message.params.response.status,
+            requestBody: request.requestBody, body: null, error: null });
         }
       } else if (message.method === "Network.loadingFinished") {
         const reply = observationReplies.find((item) => item.requestId === message.params.requestId && item.body === null && item.error === null);
@@ -300,7 +371,8 @@ async function connectPageTarget(target, { timeoutMs = 10000 } = {}) {
     if (result.exceptionDetails) throw new Error(result.result?.description ?? result.exceptionDetails.text);
     return result.result?.value;
   };
-  return { socket, send, evaluate, observations, protocolMessages, observationReplies, recognitionRequests, targetFailures,
+  return { socket, send, evaluate, observations, protocolMessages, observationReplies, recognitionRequests,
+    truthLabelPosts, cropPosts, targetFailures,
     close: () => { if (socket.readyState < WebSocket.CLOSING) socket.close(); } };
 }
 
@@ -410,6 +482,7 @@ async function runCdpControlExperiments({ chromePath, baseUrl, workspace, output
 async function pageFacts(browser) {
   return await browser.evaluate(`JSON.stringify({url:location.href,title:document.title,readyState:document.readyState,
     innerWidth,innerHeight,devicePixelRatio,screen:{width:screen.width,height:screen.height},
+    tradeCompatibility:new URLSearchParams(location.search).get('tradeCompatibility'),
     visualViewportScale:window.visualViewport?.scale??null,appReady:document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'})`).then(JSON.parse);
 }
 
@@ -419,6 +492,16 @@ async function openTradeDialog(browser, baseUrl) {
   await waitFor(async () => browser.evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"), "production UI bootstrap");
   const bootstrap = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   if (bootstrap.workingSession !== null) throw new Error("격리 working session이 사전 데이터 없이 비어 있어야 합니다.");
+  const activeResponse = await fetch(`${baseUrl}api/master/active`, { cache: "no-store" });
+  if (!activeResponse.ok) throw new Error(`active Master API 실패: HTTP ${activeResponse.status}`);
+  const active = await activeResponse.json();
+  const masterModule = await import(pathToFileURL(path.join(APP_ROOT, "frontend", "js", "domain", "trade-master-bundle.js")));
+  const bundle = active?.bundle;
+  const validation = bundle ? masterModule.validateMasterBundleV2(bundle) : { ok: false };
+  if (active?.ok !== true || bundle?.schemaVersion !== 2 || bundle.registryVersion !== active.activeRegistryVersion
+    || !validation.ok || masterModule.masterBundleContentHash(bundle) !== bundle.contentHash) {
+    throw new Error(`active Master Bundle2가 유효하지 않습니다: ${JSON.stringify({ activeOk: active?.ok, validation })}`);
+  }
   await browser.evaluate("document.querySelector('#open-trade-capture')?.click()");
   await waitFor(async () => browser.evaluate("Boolean(document.querySelector('#trade-capture-dialog')?.open)"), "trade capture dialog open");
   await waitFor(async () => browser.evaluate("document.querySelector('[data-role=trade-runtime-status]')?.textContent==='로컬 인식 사용 가능'"),
@@ -429,7 +512,29 @@ async function openTradeDialog(browser, baseUrl) {
   if (runtimeStatus.available !== true || runtimeStatus.modelReady !== true || runtimeText !== "로컬 인식 사용 가능") {
     throw new Error(`실제 로컬 인식 runtime/model이 준비되지 않았습니다: ${JSON.stringify({ runtimeStatus, runtimeText })}`);
   }
-  return { bootstrap, runtimeStatus };
+  return { bootstrap, runtimeStatus, masterBinding: { masterSchemaVersion: bundle.schemaVersion,
+    registryVersion: bundle.registryVersion, contentHash: bundle.contentHash, hashBasis: bundle.hashBasis },
+    masterBundle: bundle };
+}
+
+async function inspectCurrentPrimaryContract() {
+  const ui = await readFile(path.join(APP_ROOT, "frontend", "js", "recognition-ui.js"), "utf8");
+  const flow = await readFile(path.join(APP_ROOT, "frontend", "js", "trade-final-shadow.js"), "utf8");
+  const review = await readFile(path.join(APP_ROOT, "frontend", "js", "trade-final-review.js"), "utf8");
+  const required = [
+    [ui, "recognizeTradeBatchV2", "primary V2 recognition"],
+    [ui, "runTradeFinalFlow", "active final-flow entry"],
+    [ui, "reviewed-trade-dto-mapping-v3", "DTO mapping v3"],
+    [ui, "buildFinalReviewObservationRequest", "Observation3 builder"],
+    [review, "projection.schemaVersion !== 3", "FinalReview3 projection contract"],
+    [review, 'data-tab="problem"', "problem-first FinalReview3 tab"],
+    [review, 'data-tab="all"', "full-result FinalReview3 tab"],
+  ];
+  const missing = required.filter(([source, marker]) => !source.includes(marker)).map(([, , label]) => label);
+  if (missing.length) throw new Error(`현재 primary FinalReview3 경로 marker 누락: ${missing.join(", ")}`);
+  return { primaryRecognition: "recognizeTradeBatchV2", legacyCompatibilityExplicitOnly: ui.includes('get("tradeCompatibility") === "REVIEW_FIRST"'),
+    finalFlow: "runTradeFinalFlow", observationBuilder: "buildFinalReviewObservationRequest", dtoMappingPolicy: MAPPING_POLICY,
+    finalReviewSchemaVersion: 3, problemTab: true, fullTab: true };
 }
 
 function installBlobEvidenceRegistryInPage() {
@@ -466,28 +571,33 @@ function installBlobEvidenceRegistryInPage() {
 }
 
 async function runCaptureBlobEvidenceProbe(browser) {
-  const sample = "r011-capture-blob-evidence-probe";
-  const expectedSha256 = createHash("sha256").update(sample, "utf8").digest("hex");
   return await browser.evaluate(`(async()=>{
-    const sample=${JSON.stringify(sample)};
-    const expectedSha256=${JSON.stringify(expectedSha256)};
-    let objectUrl=null;let result=null;let failure=null;let createObjectUrlRestored=false;let objectUrlRevoked=false;
+    let objectUrl=null;let result=null;let failure=null;let createObjectUrlRestored=false;let objectUrlRevoked=false;let bitmap=null;
     try{
+      const canvas=document.createElement("canvas");canvas.width=2;canvas.height=2;
+      const context=canvas.getContext("2d");const pixels=new Uint8ClampedArray([255,0,0,255,0,255,0,255,0,0,255,255,255,255,0,255]);
+      context.putImageData(new ImageData(pixels,2,2),0,0);
+      const pixelDigest=await crypto.subtle.digest("SHA-256",pixels);
+      const pixelSha256=[...new Uint8Array(pixelDigest)].map(value=>value.toString(16).padStart(2,"0")).join("");
+      const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("CANVAS_PNG_ENCODE_FAILED")),"image/png"));
       const install=(${installBlobEvidenceRegistryInPage.toString()})();
       if(!install.installed)throw new Error("CAPTURE_BLOB_EVIDENCE_INSTALL_FAILED");
-      objectUrl=URL.createObjectURL(new Blob([sample],{type:"text/plain"}));
+      objectUrl=URL.createObjectURL(blob);
       const pending=window.__r011BlobEvidenceByUrl.get(objectUrl);
       if(!pending)throw new Error("CAPTURE_BLOB_EVIDENCE_MISSING");
       const evidence=await pending;
-      result={status:"PASS",bytes:evidence.bitmapBytes,expectedBytes:new TextEncoder().encode(sample).byteLength,
-        sha256:evidence.bitmapSha256,sha256Matched:evidence.bitmapSha256===expectedSha256,
-        previewFetchUsed:false};
-      if(result.bytes!==result.expectedBytes||!result.sha256Matched)throw new Error("CAPTURE_BLOB_EVIDENCE_PROBE_MISMATCH");
+      bitmap=await createImageBitmap(blob);
+      result={status:"PASS",blobBytes:evidence.bitmapBytes,blobSha256:evidence.bitmapSha256,
+        pixelSha256,pixelBytes:pixels.byteLength,pngMime:blob.type,imageDimensions:{width:bitmap.width,height:bitmap.height},
+        pngDecoded:bitmap.width===2&&bitmap.height===2,previewFetchUsed:false,syntheticOnly:true};
+      if(!result.blobBytes||!/^([a-f0-9]{64})$/.test(result.blobSha256)||!result.pngDecoded||blob.type!=="image/png")
+        throw new Error("CAPTURE_PIXEL_EVIDENCE_PROBE_MISMATCH");
     }catch(error){failure=error.message;}
     finally{
       const restore=window.__r011RestoreCreateObjectURL;
       createObjectUrlRestored=restore?restore():true;
       window.__r011RestoreCreateObjectURL=null;
+      bitmap?.close();
       if(objectUrl){try{URL.revokeObjectURL(objectUrl);objectUrlRevoked=true;}catch{}}
     }
     if(failure)throw new Error(failure);
@@ -572,8 +682,8 @@ async function runRecognitionInteractionProbe(browser) {
 }
 
 async function runPreflight(options) {
-  const defaultDir = path.join(R011_ROOT, `preflight-${new Date().toISOString().replaceAll(":", "-")}`);
-  const outputDir = assertInsideR011(options["run-dir"] || defaultDir);
+  const defaultDir = path.join(L1_ROOT, `preflight-${new Date().toISOString().replaceAll(":", "-")}`);
+  const outputDir = assertInsideL1(options["run-dir"] || defaultDir);
   const pythonPath = selectedPython(); const chromePath = selectedChrome();
   await mkdir(outputDir, { recursive: true });
   let stage = "python_abi_import_probe";
@@ -583,7 +693,7 @@ async function runPreflight(options) {
   if (!(await stat(path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs")).catch(() => null))?.isFile()) throw new Error("R010 evaluator 파일이 없습니다.");
   const workspace = await import("node:fs/promises").then(({ mkdtemp }) => mkdtemp(path.join(tmpdir(), "bdo-r011-preflight-")));
   const port = await findPort(); let server; let browser; let result; let cdpControls = null;
-  let captureBlobEvidenceProbe = null; let recognitionInteractionProbe = null;
+  let captureBlobEvidenceProbe = null; let recognitionInteractionProbe = null; let primaryContract = null;
   const deviceScaleFactor = Number(options["device-scale-factor"] ?? "1.3");
   if (!Number.isFinite(deviceScaleFactor) || deviceScaleFactor <= 0 || deviceScaleFactor > 4) throw new Error("--device-scale-factor는 0 초과 4 이하 수치여야 합니다.");
   try {
@@ -600,22 +710,32 @@ async function runPreflight(options) {
     browser = await launchChrome({ chromePath, baseUrl: server.baseUrl, profile, deviceScaleFactor });
     stage = "production_page_and_capture_ui";
     const ui = await openTradeDialog(browser, server.baseUrl);
+    primaryContract = await inspectCurrentPrimaryContract();
     stage = "capture_blob_evidence_probe";
     captureBlobEvidenceProbe = await runCaptureBlobEvidenceProbe(browser);
-    if (captureBlobEvidenceProbe.status !== "PASS" || !captureBlobEvidenceProbe.sha256Matched
+    if (captureBlobEvidenceProbe.status !== "PASS" || !captureBlobEvidenceProbe.pngDecoded
       || captureBlobEvidenceProbe.previewFetchUsed !== false || !captureBlobEvidenceProbe.createObjectUrlRestored
       || !captureBlobEvidenceProbe.objectUrlRevoked) {
       throw new Error(`CAPTURE_BLOB_EVIDENCE_PROBE_FAILED: ${JSON.stringify(captureBlobEvidenceProbe)}`);
     }
     stage = "passive_recognition_interaction_probe";
     recognitionInteractionProbe = await runRecognitionInteractionProbe(browser);
+    stage = "export3_evaluator_synthetic_regression";
+    const evaluatorRegression = spawnSync(process.execPath,
+      [path.join(APP_ROOT, "tests", "trade_final_evaluation_regression.mjs")],
+      { cwd: REPO, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    if (evaluatorRegression.status !== 0) throw new Error(`Export3 evaluator synthetic regression 실패:\n${evaluatorRegression.stderr || evaluatorRegression.stdout}`);
     const viewport = await pageFacts(browser);
     if (!viewport.appReady || !viewport.url.startsWith(server.baseUrl) || !viewport.innerWidth || !viewport.innerHeight) throw new Error("visible Chrome의 production UI/viewport 확인이 실패했습니다.");
+    if (viewport.tradeCompatibility === "REVIEW_FIRST") throw new Error("legacy REVIEW_FIRST mode is forbidden for L1 preflight.");
     const mode = deviceScaleFactor;
     result = {
-      schemaVersion: 1, task: "R011-A", status: "PREFLIGHT_PASS", createdAt: isoNow(),
+      schemaVersion: 1, task: "ARCH-A1B-L1-PREP1", status: "PREFLIGHT_PASS", createdAt: isoNow(),
       gameCapturePerformed: false, independentEvidenceCreated: false,
-      git: { branch: git(["branch", "--show-current"]), head: git(["rev-parse", "HEAD"]), main: git(["rev-parse", "main"]) },
+      ownerUsabilityDecision: null,
+      git: { branch: git(["branch", "--show-current"]), head: git(["rev-parse", "HEAD"]), originV2: git(["rev-parse", "origin/v2"]), main: git(["rev-parse", "main"]),
+        clean: statusEntries().length === 0, baselineParent: L1_BASELINE_PARENT,
+        baselineAncestor: git(["merge-base", L1_BASELINE_PARENT, git(["rev-parse", "HEAD"])]) === L1_BASELINE_PARENT },
       python: probe,
       chrome: { executable: chromePath, version: browser.version.Browser, product: browser.version.Product, visible: true },
       chromeStderrTail: browser.stderr().slice(-6000),
@@ -624,22 +744,35 @@ async function runPreflight(options) {
         initialTargets: browser.initialTargets, blankTarget: browser.blankTarget, appTarget: browser.appTarget,
         browserLevelWebSocketUsedForPageCommands: false, websocket: browser.diagnostics },
       runtime: ui.runtimeStatus,
+      master: { apiAvailable: true, activeRegistryVersion: ui.masterBinding.registryVersion, binding: ui.masterBinding,
+        schemaVersion: ui.masterBundle.schemaVersion, validated: true,
+        preflightSource: "isolated_repository_catalog_and_reference_manifest",
+        isolatedPublishReceipt: server.masterReceipt, isolatedMasterDb: server.masterDb },
+      evaluatorProbe: { status: "PASS", policy: EVALUATION_POLICY, regression: "trade_final_evaluation_regression.mjs",
+        output: evaluatorRegression.stdout.trim().slice(-3000), syntheticOnly: true },
+      currentPrimaryContract: { ...primaryContract, tradeCompatibility: viewport.tradeCompatibility },
+      currentContractVersions: { rawEvidence: 2, reconciliationPolicy: "trade-batch-reconciliation-v1",
+        correctionVersion: "trade-final-correction-v1", projection: 3, completion: 3, observation: 3,
+        export: 3, evaluationPolicy: EVALUATION_POLICY, dtoMappingPolicy: MAPPING_POLICY, validatedBatchOutput: 1,
+        operationalDecisions: [...OPERATIONAL_DECISIONS], truthEvidence: "HUMAN_CROP_VERIFIED_ONLY" },
       captureBlobEvidenceProbe,
       recognitionInteractionProbe,
       model: { available: ui.runtimeStatus.available, modelReady: ui.runtimeStatus.modelReady,
         engineId: ui.runtimeStatus.engineId, modelBundleSha256: ui.runtimeStatus.modelBundleSha256 ?? null },
       storageIsolation: { isolatedMainDb: server.mainDb, isolatedRecognitionSidecar: server.sidecar,
+        isolatedMasterDb: server.masterDb,
         tempLocalAppData: path.join(workspace, "localappdata"), realMainDbAccessed: false, realUserDbAccessed: false,
         productionSidecarAccessed: false },
       browser: { ...viewport, targetViewport: { width: 1920, height: 1080 },
         cdpDeviceScaleFactor: mode, cdpDeviceScaleFactorIsOsScale: false,
         cdpDeviceScaleFactorIsWindowsScale: false, cdpDeviceScaleFactorIsChromeZoom: false,
         captureDialogOpened: true, runtimeLabel: "로컬 인식 사용 가능" },
-      r010Evaluator: path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs"),
+      finalReviewEvaluator: path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs"),
     };
     await writeFile(path.join(outputDir, "preflight.json"), `${JSON.stringify(result, null, 2)}\n`, { flag: "wx" });
   } catch (error) {
-    const failed = { schemaVersion: 1, task: "R011-A", status: "PREFLIGHT_FAILED", createdAt: isoNow(),
+    const failed = { schemaVersion: 1, task: "ARCH-A1B-L1-PREP1", status: "PREFLIGHT_FAILED", createdAt: isoNow(),
+      ownerUsabilityDecision: null,
       failedStage: stage, errorSummary: error.message.split(/\r?\n/)[0],
       gameCapturePerformed: false, independentEvidenceCreated: false,
       python: { executable: pythonPath, version: probe.version, importsPassed: true },
@@ -652,6 +785,7 @@ async function runPreflight(options) {
       recognitionInteractionProbe,
       runtime: server?.runtime ?? null,
       storageIsolation: server ? { isolatedMainDb: server.mainDb, isolatedRecognitionSidecar: server.sidecar,
+        isolatedMasterDb: server.masterDb,
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false } : null };
     await writeFile(path.join(outputDir, "preflight.json"), `${JSON.stringify(failed, null, 2)}\n`, { flag: "wx" }).catch(() => {});
     throw error;
@@ -701,34 +835,37 @@ function verifyLiveGit() {
   const remote = git(["rev-parse", "origin/v2"]);
   const main = git(["rev-parse", "main"]);
   if (branch !== "v2") throw new Error(`live run은 v2에서만 허용됩니다 (현재 ${branch}).`);
-  if (git(["merge-base", EXPECTED_BASELINE, head]) !== EXPECTED_BASELINE) throw new Error("HEAD가 승인된 R011 baseline의 후속 커밋이 아닙니다.");
-  if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. R011-A harness commit push 후 실행해야 합니다.");
+  if (git(["merge-base", L1_BASELINE_PARENT, head]) !== L1_BASELINE_PARENT) throw new Error("HEAD가 승인된 L1 baseline parent의 후속 커밋이 아닙니다.");
+  if (remote !== head) throw new Error("origin/v2와 HEAD가 같지 않습니다. L1 harness commit을 push한 clean HEAD에서 실행해야 합니다.");
   if (main !== EXPECTED_MAIN) throw new Error(`main SHA가 승인 기준과 다릅니다: ${main}`);
   const entries = statusEntries();
-  const unexpected = entries.filter((entry) => !PROTECTED_DIRTY.has(entry.path.replaceAll("\\", "/")));
-  if (unexpected.length) throw new Error(`보호된 기존 dirty 외 tracked/untracked 변경이 있어 live freeze를 거부합니다: ${unexpected.map((item) => item.raw).join(" | ")}`);
-  return { branch, head, originV2: remote, main, protectedDirty: entries.map((item) => item.path) };
+  if (entries.length) throw new Error(`L1 live freeze는 clean working tree에서만 허용됩니다: ${entries.map((item) => item.raw).join(" | ")}`);
+  return { branch, head, originV2: remote, main, protectedDirty: [] };
 }
 
 async function loadOrCreateFreeze(runDir, gitState, environment) {
   const freezePath = path.join(runDir, "freeze-manifest.json");
   const existing = await readFile(freezePath, "utf8").then(JSON.parse).catch((error) => error.code === "ENOENT" ? null : Promise.reject(error));
   if (existing) {
-    if (existing.task !== "R011" || existing.frozenGitSha !== gitState.head || existing.mainSha !== gitState.main || existing.branch !== "v2") {
+    if (existing.task !== "ARCH-A1B-L1" || existing.frozenGitSha !== gitState.head || existing.mainSha !== gitState.main || existing.branch !== "v2") {
       throw new Error("기존 freeze-manifest가 현재 harness commit/main/branch와 달라 덮어쓰지 않고 중단합니다.");
     }
-    if (existing.evaluationPolicyVersion !== EVALUATION_POLICY || existing.rawEvaluationVersion !== RAW_EVALUATION) throw new Error("freeze-manifest의 R010 policy가 현재와 다릅니다.");
+    if (existing.evaluationPolicyVersion !== EVALUATION_POLICY || existing.mappingPolicyVersion !== MAPPING_POLICY) throw new Error("freeze-manifest의 L1 v3 policy가 현재와 다릅니다.");
     if (existing.liveUserEnvironmentRequirement !== "USE_ACTUAL_USER_ENVIRONMENT_WITHOUT_FORCED_SCALING_OR_ZOOM") {
       throw new Error("기존 freeze-manifest에 실제 사용자 환경 정책이 없습니다. 기존 evidence를 덮어쓰지 않고 중단합니다.");
     }
     return existing;
   }
   const legacyRoot = path.join(ROOT, "recognition-local", "live-validation");
-  const oldEvidence = await listImages(legacyRoot).then((items) => items.filter((item) => !item.path.startsWith("_dev/recognition-local/live-validation/r011/")));
+  const oldEvidence = await listImages(legacyRoot).then((items) => items.filter((item) => !item.path.startsWith("_dev/recognition-local/live-validation/l1-final/")));
   const freeze = {
-    schemaVersion: 1, task: "R011", frozenGitSha: gitState.head, mainSha: gitState.main, branch: gitState.branch,
-    evaluationPolicyVersion: EVALUATION_POLICY, rawEvaluationVersion: RAW_EVALUATION,
-    mappingPolicyVersion: MAPPING_POLICY, correctionVersion: null, registryVersion: null,
+    schemaVersion: 1, task: "ARCH-A1B-L1", frozenGitSha: gitState.head, originV2Sha: gitState.originV2,
+    mainSha: gitState.main, branch: gitState.branch,
+    evaluationPolicyVersion: EVALUATION_POLICY, mappingPolicyVersion: MAPPING_POLICY,
+    rawEvidenceSchemaVersion: 2, projectionSchemaVersion: 3, completionSchemaVersion: 3,
+    observationSchemaVersion: 3, exportSchemaVersion: 3, correctionVersion: "trade-final-correction-v1",
+    reconciliationPolicyVersion: "trade-batch-reconciliation-v1",
+    masterBinding: environment.masterBinding ?? null,
     runtime: environment.runtime, model: environment.model,
     createdAt: isoNow(), automatedBrowserReference: { viewport: { width: 1920, height: 1080 },
       cdpDeviceScaleFactor: 1.3, purpose: "DETERMINISTIC_BROWSER_REGRESSION_REFERENCE",
@@ -742,7 +879,7 @@ async function loadOrCreateFreeze(runDir, gitState, environment) {
   return freeze;
 }
 
-async function readPriorR011Cases() {
+async function readPriorLiveCases() {
   const records = [];
   async function visit(directory) {
     for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
@@ -750,11 +887,12 @@ async function readPriorR011Cases() {
       if (entry.isDirectory()) await visit(fullPath);
       else if (entry.isFile() && entry.name === "case-manifest.json") {
         const record = await readFile(fullPath, "utf8").then(JSON.parse).catch(() => null);
-        if (record?.task === "R011" && record.caseId) records.push({ ...record, caseManifestPath: fullPath });
+        if (["R011", "ARCH-A1B-L1"].includes(record?.task) && record.caseId) records.push({ ...record, caseManifestPath: fullPath });
       }
     }
   }
-  await visit(R011_ROOT);
+  await visit(path.join(ROOT, "recognition-local", "live-validation", "r011"));
+  await visit(L1_ROOT);
   return records;
 }
 
@@ -770,11 +908,11 @@ async function updateRunManifest(runDir, gitState, cases, evaluationReport, limi
     browserObservedEnvironment: item.browserObservedEnvironment ?? null,
     observationId: item.observationId ?? null, exportPath: item.exportPath ?? null }));
   const manifest = {
-    schemaVersion: 1, task: "R011", status: "LIVE_CASES_RECORDED_NOT_FINAL_R011", frozenGitSha: gitState.head,
+    schemaVersion: 1, task: "ARCH-A1B-L1", status: "L1_CASES_RECORDED_OWNER_DECISION_PENDING", frozenGitSha: gitState.head,
     environmentPolicy: "ACTUAL_USER_ENVIRONMENT_RECORDED_NOT_FORCED", cases: caseRefs,
     observationRefs: caseRefs.filter((item) => item.observationId).map(({ caseId, observationId, exportPath }) => ({ caseId, observationId, exportPath })),
     evaluationReport, sessionResults: cases.map((item) => ({ caseId: item.caseId, status: item.sessionStatus ?? "NOT_RECORDED" })),
-    automatedRegressionRefs: [], limitations: [...limitations, "R011-A harness does not issue final R011 usability approval."],
+    automatedRegressionRefs: [], limitations: [...limitations, "L1 harness does not issue owner usability or release approval."],
     ownerUsabilityDecision: null,
   };
   await writeJson(path.join(runDir, "run-manifest.json"), manifest);
@@ -815,25 +953,24 @@ function liveArgs(options) {
     humanTimeoutMs: parseNumber(options["human-timeout-minutes"] ?? "120", "--human-timeout-minutes", { minimum: 1 }) * 60 * 1000 };
 }
 
-function sourceRowsFromExport(exportRecord) {
+export function sourceRowsFromExport(exportRecord) {
   const semantic = exportRecord?.semantic;
   const observation = semantic?.observation;
-  const captures = observation?.sourceContext?.captures;
-  const captureEvidence = observation?.sourceContext?.recognition?.captureEvidence?.captures;
-  if (!Array.isArray(captures) || !Array.isArray(captureEvidence)) throw new Error("저장된 observation export에 capture provenance/evidence가 없습니다.");
-  const evidenceById = new Map(captureEvidence.map((item) => [item.captureId, item]));
-  return captures.map((item) => {
-    const evidence = evidenceById.get(item.captureId);
-    if (!evidence) throw new Error(`observation capture evidence 누락: ${item.captureId}`);
-    return { captureId: item.captureId, sourceType: item.metadata?.sourceType ?? null,
-      capturedAt: item.metadata?.capturedAt ?? null, frame: item.metadata?.frame ?? null,
-      fidelity: item.metadata?.fidelity ?? null, sourceSha256: item.sourceSha256 ?? null,
-      bitmapSha256: item.bitmapSha256 ?? evidence.imageHash ?? null,
-      bitmapBytes: item.bitmapBytes ?? null, sourceBytes: item.sourceBytes ?? null,
-      reencoded: item.reencoded === true, recognitionImageHash: evidence.imageHash,
-      imageDimensions: evidence.imageDimensions ?? null, completeRowCount: evidence.completeRowCount,
-      edgeSegmentCount: evidence.edgeSegmentCount };
-  });
+  const snapshot = observation?.sourceContext?.rawEvidence?.snapshot;
+  const sourceRows = snapshot?.sourceRows;
+  const captures = snapshot?.captures;
+  if (exportRecord?.schemaVersion !== 3 || exportRecord?.exportType !== "TRADE_FINAL_REVIEW_OBSERVATION"
+    || observation?.schemaVersion !== 3 || observation?.reviewMode !== "FINAL_CORRECTED_RESULT"
+    || snapshot?.schemaVersion !== 2 || !Array.isArray(captures) || !Array.isArray(sourceRows)) {
+    throw new Error("저장된 observation export가 현재 Export3/RawEvidenceSnapshot2 계약이 아닙니다.");
+  }
+  return captures.map((item) => ({ captureId: item.captureId, captureOrdinal: item.captureOrdinal ?? null,
+    sourceType: item.sourceType ?? null, capturedAt: item.capturedAt ?? null, frame: item.frame ?? null,
+    fidelity: item.sourceFidelity ?? null, sourceSha256: item.sourceSha256 ?? null,
+    bitmapSha256: item.bitmapSha256 ?? item.imageSha256 ?? null, imageSha256: item.imageSha256 ?? null,
+    bitmapBytes: item.bitmapBytes ?? null, sourceBytes: item.sourceBytes ?? null, reencoded: item.reencoded === true,
+    completeRowCount: sourceRows.filter((row) => row.captureId === item.captureId).length,
+    edgeSegmentCount: (snapshot.edgeSegments ?? []).filter((edge) => edge.captureId === item.captureId).length }));
 }
 
 function getQueuedCapturesExpression() {
@@ -865,8 +1002,9 @@ async function queuedCaptures(browser) {
 }
 
 function modeMatches(mode, sourceType) {
-  return (mode === "STREAM" && sourceType === "browser-stream") || (mode === "FILE" && sourceType === "file")
-    || (mode === "PASTE" && sourceType === "clipboard");
+  return (mode === "STREAM" && ["browser-stream", "STREAM"].includes(sourceType))
+    || (mode === "FILE" && ["file", "FILE"].includes(sourceType))
+    || (mode === "PASTE" && ["clipboard", "CLIPBOARD"].includes(sourceType));
 }
 
 function classifyCaptureSources(queued, freeze, priorCases, inputMode) {
@@ -904,10 +1042,13 @@ function compareRecognitionSourceWithExport(startSnapshot, exportCaptures) {
   for (const exported of exportCaptures) {
     const observed = byId.get(exported.captureId);
     if (!observed) { mismatches.push({ captureId: exported.captureId, field: "captureId", reason: "missing from recognition-start snapshot" }); continue; }
-    for (const field of ["sourceType", "bitmapSha256"]) {
-      if (observed[field] !== exported[field]) mismatches.push({ captureId: exported.captureId, field,
-        recognitionStart: observed[field] ?? null, observationExport: exported[field] ?? null });
-    }
+    const rawSourceType = ({ "browser-stream": "STREAM", file: "FILE", clipboard: "CLIPBOARD" })[observed.sourceType] ?? observed.sourceType;
+    if (rawSourceType !== exported.sourceType) mismatches.push({ captureId: exported.captureId, field: "sourceType",
+      recognitionStart: rawSourceType ?? null, observationExport: exported.sourceType ?? null });
+    if (observed.bitmapSha256 !== exported.bitmapSha256) mismatches.push({ captureId: exported.captureId, field: "bitmapSha256",
+      recognitionStart: observed.bitmapSha256 ?? null, observationExport: exported.bitmapSha256 ?? null });
+    if (observed.reencoded !== exported.reencoded) mismatches.push({ captureId: exported.captureId, field: "reencoded",
+      recognitionStart: observed.reencoded ?? null, observationExport: exported.reencoded ?? null });
     for (const dimension of ["width", "height"]) {
       if (observed.frame?.[dimension] !== exported.frame?.[dimension]) mismatches.push({ captureId: exported.captureId,
         field: `frame.${dimension}`, recognitionStart: observed.frame?.[dimension] ?? null,
@@ -918,7 +1059,7 @@ function compareRecognitionSourceWithExport(startSnapshot, exportCaptures) {
     comparedCaptureCount: Math.min(starts.length, exportCaptures.length), mismatches };
 }
 
-function classifyExportIndependence(exportCaptures, freeze, priorCases, sourceComparison, inputMode) {
+export function classifyExportIndependence(exportCaptures, freeze, priorCases, sourceComparison, inputMode) {
   const evidenceByHash = new Map();
   const addHash = (hash, ref) => {
     if (!hash) return;
@@ -926,21 +1067,23 @@ function classifyExportIndependence(exportCaptures, freeze, priorCases, sourceCo
     refs.push(ref);
     evidenceByHash.set(hash, refs);
   };
-  for (const item of freeze.preFreezeImageEvidence || []) addHash(item.sha256, { type: "PRE_R011_IMAGE", path: item.path });
+  for (const item of freeze.preFreezeImageEvidence || []) addHash(item.sha256, { type: "PRE_L1_LIVE_IMAGE", path: item.path });
   for (const prior of priorCases) for (const capture of prior.sourceCaptures || []) {
-    addHash(capture.bitmapSha256, { type: "PRIOR_R011_CAPTURE", caseId: prior.caseId, hashBasis: "bitmapSha256" });
-    addHash(capture.sourceSha256, { type: "PRIOR_R011_CAPTURE", caseId: prior.caseId, hashBasis: "sourceSha256" });
+    addHash(capture.bitmapSha256, { type: prior.task === "R011" ? "PRIOR_R011_CAPTURE" : "PRIOR_L1_CAPTURE", caseId: prior.caseId, hashBasis: "bitmapSha256" });
+    addHash(capture.imageSha256, { type: prior.task === "R011" ? "PRIOR_R011_CAPTURE" : "PRIOR_L1_CAPTURE", caseId: prior.caseId, hashBasis: "imageSha256" });
+    addHash(capture.sourceSha256, { type: prior.task === "R011" ? "PRIOR_R011_CAPTURE" : "PRIOR_L1_CAPTURE", caseId: prior.caseId, hashBasis: "sourceSha256" });
   }
   const matches = [];
-  for (const capture of exportCaptures) for (const hashBasis of ["bitmapSha256", "sourceSha256"]) {
+  for (const capture of exportCaptures) for (const hashBasis of ["bitmapSha256", "imageSha256", "sourceSha256"]) {
     const hash = capture[hashBasis];
     for (const prior of evidenceByHash.get(hash) || []) matches.push({ captureId: capture.captureId, hashBasis, hash, prior });
   }
-  const priorCasesWithoutHashes = priorCases.filter((item) => !(item.sourceCaptures || []).some((capture) => capture.bitmapSha256 || capture.sourceSha256))
+  const priorCasesWithoutHashes = priorCases.filter((item) => !(item.sourceCaptures || []).some((capture) => capture.bitmapSha256 || capture.imageSha256 || capture.sourceSha256))
     .map((item) => ({ caseId: item.caseId, status: item.status, caseManifestPath: item.caseManifestPath }));
   const inputModeMismatches = exportCaptures.filter((item) => !modeMatches(inputMode, item.sourceType))
     .map((item) => ({ captureId: item.captureId, inputMode, sourceType: item.sourceType }));
   const status = matches.length ? "DUPLICATE_NON_INDEPENDENT"
+    : priorCasesWithoutHashes.length ? "INDEPENDENCE_UNVERIFIABLE_PRIOR_CASE_HASHES_MISSING"
     : sourceComparison.status !== "SOURCE_PROVENANCE_MATCH" ? "INDEPENDENCE_UNVERIFIABLE_SOURCE_MISMATCH"
       : inputModeMismatches.length ? "INDEPENDENCE_UNVERIFIABLE_INPUT_MODE_MISMATCH"
       : "NO_KNOWN_PRIOR_HASH_MATCH";
@@ -948,11 +1091,65 @@ function classifyExportIndependence(exportCaptures, freeze, priorCases, sourceCo
     priorCasesWithoutHashes, inputModeMismatches, comparedCaptureCount: exportCaptures.length };
 }
 
+async function validateExport3(exportRecord, receipt) {
+  const semantic = exportRecord?.semantic;
+  const observation = semantic?.observation;
+  const projection = observation?.projection;
+  const completion = observation?.completion;
+  const rawEvidence = observation?.sourceContext?.rawEvidence;
+  const master = observation?.sourceContext?.masterBundle;
+  const manifest = semantic?.manifest;
+  if (exportRecord?.schemaVersion !== 3 || exportRecord.exportType !== "TRADE_FINAL_REVIEW_OBSERVATION"
+    || exportRecord.hashBasis !== "TRADE_EXPORT_JSON_V3" || observation?.schemaVersion !== 3
+    || observation.reviewMode !== "FINAL_CORRECTED_RESULT" || projection?.schemaVersion !== 3
+    || completion?.schemaVersion !== 3 || completion.batchConfirmation?.method !== "USER_FINAL_LIST_CONFIRMED"
+    || projection.recognitionBatchId !== completion.recognitionBatchId
+    || projection.projectionHash !== completion.projectionHash
+    || completion.batchConfirmation.projectionHash !== projection.projectionHash
+    || completion.batchConfirmation.reviewRevision !== completion.reviewRevision
+    || manifest?.evaluationPolicyVersion !== EVALUATION_POLICY || manifest.observationSchemaVersion !== 3
+    || manifest.projectionSchemaVersion !== 3 || manifest.completionSchemaVersion !== 3
+    || rawEvidence?.snapshot?.schemaVersion !== 2 || rawEvidence.rawEvidenceHash !== projection.rawEvidenceHash
+    || rawEvidence.snapshot.recognitionBatchId !== projection.recognitionBatchId
+    || rawEvidence.rawEvidenceHash !== manifest.rawEvidenceHash && manifest.rawEvidenceHash != null
+    || receipt?.schemaVersion !== 3 || receipt.reviewMode !== "FINAL_CORRECTED_RESULT"
+    || receipt?.observationId !== observation.observationId || receipt?.observationHash !== observation.observationHash
+    || receipt?.payloadHash !== observation.payloadHash || receipt?.projectionHash !== projection.projectionHash) {
+    throw new Error("Export3 / Observation3 / Completion3 binding validation failed.");
+  }
+  const masterModule = await import(pathToFileURL(path.join(APP_ROOT, "frontend", "js", "domain", "trade-master-bundle.js")));
+  const binding = projection.masterBinding;
+  if (!binding || JSON.stringify(master.binding) !== JSON.stringify(binding)
+    || JSON.stringify(completion.masterBinding) !== JSON.stringify(binding)
+    || JSON.stringify(manifest.masterBinding) !== JSON.stringify(binding)
+    || master.snapshot?.schemaVersion !== 2 || !masterModule.validateMasterBundleV2(master.snapshot).ok
+    || masterModule.masterBundleContentHash(master.snapshot) !== binding.contentHash
+    || master.snapshot.registryVersion !== binding.registryVersion) {
+    throw new Error("Export3 pinned Master Bundle2 binding is inconsistent.");
+  }
+  if (!Array.isArray(semantic.truthLabels) || semantic.truthLabels.length > 0) {
+    throw new Error("L1 operational review must not create or import independent truth labels.");
+  }
+  if ((semantic.dataset?.rows ?? []).some((row) => row.fields.some((field) => field.knownTruthEligible
+    || field.truthEvidence !== "NONE"))) throw new Error("Operational review was incorrectly promoted to truth evidence.");
+  return { observation, projection, completion, binding, rawEvidence: rawEvidence.snapshot,
+    sourceContext: observation.sourceContext, cropPlan: observation.cropPlan,
+    cropEvidence: semantic.cropEvidence ?? [], dataset: semantic.dataset };
+}
+
+function semanticTruthLabelCount(exportRecord) {
+  return exportRecord?.semantic?.truthLabels?.length ?? -1;
+}
+
 async function waitForRecognitionStart(browser, timeoutMs) {
-  console.log(`\nChrome에서 화면 연결 후 ROI를 정하고, 게임을 직접 스크롤하며 필요한 만큼 캡처하세요.`);
+  console.log(`\nChrome에서 화면 연결 후 ROI를 정하고, 이번 fresh L1 검증용 실제 화면을 사용자가 직접 캡처하세요.`);
   console.log("캡처가 끝나면 Chrome 화면의 ‘로컬 인식 실행’을 직접 누르세요. 터미널 입력은 필요하지 않습니다.");
   const request = await waitFor(async () => browser.recognitionRequests[0] || false,
     "user-triggered local trade recognition request", timeoutMs, 250);
+  await waitFor(async () => request.version != null, "recognition request version", 5000, 100);
+  if (request.version !== 2 || browser.recognitionRequests.some((item) => item.version === 1)) {
+    throw new Error(`CURRENT_PRIMARY_RECOGNITION_NOT_V2: ${JSON.stringify(browser.recognitionRequests)}`);
+  }
   let clickSnapshot = null;
   try {
     clickSnapshot = await browser.evaluate(`(async()=>window.__r011RecognitionStartSnapshotPromise
@@ -974,21 +1171,37 @@ async function waitForRecognitionStart(browser, timeoutMs) {
 }
 
 async function waitForRecognition(browser, timeoutMs) {
-  console.log("\n인식이 끝나면 모든 logical row와 6개 필드를 직접 확인·수정하고, 모르는 값은 UNKNOWN으로 표시한 뒤 ‘검수 완료’를 누르세요.");
-  return await waitFor(async () => {
-    const state = await browser.evaluate(`JSON.stringify({rows:document.querySelectorAll('.trade-review-table tbody tr[data-projection-row-id],.trade-review-table tbody tr[data-capture-id]').length,
-      table:Boolean(document.querySelector('#trade-recognition-review-dialog .trade-review-table')),
-      reviewDialogOpen:Boolean(document.querySelector('#trade-recognition-review-dialog')?.open),recognizeDisabled:document.querySelector('[data-action=recognize-trade]')?.disabled??null,
+  console.log("\n인식이 끝나면 FinalReview3에서 모든 logical row와 6개 필드를 직접 확인·수정하고, 모르는 값은 ‘모름’으로 표시한 뒤 ‘검수 완료’를 직접 누르세요.");
+  const ready = await waitFor(async () => {
+    const state = await browser.evaluate(`JSON.stringify({rows:document.querySelectorAll('#trade-final-review-dialog [data-role=list] [data-action=select-item][data-item-type=row]').length,
+      reviewRoot:Boolean(document.querySelector('#trade-final-review-dialog [data-role=trade-final-review-root] .trade-final-review-shell')),
+      summary:(document.querySelector('#trade-final-review-dialog [data-role=summary]')?.textContent||'').trim(),
+      problemTab:Boolean(document.querySelector('#trade-final-review-dialog [role=tab][data-tab=problem]')),
+      fullTab:Boolean(document.querySelector('#trade-final-review-dialog [role=tab][data-tab=all]')),
+      sourcePanel:Boolean(document.querySelector('#trade-final-review-dialog [data-role=source]')),
+      fieldsPanel:Boolean(document.querySelector('#trade-final-review-dialog [data-role=fields]')),
+      reviewDialogOpen:Boolean(document.querySelector('#trade-final-review-dialog')?.open),recognizeDisabled:document.querySelector('[data-action=recognize-trade]')?.disabled??null,
       queued:Number(document.querySelector('#trade-capture-dialog')?.dataset.queueLength||0)})`).then(JSON.parse);
-    return state.reviewDialogOpen && state.table && state.rows > 0 ? state : false;
-  }, "real recognition result/review rows", timeoutMs, 500);
+    return state.reviewDialogOpen && state.reviewRoot && state.rows > 0 && state.problemTab && state.fullTab
+      && state.sourcePanel && state.fieldsPanel && state.summary ? state : false;
+  }, "FinalReview3 mounted logical rows, tabs, classification summary, and source evidence panel", timeoutMs, 500);
+  if (!browser.recognitionRequests.length || browser.recognitionRequests.some((item) => item.version !== 2)) {
+    throw new Error(`V2_PRIMARY_PATH_OR_NO_SILENT_FALLBACK_FAILED: ${JSON.stringify(browser.recognitionRequests)}`);
+  }
+  return ready;
 }
 
 async function waitForObservation(browser, timeoutMs) {
-  console.log("검수 완료 후 backend가 observation을 저장하면 export를 자동 보관합니다.");
+  console.log("사용자가 최종 목록 확인을 누른 뒤 Observation3 저장을 기다립니다. harness는 확인 동작을 대신하지 않습니다.");
   return await waitFor(async () => {
     const reply = [...browser.observationReplies].reverse().find((item) => item.body?.ok === true && item.body?.receipt?.observationId);
-    if (reply) return reply;
+    if (reply) {
+      if (reply.requestBody?.schemaVersion !== 3 || reply.requestBody?.reviewMode !== "FINAL_CORRECTED_RESULT"
+        || reply.body?.receipt?.schemaVersion !== 3 || reply.body?.receipt?.reviewMode !== "FINAL_CORRECTED_RESULT") {
+        throw new Error(`OBSERVATION3_CONTRACT_MISMATCH: ${JSON.stringify({ request: reply.requestBody, receipt: reply.body?.receipt })}`);
+      }
+      return reply;
+    }
     const status = await browser.evaluate(`document.querySelector('[data-role=trade-recognition-status]')?.textContent||document.querySelector('#trade-recognition-status')?.textContent||''`);
     const hasSaveFailure = /저장.*실패|저장 요청이 거부|저장소/.test(status);
     if (hasSaveFailure) return false;
@@ -999,18 +1212,23 @@ async function waitForObservation(browser, timeoutMs) {
 async function observationStatus(browser) {
   return await browser.evaluate(`JSON.stringify({status:[...document.querySelectorAll('[data-role]')].find(node=>node.dataset.role==='trade-recognition-status')?.textContent||'',
     sessionStatus:document.querySelector('[data-role=session-apply-status]')?.textContent||'',
+    sessionState:document.querySelector('[data-role=session-apply-status]')?.dataset.state||null,
     newDisabled:document.querySelector('[data-action=apply-reviewed-new]')?.disabled??true,
     exclusions:[...document.querySelectorAll('.trade-review-held-exclusion input[type=checkbox]')].filter(node=>node.checked).map(node=>node.dataset.projectionRowId),
     exclusionOptions:[...document.querySelectorAll('.trade-review-held-exclusion input[type=checkbox]')].map(node=>node.dataset.projectionRowId)})`).then(JSON.parse);
 }
 
-async function waitForDtoReadiness(browser, timeoutMs) {
-  console.log("R008 상태가 준비되면 보류 행이 있는 경우 사용자가 직접 제외 여부를 결정합니다.");
+async function waitForDtoReadiness(browser, timeoutMs, expectedCropCount) {
+  console.log("저장된 Observation3의 DTO v3 상태를 확인합니다. 보류 행이 있으면 사용자가 직접 제외 여부를 결정하세요.");
   console.log("그 뒤 ‘새 회차로 적용’과 ‘이 내용으로 회차 저장’을 직접 눌러 주세요. harness는 버튼을 누르지 않습니다.");
   const ready = await waitFor(async () => {
     const state = await observationStatus(browser);
-    return state.sessionStatus && state.sessionStatus !== "저장된 검수 자료를 확인하는 중입니다." && !state.newDisabled ? state : false;
-  }, "R008 READY and user exclusions", timeoutMs, 500);
+    const cropsSaved = expectedCropCount === 0
+      ? /검수 자료 저장 완료|선택한 원본 영역 저장 완료/.test(state.status)
+      : expectedCropCount > 0 && /선택한 원본 영역 저장 완료/.test(state.status);
+    return state.sessionStatus && state.sessionStatus !== "저장된 검수 자료를 확인하는 중입니다."
+      && !state.newDisabled && cropsSaved ? state : false;
+  }, "DTO v3 READY and user exclusions", timeoutMs, 500);
   return ready;
 }
 
@@ -1022,10 +1240,13 @@ function bootstrapSessionFacts(body) {
     : { exists: false };
 }
 
-async function waitForAppliedSession(browser, timeoutMs) {
+async function waitForAppliedSession(browser, baseUrl, timeoutMs) {
   return await waitFor(async () => {
     const state = await observationStatus(browser);
-    if (/저장된 회차를 다시 읽어 확인하고 화면에 적용했습니다/.test(state.sessionStatus)) return state;
+    const bootstrap = await (await fetch(`${baseUrl}api/bootstrap`, { cache: "no-store" })).json();
+    const facts = bootstrapSessionFacts(bootstrap);
+    if (state.sessionState === "APPLIED" && facts.exists && facts.diagnostics?.type === "TRADE_REVIEW_SESSION_APPLY"
+      && facts.diagnostics?.mode === "NEW" && facts.scannedTradeCount > 0) return { ...state, durableSession: facts };
     return false;
   }, "durable session commit and R009 readback", timeoutMs, 500);
 }
@@ -1034,10 +1255,15 @@ async function evaluateRun(runDir, caseId, exportsForEvaluation) {
   const evalDir = path.join(runDir, "evaluation"); await mkdir(evalDir, { recursive: true });
   const manifestPath = path.join(evalDir, `manifest-${caseId}.json`);
   const outputPath = path.join(evalDir, `report-${caseId}.json`);
+  const assignments = [...new Map(exportsForEvaluation.map((item) => [item.sourceFamilyId, item])).values()]
+    .map((item) => ({ sourceFamilyId: item.sourceFamilyId, cohort: item.cohort }));
+  const splitBody = { schemaVersion: 1, frozen: true, assignments };
+  const splitManifest = { ...splitBody, manifestHash: semanticEvaluationSha256(splitBody) };
+  const splitManifestPath = path.join(evalDir, `split-${caseId}.json`);
+  await writeJson(splitManifestPath, splitManifest);
   const manifest = { schemaVersion: 1, evaluationPolicyVersion: EVALUATION_POLICY,
-    rawEvaluationVersion: RAW_EVALUATION, splitSeed: "r011-independent-live-v1",
-    observations: exportsForEvaluation.map((item) => ({ exportPath: path.relative(evalDir, item.exportPath).replaceAll(path.sep, "/"),
-      exclusions: item.exclusions, cohort: item.cohort })) };
+    splitManifestPath: path.relative(evalDir, splitManifestPath).replaceAll(path.sep, "/"),
+    observations: exportsForEvaluation.map((item) => ({ exportPath: path.relative(evalDir, item.exportPath).replaceAll(path.sep, "/") })) };
   await writeJson(manifestPath, manifest);
   const evaluator = path.join(APP_ROOT, "tools", "trade_review_evaluation.mjs");
   const result = spawnSync(process.execPath, [evaluator, "--manifest", manifestPath, "--out", outputPath], {
@@ -1045,13 +1271,14 @@ async function evaluateRun(runDir, caseId, exportsForEvaluation) {
   });
   if (result.status !== 0) throw new Error(`R010 evaluator 실패:\n${result.stderr || result.stdout}`);
   const report = JSON.parse(await readFile(outputPath, "utf8"));
-  return { manifestPath, reportPath: outputPath, semanticHash: report.semanticHash,
-    evaluationStatus: report.evaluationStatus, splitLeakage: report.warnings?.some((item) => String(item).includes("SPLIT_LEAKAGE")) ?? false };
+  return { manifestPath, splitManifestPath, splitManifestHash: splitManifest.manifestHash, reportPath: outputPath,
+    semanticHash: report.semanticHash, evaluationStatus: report.evaluationStatus,
+    splitLeakage: report.warnings?.some((item) => String(item).includes("SPLIT_LEAKAGE")) ?? false };
 }
 
 async function runLive(options) {
   const input = liveArgs(options);
-  const runDir = assertInsideR011(options["run-dir"]);
+  const runDir = assertInsideL1(options["run-dir"]);
   const caseDir = path.join(runDir, "cases", input.caseId);
   await mkdir(runDir, { recursive: true });
   await mkdir(path.join(runDir, "cases"), { recursive: true });
@@ -1060,13 +1287,14 @@ async function runLive(options) {
     throw error;
   }
   const caseManifestPath = path.join(caseDir, "case-manifest.json");
-  const caseRecord = { schemaVersion: 1, task: "R011", caseId: input.caseId, status: "STARTED_CAPTURE_PENDING",
+  const caseRecord = { schemaVersion: 1, task: "ARCH-A1B-L1", caseId: input.caseId, status: "STARTED_CAPTURE_PENDING",
     cohort: input.cohort, inputMode: input.inputMode,
     userAttestedEnvironment: { displayWidth: input.displayWidth, displayHeight: input.displayHeight,
       windowsScalePercent: input.windowsScalePercent, chromeZoomPercent: input.chromeZoomPercent,
       source: "USER_ATTESTED_OPTIONAL" },
     notes: input.notes, createdAt: isoNow(), sourceCaptures: [], observationId: null, exportPath: null,
-    exportSha256: null, explicitExclusions: [], r008Status: null, sessionStatus: "NOT_STARTED" };
+    exportSha256: null, explicitExclusions: [], dtoStatus: null, sessionStatus: "NOT_STARTED",
+    ownerUsabilityDecision: null, truthLabelPostCount: 0 };
   await writeJson(caseManifestPath, caseRecord);
   const caseFiles = { browserObservationsPath: path.join(caseDir, "browser-observations.json"),
     sessionResultPath: path.join(caseDir, "session-result.json"), runLogPath: path.join(caseDir, "run-log.json") };
@@ -1086,9 +1314,9 @@ async function runLive(options) {
       const existing = await readFile(path.join(runDir, "cases", item.name, "case-manifest.json"), "utf8").then(JSON.parse).catch(() => null);
       if (existing) existingCases.push(existing);
     }
-    const priorR011Cases = (await readPriorR011Cases()).filter((item) =>
+    const priorLiveCases = (await readPriorLiveCases()).filter((item) =>
       path.resolve(item.caseManifestPath) !== path.resolve(caseManifestPath));
-    workspace = await import("node:fs/promises").then(({ mkdtemp }) => mkdtemp(path.join(tmpdir(), "bdo-r011-live-")));
+    workspace = await import("node:fs/promises").then(({ mkdtemp }) => mkdtemp(path.join(tmpdir(), "bdo-l1-live-")));
     const port = await findPort();
     server = await startServer({ pythonPath, workspace: path.join(runDir, "session", input.caseId), port });
     if (server.runtime.available !== true || server.runtime.modelReady !== true) throw new Error(`실제 로컬 OCR runtime/model unavailable: ${JSON.stringify(server.runtime)}`);
@@ -1120,6 +1348,7 @@ async function runLive(options) {
     await writeJson(caseFiles.browserObservationsPath, { schemaVersion: 1, environment: environmentObservation,
       python: { executable: probe.executable, version: probe.version, prefix: probe.prefix }, chrome: browser.version,
       runtime: opened.runtimeStatus, isolatedStorage: { mainDb: server.mainDb, recognitionSidecar: server.sidecar,
+        masterDb: server.masterDb, masterSource: "isolated_repository_catalog_and_reference_manifest",
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false },
       recognitionStart: null, captureMetadataAtRecognitionStart: null, sourceProvenanceComparison: null,
       observationResponse: null,
@@ -1128,7 +1357,7 @@ async function runLive(options) {
       caseManifestPath: path.join(runDir, "cases", item.caseId, "case-manifest.json") })),
       { ...caseRecord, caseManifestPath }], null);
     const recognitionStart = await waitForRecognitionStart(browser, timeoutMs);
-    const sourceClassification = classifyCaptureSources(recognitionStart.sourceSnapshot.captures || [], freeze, priorR011Cases, input.inputMode);
+    const sourceClassification = classifyCaptureSources(recognitionStart.sourceSnapshot.captures || [], freeze, priorLiveCases, input.inputMode);
     caseRecord.recognitionStart = { request: recognitionStart.request, sourceSnapshotAuthority: recognitionStart.sourceSnapshot.authority,
       sourceSnapshotObservedAt: recognitionStart.sourceSnapshot.observedAt ?? null,
       captureCount: recognitionStart.sourceSnapshot.captureCount ?? recognitionStart.sourceSnapshot.captures?.length ?? 0,
@@ -1146,6 +1375,7 @@ async function runLive(options) {
     const browserObservations = { schemaVersion: 1, environment: environmentObservation,
       python: { executable: probe.executable, version: probe.version, prefix: probe.prefix }, chrome: browser.version,
       runtime: opened.runtimeStatus, isolatedStorage: { mainDb: server.mainDb, recognitionSidecar: server.sidecar,
+        masterDb: server.masterDb, masterSource: "isolated_repository_catalog_and_reference_manifest",
         realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false },
       recognitionStart: caseRecord.recognitionStart, captureMetadataAtRecognitionStart: sourceClassification,
       sourceProvenanceComparison: null, observationResponse: null, observationExport: null, preReviewTruthInferred: false };
@@ -1160,6 +1390,16 @@ async function runLive(options) {
     caseRecord.observationId = observationId;
     caseRecord.observationPersistedAt = isoNow();
     log.events.push({ at: isoNow(), event: "OBSERVATION_SAVED", observationId });
+    const selectedCropEntries = reply.requestBody?.cropPlan?.entries?.filter((entry) => entry.selected && entry.cropRefId) ?? null;
+    if (!selectedCropEntries) throw new Error("Observation3 POST body의 CropPlan3를 읽지 못해 crop 업로드 완료를 증명할 수 없습니다.");
+    const readiness = await waitForDtoReadiness(browser, timeoutMs, selectedCropEntries.length);
+    caseRecord.dtoStatus = readiness.newDisabled ? "NOT_READY" : "READY";
+    caseRecord.dtoMappingPolicyVersion = MAPPING_POLICY;
+    caseRecord.dtoStatusText = readiness.sessionStatus;
+    caseRecord.explicitExclusions = readiness.exclusions.map((projectionRowId) => ({ projectionRowId,
+      action: "EXCLUDE_FROM_FINAL_DTO", reason: "USER_EXPLICIT_EXCLUSION" }));
+    caseRecord.truthLabelPostCount = browser.truthLabelPosts.length;
+    if (caseRecord.truthLabelPostCount !== 0) throw new Error(`unexpected truth-label POST: ${caseRecord.truthLabelPostCount}`);
     const exportResponse = await fetch(`${server.baseUrl}api/recognition/trade-review-observations/${encodeURIComponent(observationId)}/export`, { cache: "no-store" });
     if (!exportResponse.ok) throw new Error(`observation export failed: HTTP ${exportResponse.status}`);
     const exportBytes = Buffer.from(await exportResponse.arrayBuffer());
@@ -1167,9 +1407,13 @@ async function runLive(options) {
     await mkdir(path.dirname(exportPath), { recursive: true });
     await writeFile(exportPath, exportBytes, { flag: "wx" });
     const exportRecord = JSON.parse(exportBytes.toString("utf8"));
+    const validated = await validateExport3(exportRecord, reply.body.receipt);
+    const observation = validated.observation;
+    const projection = validated.projection;
+    const completion = validated.completion;
     const sourceCaptures = sourceRowsFromExport(exportRecord);
     const sourceProvenanceComparison = compareRecognitionSourceWithExport(recognitionStart.sourceSnapshot, sourceCaptures);
-    const exportIndependence = classifyExportIndependence(sourceCaptures, freeze, priorR011Cases,
+    const exportIndependence = classifyExportIndependence(sourceCaptures, freeze, priorLiveCases,
       sourceProvenanceComparison, input.inputMode);
     const recognitionStartById = new Map((recognitionStart.sourceSnapshot.captures || []).map((item) => [item.captureId, item]));
     caseRecord.sourceCaptures = sourceCaptures.map((item, index) => ({
@@ -1177,8 +1421,9 @@ async function runLive(options) {
     }));
     caseRecord.sourceProvenanceComparison = sourceProvenanceComparison;
     caseRecord.sourceIndependence = exportIndependence;
-    caseRecord.independenceBasis = "POST_RECOGNITION_SOURCE_HASH_COMPARISON_WITH_RECORDED_R011_EVIDENCE";
+    caseRecord.independenceBasis = "POST_RECOGNITION_SOURCE_HASH_COMPARISON_WITH_READ_ONLY_HISTORICAL_AND_PRIOR_L1_EVIDENCE";
     caseRecord.cohort = exportIndependence.independentCandidate ? input.cohort : "UNASSIGNED";
+    caseRecord.sourceFamilyId = randomUUID();
     log.events.push({ at: isoNow(), event: sourceProvenanceComparison.status,
       comparedCaptureCount: sourceProvenanceComparison.comparedCaptureCount, mismatches: sourceProvenanceComparison.mismatches ?? [] });
     log.events.push({ at: isoNow(), event: "SOURCE_INDEPENDENCE_CLASSIFIED", status: exportIndependence.status,
@@ -1187,17 +1432,54 @@ async function runLive(options) {
     caseRecord.exportPath = path.relative(runDir, exportPath).replaceAll(path.sep, "/");
     caseRecord.exportSha256 = sha256(exportBytes);
     caseRecord.exportBytes = exportBytes.byteLength;
-    caseRecord.status = "OBSERVATION_EXPORTED_R008_REVIEW_PENDING";
-    caseRecord.registryVersion = exportRecord.semantic?.observation?.completion?.registryVersion ?? null;
-    caseRecord.correctionVersion = exportRecord.semantic?.observation?.completion?.correctionVersion ?? null;
+    caseRecord.status = "OBSERVATION3_EXPORTED_DTO_V3_REVIEWED";
+    caseRecord.masterBinding = projection.masterBinding;
+    caseRecord.masterBundle = { schemaVersion: validated.sourceContext.masterBundle.snapshot.schemaVersion,
+      registryVersion: projection.masterBinding.registryVersion, contentHash: projection.masterBinding.contentHash,
+      hashBasis: projection.masterBinding.hashBasis };
+    caseRecord.correctionVersion = projection.correctionVersion;
+    caseRecord.reconciliationPolicyVersion = projection.reconciliation.policyVersion;
+    caseRecord.rawEvidenceHash = projection.rawEvidenceHash;
+    caseRecord.projectionHash = projection.projectionHash;
+    caseRecord.observationHash = observation.observationHash;
+    caseRecord.exportHashBasis = exportRecord.hashBasis;
+    caseRecord.observationSchemaVersion = observation.schemaVersion;
+    caseRecord.completionSchemaVersion = completion.schemaVersion;
+    caseRecord.exportSchemaVersion = exportRecord.schemaVersion;
+    caseRecord.batchConfirmation = completion.batchConfirmation;
+    caseRecord.operationalDecisionCounts = Object.fromEntries([...OPERATIONAL_DECISIONS].map((decision) => [decision,
+      completion.rows.reduce((sum, row) => sum + row.fields.filter((field) => field.operationalDecision === decision).length, 0)]));
+    caseRecord.unknownFieldCount = caseRecord.operationalDecisionCounts.USER_MARKED_UNKNOWN;
+    caseRecord.unknownRowCount = completion.rows.filter((row) => row.fields.some((field) => field.operationalDecision === "USER_MARKED_UNKNOWN")).length;
+    caseRecord.excludedLogicalRowCount = completion.rows.filter((row) => row.disposition === "EXCLUDE").length;
+    caseRecord.edgeDecisionCounts = Object.fromEntries([...new Set(completion.workItems.map((item) => item.decision))]
+      .map((decision) => [decision, completion.workItems.filter((item) => item.decision === decision).length]));
+    caseRecord.captureCount = validated.rawEvidence.captures.length;
+    caseRecord.sourceCompleteRowCount = validated.rawEvidence.sourceRows.length;
+    caseRecord.logicalReviewRowCount = projection.rows.length;
+    caseRecord.edgeSegmentCount = validated.rawEvidence.edgeSegments.length;
+    caseRecord.classificationCounts = Object.fromEntries(["FINAL_READY", "NEEDS_REVIEW", "NEEDS_RECAPTURE", "CONFLICT"]
+      .map((classification) => [classification, projection.rows.filter((row) => row.classification === classification).length]));
+    const selectedCropKeys = new Set(validated.cropPlan.entries.filter((entry) => entry.selected && entry.cropRefId)
+      .map((entry) => `${entry.projectionRowId}|${entry.field}|${entry.cropRefId}`));
+    const savedCropKeys = new Set(validated.cropEvidence.filter((item) => item.state === "AVAILABLE")
+      .map((item) => `${item.projectionRowId}|${item.field}|${item.cropRefId}`));
+    caseRecord.cropEvidence = { selectedCount: selectedCropKeys.size,
+      availableCount: [...selectedCropKeys].filter((key) => savedCropKeys.has(key)).length,
+      uploadRequests: browser.cropPosts.length, selectedRefs: [...selectedCropKeys] };
+    if ([...selectedCropKeys].some((key) => !savedCropKeys.has(key))) throw new Error("선택 CropRef가 Export3에서 AVAILABLE로 확인되지 않았습니다.");
+    caseRecord.truthLabelPostCount = browser.truthLabelPosts.length;
+    if (caseRecord.truthLabelPostCount !== 0 || semanticTruthLabelCount(exportRecord) !== 0) throw new Error("L1 operational review가 독립 truth label을 만들었습니다.");
     const observationFacts = { observationId,
       response: { status: reply.status, receipt: reply.body.receipt },
       export: { path: caseRecord.exportPath, sha256: caseRecord.exportSha256, bytes: caseRecord.exportBytes,
         semanticHash: exportRecord.semanticHash ?? null },
       sourceCaptures: caseRecord.sourceCaptures, correctionVersion: caseRecord.correctionVersion,
-      registryVersion: caseRecord.registryVersion, projectionHash: exportRecord.semantic?.observation?.completion?.projectionHash ?? null,
-      rowCounts: { logicalReviewRows: exportRecord.semantic?.observation?.completion?.rows?.length ?? null,
-        captureSourceCompleteRows: exportRecord.semantic?.observation?.sourceContext?.recognition?.captureEvidence?.captures?.reduce((sum, item) => sum + item.completeRowCount, 0) ?? null },
+      masterBinding: caseRecord.masterBinding, reconciliationPolicyVersion: caseRecord.reconciliationPolicyVersion,
+      rawEvidenceHash: caseRecord.rawEvidenceHash, projectionHash: caseRecord.projectionHash,
+      observationHash: caseRecord.observationHash,
+      rowCounts: { sourceCompleteRows: caseRecord.sourceCompleteRowCount, logicalReviewRows: caseRecord.logicalReviewRowCount,
+        edgeSegments: caseRecord.edgeSegmentCount }, cropEvidence: caseRecord.cropEvidence,
       rawExportBytesPreserved: true, preReviewTruthInferred: false };
     browserObservations.observationResponse = { status: reply.status, receipt: reply.body.receipt };
     browserObservations.sourceProvenanceComparison = sourceProvenanceComparison;
@@ -1205,14 +1487,10 @@ async function runLive(options) {
     browserObservations.captureMetadataFromPersistedExport = caseRecord.sourceCaptures;
     await writeJson(caseFiles.browserObservationsPath, browserObservations);
     await writeJson(caseManifestPath, caseRecord);
-    const readiness = await waitForDtoReadiness(browser, timeoutMs);
-    caseRecord.r008Status = readiness.newDisabled ? "NOT_READY" : "READY";
-    caseRecord.explicitExclusions = readiness.exclusions.map((projectionRowId) => ({ projectionRowId,
-      action: "EXCLUDE_FROM_FINAL_DTO", reason: "USER_EXPLICIT_EXCLUSION" }));
     caseRecord.reviewedProjectionRowCount = observationFacts.rowCounts.logicalReviewRows;
-    caseRecord.sessionStatus = "R008_READY_WAITING_FOR_HUMAN_NEW_AND_COMMIT";
+    caseRecord.sessionStatus = "DTO_V3_READY_WAITING_FOR_HUMAN_NEW_AND_COMMIT";
     await writeJson(caseManifestPath, caseRecord);
-    const applied = await waitForAppliedSession(browser, timeoutMs);
+    const applied = await waitForAppliedSession(browser, server.baseUrl, timeoutMs);
     caseRecord.sessionStatus = "APPLIED_READBACK_VERIFIED";
     caseRecord.appliedStatusText = applied.sessionStatus;
     const bootstrapBeforeReloadResponse = await fetch(`${server.baseUrl}api/bootstrap`, { cache: "no-store" });
@@ -1234,11 +1512,11 @@ async function runLive(options) {
     }
     caseRecord.sessionAfterReload = afterReloadFacts;
     caseRecord.renderedTradeListAfterReload = true;
-    caseRecord.status = "COMPLETE_LIVE_CASE_NOT_FINAL_R011";
+    caseRecord.status = "COMPLETE_L1_CASE_OWNER_DECISION_PENDING";
     caseRecord.completedAt = isoNow();
     caseRecord.sessionStatus = "NEW_COMMIT_READBACK_RELOAD_RENDER_PASS";
     await writeJson(caseFiles.sessionResultPath, { schemaVersion: 1, caseId: input.caseId,
-      r008Status: caseRecord.r008Status, explicitExclusions: caseRecord.explicitExclusions,
+      dtoStatus: caseRecord.dtoStatus, explicitExclusions: caseRecord.explicitExclusions,
       userTriggeredNewApply: true, durableSessionBeforeReload: beforeReloadFacts,
       durableSessionAfterReload: afterReloadFacts, listRenderedAfterReload: true,
       realMainDbAccessed: false, realUserDbAccessed: false, productionSidecarAccessed: false });
@@ -1250,8 +1528,9 @@ async function runLive(options) {
       const value = await readFile(path.join(runDir, "cases", item.name, "case-manifest.json"), "utf8").then(JSON.parse).catch(() => null);
       if (value) allCases.push(value);
     }
-    const eligible = allCases.filter((item) => item.status === "COMPLETE_LIVE_CASE_NOT_FINAL_R011" && item.exportPath
-      && item.cohort === "INDEPENDENT").map((item) => ({ exportPath: path.join(runDir, item.exportPath), exclusions: item.explicitExclusions, cohort: item.cohort }));
+    const eligible = allCases.filter((item) => item.status === "COMPLETE_L1_CASE_OWNER_DECISION_PENDING" && item.exportPath
+      && item.cohort === "INDEPENDENT" && item.sourceFamilyId).map((item) => ({ exportPath: path.join(runDir, item.exportPath),
+        sourceFamilyId: item.sourceFamilyId, cohort: item.cohort }));
     const evaluation = await evaluateRun(runDir, input.caseId, eligible);
     await writeJson(path.join(runDir, "evaluation", `case-${input.caseId}-reference.json`), evaluation);
     await updateRunManifest(runDir, gitState, allCases.map((item) => ({ ...item,
@@ -1259,11 +1538,12 @@ async function runLive(options) {
       ["Evaluation is descriptive evidence only; user ownerUsabilityDecision remains null."]);
     log.events.push({ at: isoNow(), event: "R010_EVALUATION_COMPLETED", status: evaluation.evaluationStatus, report: evaluation.reportPath });
     await writeJson(caseFiles.runLogPath, log);
-    console.log(JSON.stringify({ task: "R011-B case evidence", status: caseRecord.status,
+    console.log(JSON.stringify({ task: "ARCH-A1B-L1", status: caseRecord.status,
       caseId: input.caseId, observationId, exportPath, exportSha256: caseRecord.exportSha256,
-      r008Status: caseRecord.r008Status, explicitExclusions: caseRecord.explicitExclusions,
-      sessionStatus: caseRecord.sessionStatus, evaluation, finalR011UsabilityDecision: null,
-      message: "독립 case가 기록되었습니다. 이것만으로 R011 최종 usability 승인이나 auto-accept 승인을 뜻하지 않습니다." }, null, 2));
+      dtoStatus: caseRecord.dtoStatus, explicitExclusions: caseRecord.explicitExclusions,
+      sessionStatus: caseRecord.sessionStatus, evaluation, ownerUsabilityDecision: null,
+      truthLabelPostCount: caseRecord.truthLabelPostCount,
+      message: "L1 case가 기록되었습니다. 소유자 usability 판단 전이므로 사용 승인/릴리즈 준비를 의미하지 않습니다." }, null, 2));
   } catch (error) {
     caseRecord.status = caseRecord.sessionStatus === "NEW_COMMIT_READBACK_RELOAD_PASS"
       ? "CASE_RECORDED_BUT_POST_CASE_GATE_FAILED"
@@ -1296,13 +1576,15 @@ async function runLive(options) {
   }
 }
 
-try {
-  const parsed = parseArgs(process.argv.slice(2));
-  if (parsed.mode === "help") { process.stdout.write(usage()); process.exitCode = 0; }
-  else if (parsed.mode === "preflight") await runPreflight(parsed.options);
-  else if (parsed.mode === "live") await runLive(parsed.options);
-  else throw new Error(`지원하지 않는 모드: ${parsed.mode}`);
-} catch (error) {
-  process.stderr.write(`R011 live harness 오류: ${error.stack || error.message}\n`);
-  process.exitCode = 1;
+if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+  try {
+    const parsed = parseArgs(process.argv.slice(2));
+    if (parsed.mode === "help") { process.stdout.write(usage()); process.exitCode = 0; }
+    else if (parsed.mode === "preflight") await runPreflight(parsed.options);
+    else if (parsed.mode === "live") await runLive(parsed.options);
+    else throw new Error(`지원하지 않는 모드: ${parsed.mode}`);
+  } catch (error) {
+    process.stderr.write(`L1 live harness 오류: ${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  }
 }
