@@ -51,6 +51,7 @@ try {
   await send("Page.enable"); await send("Runtime.enable"); await send("Emulation.setDeviceMetricsOverride", { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await waitFor(async () => (await evaluate("document.querySelectorAll('.inventory-row').length")) === 70, "app bootstrap");
 
+  await click(".header-tools > summary");
   await click("#open-map-tools");
   await waitFor(async () => await evaluate("document.querySelector('#map-tools-dialog').open && !!document.querySelector('#map-root .mv-open-button')"), "map tools dialog");
   await setValue("#viewer-zoom", "130"); await click("#viewer-root .actions button");
@@ -182,7 +183,7 @@ try {
   await reloadPage("app after backend restart");
   const afterRestart = await readViewerPanels();
   if (!afterRestart?.mainPanel || JSON.stringify(afterRestart.mainPanel) !== JSON.stringify(savedPanel)) throw new Error(`panel layout did not survive process restart: ${JSON.stringify({savedPanel,afterRestart})}`);
-  await click("#open-map-tools"); await waitFor(async () => await evaluate("document.querySelector('#map-tools-dialog').open"), "map tools after process restart"); await click("#map-root .mv-open-button");
+  await click(".header-tools > summary"); await click("#open-map-tools"); await waitFor(async () => await evaluate("document.querySelector('#map-tools-dialog').open"), "map tools after process restart"); await click("#map-root .mv-open-button");
   await waitFor(async () => await evaluate("!!document.querySelector('.mv-window[open]')"), "map viewer after process restart");
   await clickByText("#mv-slots-panel .mv-row button", "불러오기");
   await waitFor(async()=>await evaluate("import('/assets/js/state.js').then(({state})=>state.mapRouteDraft?.some(route=>route.customSeconds===240))"),"slot restores route customSeconds");

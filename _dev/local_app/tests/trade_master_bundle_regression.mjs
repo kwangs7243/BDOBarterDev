@@ -366,12 +366,15 @@ assert.throws(() => adaptRegistrySnapshotV1ToMasterBundleV2({ ...currentV1, regi
 assert.throws(() => adaptRegistrySnapshotV1ToMasterBundleV2(currentV1, {}), /createdAt/);
 
 const runtimeFiles = [
-  "frontend/js/app.js", "frontend/js/recognition-ui.js", "frontend/js/trade-recognition-review.js",
+  "frontend/js/app.js", "frontend/js/trade-recognition-review.js",
   "frontend/js/domain/trade-review-projection.js", "backend/recognition_contracts.py", "backend/app.py",
 ];
 for (const relativePath of runtimeFiles) {
   const source = await readFile(resolve(root, relativePath), "utf8");
   assert.equal(source.includes("trade-master-bundle.js"), false, `${relativePath} must not import or wire M1`);
 }
+const primaryRecognitionSource = await readFile(resolve(root, "frontend/js/recognition-ui.js"), "utf8");
+assert.equal(primaryRecognitionSource.includes("trade-master-bundle.js"), true, "activated primary recognition pins a validated Master Bundle2");
+assert.equal(primaryRecognitionSource.includes("validateMasterBundleV2"), true, "primary recognition validates the pinned Master Bundle2");
 
 console.log(`PASS trade_master_bundle_regression: 241 occurrences, 230 source groups, ${referenceManifest.claims.length} reference claims, ${referenceManifest.unresolved.length} documented unresolved, ${currentOverlaps.length} island scope overlaps`);

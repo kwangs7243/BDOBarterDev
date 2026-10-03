@@ -113,7 +113,7 @@
   </dialog>
 
   <dialog id="trade-master-dialog" class="app-dialog trade-master-dialog" aria-labelledby="trade-master-title">
-    <div class="dialog-titlebar"><h2 id="trade-master-title">물교 마스터 관리</h2><button type="button" data-master-close aria-label="마스터 관리 닫기">×</button></div>
+    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="trade-master-title">물교 마스터 관리</h2><p class="tool-dialog-context">현재 저장된 기준을 확인하고 다음 인식에 사용할 Master를 관리합니다.</p></div><button type="button" data-master-close aria-label="마스터 관리 닫기">×</button></div>
     <div class="trade-master-shell">
       <header class="trade-master-header">
         <div class="trade-master-safety"><strong>저장 전 검수 초안</strong><span>현재 단계에서는 변경 내용이 저장되거나 인식에 적용되지 않습니다.</span></div>
@@ -124,7 +124,7 @@
           <div><span>미해결</span><strong data-master-summary="unresolved">확인 전</strong></div>
           <div><span>저장된 변경</span><strong data-master-summary="saved">0</strong></div>
         </div>
-        <p class="trade-master-storage-note">저장 상태: <strong>미지원 · M3 예정</strong></p>
+        <p class="trade-master-storage-note" data-master-storage-state role="status" aria-live="polite">Master 저장 상태를 확인하는 중입니다.</p>
         <p class="trade-master-unsaved" data-master-unsaved role="status" aria-live="polite">저장되지 않은 초안은 없습니다.</p>
         <p class="trade-master-error" data-master-error role="alert" hidden></p>
       </header>
@@ -146,17 +146,32 @@
       </div>
       <footer class="trade-master-footer">
         <div><strong>저장 전 초안</strong><span>이 페이지를 새로고침하면 사라집니다. 창을 닫았다 다시 열면 현재 페이지 안에서는 유지됩니다.</span></div>
-        <button type="button" data-master-save disabled title="저장 기능은 다음 단계에서 활성화됩니다.">검수한 마스터 저장</button>
+        <button type="button" data-master-save disabled title="저장 상태 확인 후 활성화됩니다.">검수한 마스터 저장</button>
       </footer>
     </div>
   </dialog>
 
   <dialog id="schedule-dialog" class="app-dialog briefing-dialog" aria-labelledby="briefing-title">
-    <div class="dialog-titlebar"><h2 id="briefing-title">출항 브리핑</h2><div class="dialog-actions"><button id="generate-schedule" class="primary" type="button">스케줄 생성 / 다시 계산</button><button type="button" data-close-dialog aria-label="닫기">×</button></div></div>
+    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="briefing-title">출항 브리핑</h2><p class="tool-dialog-context">현재 회차 경로와 저장된 스케줄을 확인합니다.</p></div><div class="dialog-actions tool-dialog-actions"><button id="generate-schedule" class="primary" type="button">스케줄 생성 / 다시 계산</button><button type="button" data-close-dialog aria-label="닫기">×</button></div></div>
     <div class="dialog-body briefing-body">
-      <div class="briefing-toolbar"><label class="brief-config-mode" for="brief-session-mode">현재 회차 교역 모드<select id="brief-session-mode"></select></label><div class="brief-mode-tabs" role="tablist" aria-label="브리핑 보기"><button type="button" data-brief-mode="speed">⚡ 쾌속</button><button type="button" data-brief-mode="balance">⚖️ 균형</button><button type="button" data-brief-mode="both">둘 다</button></div><p id="schedule-status" class="status-note" role="status"></p><div id="schedule-slot-controls" class="schedule-slot-controls" aria-label="스케줄 저장 슬롯"></div><button id="retry-completion-save" type="button" hidden>완료 저장 재시도</button><button id="brief-open-tuning" type="button">계산 튜닝</button><button id="brief-map-speed" type="button">쾌속 지도</button><button id="brief-map-balance" type="button">균형 지도</button><button id="open-engine-diagnostics" type="button">결정 과정 보기</button></div>
-      <div class="briefing-secondary-tools"><div id="free-route-root"></div></div>
+      <div class="briefing-toolbar tool-dialog-toolbar">
+        <section class="tool-dialog-group briefing-calculation" aria-label="계산 설정">
+          <label class="brief-config-mode" for="brief-session-mode">현재 회차 교역 모드<select id="brief-session-mode"></select></label>
+          <div class="brief-mode-tabs" role="tablist" aria-label="브리핑 보기"><button type="button" role="tab" aria-selected="false" data-brief-mode="speed">⚡ 쾌속</button><button type="button" role="tab" aria-selected="false" data-brief-mode="balance">⚖️ 균형</button><button type="button" role="tab" aria-selected="true" data-brief-mode="both">둘 다</button></div>
+          <p id="schedule-status" class="status-note tool-dialog-status" role="status" aria-live="polite"></p>
+        </section>
+        <section class="tool-dialog-group briefing-saved-schedule" aria-label="저장된 스케줄">
+          <span class="tool-dialog-group-label">저장된 스케줄</span>
+          <div id="schedule-slot-controls" class="schedule-slot-controls" aria-label="스케줄 저장 슬롯"></div>
+          <button id="retry-completion-save" type="button" hidden>완료 저장 재시도</button>
+        </section>
+        <section class="tool-dialog-group tool-dialog-secondary briefing-secondary-tools" aria-label="보조 도구">
+          <span class="tool-dialog-group-label">보조 도구</span>
+          <button id="brief-open-tuning" type="button">계산 튜닝</button><button id="brief-map-speed" type="button">쾌속 지도</button><button id="brief-map-balance" type="button">균형 지도</button><button id="open-engine-diagnostics" type="button">결정 과정 보기</button>
+        </section>
+      </div>
       <div id="schedule-columns" class="schedule-columns" data-mode="both"><section><h3 id="header-speed">⚡ 쾌속 모드</h3><div id="summary-speed" class="mode-settlement" aria-live="polite"></div><div id="col-speed" class="schedule-column"></div></section><section><h3 id="header-balance">⚖️ 균형 모드</h3><div id="summary-balance" class="mode-settlement" aria-live="polite"></div><div id="col-balance" class="schedule-column"></div></section></div>
+      <section class="briefing-free-route" aria-label="추가 경유지 편집"><div id="free-route-root"></div></section>
       <details class="schedule-diagnostics"><summary>계산 진단 데이터</summary><pre id="schedule-diagnostics">아직 계산하지 않았습니다.</pre><button id="copy-engine-diagnostics" type="button">진단 복사</button></details>
       <div class="compat-inputs" aria-hidden="true"><input id="maxParley" type="number"><input id="normalWeight" type="number"><input id="maxWeight" type="number"><input id="parleyPerTrade" type="number"><input id="parleyCrow" type="number"></div>
       <div id="waypointModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="waypoint-title">
@@ -166,16 +181,16 @@
   </dialog>
 
   <dialog id="tuning-dialog" class="app-dialog tuning-dialog" aria-labelledby="tuning-title">
-    <div class="dialog-titlebar"><h2 id="tuning-title">계산 튜닝</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body"><div class="tuning-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-tuning-tab="temporary">이번 회차 임시 적용</button><button type="button" role="tab" aria-selected="false" data-tuning-tab="durable">영구 기본값 저장</button></div><p class="hint">임시 적용은 현재 회차 설정에만 저장하고 스케줄을 다시 계산합니다. 영구 저장은 다음 새 회차의 기본값을 바꿉니다.</p><div id="tuning-root"></div></div>
+    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="tuning-title">계산 튜닝</h2><p class="tool-dialog-context">현재 회차 설정과 다음 회차 기본값을 구분해 관리합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
+    <div class="dialog-body tool-dialog-content"><div class="tuning-tabs tool-dialog-tabs" role="tablist" aria-label="설정 적용 범위"><button type="button" role="tab" aria-selected="true" aria-controls="tuning-root" data-tuning-tab="temporary">이번 회차 임시 적용</button><button type="button" role="tab" aria-selected="false" aria-controls="tuning-root" data-tuning-tab="durable">영구 기본값 저장</button></div><p class="hint tool-dialog-scope">임시 적용 · 현재 회차만 변경하고 스케줄을 다시 계산합니다. 영구 저장 · 다음 새 회차부터 기본값으로 사용합니다.</p><div id="tuning-root" aria-live="polite"></div></div>
   </dialog>
 
   <dialog id="map-tools-dialog" class="app-dialog map-tools-dialog" aria-labelledby="map-tools-title">
-    <div class="dialog-titlebar"><h2 id="map-tools-title">지도와 좌표 설정</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body"><p class="hint">현재 회차 경로와 적용 좌표·보정·메모를 확인합니다.</p><div class="map-tools-grid"><section><h3>경로·좌표 설정</h3><div id="navigation-root"></div></section><section><h3>지도 뷰어</h3><div id="map-root"></div><div id="viewer-root"></div></section></div></div>
+    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="map-tools-title">지도·항로</h2><p class="tool-dialog-context">현재 회차 경로 설정과 지도 뷰어를 함께 사용합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
+    <div class="dialog-body tool-dialog-content"><div class="map-tools-grid"><section class="tool-dialog-workspace"><h3>경로·좌표 설정</h3><div id="navigation-root"></div></section><section class="tool-dialog-workspace"><h3>지도 뷰어</h3><div id="map-root"></div><div id="viewer-root"></div></section></div></div>
   </dialog>
 
-  <dialog id="engine-diagnostics-dialog" class="app-dialog small-dialog" aria-labelledby="engine-diagnostics-title"><div class="dialog-titlebar"><h2 id="engine-diagnostics-title">ENGINE_DEBUG · 항로 결정 과정</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div><div class="dialog-body"><p>계산기에 기록된 서류 점수와 후보별 선택 근거를 보여줍니다. 저장된 근거가 없는 제외 사유는 추정하지 않고 표시하지 않습니다. 타이머는 새로고침 후 초기화됩니다.</p><div id="engine-debug-content"></div><details><summary>원본 ENGINE_DEBUG JSON</summary><pre id="engine-debug-raw"></pre></details><button id="copy-engine-diagnostics-dialog" type="button">진단 정보 복사</button><p id="diagnostics-copy-status" role="status"></p></div></dialog>
+  <dialog id="engine-diagnostics-dialog" class="app-dialog small-dialog" aria-labelledby="engine-diagnostics-title"><div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="engine-diagnostics-title">항로 결정 과정</h2><p class="tool-dialog-context">ENGINE_DEBUG · 계산 근거와 후보 선택 설명</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div><div class="dialog-body tool-dialog-content"><p class="tool-dialog-intro">계산기에 기록된 서류 점수와 후보별 선택 근거를 보여줍니다. 저장된 근거가 없는 제외 사유는 추정하지 않습니다. 타이머는 새로고침 후 초기화됩니다.</p><div id="engine-debug-content"></div><details class="tool-dialog-raw"><summary>원본 ENGINE_DEBUG JSON</summary><pre id="engine-debug-raw"></pre></details><button id="copy-engine-diagnostics-dialog" type="button">진단 정보 복사</button><p id="diagnostics-copy-status" class="tool-dialog-status" role="status" aria-live="polite"></p></div></dialog>
 
 
   <script src="/assets/js/domain/constants.js"></script>

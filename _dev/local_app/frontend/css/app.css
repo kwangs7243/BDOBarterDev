@@ -43,3 +43,68 @@ main.workspace{grid-template-columns:minmax(0,1.8fr) minmax(20rem,1fr);height:ca
   main.workspace{width:100%;gap:.5rem}
   .workspace .panel{padding:.5rem}
 }
+
+/* Shared layout and action hierarchy for secondary tool dialogs. */
+.tool-dialog-titlebar{align-items:center;min-height:3.7rem;padding:.55rem .8rem}
+.tool-dialog-heading{min-width:0}
+.tool-dialog-heading h2{margin:0}
+.tool-dialog-context{margin:.12rem 0 0;color:var(--sea-muted,#a9b9cb);font-size:.75rem;line-height:1.35}
+.tool-dialog-actions{flex:none}
+.tool-dialog-content{min-width:0}
+.tool-dialog-intro{max-width:72ch;margin:0 0 .75rem;color:var(--sea-muted,#a9b9cb)}
+.tool-dialog-toolbar{align-items:stretch;gap:.55rem;padding:.2rem 0 .6rem;border-bottom:1px solid var(--sea-line,#294b6b)}
+.tool-dialog-group{display:flex;align-items:center;gap:.4rem;min-width:0;padding:.42rem .5rem;border:1px solid var(--sea-line,#294b6b);border-radius:6px;background:color-mix(in srgb,var(--sea-900,#0b1c31) 76%,transparent)}
+.tool-dialog-group-label{flex:none;color:var(--sea-muted,#a9b9cb);font-size:.7rem;font-weight:700;white-space:nowrap}
+.briefing-calculation{flex:1 1 23rem;flex-wrap:wrap}
+.briefing-calculation .brief-config-mode{display:flex;align-items:center;gap:.35rem;font-size:.75rem}
+.briefing-calculation .brief-config-mode select{max-width:12rem}
+.briefing-calculation .status-note{flex:1 1 9rem}
+.briefing-saved-schedule{flex:1 1 17rem;flex-wrap:wrap}
+.briefing-saved-schedule .schedule-slot-controls{flex:1 1 9rem}
+.briefing-secondary-tools{flex:1 1 15rem;flex-wrap:wrap}
+.briefing-secondary-tools .tool-dialog-group-label{width:100%}
+.briefing-toolbar .briefing-secondary-tools{max-height:none;overflow:visible;margin:0}
+.brief-mode-tabs [role="tab"]{min-height:2rem}
+.briefing-free-route{flex:none;max-height:min(12rem,24vh);overflow:auto;margin:.45rem 0;padding:.5rem .6rem;border:1px solid var(--sea-line,#294b6b);border-radius:6px;background:color-mix(in srgb,var(--sea-900,#0b1c31) 58%,transparent)}
+.briefing-body .schedule-columns{min-height:12rem}
+.briefing-body{height:calc(100% - 3.7rem)}
+.tuning-dialog .dialog-body{height:calc(100% - 3.7rem)}
+.map-tools-dialog .dialog-body{height:calc(100% - 3.7rem);max-height:none}
+.map-tools-grid{align-items:start}
+.tool-dialog-workspace{min-width:0;padding:.55rem;border:1px solid var(--sea-line,#294b6b);border-radius:6px;background:color-mix(in srgb,var(--sea-900,#0b1c31) 58%,transparent)}
+.tool-dialog-workspace h3{margin:0 0 .45rem;font-size:.85rem}
+.tool-dialog-tabs{margin-bottom:.5rem}
+.tool-dialog-tabs [role="tab"]{min-height:2.35rem;padding-inline:.75rem}
+.tool-dialog-scope{margin:.45rem 0 .7rem;padding:.5rem .65rem;border-left:3px solid #438bd5;background:color-mix(in srgb,var(--sea-900,#0b1c31) 72%,transparent)}
+.tool-dialog-raw{margin:.8rem 0;padding-top:.55rem;border-top:1px solid var(--sea-line,#294b6b)}
+.tool-dialog-raw summary{cursor:pointer;color:var(--sea-muted,#a9b9cb);font-weight:700}
+.tool-dialog-status{min-height:1.25rem}
+#diagnostics-copy-status:empty{margin:0;min-height:0}
+.trade-master-dialog .trade-master-shell{height:calc(100% - 3.7rem)}
+.trade-master-dialog .trade-master-summary>div:nth-child(4),.trade-master-dialog .trade-master-summary>div:nth-child(2){border-color:#3d6680}
+.trade-master-dialog .trade-master-summary>div:nth-child(4) strong{color:#f2d275;font-size:1.08rem}
+.trade-master-dialog .trade-master-storage-note{min-height:1.1em}
+.trade-master-dialog [data-master-save]:not(:disabled){background:#155c91;border-color:#438bd5;font-weight:700}
+.trade-master-dialog [data-master-save]:disabled{opacity:.58}
+.app-dialog :focus-visible{outline:2px solid #73d8ca;outline-offset:2px}
+@media(max-width:1050px){
+  .tool-dialog-toolbar{align-items:stretch}
+  .tool-dialog-group{flex-basis:100%}
+  .map-tools-dialog{width:min(92vw,900px)}
+  .map-tools-grid{grid-template-columns:minmax(0,1fr)}
+  .map-tools-grid>section{min-width:0}
+  .map-tools-dialog .dialog-body{overflow:auto}
+}
+@media(max-width:850px){
+  .trade-master-dialog .trade-master-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(9rem,.7fr) minmax(16rem,1.3fr);overflow:auto}
+  .trade-master-dialog .trade-master-list-panel{min-height:9rem}
+  .trade-master-dialog .trade-master-editor-panel{min-height:16rem}
+}
+@media(max-width:760px){
+  .tool-dialog-titlebar{align-items:flex-start;gap:.45rem}
+  .tool-dialog-context{max-width:48ch}
+  .briefing-calculation .brief-config-mode{flex:1 1 100%}
+  .briefing-saved-schedule .tool-dialog-group-label{width:100%}
+  .briefing-free-route{max-height:20vh}
+  .map-tools-grid{gap:.45rem}
+}
