@@ -13,6 +13,11 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 import webbrowser
 
+if len(sys.argv) > 1 and sys.argv[1] == "--trade-ocr-worker":
+    sys.argv.pop(1)
+    from local_app.tools.trade_batch_worker import main
+    raise SystemExit(main())
+
 from local_app.backend.app import HOST, PORT, create_app
 
 APP_URL = f"http://{HOST}:{PORT}/"

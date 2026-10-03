@@ -9,6 +9,7 @@ node_modules/
 coverage/
 build/
 dist/
+/app/
 _dev/recognition-local/
 *.sqlite3
 *.sqlite3-wal

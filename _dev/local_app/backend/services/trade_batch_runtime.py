@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -200,11 +201,12 @@ class TradeBatchRuntime:
                  worker_path: str | Path | None = None, selection_path: str | Path | None = None,
                  temp_root: str | Path | None = None, timeout: int = WORKER_TIMEOUT_SECONDS,
                  runner: Callable[..., Any] | None = None):
+        self.packaged_worker = bool(getattr(sys, "frozen", False) and python_path is None and not os.environ.get("BDO_TRADE_OCR_PYTHON"))
         self.python_path = Path(python_path or os.environ.get(
-            "BDO_TRADE_OCR_PYTHON", ROOT / "recognition-local" / "envs" / "t010b1-ocr" / "Scripts" / "python.exe"))
+            "BDO_TRADE_OCR_PYTHON", sys.executable if self.packaged_worker else ROOT / "recognition-local" / "envs" / "t010b1-ocr" / "Scripts" / "python.exe"))
         self.model_dir = Path(model_dir or os.environ.get(
-            "BDO_TRADE_OCR_MODEL_DIR", ROOT / "recognition-local" / "models" / "t010b1" / "official_models" /
-            "korean_PP-OCRv5_mobile_rec_onnx"))
+            "BDO_TRADE_OCR_MODEL_DIR", ROOT / "local_app" / "recognition_data" / "trade-model" if self.packaged_worker else
+            ROOT / "recognition-local" / "models" / "t010b1" / "official_models" / "korean_PP-OCRv5_mobile_rec_onnx"))
         self.worker_path = Path(worker_path or ROOT / "local_app" / "tools" / "trade_batch_worker.py")
         self.selection_path = Path(selection_path or ROOT / "local_app" / "recognition_data" / "trade-t010p3a-experiment.json")
         self.row_selection_path = ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json"
@@ -236,7 +238,7 @@ class TradeBatchRuntime:
     def status(self) -> dict[str, Any]:
         reason, info = self._integrity()
         return {"available": reason is None, "engineId": ENGINE_ID, "modelReady": info["modelReady"],
-                "reason": reason, "mode": "LOCAL_DEVELOPMENT_RUNTIME_ONLY",
+                "reason": reason, "mode": "PACKAGED_LOCAL_RUNTIME" if self.packaged_worker else "LOCAL_DEVELOPMENT_RUNTIME_ONLY",
                 "modelBundleSha256": info.get("hashes", {}).get("bundle", MODEL_BUNDLE_SHA256)}
 
     def recognize_live(self, batch_id: str, captures: list[dict[str, Any]]) -> dict[str, Any]:
@@ -263,7 +265,8 @@ class TradeBatchRuntime:
                 manifest_path, output_path = work_dir / "request.json", work_dir / "result.json"
                 manifest_path.write_text(json.dumps({"version": 1, "batchId": batch_id, "captures": manifest_captures},
                                                     ensure_ascii=False), encoding="utf-8")
-                command = [str(self.python_path), "-B", str(self.worker_path), "--request", str(manifest_path),
+                prefix = [str(self.python_path), "--trade-ocr-worker"] if self.packaged_worker else [str(self.python_path), "-B", str(self.worker_path)]
+                command = [*prefix, "--request", str(manifest_path),
                            "--out", str(output_path), "--model-dir", str(self.model_dir)]
                 if live_list:
                     command.append("--live-list")
@@ -272,11 +275,13 @@ class TradeBatchRuntime:
                     "PROGRAMDATA",
                 ) if key in os.environ}
                 environment.update({"PYTHONDONTWRITEBYTECODE": "1", "HF_HUB_OFFLINE": "1",
+                                    "PYINSTALLER_RESET_ENVIRONMENT": "1",
                                     "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
                                     "PADDLE_PDX_MODEL_SOURCE": "LOCAL", "PADDLE_PDX_CACHE_HOME": str(work_dir / "paddle-cache")})
                 try:
                     result = self.runner(command, cwd=str(ROOT), shell=False, timeout=self.timeout,
-                                         capture_output=True, text=True, env=environment)
+                                         capture_output=True, text=True, env=environment,
+                                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
                 except subprocess.TimeoutExpired:
                     raise TradeBatchRuntimeError("recognition_timeout", "Local recognition timed out.", 504, retryable=True) from None
                 if getattr(result, "returncode", 1) != 0 or not output_path.is_file():
@@ -338,7 +343,8 @@ class TradeBatchRuntime:
                 manifest_path, output_path = work_dir / "request.json", work_dir / "result.json"
                 manifest_path.write_text(json.dumps({"version": 1, "batchId": batch_id, "captures": manifest_captures},
                                                     ensure_ascii=False), encoding="utf-8")
-                command = [str(self.python_path), "-B", str(self.worker_path), "--request", str(manifest_path),
+                prefix = [str(self.python_path), "--trade-ocr-worker"] if self.packaged_worker else [str(self.python_path), "-B", str(self.worker_path)]
+                command = [*prefix, "--request", str(manifest_path),
                            "--out", str(output_path), "--model-dir", str(self.model_dir),
                            "--raw-evidence-version", "2"]
                 environment = {key: os.environ[key] for key in (
@@ -346,11 +352,13 @@ class TradeBatchRuntime:
                     "PROGRAMDATA",
                 ) if key in os.environ}
                 environment.update({"PYTHONDONTWRITEBYTECODE": "1", "HF_HUB_OFFLINE": "1",
+                                    "PYINSTALLER_RESET_ENVIRONMENT": "1",
                                     "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8",
                                     "PADDLE_PDX_MODEL_SOURCE": "LOCAL", "PADDLE_PDX_CACHE_HOME": str(work_dir / "paddle-cache")})
                 try:
                     result = self.runner(command, cwd=str(ROOT), shell=False, timeout=self.timeout,
-                                         capture_output=True, text=True, env=environment)
+                                         capture_output=True, text=True, env=environment,
+                                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
                 except subprocess.TimeoutExpired:
                     raise TradeBatchRuntimeError("recognition_timeout", "Local recognition timed out.", 504, retryable=True) from None
                 if getattr(result, "returncode", 1) != 0 or not output_path.is_file():

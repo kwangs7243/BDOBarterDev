@@ -1,9 +1,16 @@
 # Folder-based, windowed Windows distribution. Run from any working directory:
 # python -m PyInstaller --clean --noconfirm local_app/packaging/bdo-barter.spec
 from pathlib import Path
+import os
 
 ROOT = Path(SPECPATH).resolve().parents[1]
+trade_model = Path(os.environ.get("BDO_PACKAGE_TRADE_MODEL_DIR", ROOT / "recognition-local/models/t010b1/official_models/korean_PP-OCRv5_mobile_rec_onnx"))
+if not all((trade_model / name).is_file() for name in ("inference.onnx", "inference.yml")):
+    raise RuntimeError("The verified local trade OCR model is required for packaging.")
 datas = [
+    (str(trade_model / "inference.onnx"), "local_app/recognition_data/trade-model"),
+    (str(trade_model / "inference.yml"), "local_app/recognition_data/trade-model"),
+    (str(ROOT / "local_app" / "tools" / "trade_live_ocr.py"), "local_app/tools"),
     (str(ROOT / "local_app" / "recognition_data"), "local_app/recognition_data"),
     (str(ROOT / "local_app" / "tools" / "trade_batch_worker.py"), "local_app/tools"),
     (str(ROOT / "local_app" / "tools" / "trade_batch_draft_experiment.py"), "local_app/tools"),
@@ -16,6 +23,12 @@ datas = [
     (str(ROOT / "tools" / "warehouse_patch" / "quantity_templates.npz"), "tools/warehouse_patch"),
 ]
 hiddenimports = [
+    "local_app.tools.trade_batch_worker",
+    "local_app.tools.trade_live_ocr",
+    "local_app.backend.services.trade_recognition",
+    "onnxruntime",
+    "cv2",
+    "yaml",
     "local_app.backend.api.maintenance",
     "local_app.backend.api.scan",
     "local_app.backend.api.state",
