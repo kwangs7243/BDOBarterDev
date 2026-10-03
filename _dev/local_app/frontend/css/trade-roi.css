@@ -1,5 +1,7 @@
 /* Trade capture ROI preview and accessible handles */
 .trade-roi-panel{margin:.8rem 0;padding:.7rem;border:1px solid #394354;border-radius:8px;background:#111923}
+.trade-roi-panel .screen-capture-session{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin-bottom:.65rem}
+.trade-roi-panel .screen-capture-actions{display:flex;gap:.4rem;flex-wrap:wrap}
 .trade-preview-stage{position:relative;width:100%;height:min(44vh,420px);min-height:220px;overflow:hidden;background:#05080c;border:1px solid #475569;touch-action:none}
 .trade-preview-stage>video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .trade-roi-box{position:absolute;border:2px solid #70e0a0;box-shadow:0 0 0 9999px #07101966;touch-action:none;cursor:move}
