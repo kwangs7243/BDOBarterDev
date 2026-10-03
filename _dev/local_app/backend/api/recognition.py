@@ -306,7 +306,9 @@ def get_trade_runtime():
 
 
 @recognition_api.post("/trade-batch")
+@recognition_api.post("/trade-live-list")
 def post_trade_batch():
+    live_list_request = request.path.endswith("/trade-live-list")
     if request.mimetype != "multipart/form-data":
         return _error("invalid_batch", "Batch requests must use multipart/form-data.", 415)
     if set(request.form.keys()) != {"batch"} or len(request.form.getlist("batch")) != 1:
@@ -320,7 +322,8 @@ def post_trade_batch():
         batch = parse_json(request.form.getlist("batch")[0], max_bytes=MAX_JSON_BYTES, label="batch")
     except RecognitionContractError:
         raise
-    if set(batch) != {"version", "batchId", "captures"} or type(batch.get("version")) is not int or batch["version"] not in (1, 2):
+    if (set(batch) != {"version", "batchId", "captures"} or type(batch.get("version")) is not int
+            or batch["version"] not in ((1,) if live_list_request else (1, 2))):
         return _error("invalid_batch", "The batch contract is invalid.", 422)
     batch_version = batch["version"]
     try:
@@ -335,7 +338,7 @@ def post_trade_batch():
     raw_captures = []
     total_bytes = 0
     for descriptor, upload in zip(descriptors, uploads, strict=True):
-        expected_descriptor_keys = {"captureId", "metadata"} if batch_version == 1 else {"captureId", "metadata", "reencoded"}
+        expected_descriptor_keys = {"captureId", "metadata", "reencoded"} if batch_version == 2 else {"captureId", "metadata"}
         if not isinstance(descriptor, dict) or set(descriptor) != expected_descriptor_keys:
             return _error("invalid_batch", "Each capture descriptor does not match its batch version.", 422)
         if batch_version == 2 and type(descriptor.get("reencoded")) is not bool:
@@ -377,13 +380,17 @@ def post_trade_batch():
     if runtime is None:
         return _error("engine_unavailable", "The local recognition engine is unavailable.", 503)
     try:
-        if batch_version == 1:
+        if live_list_request:
+            result = runtime.recognize_live(batch_id, raw_captures)
+        elif batch_version == 1:
             result = runtime.recognize(batch_id, raw_captures)
         else:
             result = runtime.recognize_raw_v2(batch_id, raw_captures)
     except TradeBatchRuntimeError as error:
         return _error(error.code, str(error), error.status, retryable=error.retryable,
                       diagnostics={"stage": "OCR_RUNTIME"})
+    if live_list_request:
+        return jsonify({"ok": True, "result": result})
     if batch_version == 2:
         raw_evidence = result.get("rawEvidence") if isinstance(result, dict) else None
         runtime_metadata = result.get("runtime") if isinstance(result, dict) else None

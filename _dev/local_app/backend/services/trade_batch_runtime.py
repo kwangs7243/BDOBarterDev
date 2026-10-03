@@ -239,7 +239,10 @@ class TradeBatchRuntime:
                 "reason": reason, "mode": "LOCAL_DEVELOPMENT_RUNTIME_ONLY",
                 "modelBundleSha256": info.get("hashes", {}).get("bundle", MODEL_BUNDLE_SHA256)}
 
-    def recognize(self, batch_id: str, captures: list[dict[str, Any]]) -> dict[str, Any]:
+    def recognize_live(self, batch_id: str, captures: list[dict[str, Any]]) -> dict[str, Any]:
+        return self.recognize(batch_id, captures, live_list=True)
+
+    def recognize(self, batch_id: str, captures: list[dict[str, Any]], *, live_list: bool = False) -> dict[str, Any]:
         reason, info = self._integrity()
         if reason == "engine_integrity_error":
             raise TradeBatchRuntimeError(reason, "The local recognition engine failed integrity verification.", 503)
@@ -262,6 +265,8 @@ class TradeBatchRuntime:
                                                     ensure_ascii=False), encoding="utf-8")
                 command = [str(self.python_path), "-B", str(self.worker_path), "--request", str(manifest_path),
                            "--out", str(output_path), "--model-dir", str(self.model_dir)]
+                if live_list:
+                    command.append("--live-list")
                 environment = {key: os.environ[key] for key in (
                     "PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA",
                     "PROGRAMDATA",
@@ -280,11 +285,14 @@ class TradeBatchRuntime:
                     payload = json.loads(output_path.read_text(encoding="utf-8"))
                 except (OSError, UnicodeError, json.JSONDecodeError):
                     raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned an invalid result.", 502) from None
-                self._validate_worker_result(payload, batch_id, captures)
+                if live_list:
+                    self._validate_live_result(payload, batch_id, captures)
+                else:
+                    self._validate_worker_result(payload, batch_id, captures)
                 payload["runtime"] = {"available": True, "engineId": ENGINE_ID,
                                       "modelBundleSha256": info["hashes"]["bundle"], "workerVersion": WORKER_VERSION,
                                       "durationMs": round((time.monotonic() - started) * 1000),
-                                      "captureCount": len(captures), "draftRowCount": len(payload["draftRows"])}
+                                      "captureCount": len(captures), "draftRowCount": len(payload["rows"] if live_list else payload["draftRows"])}
                 return payload
         finally:
             self._worker_lock.release()
@@ -359,6 +367,28 @@ class TradeBatchRuntime:
                 }}
         finally:
             self._worker_lock.release()
+
+    @staticmethod
+    def _validate_live_result(payload: Any, batch_id: str, captures: list[dict[str, Any]]) -> None:
+        ids = [capture["captureId"] for capture in captures]
+        if (not isinstance(payload, dict) or payload.get("version") != 3 or payload.get("batchId") != batch_id
+                or not isinstance(payload.get("rows"), list) or not isinstance(payload.get("captures"), list)
+                or [item.get("captureId") for item in payload["captures"]] != ids):
+            raise _raw_v2_error()
+        for row in payload["rows"]:
+            if (not isinstance(row, dict) or row.get("captureId") not in ids
+                    or type(row.get("ordinal")) is not int or row["ordinal"] < 0
+                    or not isinstance(row.get("fields"), dict) or set(row["fields"]) != set(RAW_FIELDS)):
+                raise _raw_v2_error()
+            for field, value in row["fields"].items():
+                if (not isinstance(value, dict) or not isinstance(value.get("rawOCR"), str)
+                        or type(value.get("reviewRequired")) is not bool):
+                    raise _raw_v2_error()
+                corrected = value.get("corrected")
+                if corrected is not None and (field in ("reqAmount", "count", "yield")
+                        and (type(corrected) is not int or corrected < (0 if field == "count" else 1))
+                        or field not in ("reqAmount", "count", "yield") and not isinstance(corrected, str)):
+                    raise _raw_v2_error()
 
     @staticmethod
     def _validate_worker_result(payload: Any, batch_id: str, captures: list[dict[str, Any]]) -> None:

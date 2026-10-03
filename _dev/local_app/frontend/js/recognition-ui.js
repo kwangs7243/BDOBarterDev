@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { CaptureError, CaptureQueue, DEFAULT_TRADE_ROI, PreviewRegistry, ScreenCaptureSession, captureFromFile, captureFromPaste, captureLimits, displayedVideoContentRect, isEditableTarget, moveNormalizedRegion, normalizeRegion, resizeNormalizedRegion } from "./capture.js";
-import { getTradeRecognitionRuntime, recognizeTradeBatch, recognizeTradeBatchV2 } from "./trade-recognition-client.js";
+import { getTradeRecognitionRuntime, recognizeTradeBatch, recognizeTradeBatchV2, recognizeTradeLiveList } from "./trade-recognition-client.js";
 import { mountTradeRecognitionReview } from "./trade-recognition-review.js";
 import { validateReviewedTradeBatch } from "./domain/reviewed-trade-dto.js";
 import { masterBundleContentHash, validateMasterBundleV2 } from "./domain/trade-master-bundle.js";
@@ -12,6 +12,7 @@ import { loadLegacySeed } from "./trade-master-ui.js";
 
 const FINAL_CORRECTION_POLICY = Object.freeze({ policyVersion: "trade-final-correction-v1", boundedMatchPolicy: "V1_UNIQUE_BOUNDED_0.75" });
 const legacyReviewFirstCompatibility = new URLSearchParams(window.location.search).get("tradeCompatibility") === "REVIEW_FIRST";
+const liveListPrimary = !legacyReviewFirstCompatibility && new URLSearchParams(window.location.search).get("tradeCompatibility") !== "FINAL_REVIEW";
 
 function captureContext(taskType) {
   const sessionId = state.session?.id;
@@ -64,14 +65,19 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   rawResultSection.dataset.role = "trade-raw-ocr";
   const correctedResultSection = document.createElement("section");
   correctedResultSection.dataset.role = "trade-corrected-result";
+  const liveListSection = document.createElement("section");
+  liveListSection.dataset.role = "trade-live-list";
+  liveListSection.hidden = true;
   const recognitionDiagnostics = document.createElement("details");
   recognitionDiagnostics.dataset.role = "trade-recognition-diagnostics";
   recognitionDiagnostics.hidden = true;
   tradeRecognitionStatus.after(recognitionDiagnostics);
-  tradeRecognitionResultRegion.append(rawResultSection, correctedResultSection, finalResultSummary, reviewLauncher);
+  tradeRecognitionResultRegion.append(liveListSection, rawResultSection, correctedResultSection, finalResultSummary, reviewLauncher);
   reviewLauncher.hidden = true;
   const reviewStorage = document.createElement("section");
   reviewStorage.className = "trade-review-storage";
+  reviewStorage.hidden = liveListPrimary;
+  if (liveListPrimary) reviewStorage.style.display = "none";
   const evidenceHeading = document.createElement("h3");
   evidenceHeading.textContent = "1. 검수 자료 저장";
   const reviewStatus = document.createElement("p");
@@ -122,6 +128,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeRecognitionPending = false;
   let tradeRecognitionResult = null;
   let rawRecognitionResult = null;
+  let liveListResult = null;
   let usingBaselineMaster = false;
   let tradeRecognitionResultRevision = null;
   let tradeReviewController = null;
@@ -557,6 +564,32 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     wrap.append(table); section.replaceChildren(heading, wrap);
   };
   const fieldLabels = ["섬", "교환 아이템", "필요 수량", "결과 아이템", "교환 횟수", "결과 수량"];
+  const renderLiveList = (result) => {
+    liveListResult = result;
+    liveListSection.hidden = false;
+    rawResultSection.hidden = true;
+    correctedResultSection.hidden = true;
+    resultTable(liveListSection, `물교 목록 · ${result.rows.length}행`, ["섬", "요구 아이템", "요구 수량", "결과 아이템", "남은 교환 횟수", "결과 수량"], result.rows.map((row) =>
+      ["island", "fromItem", "reqAmount", "toItem", "count", "yield"].map((name) => {
+        const field = row.fields[name];
+        const numeric = ["reqAmount", "count", "yield"].includes(name);
+        const value = field.corrected ?? (numeric ? "?" : field.rawOCR || "?");
+        return `${value}${field.reviewRequired ? "\n확인 필요" : ""}`;
+      })));
+    const details = document.createElement("details");
+    const summary = document.createElement("summary"); summary.textContent = "인식 원문 보기";
+    const raw = document.createElement("section");
+    resultTable(raw, "인식 원문", fieldLabels, result.rows.map((row) =>
+      ["island", "fromItem", "reqAmount", "toItem", "count", "yield"].map((name) => row.fields[name].rawOCR || "?")));
+    details.append(summary, raw); liveListSection.append(details);
+    tradeRecognitionResultRegion.hidden = false;
+    tradeRecognitionRegion.style.flex = "0 0 auto";
+    finalResultSummary.hidden = true;
+    reviewLauncher.hidden = true;
+    recognitionDiagnostics.hidden = true;
+    liveListSection.scrollIntoView({ block: "nearest" });
+    tradeRecognitionResultRegion.scrollTop = 0;
+  };
   const renderRawResult = (result) => {
     rawRecognitionResult = result;
     const raw = result.rawEvidence;
@@ -595,6 +628,10 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
 
   const renderTradeRecognitionResult = () => {
+    if (liveListResult) {
+      tradeRecognitionResultRegion.hidden = false;
+      return Promise.resolve({ status: "visible-list" });
+    }
     if (rawRecognitionResult && !tradeFinalFlow && !legacyReviewFirstCompatibility) {
       tradeRecognitionResultRegion.hidden = false;
       finalResultSummary.hidden = true;
@@ -754,6 +791,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     }
     tradeRecognitionResult = null;
     rawRecognitionResult = null;
+    liveListResult = null;
+    liveListSection.replaceChildren(); liveListSection.hidden = true;
     rawResultSection.replaceChildren(); correctedResultSection.replaceChildren();
     recognitionDiagnostics.hidden = true; reviewLauncher.hidden = true;
     tradeRecognitionResultRevision = null;
@@ -902,13 +941,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeQueueRevision += 1;
     tradePreviews.clear();
     tradeBatchId = null;
-    if (tradeFinalFlow) { tradeFinalFlow.destroy(); tradeFinalFlow = null; tradeReviewController = null; }
-    tradeRecognitionResult = null;
-    tradeRecognitionResultRevision = null;
-    rawRecognitionResult = null;
-    rawResultSection.replaceChildren(); correctedResultSection.replaceChildren();
-    recognitionDiagnostics.hidden = true; reviewLauncher.hidden = true;
-    renderTradeRecognitionResult();
+    invalidateRecognitionResult("대기 이미지를 지워 인식 결과도 지웠습니다.");
     renderTradeQueue();
     tradeStatus.textContent = "대기 이미지를 모두 삭제했습니다. 화면 연결과 영역은 유지됩니다.";
   });
@@ -930,6 +963,16 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeRecognitionResult = null;
       tradeRecognitionResultRevision = null;
       tradeReviewRoot.replaceChildren();
+      if (liveListPrimary) {
+        const result = await recognizeTradeLiveList(captures);
+        if (requestRevision !== tradeQueueRevision) return;
+        renderLiveList(result);
+        tradeRecognitionResultRevision = requestRevision;
+        tradeRecognitionStatus.textContent = result.rows.length
+          ? `물교 ${result.rows.length}행을 표시했습니다. 확인 필요 값은 원본과 비교해 주세요.`
+          : "물교 행을 찾지 못했습니다. 물교 표 전체가 포함되도록 입력해 주세요.";
+        return;
+      }
       if (legacyReviewFirstCompatibility) {
         const result = await recognizeTradeBatch(captures);
         if (requestRevision !== tradeQueueRevision) {

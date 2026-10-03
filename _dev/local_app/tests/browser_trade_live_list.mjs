@@ -1,0 +1,125 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { mkdtemp, readFile, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const output = resolve(process.env.BDO_LIVE_REPORT_DIR ?? join(root, "recognition-local/hotfix-live-list"));
+const baseUrl = "http://127.0.0.1:18783/";
+const profile = await mkdtemp(join(tmpdir(), "bdo-live-list-"));
+const mapping = JSON.parse(await readFile(join(root, "local_app/tests/fixtures/trade-recognition/live-list-mapping.json"), "utf8"));
+const pythonCode = `
+from pathlib import Path
+import sqlite3,hashlib,json
+from flask import jsonify
+from local_app.backend.app import create_app
+app=create_app(r'${join(profile, "main.sqlite3")}',testing=True)
+@app.get('/__test__/database-snapshot')
+def snapshot():
+    result={}
+    for path in sorted(Path(r'${profile}').rglob('*.sqlite3')):
+        with sqlite3.connect(path) as conn:
+            result[str(path.relative_to(Path(r'${profile}')))]=hashlib.sha256('\\n'.join(conn.iterdump()).encode()).hexdigest()
+    return jsonify(result)
+app.run(host='127.0.0.1',port=18783,use_reloader=False,threaded=True)
+`;
+let server, chrome, socket;
+const waitFor = async (predicate, label, timeout = 45000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const value = await predicate(); if (value) return value;
+    await new Promise((done) => setTimeout(done, 100));
+  }
+  throw new Error(`Timed out: ${label}`);
+};
+const stop = async (child) => {
+  if (!child || child.exitCode !== null) return;
+  const done = new Promise((resolveExit) => child.once("exit", resolveExit)); child.kill();
+  await Promise.race([done, new Promise((resolveWait) => setTimeout(resolveWait, 3000))]);
+};
+try {
+  await mkdir(output, { recursive: true });
+  server = spawn(process.env.PYTHON ?? "python", ["-B", "-c", pythonCode], {
+    cwd: root, windowsHide: true, stdio: ["ignore", "ignore", "pipe"],
+    env: { ...process.env, LOCALAPPDATA: profile, PYTHONDONTWRITEBYTECODE: "1", PYTHONUTF8: "1" },
+  });
+  let serverErrors = ""; server.stderr.on("data", (data) => { serverErrors += data.toString(); });
+  await waitFor(async () => { if (server.exitCode !== null) throw new Error(serverErrors); try { return (await fetch(`${baseUrl}api/health`)).ok; } catch { return false; } }, "server");
+  chrome = spawn(process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", [
+    "--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking",
+    "--disable-crash-reporter", "--disable-breakpad",
+    "--window-size=1920,1080", "--remote-debugging-port=0", "--remote-allow-origins=*",
+    `--user-data-dir=${join(profile, "chrome")}`, "about:blank",
+  ], { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
+  let chromeErrors = ""; chrome.stderr.on("data", (data) => { chromeErrors += data.toString(); });
+  const portText = await waitFor(async () => { try { return await readFile(join(profile, "chrome/DevToolsActivePort"), "utf8"); } catch { return false; } }, "Chrome");
+  const target = await (await fetch(`http://127.0.0.1:${portText.trim().split(/\r?\n/)[0]}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT", signal: AbortSignal.timeout(10000) })).json();
+  socket = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((done, reject) => {
+    const timer=setTimeout(()=>reject(new Error(`Chrome connection timeout: ${chromeErrors}`)),10000);
+    socket.addEventListener("open", ()=>{clearTimeout(timer);done();}, { once: true }); socket.addEventListener("error", reject, { once: true });
+  });
+  const pending = new Map(); let id = 0;
+  socket.addEventListener("message", (event) => {
+    const value = JSON.parse(event.data); const task = pending.get(value.id); if (!task) return;
+    pending.delete(value.id); value.error ? task.reject(new Error(value.error.message)) : task.resolve(value.result);
+  });
+  const send = (method, params = {}) => new Promise((resolveResult, reject) => {
+    const requestId = ++id;
+    const timer=setTimeout(()=>{pending.delete(requestId);reject(new Error(`Chrome command timeout: ${method}; ${chromeErrors}`));},15000);
+    pending.set(requestId, { resolve:(value)=>{clearTimeout(timer);resolveResult(value);}, reject:(error)=>{clearTimeout(timer);reject(error);} });
+    socket.send(JSON.stringify({ id: requestId, method, params }));
+  });
+  const evaluate = async (expression) => {
+    const value = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+    if (value.exceptionDetails) throw new Error(value.exceptionDetails.exception?.description ?? value.exceptionDetails.text);
+    return value.result.value;
+  };
+  await send("Page.enable"); await send("Runtime.enable"); await send("DOM.enable");
+  const crashes = [];
+  socket.addEventListener("message", (event) => { const data = JSON.parse(event.data); if (data.method === "Runtime.exceptionThrown") crashes.push(data.params); });
+  await waitFor(async () => (await evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')")) === "false", "app ready");
+  await evaluate("document.body.style.zoom='1.3'; document.querySelector('#open-trade-capture').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-runtime-status]').textContent==='로컬 인식 사용 가능'"), "real local OCR runtime");
+  const master = await (await fetch(`${baseUrl}api/master/active`)).json();
+  assert.equal(master.activeRegistryVersion, null); assert.equal(master.bundle, null);
+  const before = await (await fetch(`${baseUrl}__test__/database-snapshot`)).json();
+  const recognize = async (imageIndex, expectedRows) => {
+    const document = await send("DOM.getDocument");
+    const input = await send("DOM.querySelector", { nodeId: document.root.nodeId, selector: "#trade-capture-files" });
+    await send("DOM.setFileInputFiles", { nodeId: input.nodeId, files: [join(root, "local_app/tests/fixtures/trade-recognition", mapping[imageIndex].image)] });
+    await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='1'"), "real PNG input");
+    await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+    await waitFor(async () => evaluate(`document.querySelector('[data-role=trade-live-list] > .trade-recognition-table-wrap tbody')?.rows.length===${expectedRows} && !document.querySelector('[data-action=recognize-trade]').disabled`), "visible six-field table");
+    const visible = await evaluate(`(() => {
+      const section=document.querySelector('[data-role=trade-live-list]'); const table=section.querySelector('table');
+      return {visible:section.checkVisibility() && table.checkVisibility(),rows:[...table.tBodies[0].rows].map(row=>[...row.cells].map(cell=>cell.innerText)), headers:[...table.tHead.rows[0].cells].map(cell=>cell.innerText),status:document.querySelector('[data-role=trade-recognition-status]').innerText};
+    })()`);
+    assert.equal(visible.visible, true); assert.equal(visible.rows.length, expectedRows); assert.equal(visible.headers.length, 6);
+    return visible;
+  };
+  const first = await recognize(0, 6);
+  assert.deepEqual(first.rows[0].map((text) => text.split("\n")[0]), ["파라타마 섬", "대추야자", "500", "고대 항아리 파편", "10", "1"]);
+  assert.match(first.rows[0][1], /확인 필요/, "unmatched land material remains visible as raw OCR");
+  assert.equal(await evaluate("document.querySelector('.trade-review-storage').checkVisibility()"), false);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').parentElement.scrollTop"), 0);
+  const screenshot = await send("Page.captureScreenshot", { format: "png" });
+  await writeFile(join(output, "visible-table.png"), Buffer.from(screenshot.data, "base64"));
+  await evaluate(`window.__masterCalls=0; window.__originalFetch=window.fetch.bind(window); window.fetch=(url,options)=>{if(String(url).includes('/api/master/active')){window.__masterCalls++; return Promise.reject(new Error('Master unavailable'));} return window.__originalFetch(url,options);}; document.querySelector('[data-action=clear-trade-queue]').click();`);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').checkVisibility()"), false, "cleared inputs invalidate their visible result");
+  const second = await recognize(1, 4);
+  assert.equal(await evaluate("window.__masterCalls"), 0, "display does not depend on Master API");
+  await evaluate("document.querySelector('[data-role=trade-live-list] details').open=true");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list] details section').checkVisibility()"), true);
+  assert.deepEqual(await (await fetch(`${baseUrl}__test__/database-snapshot`)).json(), before, "main/master/sidecar DBs unchanged");
+  assert.equal(crashes.length, 0); assert.equal((await fetch(`${baseUrl}api/health`)).ok, true);
+  const report = { browserRealImageVisibleTable: "PASS", missingActiveMaster: "PASS", masterApiFailure: "PASS",
+    rawOCRVisibleIfCorrectionFails: "PASS", databaseSessionModified: "NO", appCrash: "NO", images: 2,
+    viewport: "1920x1080", bodyZoom: "130%", first, second };
+  await writeFile(join(output, "browser.json"), JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(report, null, 2));
+} finally {
+  socket?.close(); await stop(chrome); await stop(server); await rm(profile, { recursive: true, force: true });
+}

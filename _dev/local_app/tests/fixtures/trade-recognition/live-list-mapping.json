@@ -1,0 +1,194 @@
+[
+  {
+    "captureId": "archive-01",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_43_53.png",
+    "sha256": "e65afdd987b2f1e99e573c53897c6bd39632c1bfec248e5068f9fdde7f745843",
+    "oracleRows": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  {
+    "captureId": "archive-02",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_44_44.png",
+    "sha256": "19d99437c4135847cb831e21f02d15ce8a93ff9f498ab3cef922684e36fed5ca",
+    "oracleRows": [
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  {
+    "captureId": "archive-03",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_44_48.png",
+    "sha256": "d1a43d4f006e0a9ae1cdcd93491af678d70be3705032694f0faf3795e22d7c1e",
+    "oracleRows": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ]
+  },
+  {
+    "captureId": "archive-04",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_44_52.png",
+    "sha256": "6384741f6ce7d66cd9ebd379e72e446bbfa25bb89e41ad3afb1c67d7c1350a8e",
+    "oracleRows": [
+      16,
+      17,
+      18,
+      19
+    ]
+  },
+  {
+    "captureId": "archive-05",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_44_56.png",
+    "sha256": "567f6807544b06a6216c7df5c05d25889b1524082859a08602495cc34ce21cc0",
+    "oracleRows": [
+      20,
+      21,
+      22,
+      23,
+      24,
+      25
+    ]
+  },
+  {
+    "captureId": "archive-06",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_44_59.png",
+    "sha256": "a365435ce5d012352ee9b863d6ee111f6e09b6075548d921e499171311b026d8",
+    "oracleRows": [
+      26,
+      27,
+      28,
+      29,
+      30
+    ]
+  },
+  {
+    "captureId": "archive-07",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_03.png",
+    "sha256": "39580306d258f9c4000a37d814ca4a47074491e051e37224a54c6b9e0721177a",
+    "oracleRows": [
+      31,
+      32,
+      33,
+      34,
+      35,
+      36
+    ]
+  },
+  {
+    "captureId": "archive-08",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_09.png",
+    "sha256": "522bd25905c9d26385eb882ef7c8402429ad605db43c9650221c1be1daac15d6",
+    "oracleRows": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ]
+  },
+  {
+    "captureId": "archive-09",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_13.png",
+    "sha256": "d620e2eb44c991920f85cbda9c74356a79c557439647b3e664cc0bd5e9e8104a",
+    "oracleRows": [
+      42,
+      43,
+      44,
+      45,
+      46,
+      47
+    ]
+  },
+  {
+    "captureId": "archive-10",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_16.png",
+    "sha256": "57c8b62ddd421867ae3e6fbbc39b9d7d44cb47b8392dfed1a681fed14d3fe43a",
+    "oracleRows": [
+      48,
+      49
+    ]
+  },
+  {
+    "captureId": "archive-11",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_20.png",
+    "sha256": "a9ac30d254bd49d0899ed86ff1d4f4e866e88a447ae5aae4e013e3db71eb41d9",
+    "oracleRows": [
+      50,
+      51,
+      52,
+      53,
+      54,
+      55
+    ]
+  },
+  {
+    "captureId": "archive-12",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_25.png",
+    "sha256": "43061b06e4825f5417c387dab4b1c36a6ed7b195c30d0e770d8fb69d121be4de",
+    "oracleRows": [
+      56,
+      57,
+      58,
+      59,
+      60,
+      61
+    ]
+  },
+  {
+    "captureId": "archive-13",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_28.png",
+    "sha256": "c3da4c25bfe52aa9a6f7ba48bb6293c7ece5dfdc739e8802654bc9326feb30cd",
+    "oracleRows": [
+      62,
+      63,
+      64,
+      65,
+      66,
+      67
+    ]
+  },
+  {
+    "captureId": "archive-14",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_33.png",
+    "sha256": "8390fbf48a76aaedd4aaf390c4ac42b5667e7e9595dbd38884ce5716ca556f17",
+    "oracleRows": [
+      68
+    ]
+  },
+  {
+    "captureId": "archive-15",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_37.png",
+    "sha256": "9519215e887f2e80c02bd14d650432ff057d27fca1803d9b1a6ab7a44a990ba5",
+    "oracleRows": [
+      69,
+      70,
+      71,
+      72,
+      73,
+      74
+    ]
+  },
+  {
+    "captureId": "archive-16",
+    "image": "Codex 이미지 2026년 9월 25일 오후 08_45_41.png",
+    "sha256": "7c2c5c356d447d41664b2cb14660c789252db7eef21ab4e50bdfc8725c609ba5",
+    "oracleRows": [
+      75,
+      76,
+      77,
+      78,
+      79
+    ]
+  }
+]

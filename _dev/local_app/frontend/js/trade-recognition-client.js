@@ -103,7 +103,11 @@ function validateResult(body, expectedCaptureIds, expectedBatchId) {
   return result;
 }
 
-export async function recognizeTradeBatch(captures) {
+export async function recognizeTradeLiveList(captures) {
+  return recognizeTradeBatch(captures, { liveList: true });
+}
+
+export async function recognizeTradeBatch(captures, { liveList = false } = {}) {
   if (!Array.isArray(captures) || captures.length === 0) throw new TradeRecognitionError("invalid_batch");
   for (const capture of captures) {
     if (!(capture?.blob instanceof Blob) || capture.blob.type !== "image/png"
@@ -123,7 +127,7 @@ export async function recognizeTradeBatch(captures) {
   captures.forEach((capture, index) => form.append("image", capture.blob, `capture-${String(index + 1).padStart(4, "0")}.png`));
   let response;
   try {
-    response = await fetch("/api/recognition/trade-batch", { method: "POST", credentials: "same-origin", body: form });
+    response = await fetch(liveList ? "/api/recognition/trade-live-list" : "/api/recognition/trade-batch", { method: "POST", credentials: "same-origin", body: form });
   } catch {
     throw new TradeRecognitionError("network_error");
   }
@@ -131,6 +135,19 @@ export async function recognizeTradeBatch(captures) {
   if (!response.ok) {
     const code = typeof body?.error?.code === "string" ? body.error.code : "recognition_failed";
     throw new TradeRecognitionError(code, undefined, { ...body?.diagnostics, httpStatus: response.status, backendCode: code, backendMessage: body?.error?.message });
+  }
+  if (liveList) {
+    const result = body?.result;
+    const ids = captures.map((capture) => capture.metadata.captureId);
+    if (body?.ok !== true || result?.version !== 3 || result.batchId !== batchId
+        || !Array.isArray(result.rows) || !Array.isArray(result.captures)
+        || result.captures.length !== ids.length || result.captures.some((item, i) => item.captureId !== ids[i])
+        || result.rows.some((row) => !ids.includes(row.captureId) || !row.fields
+          || FIELD_KEYS.some((field) => typeof row.fields[field]?.rawOCR !== "string"
+            || typeof row.fields[field]?.reviewRequired !== "boolean"))) {
+      throw new TradeRecognitionError("contract_violation");
+    }
+    return result;
   }
   return validateResult(body, captures.map((capture) => capture.metadata.captureId), batchId);
 }

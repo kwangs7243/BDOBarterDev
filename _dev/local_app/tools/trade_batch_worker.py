@@ -30,7 +30,7 @@ def _digest(path: Path) -> str:
     return value.hexdigest()
 
 
-def _load_inputs(request_path: Path, model_dir: Path, raw_evidence_version: int = 1) -> tuple[str, list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any]]:
+def _load_inputs(request_path: Path, model_dir: Path, raw_evidence_version: int = 1, *, live_list: bool = False) -> tuple[str, list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any]]:
     if raw_evidence_version not in (1, 2):
         raise ValueError("raw evidence version is invalid")
     if not request_path.is_file():
@@ -67,6 +67,8 @@ def _load_inputs(request_path: Path, model_dir: Path, raw_evidence_version: int 
                                     "reencoded": reencoded})
         checked.append(checked_capture)
 
+    if live_list:
+        return request_value["batchId"], checked, {}, {}, {}
     selection_path = ROOT / "local_app" / "recognition_data" / "trade-t010p3a-experiment.json"
     row_path = ROOT / "local_app" / "recognition_data" / "trade-t010a-experiment.json"
     numeric_path = ROOT / "local_app" / "recognition_data" / "trade-t010a2-experiment.json"
@@ -234,9 +236,15 @@ def _validate_raw_evidence_snapshot_v2(snapshot: Any, batch_id: str,
         edge_ids.add(edge["edgeId"])
 
 
-def run(request_path: Path, output_path: Path, model_dir: Path, raw_evidence_version: int = 1) -> None:
+def run(request_path: Path, output_path: Path, model_dir: Path, raw_evidence_version: int = 1, *, live_list: bool = False) -> None:
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     os.environ["HF_HUB_OFFLINE"] = "1"
+    if live_list:
+        batch_id, captures, *_ = _load_inputs(request_path, model_dir, live_list=True)
+        from local_app.tools.trade_live_ocr import recognize_live
+        payload = recognize_live(captures, model_dir, batch_id)
+        output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        return
     if raw_evidence_version == 1:
         batch_id, captures, lanes, row_parameters, numeric_parameters = _load_inputs(request_path, model_dir)
     elif raw_evidence_version == 2:
@@ -309,6 +317,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--model-dir", required=True, type=Path)
     parser.add_argument("--raw-evidence-version", choices=(1, 2), type=int, default=1)
+    parser.add_argument("--live-list", action="store_true")
     return parser
 
 
@@ -316,7 +325,7 @@ def main() -> int:
     parser = _build_parser()
     args = parser.parse_args()
     try:
-        run(args.request, args.out, args.model_dir, raw_evidence_version=args.raw_evidence_version)
+        run(args.request, args.out, args.model_dir, raw_evidence_version=args.raw_evidence_version, live_list=args.live_list)
     except Exception as error:
         print(f"trade batch worker failed: {type(error).__name__}", file=sys.stderr)
         return 1
