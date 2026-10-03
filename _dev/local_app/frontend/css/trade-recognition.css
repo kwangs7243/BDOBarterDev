@@ -7,6 +7,7 @@
 .trade-recognition-table th,.trade-recognition-table td{padding:.45rem .55rem;border-bottom:1px solid #303b4a;text-align:left;vertical-align:top}
 .trade-recognition-table th{position:sticky;top:2.3rem;background:#17212d;color:#d8e0e8}
 .trade-recognition-table td{white-space:pre-wrap;overflow-wrap:anywhere}
+.trade-recognition-edit{margin-top:.3rem;padding:.25rem .45rem;font-size:.75rem;white-space:nowrap}
 .trade-capture-dialog [data-action="recognize-trade"]{white-space:nowrap}
 .trade-capture-dialog .dialog-body{max-height:calc(100dvh - 4rem)}
 .trade-capture-dialog .trade-recognition-toolbar{border-top:1px solid #394354;padding-top:.65rem}

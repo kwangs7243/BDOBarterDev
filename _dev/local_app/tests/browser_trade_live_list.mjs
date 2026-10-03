@@ -119,6 +119,11 @@ try {
   assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').parentElement.scrollTop"), 0);
   const screenshot = await send("Page.captureScreenshot", { format: "png" });
   await writeFile(join(output, "visible-table.png"), Buffer.from(screenshot.data, "base64"));
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]')===null"),true,'automatic requirement needs no initial review');
+  await evaluate("document.querySelector('[data-action=review-live-requirement][data-row=\"0\"]').click()");
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]').value"),'500','automatic requirement can be reopened');
+  await evaluate("const input=document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]');input.value='600';input.dispatchEvent(new Event('input',{bubbles:true}))");
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]').value"),'600');
   await evaluate(`window.__masterCalls=0; window.__originalFetch=window.fetch.bind(window); window.fetch=(url,options)=>{if(String(url).includes('/api/master/active')){window.__masterCalls++; return Promise.reject(new Error('Master unavailable'));} return window.__originalFetch(url,options);}; document.querySelector('[data-action=clear-trade-queue]').click();`);
   assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').checkVisibility()"), false, "cleared inputs invalidate their visible result");
   const second = await recognize(1, 4);

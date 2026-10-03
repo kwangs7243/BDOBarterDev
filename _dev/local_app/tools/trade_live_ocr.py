@@ -110,11 +110,17 @@ def _tight(image, mask, padding=3):
 
 
 def _requirement_crop(row):
-    # Keep complete crops compact so extra item artwork cannot change their reading.
     compact = _crop(row, (.287, .55, .328, .84))
     mask = _ink(compact, numeric=True)
     if mask.any() and not mask[:, -1].any() and not mask[-1, :].any():
-        return compact
+        # A trailing digit may lie entirely beyond the blank compact boundary.
+        wide = _crop(row, (.287, .55, .340, .93))
+        outside = _ink(wide, numeric=True)
+        outside[:compact.height, :compact.width] = False
+        ys = np.flatnonzero(outside.any(axis=1))
+        if not len(ys) or ys[-1] - ys[0] + 1 < wide.height * .30:
+            return compact
+        return wide
     return _crop(row, (.287, .55, .340, .93))
 
 

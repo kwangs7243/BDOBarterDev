@@ -122,6 +122,21 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         const value = field.corrected ?? (numeric ? "?" : field.rawOCR || "?");
         return `${value}${field.reviewRequired ? `\n확인 필요${field.allowedValues ? ` (${field.allowedValues.join("·")})` : ""}` : ""}`;
       })));
+    const tableRows = liveListSection.querySelector(".trade-recognition-table tbody").rows;
+    result.rows.forEach((row, index) => {
+      if (row.fields.reqAmount.valueSource === "TRADE_RULE") return;
+      const edit = document.createElement("button"); edit.type = "button";
+      edit.className = "trade-recognition-edit"; edit.textContent = "수량 수정";
+      edit.dataset.action = "review-live-requirement"; edit.dataset.row = String(index);
+      edit.setAttribute("aria-label", `${index + 1}행 요구 수량 수정`);
+      edit.addEventListener("click", () => {
+        if (tradeRecognitionPending) return;
+        row.fields.reqAmount.reviewRequired = true;
+        renderLiveList(result);
+        liveListSection.querySelector(`input[data-row="${index}"][data-field="reqAmount"]`)?.focus();
+      });
+      tableRows[index].cells[2].append(document.createElement("br"), edit);
+    });
     const details = document.createElement("details");
     const summary = document.createElement("summary"); summary.textContent = "인식 원문 보기";
     const raw = document.createElement("section");

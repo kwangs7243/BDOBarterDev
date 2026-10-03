@@ -99,6 +99,16 @@ class LiveListTests(unittest.TestCase):
         self.assertGreater(result["confidence"], .98)
         self.assertTrue(json.loads(json.dumps(result))["reviewRequired"])
 
+    def test_requirement_crop_finds_digit_after_a_blank_boundary(self):
+        row = Image.new("RGB", (1000, 100), "black")
+        for left, right in [(315, 321), (331, 337)]:
+            for x in range(left, right):
+                for y in range(60, 74):
+                    row.putpixel((x, y), (255, 255, 255))
+        crop = _requirement_crop(row)
+        self.assertEqual(crop.size, (53, 38))
+        self.assertEqual(crop.getpixel((49, 10)), (255, 255, 255))
+
     def test_requirement_enhancement_cannot_hide_conflicting_digits(self):
         fake_cv2 = SimpleNamespace(connectedComponentsWithStats=lambda mask, _: (1, mask, [], None))
         image = Image.new("RGB", (20, 15), "black")
