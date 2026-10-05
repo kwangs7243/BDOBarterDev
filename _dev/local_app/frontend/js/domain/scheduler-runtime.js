@@ -65,10 +65,11 @@ function generateSchedule(appState, setStatus) {
   const mode = appState.session.config.ship.mode || "inner";
   window.APP_CONFIG.ALLOW_OCEAN = mode;
   document.getElementById("maxParley").value = appState.session.remainingParley ?? appState.settings.parley?.defaultBudget ?? 1500000;
-  window.runAlgorithmAllModes(false);
+  if (window.runAlgorithmAllModes(false) === false) return false;
   appState.session.schedule = { speed: sortiesSpeed, balance: sortiesBalance };
   appState.session.completed = { speed: [], balance: [] };
-  appState.session.timers = window.ACTIVE_TIMERS;
+  window.ACTIVE_TIMERS = appState.session.timers = {};
+  window.dispatchEvent(new CustomEvent("bdo:timers-reset"));
   appState.session.diagnostics = { mode, generatedAt: Date.now(), speed: sortiesSpeed.length, balance: sortiesBalance.length, engineDebug: window.ENGINE_DEBUG || null };
   appState.session.remainingParley = Number(document.getElementById("maxParley").value) || 0;
   window.dispatchEvent(new CustomEvent("bdo:session-changed"));
