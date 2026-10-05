@@ -16,14 +16,14 @@ from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[3]
-WORKER_VERSION = "trade-live-worker-v3"
+WORKER_VERSION = "trade-live-worker-v9"
 ENGINE_ID = "paddle-korean-ppocrv5-mobile-onnx-cpu-v1"
 MODEL_ONNX_SHA256 = "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08"
 MODEL_CONFIG_SHA256 = "f757fa1c40e99edcf27e9cce879b93eb2a51fa46f5ef39095689b8c37dd75998"
 MODEL_BUNDLE_SHA256 = "f56168a615fa6439b18f42e55cf48dad52883dd0411590a7a4d73603e5955f90"
 MAX_BATCH_BYTES = 20 * 1024 * 1024
 MAX_CAPTURES = 100
-WORKER_TIMEOUT_SECONDS = 120
+WORKER_TIMEOUT_SECONDS = 300
 LIVE_FIELDS = ('island', 'fromItem', 'reqAmount', 'toItem', 'count', 'yield')
 
 class TradeBatchRuntimeError(RuntimeError):
@@ -93,7 +93,7 @@ class TradeBatchRuntime:
 
     def status(self) -> dict[str, Any]:
         reason, info = self._integrity()
-        return {"available": reason is None, "engineId": ENGINE_ID, "modelReady": info["modelReady"],
+        return {"available": reason is None, "engineId": ENGINE_ID, "workerVersion": WORKER_VERSION, "modelReady": info["modelReady"],
                 "reason": reason, "mode": "PACKAGED_LOCAL_RUNTIME" if self.packaged_worker else "LOCAL_DEVELOPMENT_RUNTIME_ONLY",
                 "modelBundleSha256": info.get("hashes", {}).get("bundle", MODEL_BUNDLE_SHA256)}
 

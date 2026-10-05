@@ -1,7 +1,7 @@
 import { reviewExcludedTrades } from "./trade-import-review.js";
 import { state } from "./state.js";
 import { resetWorkingSession, saveWorkingSession } from "./persistence.js";
-import { getItemTier, parseTradeJsonText, processParsedTrades } from "./domain/trade-import.js";
+import { getItemTier, parseTradeJsonText, processParsedTrades, compareTradeOrder } from "./domain/trade-import.js";
 
 let catalogPromise;
 let catalog;
@@ -138,7 +138,7 @@ function renderTradeList() {
   root.replaceChildren(); const table = document.createElement("table"); table.className = "trade-session-table"; const head = document.createElement("thead"); const headingRow = document.createElement("tr");
   for (const [index, heading] of ["섬", "소모품", "필요 수량", "획득품", "횟수", "수율", "상태", "행"].entries()) { const cell = el("th", heading); cell.className = "trade-column-" + (index + 1); headingRow.append(cell); } head.append(headingRow); table.append(head);
   const body = document.createElement("tbody");
-  trades.forEach((trade, index) => {
+  trades.map((trade, index) => ({trade, index})).sort((left, right) => compareTradeOrder(left.trade, right.trade, catalog)).forEach(({trade, index}) => {
     const row = document.createElement("tr"); row.dataset.index = String(index); row.className = `trade-row${trade.deleted ? " trade-deleted" : ""}${trade.disabled ? " trade-disabled" : ""}`;
     for (const [field, type, min] of [["island", "text"], ["fromItem", "text"], ["reqAmount", "number", 1], ["toItem", "text"], ["count", "number", 0], ["yield", "number", 1]]) row.append(addInput(trade, field, type, min));
     const stateCell = document.createElement("td"); stateCell.className = "trade-row-state"; const label = el("label", undefined, "trade-toggle"); const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = !trade.disabled; checkbox.setAttribute("aria-label", "사용 · " + (trade.island || index + 1) + "행");

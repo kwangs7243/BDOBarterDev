@@ -21,7 +21,7 @@ assert.deepEqual(getSafeUniqueItemMatch(catalog.masterData["1"][0], allItems).st
 const uniqueCorrection = getSafeUniqueItemMatch("갈퀴龘꽃 씨앗 주머니", allItems);
 assert.equal(uniqueCorrection.status, "corrected");
 assert.equal(uniqueCorrection.value, "갈퀴 꽃 씨앗 주머니");
-const correctedTrade = normalize(validTrade({ toItem: "[4단계] 갈퀴龘꽃 씨앗 주머니 x 2" }));
+const correctedTrade = normalize(validTrade({ fromItem: "코코넛", toItem: "[4단계] 갈퀴龘꽃 씨앗 주머니 x 2" }));
 assert.equal(correctedTrade.outcomes[0].status, "accepted");
 assert.equal(correctedTrade.trades[0].toItem, "갈퀴 꽃 씨앗 주머니");
 
@@ -44,12 +44,13 @@ for (const [toTier, fromTier] of [[2, 1], [3, 2], [6, 5], [7, 6]]) {
   assert.equal(wrongTier.outcomes[0].status, "unmatched", `tier ${toTier} does not force a global item match`);
 }
 
-// I: tier-1 output preserves an unlisted land material after display decoration is removed.
+// I: tier-1 output resolves a registered land material after display decoration is removed.
 const land = normalize(validTrade({
-  toItem: catalog.masterData["1"][0], fromItem: "[육지] 고유한 육지 재료 x 2", reqAmount: 2,
+  toItem: catalog.masterData["1"][0], fromItem: "[육지] 코코넛 x 2", reqAmount: 2,
 }));
 assert.equal(land.outcomes[0].status, "accepted");
-assert.equal(land.trades[0].fromItem, "고유한 육지 재료");
+assert.equal(land.trades[0].fromItem, "코코넛");
+assert.equal(normalize(validTrade({toItem:catalog.masterData[1][0],fromItem:"미등록 육지품"})).outcomes[0].status,"unmatched");
 
 // J-K: general islands use safe nearest correction; tier 6/7 use their dedicated forced lists.
 const generalIsland = catalog.islands.find((name) => /\s/.test(name));

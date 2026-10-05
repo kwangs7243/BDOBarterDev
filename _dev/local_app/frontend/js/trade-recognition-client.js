@@ -84,14 +84,15 @@ export async function recognizeTradeLiveList(captures) {
 }
 
 
-export async function saveTradeCorrections(captures, result, corrections, feedbackId) {
-  const ids = new Set(corrections.map((row) => row.captureId));
+export async function saveTradeCorrections(captures, result, corrections, feedbackId, phase = null) {
+  const ids = new Set(phase ? captures.map((capture) => capture.metadata.captureId) : corrections.map((row) => row.captureId));
   const selected = captures.filter((capture) => ids.has(capture.metadata.captureId));
-  const feedback = { version: 1, feedbackId,
+  const feedback = { version: phase ? 2 : 1, feedbackId,
     engineId: result.runtime.engineId, modelVersion: result.runtime.modelBundleSha256,
     workerVersion: result.runtime.workerVersion,
     captures: selected.map((capture) => ({ captureId: capture.metadata.captureId, metadata: capture.metadata })),
     corrections };
+  if (phase) feedback.snapshot = { phase, result };
   const form = new FormData();
   form.append("feedback", JSON.stringify(feedback));
   selected.forEach((capture, i) => form.append("image", capture.blob, `capture-${i + 1}.png`));

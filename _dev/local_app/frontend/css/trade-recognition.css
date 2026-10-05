@@ -31,6 +31,11 @@
 .trade-review-fields input{box-sizing:border-box;width:100%;min-height:2.3rem;padding:.45rem .6rem;border:1px solid #7596bc;border-radius:5px;background:#0b1520;color:#fff;font-size:1rem}
 .trade-review-fields input:focus-visible{outline:2px solid #7dd3fc;outline-offset:2px}
 .trade-review-fields small{color:#aebfd2;font-size:.75rem;overflow-wrap:anywhere}
+.trade-review-source{position:relative;overflow:hidden;width:100%;margin:.5rem 0 .8rem;border-radius:5px;background:#080e15}
+.trade-review-source img{position:absolute;max-width:none;height:auto}
+.trade-review-source-mark{position:absolute;box-sizing:border-box;border:2px solid #ffd36b;background:#ffd36b18;pointer-events:none}
+.trade-ready-list{margin-top:1rem}
+.trade-ready-list summary{cursor:pointer;color:#bde5ff;padding:.6rem}
 .trade-review-excluded{background:#20242c;border-color:#51545b}
 .trade-review-excluded .trade-review-choice{color:#f2bf93}
 .trade-review-excluded .trade-review-fields{opacity:.55}

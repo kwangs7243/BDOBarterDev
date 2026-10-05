@@ -54,6 +54,10 @@ export function getSafeUniqueItemMatch(target, candidates) {
   const uniqueCandidates = [...new Set((candidates || []).filter(Boolean))];
   const exact = uniqueCandidates.find((candidate) => candidate.replace(/\s+/g, "") === normalizedTarget);
   if (exact) return { value: exact, status: "exact", distance: 0 };
+  const prefix = normalizedTarget.replace(/(?:\.\.\.|…)$/, "");
+  const prefixMatches = prefix.length >= 6 ? uniqueCandidates.filter(candidate => candidate.replace(/\s+/g, "").startsWith(prefix)) : [];
+  if (prefixMatches.length === 1) return {value: prefixMatches[0], status: "corrected"};
+  if (prefixMatches.length > 1) return {value: "", status: "ambiguous", candidates: prefixMatches};
   const maxDistance = Math.min(3, Math.max(1, Math.ceil(normalizedTarget.length * 0.25)));
   const qualified = uniqueCandidates.map((candidate) => {
     const normalizedCandidate = candidate.replace(/\s+/g, "");
@@ -70,11 +74,132 @@ export function getItemTier(itemName, masterData, specialItems) {
   if (!itemName) return 0;
   const cleanName = itemName.replace(/\[.*?\]\s*/g, "").trim();
   for (let tier = 1; tier <= 7; tier++) {
-    if ((masterData[tier] || []).some((name) => name === cleanName)) return tier;
+    if ((masterData[tier] || []).some((name) => name.replace(/\s+/g, "") === cleanName.replace(/\s+/g, ""))) return tier;
   }
-  if (cleanName.includes("진주 결정") || cleanName.includes("암염 주괴") || cleanName.includes("코발트 주괴") || cleanName.includes("오킬루아의 꽃") || cleanName.includes("파도의 블랙스톤") || cleanName.includes("대양의 견고한 현철") || cleanName.includes("유실된 무역품 상자") || cleanName.includes("흑수정 장식 팔찌")) return "mat";
-  if (cleanName.includes(specialItems[8])) return "coin";
+  if (cleanName.includes("진주 결정") || cleanName.includes("암염 주괴") || cleanName.includes("코발트 주괴") || cleanName.includes("오킬루아의 꽃") || cleanName.includes("파도의 블랙스톤") || cleanName.includes("대양의 견고한 현철") || cleanName.includes("유실된 무역품 상자")) return "mat";
+  if (cleanName.replace(/\s+/g, "").includes("까마귀주화")) return "coin";
+  if (specialItems.some((name) => name.replace(/\s+/g, "") === cleanName.replace(/\s+/g, ""))) return "mat";
   return 0;
+}
+
+export function applyLiveTradeRules(row, catalog) {
+  const fields = row.fields;
+  const tier = (name) => getItemTier(fields[name].corrected, catalog.masterData, catalog.specialItems) || fields[name].recognizedStage;
+  const source = tier("fromItem"), destination = tier("toItem");
+  const fixed = {};
+  if (destination !== 1 && (destination || Number.isInteger(source) && source > 0)) fixed.reqAmount = 1;
+  if (destination === 1) fixed.yield = 1;
+  if (destination === 4) fixed.yield = 2;
+  if ([5, 6, 7].includes(destination)) fixed.yield = 1;
+  const output = String(fields.toItem.corrected ?? "").replace(/\s+/g, "");
+  if (["유실된무역품상자", "화려한진주결정", "화려한암염주괴"].includes(output)) fixed.yield = 1;
+  for (const name of ["reqAmount", "yield"]) {
+    if (!Object.hasOwn(fixed, name) && fields[name].valueSource === "TRADE_RULE") {
+      Object.assign(fields[name], {corrected: null, reviewRequired: true});
+      delete fields[name].valueSource;
+      delete fields[name].rule;
+    }
+  }
+  for (const [name, value] of Object.entries(fixed)) {
+    Object.assign(fields[name], {corrected: value, reviewRequired: false, valueSource: "TRADE_RULE"});
+    delete fields[name].allowedValues;
+    delete fields[name].reviewDraft;
+    delete fields[name].importReview;
+    delete fields[name].conflictReview;
+    delete fields[name].reviewReason;
+  }
+  if (!Object.hasOwn(fixed, "yield")) {
+    if ([[1, 2], [2, 3]].some(([a, b]) => source === a && destination === b)) fields.yield.allowedValues = [2, 3];
+    else delete fields.yield.allowedValues;
+  }
+  row.reviewFields = (row.reviewFields ?? []).filter((name) => !Object.hasOwn(fixed, name));
+  return row;
+}
+
+export function compareTradeOrder(left, right, catalog) {
+  const rank = (row) => {
+    const output = row.fields?.toItem;
+    const destination = getItemTier(output?.corrected ?? row.toItem, catalog.masterData, catalog.specialItems) || output?.recognizedStage;
+    return Number.isInteger(destination) && destination >= 1 && destination <= 7 ? destination - 1 : destination === "mat" ? 7 : destination === "coin" ? 8 : 9;
+  };
+  return rank(left) - rank(right);
+}
+
+export function applyMasterNameRules(row, catalog) {
+  const items = [...Object.values(catalog.masterData).flat(), ...catalog.specialItems];
+  const islands = [...catalog.islands, ...catalog.t6Islands, ...catalog.t7Islands];
+  for (const name of ["toItem", "fromItem", "island"]) {
+    const field = row.fields[name];
+    if (["USER_REVIEW", "USER_EDIT"].includes(field.valueSource) || field.reviewDraft !== undefined) continue;
+    const destination = getItemTier(row.fields.toItem.corrected, catalog.masterData, catalog.specialItems);
+    const candidates = name === "island" ? islands : name === "fromItem" && Number.isInteger(destination) && destination >= 1 ? catalog.masterData[destination - 1] || [] : items;
+    const readings = [field.rawOCR, ...(field.variants || []).map(v => v.text)].filter(Boolean);
+    const matches = readings.map(text => getSafeUniqueItemMatch(String(text).replace(/\[.*?\]\s*/g, "").trim(), candidates));
+    const values = [...new Set(matches.map(match => match.value).filter(Boolean))];
+    if (values.length === 1) {
+      Object.assign(field, {corrected: values[0], reviewRequired: false, valueSource: "MASTER", masterMatch: "RESOLVED"});
+      delete field.importReview;
+      delete field.reviewReason;
+    } else if (values.length > 1) {
+      Object.assign(field, {reviewRequired: true, masterMatch: "CONFLICT", reviewReason: "인식된 이름들이 서로 다른 마스터 품목과 일치합니다."});
+    }
+  }
+  return row;
+}
+
+export function prepareLiveTradeRows(result, catalog) {
+  for (const row of result.rows) {
+    for (const field of Object.values(row.fields)) {
+      if (!Object.hasOwn(field, "automaticCorrected")) field.automaticCorrected = field.corrected;
+    }
+    applyMasterNameRules(row, catalog);
+    applyLiveTradeRules(row, catalog);
+    delete row.duplicateOf;
+  }
+  const ready = result.rows.filter((row) => !row.excluded && Object.values(row.fields).every((f) => f.corrected !== null && f.corrected !== undefined));
+  const parsed = processParsedTrades(ready.map((row) => Object.fromEntries(Object.entries(row.fields).map(([k, f]) => [k, f.corrected]))), [], catalog);
+  for (const outcome of parsed.outcomes) {
+    if (["accepted", "duplicate"].includes(outcome.status)) {
+      for (const field of Object.values(ready[outcome.index].fields)) {
+        if (field.importReview === true) { field.reviewRequired = false; delete field.importReview; delete field.reviewReason; }
+      }
+      applyLiveTradeRules(ready[outcome.index], catalog);
+    } else {
+      const field = ready[outcome.index].fields[outcome.field ?? "fromItem"];
+      Object.assign(field, {reviewRequired: true, importReview: true,
+        reviewReason: outcome.status === "conflict" ? "같은 섬·결과의 요구 품목이 다릅니다. 한 행을 제외하거나 품목을 수정하세요." : outcome.candidates?.length ? `마스터 후보: ${outcome.candidates.join(" / ")}` : "마스터에서 품목을 찾지 못했습니다. 이름을 수정하거나 행을 제외하세요."});
+    }
+  }
+  const groups = new Map();
+  const identities = new Map();
+  for (const row of result.rows) {
+    for (const field of Object.values(row.fields)) {
+      if (field.conflictReview) { field.reviewRequired = false; delete field.conflictReview; delete field.reviewReason; }
+    }
+  }
+  result.rows.forEach((row, index) => {
+    if (row.excluded || ["island", "fromItem", "toItem"].some((name) => row.fields[name].reviewRequired)) return;
+    const key = JSON.stringify(["island", "fromItem", "toItem"].map((name) => String(row.fields[name].corrected).replace(/\s+/g, "")));
+    const peers = identities.get(key) ?? [];
+    peers.push({row, index}); identities.set(key, peers);
+  });
+  for (const peers of identities.values()) {
+    for (const name of ["reqAmount", "count", "yield"]) {
+      const values = new Set(peers.map(({row}) => row.fields[name].corrected));
+      if (values.size > 1) for (const {row} of peers) {
+        Object.assign(row.fields[name], {reviewRequired: true, conflictReview: true, reviewReason: "겹친 캡처의 값이 다릅니다. 같은 값으로 수정하거나 한 행을 제외하세요."});
+      }
+    }
+  }
+  result.rows.forEach((row, index) => {
+    if (row.excluded || ["island", "fromItem", "toItem"].some((name) => row.fields[name].reviewRequired)) return;
+    applyLiveTradeRules(row, catalog);
+    const key = JSON.stringify(["island", "fromItem", "toItem", "reqAmount", "count", "yield"].map((name) => typeof row.fields[name].corrected === "string" ? row.fields[name].corrected.replace(/\s+/g, "") : row.fields[name].corrected));
+    if (groups.has(key)) row.duplicateOf = groups.get(key);
+    else groups.set(key, index);
+  });
+  return result.rows.map((row, index) => ({row, index})).filter(({row}) => row.duplicateOf === undefined)
+    .sort((left, right) => compareTradeOrder(left.row, right.row, catalog));
 }
 
 export function processParsedTrades(newTrades, existingTrades, catalog) {
@@ -128,8 +253,8 @@ export function processParsedTrades(newTrades, existingTrades, catalog) {
       else if (toTier > 1) fromCandidates = masterData[toTier - 1] || [];
     }
 
-    // 0→1 교환의 육지 재료는 마스터 품목 목록에 없으므로 원문 이름을 그대로 보존합니다.
-    if (toTier === 1 && rawFrom) safeFrom = rawFrom;
+    if (toTier === 1 && masterData[0]) fromCandidates = masterData[0];
+    if (toTier === 1 && rawFrom && !masterData[0]) safeFrom = rawFrom;
     else {
       const fromMatch = getSafeUniqueItemMatch(rawFrom, fromCandidates);
       safeFrom = fromMatch.value;

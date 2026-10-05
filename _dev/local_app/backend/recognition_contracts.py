@@ -208,14 +208,19 @@ def validate_trade_corrections(feedback, captures):
     from .services.trade_batch_runtime import ENGINE_ID, MODEL_BUNDLE_SHA256, WORKER_VERSION
     def fail():
         raise RecognitionContractError("invalid_feedback", "Correction feedback is invalid.")
-    if (set(feedback) != {"version", "feedbackId", "captures", "engineId", "modelVersion", "workerVersion", "corrections"}
-            or type(feedback["version"]) is not int or feedback["version"] != 1
+    snapshot = feedback.get("snapshot")
+    expanded = feedback.get("version") == 2 and type(feedback.get("version")) is int
+    expected = {"version", "feedbackId", "captures", "engineId", "modelVersion", "workerVersion", "corrections"}
+    if expanded:
+        expected.add("snapshot")
+    if (set(feedback) != expected
+            or type(feedback["version"]) is not int or feedback["version"] not in (1, 2)
             or feedback["engineId"] != ENGINE_ID or feedback["modelVersion"] != MODEL_BUNDLE_SHA256
-            or feedback["workerVersion"] != WORKER_VERSION):
+            or feedback["workerVersion"] not in ({WORKER_VERSION, "trade-live-worker-v5", "trade-live-worker-v6", "trade-live-worker-v7", "trade-live-worker-v8"} if expanded else {WORKER_VERSION})):
         fail()
     _uuid(feedback["feedbackId"], "feedbackId")
     rows = feedback["corrections"]
-    if not isinstance(rows, list) or not 1 <= len(rows) <= 600:
+    if not isinstance(rows, list) or not (0 if expanded else 1) <= len(rows) <= 600:
         fail()
     frames = {capture["captureId"]: capture["metadata"]["frame"] for capture in captures}
     seen = set()
@@ -263,5 +268,28 @@ def validate_trade_corrections(feedback, captures):
                 fail()
         if row["automaticCorrected"] == row["finalValue"]:
             fail()
-    if touched != set(frames):
+    if not expanded and touched != set(frames):
         fail()
+    if expanded:
+        from .services.trade_batch_runtime import TradeBatchRuntime, TradeBatchRuntimeError
+        if not isinstance(snapshot, dict) or set(snapshot) != {"phase", "result"} or snapshot["phase"] not in {"recognized", "reviewed", "applied", "recovered"}:
+            fail()
+        result = snapshot["result"]
+        if not isinstance(result, dict) or not isinstance(result.get("rows"), list) or len(result["rows"]) > 600:
+            fail()
+        try:
+            TradeBatchRuntime._validate_live_result(result, result.get("batchId"), captures)
+        except TradeBatchRuntimeError:
+            fail()
+        members = set()
+        for row in result["rows"]:
+            key = (row["captureId"], row["ordinal"])
+            if key in members or type(row.get("excluded", False)) is not bool:
+                fail()
+            members.add(key)
+            frame = frames[row["captureId"]]
+            box(row.get("rowBox"), frame)
+            for value in row["fields"].values():
+                box(value.get("box"), frame)
+                if len(value["rawOCR"]) > 1024:
+                    fail()

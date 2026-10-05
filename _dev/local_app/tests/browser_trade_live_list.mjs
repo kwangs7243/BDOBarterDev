@@ -90,7 +90,7 @@ try {
   await waitFor(async () => evaluate("document.querySelector('[data-role=trade-runtime-status]').textContent==='로컬 인식 사용 가능'"), "real local OCR runtime");
   assert.equal((await fetch(`${baseUrl}api/master/active`)).status, 404);
   assert.equal(await evaluate("document.querySelector('#open-trade-master')"), null);
-  const snapshotUrl = `${baseUrl}${external ? "api/bootstrap" : "__test__/database-snapshot"}`;
+  const snapshotUrl = `${baseUrl}api/bootstrap`;
   const before = await (await fetch(snapshotUrl)).json();
   const recognize = async (imageIndex, expectedRows) => {
     const document = await send("DOM.getDocument");
@@ -108,7 +108,7 @@ try {
   };
   const first = await recognize(0, 6);
   assert.deepEqual(first.rows[0].map((text) => text.split("\n")[0]), ["파라타마 섬", "대추야자", "500", "고대 항아리 파편", "10", "1"]);
-  assert.match(first.rows[0][1], /확인 필요/, "unmatched land material remains visible as raw OCR");
+  assert.doesNotMatch(first.rows[0][1], /확인 필요/, "verified land name is automatically confirmed");
   assert.equal(await evaluate(`(() => {
     const review=document.querySelector('[data-role=live-list-review]');
     const region=review.parentElement.parentElement.getBoundingClientRect();
@@ -153,9 +153,24 @@ try {
   assert.equal(persisted.workingSession.scannedTrades.length,6);
   assert.ok(persisted.workingSession.scannedTrades.every(row=>row.reqAmount===1&&row.yield===1));
   await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
+  // Replay the historical name uncertainty to test review/storage independently of OCR improvements.
+  await evaluate(`window.__reviewFetch=window.fetch.bind(window); window.fetch=async(url,options)=>{
+    const response=await window.__reviewFetch(url,options);
+    if(url!=='/api/recognition/trade-live-list'||!response.ok)return response;
+    const payload=await response.json();
+    payload.result.rows[0].fields.fromItem.reviewRequired=true;
+    payload.result.rows[1].fields.fromItem.reviewRequired=true;
+    payload.result.rows[5].fields.fromItem.reviewRequired=true;
+    payload.result.rows[5].fields.fromItem.corrected='영롱한비취';
+    return new Response(JSON.stringify(payload),{status:response.status,headers:response.headers});
+  }`);
   await recognize(0,6);
   const oracle = JSON.parse(await readFile(join(root,"local_app/tests/fixtures/trade-recognition/정답.json"),"utf8"));
   const truth = mapping[0].oracleRows.map((i)=>oracle[i]);
+  // Open quantities explicitly so even confirmed rows participate in the all-excluded UI case.
+  await evaluate(`for(let row=0;row<6;row++){
+    document.querySelector('[data-action=review-live-requirement][data-row="'+row+'"]').click();
+  }`);
   await evaluate("document.querySelectorAll('[data-action=include-live-row]').forEach(input=>input.click())");
   assert.equal(await evaluate("document.querySelector('[data-action=apply-live-new]').disabled"),true,'empty final list cannot be applied');
   assert.match(await evaluate("document.querySelector('.trade-review-counts').textContent"),/포함 0행 · 제외 6행/);
@@ -177,7 +192,7 @@ try {
   await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'selective fields confirmed');
   assert.equal(await evaluate("document.querySelector('[data-action=include-live-row][data-row=\"0\"]').checked"),false,'excluded choice survives confirmation');
   assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field]').value"),'','excluded draft survives rerender');
-  assert.equal(await evaluate("document.querySelectorAll('[data-role=live-list-review] input[data-field]').length"),selectiveCount,'review choices remain editable after confirmation');
+  assert.ok(await evaluate("document.querySelectorAll('[data-role=live-list-review] input[data-field]').length")<selectiveCount,'confirmed rows disappear from the review list');
   const correctionWrites=await evaluate("window.__correctionWrites");
   assert.equal(correctionWrites.length,1);
   assert.ok(correctionWrites[0].corrections.some(row=>row.field==='fromItem'&&row.finalValue==='영롱한 비취'));
@@ -189,18 +204,19 @@ try {
     input.value=${JSON.stringify(truth)}[0][input.dataset.field];input.dispatchEvent(new Event('input',{bubbles:true}));
   }); document.querySelector('[data-role=live-list-review] form').requestSubmit();`);
   await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'reincluded row confirmed');
-  await evaluate("document.querySelector('[data-action=include-live-row][data-row=\"0\"]').click()");
-  assert.match(await evaluate("document.querySelector('.trade-review-counts').textContent"),/포함 5행 · 제외 1행 · 확인할 값 0곳/);
+  await evaluate("document.querySelector('[data-action=include-live-list-row][aria-label=\"1행 목록 포함\"]').click()");
+  assert.match(await evaluate("document.querySelector('.trade-review-counts').textContent"),/포함 5행 · 제외 1행.*확인할 값 0곳/);
   const exclusionScreenshot=await send('Page.captureScreenshot',{format:'png'});
   await writeFile(join(output,'review-excluded.png'),Buffer.from(exclusionScreenshot.data,'base64'));
   await evaluate(`(async()=>{const {applyLiveTradeRows}=await import('/assets/js/trade-ui.js');return applyLiveTradeRows([${JSON.stringify(truth[1])}],'append');})()`);
+  await evaluate("document.querySelector('[data-action=review-live-requirement][data-row=\"1\"]').click()");
   await evaluate(`const rejectedInput=document.querySelector('[data-role=live-list-review] input[data-row="1"][data-field="fromItem"]');
     rejectedInput.value='존재하지 않는 검증 아이템';rejectedInput.dispatchEvent(new Event('input',{bubbles:true}));
     document.querySelector('[data-role=live-list-review] form').requestSubmit();`);
   await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-append]').disabled"),'conflicting name submitted for importer check');
   await evaluate("document.querySelector('[data-action=apply-live-append]').click()");
-  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('적용할 수 없는 행')"),'importer rejects conflicting included row');
-  assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"),/2행 conflict/,'filtered importer index is reported as the original row');
+  await waitFor(async()=>evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent.includes('리스트 생성 보류')"),'importer rejects conflicting included row');
+  assert.match(await evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent"),/2행 기존 목록 충돌/,'filtered importer index is reported as the original row');
   assert.equal(await evaluate("document.querySelector('.trade-review-row[data-row=\"1\"] .trade-review-row-status').textContent"),'값 확인 필요','importer flags the correct included row');
   assert.equal(await evaluate("document.querySelector('.trade-review-row[data-row=\"0\"] .trade-review-row-status').textContent"),'제외 선택','importer does not reopen the excluded row');
   await evaluate(`const correctedInput=document.querySelector('[data-role=live-list-review] input[data-row="1"][data-field="fromItem"]');
@@ -217,7 +233,10 @@ try {
   const replaced=await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.ok(!replaced.workingSession.scannedTrades.some(row=>row.island===truth[0].island&&row.fromItem===truth[0].fromItem));
   await send('Page.reload');
-  await waitFor(async()=>evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"),'reload saved session');
+  await waitFor(async()=>{
+    try { return await evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false'"); }
+    catch(error) { if(/navigated|Execution context was destroyed|Cannot find context/.test(error.message))return false; throw error; }
+  },'reload saved session');
   assert.deepEqual((await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession,replaced.workingSession);
   assert.equal(crashes.length, 0); assert.equal((await fetch(`${baseUrl}api/health`)).ok, true);
   const report = { browserRealImageVisibleTable: "PASS", missingActiveMaster: "PASS", masterApiFailure: "PASS",

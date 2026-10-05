@@ -47,16 +47,21 @@ class LiveApiTests(unittest.TestCase):
                                 "field":"island", "box":value["box"], "rawOCR":value["rawOCR"],
                                 "confidence":value["confidence"], "automaticCorrected":value["corrected"], "finalValue":"새 섬"}]}
 
-    def records(self):
+    def records(self, include_automatic=False):
         with closing(sqlite3.connect(self.database)) as db:
-            return db.execute("SELECT * FROM trade_correction").fetchall()
+            rows = db.execute("SELECT * FROM trade_correction").fetchall()
+            return rows if include_automatic else [row for row in rows if json.loads(row[5]).get("snapshot", {}).get("phase") != "recognized"]
 
-    def test_live_recognition_does_not_store_automatic_samples_or_change_state(self):
+    def test_live_recognition_preserves_all_source_rows_without_changing_working_state(self):
         before=self.client.get("/api/bootstrap").get_json()
         response=self.post(self.batch())
         self.assertEqual(response.status_code,200,response.get_json())
         self.assertEqual(response.get_json()["result"]["version"],3)
         self.assertEqual(self.records(),[])
+        records = self.records(include_automatic=True)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0][4], self.image)
+        self.assertEqual(json.loads(records[0][5])["snapshot"]["rows"], response.get_json()["result"]["rows"])
         self.assertEqual(self.client.get("/api/bootstrap").get_json(),before)
         self.assertEqual([p.name for p in Path(self.temp.name).rglob('*.sqlite3')],["data.sqlite3"])
 
@@ -102,7 +107,27 @@ class LiveApiTests(unittest.TestCase):
         self.assertFalse(any(r.startswith('/api/master') for r in rules))
 
     def test_feedback_database_failure_records_no_success(self):
+        feedback = self.feedback()
         with closing(sqlite3.connect(self.database)) as db:
             db.execute("CREATE TRIGGER fail_feedback BEFORE INSERT ON trade_correction BEGIN SELECT RAISE(ABORT,'fixture failure'); END")
-        self.assertEqual(self.post(self.feedback(),field='feedback').status_code,503)
+        self.assertEqual(self.post(feedback,field='feedback').status_code,503)
         self.assertEqual(self.records(),[])
+
+    def test_full_review_keeps_unchanged_confirmation_exclusion_and_original_ocr(self):
+        result = self.post(self.batch()).get_json()["result"]
+        row = result["rows"][0]
+        row["excluded"] = True
+        row["fields"]["island"].update(automaticCorrected="품목", corrected="새 섬", reviewRequired=False, valueSource="USER_REVIEW")
+        feedback = {"version": 2, "feedbackId": str(uuid4()), "captures": [self.capture], "engineId": ENGINE_ID,
+                    "modelVersion": MODEL_BUNDLE_SHA256, "workerVersion": WORKER_VERSION, "corrections": [],
+                    "snapshot": {"phase": "reviewed", "result": result}}
+        before = self.client.get("/api/bootstrap").get_json()
+        self.assertEqual(self.post(feedback, field="feedback").status_code, 200)
+        self.assertFalse(self.post(feedback, field="feedback").get_json()["created"])
+        details = json.loads(self.records()[0][5])
+        self.assertEqual(details["snapshot"]["rows"], [row])
+        self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
+        feedback["feedbackId"] = str(uuid4())
+        row["rowBox"]["width"] = 81
+        self.assertEqual(self.post(feedback, field="feedback").status_code, 422)
+        self.assertEqual(len(self.records()), 1)

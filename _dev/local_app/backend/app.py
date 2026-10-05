@@ -20,9 +20,8 @@ from .storage import MutationConflict, RevisionConflict, Storage, default_databa
 HOST = "127.0.0.1"
 PORT = 18765
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
-# Leave room for bounded metadata plus multipart headers while the route independently
-# enforces the 20 MiB image and 64 KiB metadata contracts.
-MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 128 * 1024
+# Recognition feedback also carries the bounded full review snapshot.
+MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 2 * 1024 * 1024 + 128 * 1024
 
 
 def create_app(database_path: str | Path | None = None, *, reference_path: str | Path | None = None,

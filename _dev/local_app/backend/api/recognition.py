@@ -59,6 +59,10 @@ def post_trade_live_list():
     except TradeBatchRuntimeError as error:
         return _error(error.code, str(error), error.status, retryable=error.retryable,
                       diagnostics={"stage": "OCR_RUNTIME"})
+    current_app.extensions["bdo_storage"].record_trade_corrections({
+        "version": 2, "feedbackId": str(uuid.uuid4()), "engineId": result["runtime"]["engineId"],
+        "modelVersion": result["runtime"]["modelBundleSha256"], "workerVersion": result["runtime"]["workerVersion"],
+        "corrections": [], "snapshot": {"phase": "recognized", "result": result}}, raw_captures)
     return jsonify({"ok": True, "result": result})
 
 
@@ -105,7 +109,7 @@ def post_trade_corrections():
     if (request.mimetype != "multipart/form-data" or set(request.form) != {"feedback"}
             or len(request.form.getlist("feedback")) != 1 or set(request.files) != {"image"}):
         return _error("invalid_feedback", "Correction feedback requires metadata and PNG parts.", 422)
-    feedback = parse_json(request.form["feedback"], max_bytes=MAX_JSON_BYTES, label="feedback")
+    feedback = parse_json(request.form["feedback"], max_bytes=2 * 1024 * 1024, label="feedback")
     captures = _read_captures(feedback.get("captures"), request.files.getlist("image"))
     validate_trade_corrections(feedback, captures)
     created = current_app.extensions["bdo_storage"].record_trade_corrections(feedback, captures)

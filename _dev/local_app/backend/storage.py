@@ -356,6 +356,12 @@ class Storage:
                                "modelVersion": feedback["modelVersion"], "workerVersion": feedback["workerVersion"],
                                "corrections": [row for row in feedback["corrections"]
                                                if row["captureId"] == capture["captureId"]]}
+                    if "snapshot" in feedback:
+                        snapshot = feedback["snapshot"]
+                        result = snapshot["result"]
+                        details["snapshot"] = {"phase": snapshot["phase"], "batchId": result["batchId"],
+                                               "runtime": result.get("runtime"),
+                                               "rows": [row for row in result["rows"] if row["captureId"] == capture["captureId"]]}
                     connection.execute("""INSERT INTO trade_correction VALUES
                         (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'), ?, ?)""",
                         (feedback["feedbackId"], capture["captureId"], request_hash, capture["imageBytes"],

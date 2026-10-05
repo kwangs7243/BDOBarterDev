@@ -55,6 +55,94 @@ let APP_CONFIG = {
     MULTIPLIER: { DEFAULT: 1, T2: 3, T3: 3, T4: 2 }
 };
 const masterData = {
+    0: [
+        { name: "대추야자", weight: 0.1 },
+        { name: "영롱한 흑요석", weight: 0.3 },
+        { name: "닭고기", weight: 0.03 },
+        { name: "어둠의 가루", weight: 0.1 },
+        { name: "세월의 가루", weight: 0.1 },
+        { name: "영롱한 비취", weight: 0.3 },
+        { name: "호랑이 고기", weight: 0.03 },
+        { name: "이끼나무 합판", weight: 0.5 },
+        { name: "삼나무 합판", weight: 0.5 },
+        { name: "상급 화려한 깃털", weight: 0.1 },
+        { name: "두꺼운 모피", weight: 0.1 },
+        { name: "상급 단단한 가죽", weight: 0.1 },
+        { name: "현자의 혈액", weight: 0.1 },
+        { name: "가시나무 합판", weight: 0.5 },
+        { name: "양털", weight: 0.1 },
+        { name: "편백나무 합판", weight: 0.5 },
+        { name: "무화과", weight: 0.1 },
+        { name: "울", weight: 0.1 },
+        { name: "구리 주괴", weight: 0.3 },
+        { name: "최상급 곰 가죽", weight: 0.1 },
+        { name: "최상급 멧돼지 가죽", weight: 0.1 },
+        { name: "소나무 합판", weight: 0.5 },
+        { name: "핏빛 나무 옹이", weight: 0.1 },
+        { name: "상급 두꺼운 모피", weight: 0.1 },
+        { name: "청동 주괴", weight: 0.3 },
+        { name: "고리나무 합판", weight: 0.5 },
+        { name: "계피", weight: 0.1 },
+        { name: "팔각", weight: 0.1 },
+        { name: "맑은 액체 시약", weight: 0.1 },
+        { name: "화각", weight: 0.1 },
+        { name: "질긴 가죽", weight: 0.1 },
+        { name: "황동 주괴", weight: 0.3 },
+        { name: "육두구", weight: 0.1 },
+        { name: "맥주", weight: 0.1 },
+        { name: "식초", weight: 0.01 },
+        { name: "측백나무 합판", weight: 0.5 },
+        { name: "균열의 가루", weight: 0.1 },
+        { name: "납 주괴", weight: 0.3 },
+        { name: "주석 주괴", weight: 0.3 },
+        { name: "야자수 합판", weight: 0.5 },
+        { name: "알로에", weight: 0.1 },
+        { name: "단풍나무 합판", weight: 0.5 },
+        { name: "새구이", weight: 0.1 },
+        { name: "신비로운 가루", weight: 0.1 },
+        { name: "부드러운 가죽", weight: 0.1 },
+        { name: "죄인의 혈액", weight: 0.1 },
+        { name: "신수의 혈액", weight: 0.1 },
+        { name: "순수한 가루 시약", weight: 0.1 },
+        { name: "명주실", weight: 0.1 },
+        { name: "술의 정수", weight: 0.01 },
+        { name: "전나무 합판", weight: 0.5 },
+        { name: "선인장 껍질", weight: 0.5 },
+        { name: "피스타치오", weight: 0.1 },
+        { name: "털실", weight: 0.1 },
+        { name: "식용벌꿀", weight: 0.1 },
+        { name: "자작나무 합판", weight: 0.5 },
+        { name: "프리카", weight: 0.1 },
+        { name: "비단", weight: 0.1 },
+        { name: "아마포", weight: 0.1 },
+        { name: "코코넛", weight: 0.1 },
+        { name: "빛나는 가루", weight: 0.1 },
+        { name: "딱총나무 합판", weight: 0.5 },
+        { name: "다진 새고기", weight: 0.03 },
+        { name: "면포", weight: 0.1 },
+        { name: "광대의 혈액", weight: 0.1 },
+        { name: "가공석탄", weight: 0.3 },
+        { name: "선인장 가시", weight: 0.5 },
+        { name: "철 주괴", weight: 0.3 },
+        { name: "고목나무 껍질", weight: 0.1 },
+        { name: "비취 원석", weight: 0.3 },
+        { name: "상급 질긴 가죽", weight: 0.1 },
+        { name: "가벼운 깃털", weight: 0.1 },
+        { name: "호박", weight: 0.1 },
+        { name: "아마실", weight: 0.1 },
+        { name: "설원 삼나무 합판", weight: 0.5 },
+        { name: "카프라스 나무 합판", weight: 0.5 },
+        { name: "아연 주괴", weight: 0.3 },
+        { name: "녹 주괴", weight: 0.3 },
+        { name: "단단한 가죽", weight: 0.1 },
+        { name: "상급 부드러운 가죽", weight: 0.1 },
+        { name: "화려한 깃털", weight: 0.1 },
+        { name: "상급 가벼운 깃털", weight: 0.1 },
+        { name: "정령의 잎사귀", weight: 0.1 },
+        { name: "붉은 나무혹", weight: 0.1 },
+        { name: "화염의 가루", weight: 0.1 },
+        { name: "대지의 가루", weight: 0.1 }
+    ],
     1: [{ name: "갈퀴 꽃 씨앗 주머니", stock: 21 }, { name: "거대한 물고기 뼈", stock: 47 }, { name: "고대 항아리 파편", stock: 32 }, { name: "때 탄 갈매기 조각상", stock: 34 }, { name: "뗏목 조각품", stock: 53 }, { name: "로아 꽃 씨앗 주머니", stock: 20 }, { name: "말린 푸른 장미", stock: 50 }, { name: "비옥한 흙", stock: 33 }, { name: "알 수 없는 고대 벽화", stock: 38 }, { name: "앵두나무 씨앗 주머니", stock: 54 }, { name: "쫄깃한 전어 회", stock: 34 }, { name: "해상 전투 식량", stock: 59 }, { name: "해적의 화약", stock: 21 }, { name: "황금빛 모래", stock: 49 }],
     2: [{ name: "괴생물 촉수", stock: 0 }, { name: "균형잡힌 돌탑", stock: 13 }, { name: "나르보산 해삼", stock: 93 }, { name: "널찍한 돌판", stock: 72 }, { name: "섬마을 도시락", stock: 38 }, { name: "성게 가시", stock: 31 }, { name: "소라게 껍질 장식", stock: 47 }, { name: "오색 구슬", stock: 30 }, { name: "정제된 식수", stock: 33 }, { name: "최고급 굴 상자", stock: 65 }, { name: "크론성 금주화", stock: 42 }, { name: "해양 구조품", stock: 66 }, { name: "해적 금주화", stock: 86 }, { name: "해적선 돛대", stock: 101 }],
     3: [{ name: "걸쭉한 괴생물 혈액", stock: 44 }, { name: "낡은 지령서", stock: 30 }, { name: "롬타스 그물", stock: 60 }, { name: "반달 조리용 칼", stock: 41 }, { name: "오래된 모래 시계", stock: 39 }, { name: "정찰병 망원경", stock: 41 }, { name: "족제비 가죽 외투", stock: 37 }, { name: "종유석 파편", stock: 47 }, { name: "찢어진 해적 보물지도", stock: 16 }, { name: "푸른 양초 더미", stock: 38 }, { name: "해골 장식 찻잔", stock: 45 }, { name: "해골무늬 카페트", stock: 38 }, { name: "해적단의 보급상자", stock: 62 }, { name: "희귀 약초 무더기", stock: 42 }],
@@ -65,7 +153,7 @@ const masterData = {
         { name: "최고급 코코넛 시럽", stock: 0 }, { name: "아레하자 전통 차", stock: 0 }, { name: "아레하자 등대 조각상", stock: 0 }, { name: "황금빛 선인장 꽃다발", stock: 0 },
         { name: "숲의 요정 향수병", stock: 0 }, { name: "카마실비아 조각상", stock: 0 }, { name: "달빛 수정 램프", stock: 0 }, { name: "은빛 나무 이끼 장식", stock: 0 },
         { name: "검은 장미 꽃다발", stock: 0 }, { name: "월광 수정 조각", stock: 0 }, { name: "달빛 그림자 숙성 와인", stock: 0 }, { name: "그림자 장식 거울", stock: 0 },
-        { name: "대나무 수액 상자", stock: 0 }, { name: "남포 특산품 감 상자", stock: 0 }, { name: "고급 묵양함 상자", stock: 0 }, { name: "한짓골 산딸기 상자", stock: 0 },
+        { name: "대나무 수액 상자", stock: 0 }, { name: "남포 특산품 감 상자", stock: 0 }, { name: "고급 묵향함", stock: 0 }, { name: "한짓골 산딸기 상자", stock: 0 },
         { name: "최고급 청화백자 상자", stock: 0 }, { name: "최고급 감투 상자", stock: 0 }, { name: "놋쇠그릇 상자", stock: 0 }, { name: "예리한 홍화도 상자", stock: 0 }
     ],
     7: [
@@ -75,6 +163,16 @@ const masterData = {
         { name: "루살카 가시꽃다발", stock: 0 }, { name: "단단한 카프라스 목재", stock: 0 }, { name: "하킨자 최고급 향수", stock: 0 }, { name: "에다나 권좌의 기록서", stock: 0 },
         { name: "장인의 조개 껍질 목걸이", stock: 0 }, { name: "발레노스 항해사의 망원경", stock: 0 }, { name: "발레노스 고래 조각상", stock: 0 }, { name: "발레노스 소금꽃", stock: 0 },
         { name: "발레노스 별빛 소금", stock: 0 }, { name: "발레노스 유물 파편", stock: 0 }, { name: "발레노스 무지개 산호", stock: 0 }, { name: "무지개빛 해원석 조각", stock: 0 }
+    ],
+    mat: [
+        { name: "순수한 진주 결정", weight: 0.30 },
+        { name: "화려한 진주 결정", weight: 0.10 },
+        { name: "화려한 암염 주괴", weight: 0.30 },
+        { name: "빛나는 코발트 주괴", weight: 0.30 },
+        { name: "오킬루아의 꽃", weight: 0 },
+        { name: "파도의 블랙스톤", weight: 0.01 },
+        { name: "대양의 견고한 현철", weight: 0.30 },
+        { name: "유실된 무역품 상자", weight: 50 }
     ]
 };
 const rawData = {
@@ -208,19 +306,22 @@ function getItemTier(itemName) {
     for(let i=1; i<=7; i++) { 
         if(masterData[i] && masterData[i].some(x => x.name === cleanName)) return i; 
     }
-    if(cleanName.includes("진주 결정") || cleanName.includes("암염 주괴") || cleanName.includes("코발트 주괴") || cleanName.includes("오킬루아의 꽃") || cleanName.includes("파도의 블랙스톤") || cleanName.includes("대양의 견고한 현철") || cleanName.includes("유실된 무역품 상자") || cleanName.includes("흑수정 장식 팔찌")) return 'mat';
+    if(cleanName.includes("진주 결정") || cleanName.includes("암염 주괴") || cleanName.includes("코발트 주괴") || cleanName.includes("오킬루아의 꽃") || cleanName.includes("파도의 블랙스톤") || cleanName.includes("대양의 견고한 현철") || cleanName.includes("유실된 무역품 상자")) return 'mat';
     if(cleanName.includes("까마귀 주화")) return 'coin';
     return 0; 
 }
 
-function getItemWeight(tier) {
+function getItemWeight(tier, itemName = "") {
+    if (tier === 0 || tier === 'mat') {
+        const cleanName = String(itemName).replace(/\[.*?\]\s*/g, '').replace(/\s+/g, '');
+        return masterData[tier].find(item => item.name.replace(/\s+/g, '') === cleanName)?.weight ?? NaN;
+    }
     if (tier === 1) return APP_CONFIG.WEIGHT.T1;
     if (tier === 2) return APP_CONFIG.WEIGHT.T2;
     if (tier === 3) return APP_CONFIG.WEIGHT.T3;
     if (tier === 4 || tier === 5) return APP_CONFIG.WEIGHT.T4;
     if (tier === 6) return APP_CONFIG.WEIGHT.T6 || 2000; // 6단 2000LT 추가
     if (tier === 7) return APP_CONFIG.WEIGHT.T7 || 2000; // 7단 2000LT 추가
-    if (tier === 'mat') return APP_CONFIG.WEIGHT.MAT;
     if (tier === 'coin') return APP_CONFIG.WEIGHT.COIN;
     return APP_CONFIG.WEIGHT.BASE; 
 }

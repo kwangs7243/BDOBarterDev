@@ -15,6 +15,7 @@ function fromItemOptions(toItem, catalog, candidates, items) {
   if (tier === 6) return catalog.masterData[5] || [];
   if (tier === 7) return catalog.masterData[6] || [];
   if (tier === "mat" || tier === "coin") return candidates;
+  if (tier === 1) return catalog.masterData[0] || candidates;
   if (tier > 1) return catalog.masterData[tier - 1] || [];
   return candidates;
 }
