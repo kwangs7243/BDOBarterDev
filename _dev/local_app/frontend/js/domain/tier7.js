@@ -3,8 +3,8 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     let sorties = [];
     let remaining = trades.map(t => ({...t, currentC: t.count}));
     
-    const normW = parseInt(document.getElementById('normalWeight').value) || 23000;
-    const maxW = parseInt(document.getElementById('maxWeight').value) || 34996;
+    const normW = Number(document.getElementById('normalWeight').value) || 23000;
+    const maxW = Number(document.getElementById('maxWeight').value) || 34996;
     const weightLimit = (weightMode === 'speed') ? normW : maxW;
     const maxP = parseInt(document.getElementById('maxParley').value) || 1009355;
     const perTradeP = parseInt(document.getElementById('parleyPerTrade').value) || 10644;
@@ -26,6 +26,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     targetRegions.forEach(regKey => {
         if (usedP >= maxP) return;
 
+        const regionalInventory = forecastWarehouseInventory(sorties);
         let s = { trades: [], reqItems: {}, parleyUsed: 0 };
         // 📑 [뷰어용 메타데이터 — 표시 전용] 7단 엔진은 1위 시드 대신 고정 지역(regKey)으로 출항을 가른다
         s.seedIsland = null;
@@ -53,9 +54,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
         }
 
         let virtualT5Cargo = {};
-        let localUsed4T = {}; 
-        let localUsed5T = {}; 
-        let localUsedCoinMat = {}; 
+        let localUsedWarehouseStock = {};
 
         let chain5TTrades = remaining.filter(t => t.toTier === 5 && allowedT5.includes(t.island) && needed5T[t.toClean] > 0 && t.currentC > 0);
         
@@ -63,15 +62,15 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             let needed = needed5T[t.toClean];
             if (needed <= 0) return;
             
-            let fromStock = inventory[t.fromClean] ? inventory[t.fromClean].stock : 0;
-            let alreadyUsed = localUsed4T[t.fromClean] || 0;
+            let fromStock = regionalInventory[t.fromClean] ? regionalInventory[t.fromClean].stock : 0;
+            let alreadyUsed = localUsedWarehouseStock[t.fromClean] || 0;
             let maxCanMake = Math.floor((fromStock - alreadyUsed) / t.reqA);
             
             let take = t.currentC; // ⭐ 분할 금지 원칙
             if (maxCanMake < take) return; // ⭐ 창고 재고가 5개 분량이 안 되면 1개 단위로 쪼개지 않고 아예 방문 포기!
             if (take <= 0 || usedP + s.parleyUsed + (take * perTradeP) > maxP) return;
 
-            localUsed4T[t.fromClean] = alreadyUsed + (take * t.reqA);
+            localUsedWarehouseStock[t.fromClean] = alreadyUsed + (take * t.reqA);
 
             leg1Trades.push({ ...t, execC: take, isChained: false });
             t.currentC -= take;
@@ -87,8 +86,8 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             if (execCount <= 0) return;
             let take = Math.min(t.currentC, execCount);
             
-            let base5TStock = inventory[t.fromClean] ? inventory[t.fromClean].stock : 0;
-            let used5T = localUsed5T[t.fromClean] || 0;
+            let base5TStock = regionalInventory[t.fromClean] ? regionalInventory[t.fromClean].stock : 0;
+            let used5T = localUsedWarehouseStock[t.fromClean] || 0;
             let available5T = (base5TStock - used5T) + (virtualT5Cargo[t.fromClean] || 0);
             
             take = Math.min(take, available5T); 
@@ -104,7 +103,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             if (chainedAmount > 0) virtualT5Cargo[t.fromClean] -= chainedAmount;
             
             if (loadAtIlya > 0) {
-                localUsed5T[t.fromClean] = used5T + loadAtIlya; 
+                localUsedWarehouseStock[t.fromClean] = used5T + loadAtIlya;
                 if (!s.reqItems[t.fromClean]) s.reqItems[t.fromClean] = { count: 0, tier: 5, isBase: false };
                 s.reqItems[t.fromClean].count += loadAtIlya;
             }
@@ -117,7 +116,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
         let currentStartW = 0;
         for (let itemName in s.reqItems) {
             let req = s.reqItems[itemName];
-            currentStartW += (req.count * getItemWeight(req.tier));
+            currentStartW += (req.count * getItemWeight(req.tier, itemName));
         }
         let coinSpareWeight = normW - currentStartW; 
 
@@ -147,15 +146,15 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             if (isMatch) {
                 let take = t.currentC;
                 
-                let baseCoinMatStock = inventory[t.fromClean] ? inventory[t.fromClean].stock : 0;
-                let usedCoinMat = localUsedCoinMat[t.fromClean] || 0;
+                let baseCoinMatStock = regionalInventory[t.fromClean] ? regionalInventory[t.fromClean].stock : 0;
+                let usedCoinMat = localUsedWarehouseStock[t.fromClean] || 0;
                 let availableCoinMat = baseCoinMatStock - usedCoinMat;
                 let maxByInv = Math.floor(availableCoinMat / t.reqA);
                 take = Math.min(take, maxByInv); 
                 
                 if (take <= 0) return;
 
-                let itemW = getItemWeight(t.fromTier) * t.reqA;
+                let itemW = getItemWeight(t.fromTier, t.fromClean) * t.reqA;
                 if (itemW > 0) {
                     let maxCoinByW = Math.floor(coinSpareWeight / itemW);
                     take = Math.min(take, maxCoinByW);
@@ -164,7 +163,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
                 while (take > 0 && usedP + s.parleyUsed + (take * perTradeCrowP) > maxP) take--;
                 if (take <= 0) return;
 
-                localUsedCoinMat[t.fromClean] = usedCoinMat + (take * t.reqA); 
+                localUsedWarehouseStock[t.fromClean] = usedCoinMat + (take * t.reqA);
 
                 leg1Trades.push({ ...t, execC: take, isChained: false });
                 t.currentC -= take;
@@ -429,14 +428,6 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     //    perTradeP로 오계산한다. → 이 둘은 Phase 2 재료쌓기 국면(【4】+【5】)에서만 태운다. (Node 시뮬 근거)
     let validRemainsForVacuum = finalRemains.filter(t => t.currentC > 0 && t.toTier >= 1 && t.toTier <= 4 && t.score >= 100000);
     
-    // ⭐ [재고 버그 완벽 픽스] 호스트 동선(5/6/7단)이 이미 선점해서 창고에서 빼간 재고량을 추적!
-    let globalUsedStock = {}; 
-    sorties.forEach(s => {
-        for (let key in s.reqItems) {
-            globalUsedStock[key] = (globalUsedStock[key] || 0) + s.reqItems[key].count;
-        }
-    });
-
     sorties.forEach(s => {
         if (s.trades.length === 0 || usedP >= maxP) return;
 
@@ -518,17 +509,9 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
                         }
                     }
 
-                    for (let key in tempReqItems) {
-                        let base = inventory[key] ? inventory[key].stock : 0;
-                        let previouslyUsed = globalUsedStock[key] || 0;
-                        let oldReq = (s.reqItems[key] ? s.reqItems[key].count : 0);
-                        let available = base - (previouslyUsed - oldReq);
-                        
-                        if (available < tempReqItems[key]) {
-                            isValid = false; break; 
-                        }
-                    }
-                    
+                    const candidateSorties = sorties.map(host => host === s ? {...host, trades:testTrades} : host);
+                    if (!validateSortieSequence(candidateSorties).valid) isValid = false;
+
                     if (isValid) {
                         // ⭐ 최종 합격! 영수증 철하기
                         candLog.math = `🧲합승 성공 (길목:${Math.floor(distToReturnPath)}px, 무게통과)`;
@@ -540,8 +523,6 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
                         usedP += pCost; s.parleyUsed += pCost;
 
                         for (let key in tempReqItems) {
-                            let oldReq = (s.reqItems[key] ? s.reqItems[key].count : 0);
-                            globalUsedStock[key] = (globalUsedStock[key] || 0) + (tempReqItems[key] - oldReq);
                             if(!s.reqItems[key]) s.reqItems[key] = { count: 0 };
                             s.reqItems[key].count = tempReqItems[key];
                         }
@@ -590,7 +571,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             });
             
             let finalSim = simulateWeightsTemp(s.trades, normW);
-            s.startWeight = finalSim.startW; s.totalTime = finalSim.totalTime; 
+            s.startWeight = finalSim.startW; s.totalTime = finalSim.totalTime;
             s.returnTime = finalSim.returnTime; s.returnOver = finalSim.returnOver; 
             s.trades.forEach((t, idx) => Object.assign(t, finalSim.stepData[idx]));
         }
@@ -603,23 +584,20 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     if (finalRemains.length > 0 && usedP < maxP) {
         let maxPEl = document.getElementById('maxParley');
         let originalMaxP = maxPEl.value;
-        let backupInventory = {};
-        for (let key in phase12Delta) {
-            if (inventory[key]) {
-                backupInventory[key] = inventory[key].stock;
-                inventory[key].stock += phase12Delta[key]; 
-            }
-        }
+        const originalInventory = inventory;
+        inventory = forecastWarehouseInventory(sorties, originalInventory);
         try {
             maxPEl.value = Math.max(0, maxP - usedP); 
             let leftoverSorties = buildSorties(finalRemains, weightMode);
             sorties.push(...leftoverSorties);
         } finally {
             maxPEl.value = originalMaxP; 
-            for (let key in backupInventory) { inventory[key].stock = backupInventory[key]; }
+            inventory = originalInventory;
         }
     }
 
+    const validation = validateSortieSequence(sorties);
+    if (!validation.valid) throw new Error(`출항별 재고 계산이 맞지 않습니다: ${JSON.stringify(validation.issues[0])}`);
     return { sorties: sorties };
 }
 

@@ -22,40 +22,96 @@ function getPermutations(arr) {
     return perms;
 }
 
+function getRoutePermutationOrders(count) {
+    const cache = getRoutePermutationOrders.cache || (getRoutePermutationOrders.cache = new Map());
+    if (!cache.has(count)) cache.set(count, getPermutations(Array.from({length:count}, (_, index) => index)));
+    return cache.get(count);
+}
+
 function getOptimalRoute(tradesArray, normW) {
-    // ⭐ [핵심 픽스] 7개까지는 무조건 모든 경우의 수를 시뮬레이션! (기존 6개 제한에서 확장)
-    if (tradesArray.length <= 1 || tradesArray.length > 7) {
-        return optimizeRouteTSP(tradesArray);
+    if (tradesArray.length <= 1 || tradesArray.length > 7) return optimizeRouteTSP(tradesArray);
+
+    let bestRoute = optimizeRouteTSP(tradesArray), minTime = Infinity;
+    const nodes = tradesArray.map(t => ({
+        trade:t, required:t.execC*t.reqA, gained:t.execC*t.mult,
+        fromWeight:getItemWeight(t.fromTier, t.fromClean),
+        toWeight:getItemWeight(t.toTier, t.toClean)
+    }));
+    const distances = tradesArray.map(a => tradesArray.map(b => legDistance(a.island, b.island)));
+    const outbound = tradesArray.map(t => legDistance('일리야 섬', t.island));
+    const inbound = tradesArray.map(t => legDistance(t.island, '일리야 섬'));
+    const speed = APP_CONFIG.SHIP_SPEED || 100, penalty = APP_CONFIG.OVERLOAD_PENALTY;
+
+    const sourceItems = new Set(tradesArray.map(t => t.fromClean));
+    const independent = nodes.every(n => !n.trade.isWaypoint && !n.trade.isChained
+        && !sourceItems.has(n.trade.toClean) && Number.isSafeInteger(n.required*n.fromWeight));
+    if (independent) {
+        const loads = getSortieCargoPlan(tradesArray).reqItems;
+        let initialWeight = 0;
+        for (const [name, load] of Object.entries(loads)) initialWeight += load.count*getItemWeight(load.tier, name);
+        if (Number.isSafeInteger(initialWeight)) {
+            const order = [];
+            const visit = (mask, previous, weight, time) => {
+                if (order.length === nodes.length) {
+                    const total = time + (inbound[previous]/speed)*(weight > normW ? penalty : 1.0);
+                    if (total < minTime) { minTime = total; bestRoute = order.map(index => tradesArray[index]); }
+                    return;
+                }
+                for (let index = 0; index < nodes.length; index++) {
+                    if (mask & (1 << index)) continue;
+                    const node = nodes[index], distance = previous < 0 ? outbound[index] : distances[previous][index];
+                    const nextTime = time + (distance/speed)*(weight > normW ? penalty : 1.0);
+                    const nextWeight = weight - node.required*node.fromWeight + node.gained*node.toWeight;
+                    order.push(index);
+                    visit(mask | (1 << index), index, nextWeight, nextTime);
+                    order.pop();
+                }
+            };
+            // Independent integer loads share each prefix while retaining every original permutation and tie order.
+            visit(0, -1, initialWeight, 0);
+            return bestRoute;
+        }
     }
 
-    let bestRoute = optimizeRouteTSP(tradesArray); // 기본값
-    let minTime = Infinity;
-    const perms = getPermutations(tradesArray);
-
-    for (let perm of perms) {
-        let isValidChain = true;
-        let vCargo = {}; 
-        
-        for (let t of perm) {
+    // Keep exhaustive order and strict tie handling; reuse distances and weights within this call.
+    for (const order of getRoutePermutationOrders(tradesArray.length)) {
+        const eligible = {}, generated = {}, loads = {};
+        let valid = true;
+        for (const index of order) {
+            const {trade:t, required, gained, fromWeight} = nodes[index];
             if (t.isChained) {
-                let required = t.execC * t.reqA;
-                // 선행 재료도 안 실었는데 후행 교환부터 하려는 바보 동선 즉시 폐기!
-                if ((vCargo[t.fromClean] || 0) < required) {
-                    isValidChain = false; break; 
-                }
-                vCargo[t.fromClean] -= required;
+                if ((eligible[t.fromClean] || 0) < required) { valid = false; break; }
+                eligible[t.fromClean] -= required;
             }
-            vCargo[t.toClean] = (vCargo[t.toClean] || 0) + (t.execC * t.mult);
+            eligible[t.toClean] = (eligible[t.toClean] || 0) + gained;
+            if (t.isWaypoint) {
+                if (t.consumed?.count > 0) {
+                    const c = t.consumed;
+                    if (!loads[c.name]) loads[c.name] = {count:0, weight:getItemWeight(c.tier, c.name)};
+                    loads[c.name].count += c.count;
+                }
+                continue;
+            }
+            if (required > 0 && t.fromTier !== 0 && (generated[t.fromClean] || 0) >= required) generated[t.fromClean] -= required;
+            else if (required > 0) {
+                if (!loads[t.fromClean]) loads[t.fromClean] = {count:0, weight:fromWeight};
+                loads[t.fromClean].count += required;
+            }
+            generated[t.toClean] = (generated[t.toClean] || 0) + gained;
         }
-
-        if (!isValidChain) continue;
-
-        // ⭐ 모든 경우의 수를 돌려보고 '과적 페널티'를 포함하여 시간이 가장 짧은 예술적 동선을 채택!
-        let sim = simulateWeightsTemp(perm, normW);
-        if (sim.totalTime < minTime) {
-            minTime = sim.totalTime;
-            bestRoute = perm;
+        if (!valid) continue;
+        let weight = 0, time = 0, previous = -1;
+        for (const load of Object.values(loads)) weight += load.count * load.weight;
+        for (const index of order) {
+            const node = nodes[index], t = node.trade;
+            const distance = previous < 0 ? outbound[index] : distances[previous][index];
+            time += (distance / speed) * (weight > normW ? penalty : 1.0);
+            if (t.isWaypoint) weight -= t.consumed ? t.consumed.count*getItemWeight(t.consumed.tier, t.consumed.name) : 0;
+            else weight = weight - node.required*node.fromWeight + node.gained*node.toWeight;
+            previous = index;
         }
+        time += (inbound[previous] / speed) * (weight > normW ? penalty : 1.0);
+        if (time < minTime) { minTime = time; bestRoute = order.map(index => tradesArray[index]); }
     }
     return bestRoute;
 }
@@ -171,16 +227,88 @@ function legDistance(nameA, nameB) {
     return applyOceanCurrent(a, b, rawDist(a, b));
 }
 
+function getSortieCargoPlan(trades) {
+    const reqItems = {}, generated = {}, chained = [];
+    const load = (name, tier, count) => {
+        if (count <= 0) return;
+        if (!reqItems[name]) reqItems[name] = {count:0, tier, isBase:tier === 0};
+        reqItems[name].count += count;
+    };
+    trades.forEach((t, index) => {
+        if (t.isWaypoint) { if (t.consumed) load(t.consumed.name, t.consumed.tier, t.consumed.count); return; }
+        const required = t.execC * t.reqA;
+        const available = generated[t.fromClean] || 0;
+        const isChained = required > 0 && t.fromTier !== 0 && available >= required;
+        chained[index] = isChained;
+        if (isChained) generated[t.fromClean] -= required;
+        else load(t.fromClean, t.fromTier, required);
+        generated[t.toClean] = (generated[t.toClean] || 0) + t.execC * t.mult;
+    });
+    return {reqItems, chained};
+}
+
+function forecastWarehouseInventory(sorties, initialInventory = inventory) {
+    const forecast = Object.fromEntries(Object.entries(initialInventory).map(([name, item]) => [name, {...item}]));
+    const change = (name, tier, amount) => {
+        if (!Number.isInteger(tier) || tier < 1 || tier > 7) return;
+        if (!forecast[name]) forecast[name] = {programName:name, tier, stock:0, target:0};
+        if (forecast[name].stock !== null) forecast[name].stock += amount;
+    };
+    sorties.forEach(s => s.trades.forEach(t => {
+        if (t.isWaypoint) { if(t.consumed) change(t.consumed.name, t.consumed.tier, -t.consumed.count); return; }
+        change(t.fromClean, t.fromTier, -t.execC * t.reqA);
+        change(t.toClean, t.toTier, t.execC * t.mult);
+    }));
+    return forecast;
+}
+
+function getScheduleStartingInventory(sorties, currentInventory = inventory) {
+    const initial = Object.fromEntries(Object.entries(currentInventory).map(([name, item]) => [name, {...item}]));
+    sorties.forEach(s => s.trades.forEach(t => {
+        if (!t.completed) return;
+        const consumed = t.isWaypoint ? t.consumed : {name:t.fromClean, count:t.execC*t.reqA};
+        if (consumed && initial[consumed.name] && initial[consumed.name].stock !== null) initial[consumed.name].stock += consumed.count;
+        if (!t.isWaypoint && initial[t.toClean] && initial[t.toClean].stock !== null) initial[t.toClean].stock -= t.execC*t.mult;
+    }));
+    return initial;
+}
+
+function validateSortieSequence(sorties, initialInventory = inventory) {
+    const warehouse = Object.fromEntries(Object.entries(initialInventory).map(([name, item]) => [name, item.stock]));
+    const issues = [];
+    sorties.forEach((s, sortieIndex) => {
+        const {reqItems} = getSortieCargoPlan(s.trades), cargo = {}, tiers = {};
+        Object.entries(reqItems).forEach(([name, req]) => {
+            cargo[name] = req.count; tiers[name] = req.tier;
+            if (Number.isInteger(req.tier) && req.tier >= 1 && req.tier <= 7) {
+                const available = Object.hasOwn(warehouse, name) ? warehouse[name] : 0;
+                if (!Number.isSafeInteger(available) || available < req.count) issues.push({departure:sortieIndex+1, item:name, available, required:req.count, kind:'warehouse'});
+                warehouse[name] = available === null ? null : available - req.count;
+            }
+        });
+        s.trades.forEach((t, index) => {
+            const consumed = t.isWaypoint ? t.consumed : {name:t.fromClean, tier:t.fromTier, count:t.execC*t.reqA};
+            if (consumed) {
+                const available = cargo[consumed.name] || 0;
+                if (available < consumed.count) issues.push({departure:sortieIndex+1, step:index+1, item:consumed.name, available, required:consumed.count, kind:'cargo'});
+                cargo[consumed.name] = available - consumed.count; tiers[consumed.name] = consumed.tier;
+            }
+            if (!t.isWaypoint) { cargo[t.toClean] = (cargo[t.toClean] || 0) + t.execC*t.mult; tiers[t.toClean] = t.toTier; }
+        });
+        Object.entries(cargo).forEach(([name, count]) => {
+            if (Number.isInteger(tiers[name]) && tiers[name] >= 1 && tiers[name] <= 7 && warehouse[name] !== null) warehouse[name] = (warehouse[name] || 0) + count;
+        });
+    });
+    return {valid:issues.length === 0, issues, warehouse};
+}
+
 function simulateWeightsTemp(arr, norm) {
     let sw = 0; let tt = 0; let steps = []; let cp = getIslandCoords("일리야 섬");
     let cpName = "일리야 섬"; // ⭐ 이전 노드 이름 추적
     const shipSpeed = APP_CONFIG.SHIP_SPEED || 100;
 
-    arr.forEach(t => {
-        // 🧭 경유지: 사용 재료는 일리야에서 싣고 출발 → 출발무게에 합산 (0단은 소모무게 0 규칙 유지)
-        if (t.isWaypoint) { if (t.consumed && t.consumed.tier !== 0) sw += t.consumed.count * getItemWeight(t.consumed.tier); return; }
-        if(!t.isChained) sw += (t.fromTier !== 0 ? t.execC * t.reqA * getItemWeight(t.fromTier) : 0);
-    });
+    const cargoPlan = getSortieCargoPlan(arr);
+    for (const [name, req] of Object.entries(cargoPlan.reqItems)) sw += req.count * getItemWeight(req.tier, name);
     let cw = sw; let pw = sw;
     
     arr.forEach(t => {
@@ -198,11 +326,11 @@ function simulateWeightsTemp(arr, norm) {
         
         if (t.isWaypoint) {
             // 🧭 경유지: 이동만, 사용 재료가 있으면 그만큼 소모(감량). 획득 없음.
-            let wpMinus = (t.consumed && t.consumed.tier !== 0) ? t.consumed.count * getItemWeight(t.consumed.tier) : 0;
+            let wpMinus = t.consumed ? t.consumed.count * getItemWeight(t.consumed.tier, t.consumed.name) : 0;
             cw = cw - wpMinus;
         } else {
-            let wMinus = t.fromTier !== 0 ? (t.execC * t.reqA * getItemWeight(t.fromTier)) : 0;
-            let wPlus = t.execC * t.mult * getItemWeight(t.toTier);
+            let wMinus = t.execC * t.reqA * getItemWeight(t.fromTier, t.fromClean);
+            let wPlus = t.execC * t.mult * getItemWeight(t.toTier, t.toClean);
             cw = cw - wMinus + wPlus;
         }
         if(cw > pw) pw = cw;

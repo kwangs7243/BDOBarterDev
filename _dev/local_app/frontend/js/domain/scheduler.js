@@ -22,14 +22,17 @@ function runAlgorithmAllModes(silent = false) {
 
     // ⭐ [신규] !t.disabled 조건을 추가하여 OFF된 항목은 스케줄 엔진에 아예 들어가지 못하게 차단!
     const invalidYieldTrades = scannedTrades.filter(t => !t.deleted && !t.disabled && (parseInt(t.count) || 0) > 0 && (!Number.isInteger(t.yield) || t.yield <= 0));
-    const vTrades = scannedTrades.map((t, i) => ({ ...t, originalIndex: i })).filter(t => (parseInt(t.count) || 0) > 0 && !t.deleted && !t.disabled && t.fromItem && t.toItem && t.island && Number.isInteger(t.yield) && t.yield > 0);
+    const activeTrades = scannedTrades.map((t, i) => ({ ...t, originalIndex: i })).filter(t => (parseInt(t.count) || 0) > 0 && !t.deleted && !t.disabled && t.fromItem && t.toItem && t.island && Number.isInteger(t.yield) && t.yield > 0);
+    const missingWeights = activeTrades.filter(t => [t.fromItem, t.toItem].some(name => !Number.isFinite(getItemWeight(getItemTier(name), name))));
+    const vTrades = activeTrades.filter(t => !missingWeights.includes(t));
+    if (missingWeights.length && !silent) alert(`개당 무게가 등록되지 않은 교환 ${missingWeights.length}건은 스케줄에서 보류했습니다.\n${missingWeights.map(t => t.fromItem + ' → ' + t.toItem).join('\n')}`);
     
     // ⭐ [생성 실패 진단 가드] 스케줄이 안 만들어지는 원인을 사용자에게 구체적으로 안내
     if (!silent) {
         const _activeTrades = scannedTrades.filter(t => !t.deleted);
         const _maxP   = parseInt(document.getElementById('maxParley')?.value)     || 0;
-        const _normW  = parseInt(document.getElementById('normalWeight')?.value)  || 0;
-        const _maxW   = parseInt(document.getElementById('maxWeight')?.value)     || 0;
+        const _normW  = Number(document.getElementById('normalWeight')?.value)  || 0;
+        const _maxW   = Number(document.getElementById('maxWeight')?.value)     || 0;
         const _perP = Math.min(...vTrades.map(t => getItemTier(t.toItem) === 'coin' ? APP_CONFIG.CROW_PARLEY : APP_CONFIG.PARLEY_PER_TRADE).filter(cost => cost > 0));
 
         if (invalidYieldTrades.length > 0) {
@@ -104,8 +107,8 @@ function runAlgorithmAllModes(silent = false) {
         
         if (fromTier === 0) { reqA = t.reqAmount || 1; }
         
-        let fw = (fromTier !== 0 ? effectiveCount * reqA * getItemWeight(fromTier) : 0);
-        let tw = (effectiveCount * mult * getItemWeight(toTier));
+        let fw = effectiveCount * reqA * getItemWeight(fromTier, fromClean);
+        let tw = (effectiveCount * mult * getItemWeight(toTier, toClean));
         let isSpec = (toTier === 'mat'); let isCoin = (toTier === 'coin');
 
         return { ...t, count: effectiveCount, toClean, fromClean, toTier, fromTier, tt: toTier, ft: fromTier, mult, reqA, origC: effectiveCount, currentC: effectiveCount, fw, tw, isSpec, isCoin, isRandomCoin: __isRandomCoin };
@@ -271,7 +274,7 @@ function runAlgorithmAllModes(silent = false) {
 
     // 🎴 [표시 후보정 — 최종] 무게컷으로 쪼개진 '인접 동일 교환' 카드를 한 장으로 병합(렌더 직전, 엔진 판정 불변)
     try {
-        let __mNormW = parseInt(document.getElementById('normalWeight').value) || 14379;
+        let __mNormW = Number(document.getElementById('normalWeight').value) || 14379;
         if (window.mergeAdjacentDupTrades) { window.mergeAdjacentDupTrades(sortiesSpeed, __mNormW); window.mergeAdjacentDupTrades(sortiesBalance, __mNormW); }
     } catch(_) {}
 
@@ -288,7 +291,7 @@ function buildSorties(trades, mode) {
     let remaining = trades.map(t => ({...t})); 
     let sorties = [];
     
-    const getSafeVal = (id, def) => { const el = document.getElementById(id); return el ? parseInt(el.value) : def; };
+    const getSafeVal = (id, def) => { const el = document.getElementById(id); return el ? Number(el.value) : def; };
     let normW = getSafeVal('normalWeight', 14379); 
     let maxW = getSafeVal('maxWeight', 24445); 
     let maxP = getSafeVal('maxParley', 1250000);
@@ -359,15 +362,17 @@ function buildSorties(trades, mode) {
         return [...outbounds, ...sortedIn];
     };
     
-    let usedP = 0; let globalUsedWarehouseStock = {}; 
+    let usedP = 0;
     let allowSurplus = false; 
 
     while (remaining.length > 0) {
-        let globalGeneratedWarehouseStock = {};
+        let globalUsedWarehouseStock = {}, globalGeneratedWarehouseStock = {};
         sorties.forEach(sortie => {
             sortie.trades.forEach(t => {
                 if (!t.isChained && t.fromTier !== 0) {
                     globalUsedWarehouseStock[t.fromClean] = (globalUsedWarehouseStock[t.fromClean] || 0) + (t.execC * t.reqA);
+                } else if (t.isChained) {
+                    globalGeneratedWarehouseStock[t.fromClean] = (globalGeneratedWarehouseStock[t.fromClean] || 0) - t.execC * t.reqA;
                 }
                 globalGeneratedWarehouseStock[t.toClean] = (globalGeneratedWarehouseStock[t.toClean] || 0) + (t.execC * t.mult);
             });
@@ -1223,7 +1228,7 @@ function buildSorties(trades, mode) {
             });
             
             let finalSim = simulateWeightsTemp(s.trades, normW);
-            s.startWeight = finalSim.startW; s.totalTime = finalSim.totalTime; s.returnOver = finalSim.returnOver; s.returnTime = finalSim.returnTime; 
+            s.startWeight = finalSim.startW; s.totalTime = finalSim.totalTime; s.returnOver = finalSim.returnOver; s.returnTime = finalSim.returnTime;
             s.trades.forEach((t, i) => { t.afterW = finalSim.stepData[i].afterW; t.estT = finalSim.stepData[i].estT; t.over = finalSim.stepData[i].over; });
             
             sorties.push(s); 
@@ -1293,7 +1298,7 @@ function buildSorties(trades, mode) {
                         let simA = simulateWeightsTemp(sA.trades, normW);
                         
                         // ⭐ 여기서 판독기 가동!
-                        if (isMergeValid(simA, sA.trades)) { madeChanges = true; break; }
+                        if (isMergeValid(simA, sA.trades) && validateSortieSequence(sorties).valid) { madeChanges = true; break; }
                         
                         tB.execC = amt; tA.execC -= amt; 
                     }
@@ -1329,7 +1334,7 @@ function buildSorties(trades, mode) {
                             let simB = simulateWeightsTemp(sB.trades, normW);
                             
                             // ⭐ 여기도 판독기 가동!
-                            if (isMergeValid(simA, sA.trades) && isMergeValid(simB, sB.trades)) { madeChanges = true; break; }
+                            if (isMergeValid(simA, sA.trades) && isMergeValid(simB, sB.trades) && validateSortieSequence(sorties).valid) { madeChanges = true; break; }
                             
                             tB.execC = amtB; tA.execC -= amtB; vA.execC = amtV;
                             if (existingV_in_B) existingV_in_B.execC -= amtV;
@@ -1437,13 +1442,15 @@ function buildSorties(trades, mode) {
             });
             
             let finalSim = simulateWeightsTemp(s.trades, normW);
-            s.startWeight = finalSim.startW; s.totalTime = finalSim.totalTime; s.returnOver = finalSim.returnOver; s.returnTime = finalSim.returnTime; 
+            s.startWeight = finalSim.startW; s.totalTime = finalSim.totalTime; s.returnOver = finalSim.returnOver; s.returnTime = finalSim.returnTime;
             s.trades.forEach((t, i) => { t.afterW = finalSim.stepData[i].afterW; t.estT = finalSim.stepData[i].estT; t.over = finalSim.stepData[i].over; });
             usedP += s.parleyUsed; 
         }
     });
     
     sorties = sorties.filter(s => s.trades.length > 0);
+    const validation = validateSortieSequence(sorties);
+    if (!validation.valid) throw new Error(`출항별 재고 계산이 맞지 않습니다: ${JSON.stringify(validation.issues[0])}`);
     return sorties;
 }
 

@@ -75,6 +75,28 @@ function generateSchedule(appState, setStatus) {
   return true;
 }
 
+function canCompleteScheduleStep(schedule, si, ti) {
+    if (schedule.slice(0, si).some(s => s.trades.some(t => !t.completed))) {
+        showToast('앞 출항의 교환과 경유지를 먼저 완료하세요.');
+        return false;
+    }
+    const sortie = schedule[si], trade = sortie.trades[ti];
+    const consumed = trade.isWaypoint ? trade.consumed : {name:trade.fromClean, count:trade.execC*trade.reqA};
+    if (!consumed) return true;
+    const cargo = Object.fromEntries(Object.entries(getSortieCargoPlan(sortie.trades).reqItems).map(([name, req]) => [name, req.count]));
+    sortie.trades.slice(0, ti).forEach(t => {
+        if (!t.completed) return;
+        if (t.isWaypoint) { if (t.consumed) cargo[t.consumed.name] = (cargo[t.consumed.name] || 0) - t.consumed.count; return; }
+        cargo[t.fromClean] = (cargo[t.fromClean] || 0) - t.execC*t.reqA;
+        cargo[t.toClean] = (cargo[t.toClean] || 0) + t.execC*t.mult;
+    });
+    if ((cargo[consumed.name] || 0) < consumed.count) {
+        showToast('필요한 물품을 얻는 앞선 교환을 먼저 완료하세요.');
+        return false;
+    }
+    return true;
+}
+
 function wrapCompletion(original) {
   return function(...args) {
     const btn = args[0];
@@ -89,6 +111,7 @@ function wrapCompletion(original) {
       return;
     }
     syncLegacyState(window.__bdoAppState);
+    if (!canCompleteScheduleStep(schedule, si, ti)) return;
     const count = trade.execC;
     const cost = Number(document.getElementById(trade.isCoin ? "parleyCrow" : "parleyPerTrade").value);
     const budget = Number(document.getElementById("maxParley").value);
@@ -157,6 +180,7 @@ function installCompletionAdapters(store, appState, setStatus) {
   window.completeWaypoint = function(btn, mode, si, ti) {
     const waypoint = (mode === "speed" ? sortiesSpeed : sortiesBalance)?.[si]?.trades?.[ti];
     if (!waypoint || waypoint.completed || sessionMutationPending()) return;
+    if (!canCompleteScheduleStep(mode === "speed" ? sortiesSpeed : sortiesBalance, si, ti)) return;
     const before = Object.fromEntries(Object.entries(inventory).map(([name, row]) => [name, row.stock]));
     window.__bdoCompletionInvocationObserver?.("completeWaypoint");
     originalWaypoint.call(this, btn, mode, si, ti);
@@ -171,7 +195,12 @@ function installCompletionAdapters(store, appState, setStatus) {
       persistPendingCompletion();
     }
   };
-  window.completeTradeAndTimer = function(...args) { return originalTradeAndTimer.apply(this, args); };
+  window.completeTradeAndTimer = function(...args) {
+    if (sessionMutationPending()) { showToast('완료 저장을 먼저 확인하세요.'); return; }
+    const schedule = args[1] === 'speed' ? sortiesSpeed : sortiesBalance;
+    if (!schedule?.[args[2]]?.trades?.[args[3]] || !canCompleteScheduleStep(schedule, args[2], args[3])) return;
+    return originalTradeAndTimer.apply(this, args);
+  };
   window.__spec005CompletionInstalled = true;
 }
 

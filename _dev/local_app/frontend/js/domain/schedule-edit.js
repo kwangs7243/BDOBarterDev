@@ -1,3 +1,23 @@
+function canApplyScheduleChange(sorties, mode) {
+    const validation = validateSortieSequence(sorties, getScheduleStartingInventory(sorties));
+    if (!validation.valid) {
+        const issue = validation.issues[0];
+        showToast(`${issue.departure}차 출항의 ${issue.item} 재료가 부족해 변경할 수 없습니다.`);
+        return false;
+    }
+    const normalW = Number(document.getElementById('normalWeight').value);
+    const limitW = mode === 'speed' ? normalW : Number(document.getElementById('maxWeight').value);
+    for (const sortie of sorties) {
+        if (sortie.trades.every(t => t.completed)) continue;
+        const sim = simulateWeightsTemp(sortie.trades, normalW);
+        if (!Number.isFinite(sim.startW) || sim.startW > normalW || sim.peakW > limitW) {
+            showToast('출발 적재량 또는 항해 중 무게 한도를 초과해 변경할 수 없습니다.');
+            return false;
+        }
+    }
+    return true;
+}
+
 /* SPEC-005 T006 FUNCTIONS — copied from the selected final definitions in BDO_물교_v1.0.html. */
 window.routeDragStart = function(e, sortieIdx, tradeIdx, mode) { draggedRoute = { sortieIdx, tradeIdx, mode }; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; };
 
@@ -11,10 +31,15 @@ window.routeDrop = function(e, targetSortieIdx, targetTradeIdx, mode) {
         let sIdx = draggedRoute.sortieIdx; let fromIdx = draggedRoute.tradeIdx; let toIdx = targetTradeIdx;
         let arrRef = (mode === 'speed') ? sortiesSpeed : sortiesBalance;
         let sortie = arrRef[sIdx];
-        let movedItem = sortie.trades.splice(fromIdx, 1)[0];
-        sortie.trades.splice(toIdx, 0, movedItem);
+        if (sortie.trades.slice(Math.min(fromIdx, toIdx), Math.max(fromIdx, toIdx) + 1).some(t => t.completed)) { showToast('완료한 교환의 순서는 변경할 수 없습니다.'); return; }
+        const candidate = {...sortie, trades:sortie.trades.map(t => ({...t}))};
+        const movedItem = candidate.trades.splice(fromIdx, 1)[0];
+        candidate.trades.splice(toIdx, 0, movedItem);
+        if (!canApplyScheduleChange(arrRef.map((s, i) => i === sIdx ? candidate : s), mode)) return;
+        sortie.trades.splice(toIdx, 0, sortie.trades.splice(fromIdx, 1)[0]);
+        window.rebuildSortieReq(sortie);
 
-        let normalW = parseInt(document.getElementById('normalWeight').value) || 14379;
+        let normalW = Number(document.getElementById('normalWeight').value) || 14379;
         let finalSim = simulateWeightsTemp(sortie.trades, normalW);
         sortie.startWeight = finalSim.startW; sortie.totalTime = finalSim.totalTime; sortie.returnOver = finalSim.returnOver; sortie.returnTime = finalSim.returnTime;
         sortie.trades.forEach((ct, idx) => { ct.afterW = finalSim.stepData[idx].afterW; ct.estT = finalSim.stepData[idx].estT; ct.over = finalSim.stepData[idx].over; });
@@ -48,6 +73,8 @@ window.adjustTradeCount = function(e, mode, sortieIdx, tradeIdx, delta) {
             return;
         }
     }
+    const candidate = {...sortie, trades:sortie.trades.map(t => t === trade ? {...t, execC:newCount} : {...t})};
+    if (!canApplyScheduleChange(arrRef.map((s, i) => i === sortieIdx ? candidate : s), mode)) return;
     trade.execC = newCount;
 
     // 1~4. 적재/교섭력/연쇄/무게/시간 재계산 + 재렌더 (경유지 isWaypoint 인지 — 공용 헬퍼)
@@ -57,46 +84,17 @@ window.adjustTradeCount = function(e, mode, sortieIdx, tradeIdx, delta) {
 window.rebuildSortieReq = function(sortie) {
     const perTradeP = parseInt(document.getElementById('parleyPerTrade').value) || 10973;
     const perTradeCrowP = parseInt(document.getElementById('parleyCrow').value) || 20000;
-    sortie.reqItems = {};
-    let vCargo = {};
-    let parley = 0;
-    sortie.trades.forEach(t => {
-        if (t.isWaypoint) {
-            // 사용 재료는 일리야에서 싣고 출발 → 적재목록에 합산
-            if (t.consumed && t.consumed.count > 0) {
-                let nm = t.consumed.name;
-                if(!sortie.reqItems[nm]) sortie.reqItems[nm] = { count: 0, isBase: t.consumed.tier === 0, tier: t.consumed.tier };
-                sortie.reqItems[nm].count += t.consumed.count;
-            }
-            return; // 교섭력·연쇄·획득 없음
-        }
-        parley += (t.isCoin ? perTradeCrowP : perTradeP) * t.execC;
-        if (t.execC <= 0) return;
-        let required = t.execC * t.reqA;
-        let currentStock = vCargo[t.fromClean] || 0;
-        if (currentStock > 0) {
-            t.isChained = true;
-            let useAmount = Math.min(currentStock, required);
-            vCargo[t.fromClean] -= useAmount;
-            let deficit = required - useAmount;
-            if (deficit > 0) {
-                if(!sortie.reqItems[t.fromClean]) sortie.reqItems[t.fromClean] = { count: 0, isBase: t.fromTier === 0, tier: t.fromTier };
-                sortie.reqItems[t.fromClean].count += deficit;
-            }
-        } else {
-            t.isChained = false;
-            if(!sortie.reqItems[t.fromClean]) sortie.reqItems[t.fromClean] = { count: 0, isBase: t.fromTier === 0, tier: t.fromTier };
-            sortie.reqItems[t.fromClean].count += required;
-        }
-        vCargo[t.toClean] = (vCargo[t.toClean] || 0) + (t.execC * t.mult);
-    });
+    const parley = sortie.trades.reduce((sum, t) => sum + (t.isWaypoint ? 0 : (t.isCoin ? perTradeCrowP : perTradeP) * t.execC), 0);
+    const cargoPlan = getSortieCargoPlan(sortie.trades);
+    sortie.reqItems = cargoPlan.reqItems;
+    sortie.trades.forEach((t, index) => { if (!t.isWaypoint) t.isChained = cargoPlan.chained[index]; });
     sortie.parleyUsed = parley;
 };
 
 window.applySortieRecompute = function(sortie, mode) {
     let arrRef = (mode === 'speed') ? sortiesSpeed : sortiesBalance;
     window.rebuildSortieReq(sortie);
-    let normalW = parseInt(document.getElementById('normalWeight').value) || 14379;
+    let normalW = Number(document.getElementById('normalWeight').value) || 14379;
     let finalSim = simulateWeightsTemp(sortie.trades, normalW);
     sortie.startWeight = finalSim.startW; sortie.totalTime = finalSim.totalTime;
     sortie.returnOver = finalSim.returnOver; sortie.returnTime = finalSim.returnTime;
@@ -157,8 +155,12 @@ window.sortieDrop = function(e, targetIdx, mode) {
     e.preventDefault();
     if (draggedSortie && draggedSortie.mode === mode && draggedSortie.sortieIdx !== targetIdx) {
         let arrRef = (mode === 'speed') ? sortiesSpeed : sortiesBalance;
-        let movedItem = arrRef.splice(draggedSortie.sortieIdx, 1)[0];
-        arrRef.splice(targetIdx, 0, movedItem);
+        const fromIdx = draggedSortie.sortieIdx;
+        if (arrRef[fromIdx].trades.some(t => t.completed) || arrRef[targetIdx].trades.some(t => t.completed)) { showToast('진행한 출항의 순서는 변경할 수 없습니다.'); return; }
+        const candidate = [...arrRef];
+        candidate.splice(targetIdx, 0, candidate.splice(fromIdx, 1)[0]);
+        if (!canApplyScheduleChange(candidate, mode)) return;
+        arrRef.splice(targetIdx, 0, arrRef.splice(fromIdx, 1)[0]);
         renderModeColumn(`col-${mode}`, arrRef, mode);
         showToast("📍 출항 순서가 변경되었습니다.");
     }

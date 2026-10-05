@@ -230,6 +230,10 @@ window.confirmWaypoint = function() {
     }
     let wpId = 'wp' + Date.now() + '_' + Math.floor(Math.random() * 100000);
     let wp = { isWaypoint: true, island: island, consumed: consumed, toClean: wpId, wpId: wpId, completed: false };
+    const candidate = {...sortie, trades:[...sortie.trades]};
+    candidate.trades.splice(insertIdx, 0, wp);
+    if (sortie.trades.slice(insertIdx).some(t => t.completed)) { showToast('완료한 교환 앞에는 경유지를 추가할 수 없습니다.'); return; }
+    if (!canApplyScheduleChange(arrRef.map((s, i) => i === sortieIdx ? candidate : s), mode)) return;
     sortie.trades.splice(insertIdx, 0, wp);
     closeWaypointModal();
     window.applySortieRecompute(sortie, mode);
