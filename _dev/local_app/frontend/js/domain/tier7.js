@@ -12,9 +12,9 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     
     let usedP = 0;
     const regions = { 
-        east: ["하코번 섬", "아레하자 마을"],
-        west: ["해모 섬", "달래나루"],
-        south: ["그란디하", "깊은 밤의 항구"]
+        east: ["하코번 섬", "아레하자 마을", "하코번", "아레하자"],
+        west: ["해모 섬", "달래나루", "해모"],
+        south: ["그란디하", "깊은 밤의 항구", "깊은 밤"]
     };
 
     let targetRegions = [];

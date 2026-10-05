@@ -126,7 +126,6 @@ function runAlgorithmAllModes(silent = false) {
     let projectedStock = {};
     let projectedProduction = {};
     const projectedExecutions = new Map();
-    const projectionInfeasibleTrades = new Set();
     for (let key in inventory) { 
         dynamicTargets[key] = inventory[key].target || 0; 
         projectedStock[key] = inventory[key].stock || 0; 
@@ -146,7 +145,6 @@ function runAlgorithmAllModes(silent = false) {
             else return null;
         }
         if (trade.isCoin && APP_CONFIG.CROW_COIN_PRIORITY >= 50000) reserve = 0;
-        if (trade.toTier === 5 && (trade.isUrgent || trade.isConsumedByT7)) reserve = 0;
         return reserve;
     };
     const projectedSourceQuantity = (itemName, sourceTrade, pool, visited = new Set(), requested = Infinity) => {
@@ -192,10 +190,10 @@ function runAlgorithmAllModes(silent = false) {
     };
 
     let activeT67Regions = [];
-    if (allowOcean === 't7_3region') activeT67Regions = ["하코번 섬", "아레하자 마을", "해모 섬", "달래나루", "그란디하", "깊은 밤의 항구"];
-    else if (allowOcean === 't7_2region') activeT67Regions = ["하코번 섬", "아레하자 마을", "해모 섬", "달래나루"];
-    else if (allowOcean === 't7_2region_south') activeT67Regions = ["하코번 섬", "아레하자 마을", "그란디하", "깊은 밤의 항구"];
-    else if (allowOcean === 't7_2region_arehazaX') activeT67Regions = ["해모 섬", "달래나루", "그란디하", "깊은 밤의 항구"];
+    if (allowOcean === 't7_3region') activeT67Regions = ["하코번 섬", "아레하자 마을", "하코번", "아레하자", "해모 섬", "달래나루", "해모", "그란디하", "깊은 밤의 항구", "깊은 밤"];
+    else if (allowOcean === 't7_2region') activeT67Regions = ["하코번 섬", "아레하자 마을", "하코번", "아레하자", "해모 섬", "달래나루", "해모"];
+    else if (allowOcean === 't7_2region_south') activeT67Regions = ["하코번 섬", "아레하자 마을", "하코번", "아레하자", "그란디하", "깊은 밤의 항구", "깊은 밤"];
+    else if (allowOcean === 't7_2region_arehazaX') activeT67Regions = ["해모 섬", "달래나루", "해모", "그란디하", "깊은 밤의 항구", "깊은 밤"];
 
     // 최상위 티어부터 역순으로 수요(Consumption)를 전파
     const evaluationOrder = [7, 6, 'coin', 'mat', 5, 4, 3, 2, 1];
@@ -219,9 +217,7 @@ function runAlgorithmAllModes(silent = false) {
                 }
             }
 
-            const requestedExecutions = willExecute;
             while (willExecute > 0 && !hasProjectedSource(t, willExecute)) willExecute--;
-            if (requestedExecutions > 0 && willExecute === 0 && t.fromTier !== 0) projectionInfeasibleTrades.add(t);
             if (willExecute > 0 && t.toTier !== 6 && t.toTier !== 7 && t.toTier !== 'coin' && t.toTier !== 'mat') {
                 const produced = willExecute * t.mult;
                 projectedStock[t.toClean] = (projectedStock[t.toClean] || 0) + produced;
@@ -239,7 +235,6 @@ function runAlgorithmAllModes(silent = false) {
 
     // 3. 예측된 동적 목표치(dynamicTargets)를 바탕으로 최종 점수 계산
     let preparedTrades = baseTrades.map(t => {
-        if (projectionInfeasibleTrades.has(t)) { t.currentC = 0; t.count = 0; t.origC = 0; }
         let score = 0; let lack = 0; let isUrgent = false;
         let toInv = inventory[t.toClean];
         let currentStock = toInv ? toInv.stock : 0;
@@ -609,6 +604,167 @@ function buildSorties(trades, mode) {
             }
         });
 
+        // Seed probes and real candidates use the same reserve, cargo, parley and weight rules.
+        const materialAvailability = (cand, plannedTrades, cargo) => {
+            let reserve = 0; let ft = cand.fromTier;
+            if (ft === 'mat' || ft === 5 || ft === 'coin') reserve = schedulerNumberOrDefault(tierRules[5], 1);
+            else if (ft >= 1 && ft <= 4) reserve = schedulerNumberOrDefault(tierRules[ft], 20);
+
+            // ⭐ [뭉태기 교환] 특수재료·4회 랜덤까주: 목표선 무시. 교환 전 재고 ≥ reserve면 reserve 무시하고 뭉태기(횟수대로),
+            //    재고 < reserve면 이 출항엔 스킵. 집착도 140000↑이면 reserve 무시(무조건 실행). "되는 만큼 부분교환" 없음(물리 재료 한계만 별도).
+            if (cand.isSpec || cand.isRandomCoin) {
+                let _bulkStock = inventory[cand.fromClean] ? inventory[cand.fromClean].stock : 0;
+                if (_bulkStock >= reserve || (APP_CONFIG.SPECIAL_MAT_PRIORITY || 0) >= 140000) { reserve = 0; }
+                else return { maxByMat: 0, blocked: true }; // 시작부터 최소선(reserve) 아래 → 스킵 (빈 출항 시 @3649 가드가 종료 처리)
+            }
+
+            if (cand.isCoin && APP_CONFIG.CROW_COIN_PRIORITY >= 50000) reserve = 0;
+            if (cand.toTier === 5 && (cand.isUrgent || cand.isConsumedByT7)) reserve = 0;
+
+            let baseStock = inventory[cand.fromClean] ? inventory[cand.fromClean].stock : 0;
+            let used = globalUsedWarehouseStock[cand.fromClean] || 0;
+            let gained = globalGeneratedWarehouseStock[cand.fromClean] || 0;
+            // 기존 재고가 보존선 미만이면 새 생산분으로 부족분부터 채운 뒤 남는 수량만 사용합니다.
+            let realWStock = Math.max(0, baseStock - used + gained - reserve);
+            let currentSortieUsed = plannedTrades.reduce((sum, planned) => {
+                if (!planned.isChained && planned.fromClean === cand.fromClean) {
+                    return sum + (planned.execC * planned.reqA);
+                }
+                return sum;
+            }, 0);
+
+            let availableMat = (ft === 0) ? Infinity : (Math.max(0, realWStock - currentSortieUsed) + (cargo[cand.fromClean] || 0));
+
+            let maxByMat = (ft === 0) ? cand.currentC : Math.floor(availableMat / cand.reqA);
+            return { maxByMat, blocked: false };
+        };
+        const executableCount = (cand, execCount, plannedTrades, cargo, plannedParley, zone, reservedParley, isJitSupplier = false) => {
+            let pCost = cand.isCoin ? perTradeCrowP : perTradeP;
+            let isCandVIP = cand.toTier === 5 && (cand.isUrgent || cand.isConsumedByT7);
+            let possibleK = 0; let tempSimTime = 0;
+            let wLimit = (mode === 'speed') ? normW : maxW;
+
+            for(let k = 1; k <= execCount; k++) {
+                if (cand.toTier === 5 && k !== cand.currentC) continue;
+
+                let currentCost = k * pCost;
+                if (usedP + plannedParley + currentCost > maxP) break;
+
+                if (!isCandVIP && (maxP - (usedP + plannedParley + currentCost)) < reservedParley) break;
+
+                let tempTrade = { ...cand, execC: k };
+                if (cargo[cand.fromClean] >= cand.reqA * k) tempTrade.isChained = true;
+                if (isJitSupplier) tempTrade.isJit = true;
+
+                let tempT = [...plannedTrades, tempTrade];
+
+                let optTempT = (zone === 'OCEAN') ? arrangeOceanAndInbounds(tempT) : getOptimalRoute(tempT, normW);
+                let tempSim = simulateWeightsTemp(optTempT, normW);
+
+                let validWeight = true;
+                if (tempSim.startW > normW) validWeight = false;
+                if (tempSim.peakW > wLimit) validWeight = false;
+
+                // ⭐ [근본 픽스] 쾌속 모드는 '귀환길 과적(returnOver)'도 빌드 단계에서 즉시 컷!
+                // 무거운 짐이 동선 맨 끝(귀환 직전)에 와서 100%를 넘기는 케이스를 기존 peakW 검사가 놓쳤음.
+                if (mode === 'speed' && tempSim.returnOver) validWeight = false;
+
+                for (let sIdx = 0; sIdx < optTempT.length; sIdx++) {
+                    let tNode = optTempT[sIdx];
+                    let wBefore = (sIdx === 0) ? tempSim.startW : tempSim.stepData[sIdx - 1].afterW;
+                    let tCoords = getIslandCoords(tNode.island) || {x:0, y:0};
+
+                    let isOceanStrictNode = (tNode.isCoin || tCoords.isOcean) && tCoords.x < 800 && !tNode.island.includes('파딕스');
+                    if (isOceanStrictNode && wBefore > normW) { validWeight = false; break; }
+
+                    let prevCoords = (sIdx === 0) ? {x: 0, y: 0} : (getIslandCoords(optTempT[sIdx - 1].island) || {x: 0, y: 0});
+
+                    if (wBefore > normW) {
+                        if (prevCoords.x >= -500 && tCoords.x < -500) { validWeight = false; break; }
+                        if (prevCoords.x <= 500 && tCoords.x > 500) { validWeight = false; break; }
+                    }
+                }
+
+                // ⭐ [최종 검산 핀셋 패치] 연쇄(Chain)로 인한 초반 대량 과적 차단!
+                // 일반 줍줍은 건드리지 않고, 오직 '다른 섬에 바쳐야 할 연쇄 재료'를 실었을 때
+                // 그 직후 즉시 100%(normW)를 초과해버리면, 무거운 채로 바다를 건너지 않도록 횟수를 쪼갭니다.
+                if (validWeight && mode === 'balance') {
+                    let isChainSource = currentValidRemaining.some(rt => rt.fromClean === cand.toClean && rt.currentC > 0);
+                    if (isChainSource) {
+                        let myStepIdx = optTempT.findIndex(t => t.island === cand.island && t.toClean === cand.toClean);
+                        if (myStepIdx !== -1 && tempSim.stepData[myStepIdx].afterW > normW) {
+                            validWeight = false; // 과적 컷! -> k(횟수)를 줄여서 다시 시뮬레이션 하도록 빠꾸시킴
+                        }
+                    }
+                }
+
+                if (validWeight) { possibleK = k; tempSimTime = tempSim.totalTime; }
+                else break;
+            }
+
+            return { possibleK, tempSimTime };
+        };
+        const candidateJit = (cand, plannedTrades, zone) => {
+            const candCoords = getIslandCoords(cand.island) || {x:0, y:0};
+            let isJitSupplier = false;
+            let jitTargetZone = null;
+            let jitRequiredExecs = 0;
+
+            let activeZoneForJit = zone;
+            if (!activeZoneForJit) {
+                let targetOt = currentValidRemaining.find(ot => ot.toTier === 'coin' && ot.score > 0);
+                if (targetOt) {
+                    let otCoords = getIslandCoords(targetOt.island) || {x:0, y:0};
+                    activeZoneForJit = (otCoords.x > 800) ? 'EAST_COIN' : 'OCEAN';
+                }
+            }
+
+            if (!isT7Mode && (activeZoneForJit === 'OCEAN' || activeZoneForJit === 'EAST_COIN')) {
+                let dependentOceanNodes = currentValidRemaining.filter(ot =>
+                    ot.toTier === 'coin' && ot.fromClean === cand.toClean &&
+                    ((activeZoneForJit === 'OCEAN' && ((getIslandCoords(ot.island) || {x:0}).isOcean || (getIslandCoords(ot.island) || {x:0}).x <= 800)) ||
+                     (activeZoneForJit === 'EAST_COIN' && (getIslandCoords(ot.island) || {x:0}).x > 800))
+                );
+
+                if (dependentOceanNodes.length > 0) {
+                    let totalReqForOcean = dependentOceanNodes.reduce((sum, ot) => sum + (ot.currentC * ot.reqA), 0);
+                    let baseStock = inventory[cand.toClean] ? inventory[cand.toClean].stock : 0;
+                    let usedG = globalUsedWarehouseStock[cand.toClean] || 0;
+                    let gainedG = globalGeneratedWarehouseStock[cand.toClean] || 0;
+                    let curSortieGained = 0;
+                    plannedTrades.forEach(t => { if (t.toClean === cand.toClean) curSortieGained += (t.execC * t.mult); });
+
+                    let realVirtualStock = baseStock - usedG + gainedG + curSortieGained;
+
+                    let deficit = totalReqForOcean - realVirtualStock;
+                    if (deficit > 0) {
+                        let candDistToIliya = Math.sqrt(candCoords.x**2 + candCoords.y**2);
+                        if (candDistToIliya <= (APP_CONFIG.EFFICIENCY_THRESHOLD || 600)) {
+                            isJitSupplier = true; jitTargetZone = activeZoneForJit;
+                            jitRequiredExecs = Math.ceil(deficit / cand.mult);
+                        }
+                    }
+                }
+            }
+
+            return { isJitSupplier, jitTargetZone, jitRequiredExecs };
+        };
+        const departureZone = (trade, isJitSupplier, jitTargetZone) => {
+            if (isJitSupplier) return jitTargetZone;
+            const coords = getIslandCoords(trade.island) || {x:0, y:0};
+            const ocean = APP_CONFIG.ALLOW_OCEAN === 'ocean' && coords.isOcean;
+            const east = trade.isCoin && !trade.isRandomCoin && coords.x > 800;
+            const central = trade.isCoin && !trade.isRandomCoin && coords.x <= 800 && !trade.island.includes('파딕스');
+            return ocean || central ? 'OCEAN' : east ? 'EAST_COIN' : coords.x >= 0 ? 'E' : 'W';
+        };
+        const inTheme = (cand, regions) => {
+            const region = getIslandRegion(cand.island);
+            return regions.includes(region) || region === 'UNKNOWN';
+        };
+        let vipParleyNeeded = currentValidRemaining
+            .filter(t => t.toTier === 5 && (t.isUrgent || t.isConsumedByT7))
+            .reduce((sum, t) => sum + (t.currentC * perTradeP), 0);
+
         // ⭐ [Step 3] Top 1 씨앗(Seed) 선정 및 허용 권역(Zone) 테마 선포
         let activeThemeRegions = [];
         
@@ -617,19 +773,72 @@ function buildSorties(trades, mode) {
                                ? currentValidRemaining.some(rt => rt.toTier === 'coin') 
                                : false;
 
+        const canSeedExecute = seed => {
+            const regions = getAllowedRegions(getIslandRegion(seed.island));
+            // Coin/ocean departures apply their own corridor/JIT gates after seed selection.
+            const busDeparture = coinStillExists || (APP_CONFIG.ALLOW_OCEAN === 'ocean' &&
+                currentValidRemaining.some(t => (getIslandCoords(t.island) || {}).isOcean));
+            const initial = { trades: [], cargo: {}, counts: new Map(), parley: 0, vip: vipParleyNeeded, zone: null };
+            const copyProbe = probe => ({ ...probe, trades: [...probe.trades], cargo: { ...probe.cargo },
+                counts: new Map(probe.counts) });
+            const supply = (trade, wanted, probe, visiting) => {
+                const left = trade.currentC - (probe.counts.get(trade) || 0);
+                if (left <= 0 || visiting.has(trade) || (coinStillExists && trade.toTier === 5)) return null;
+                if (!busDeparture && !inTheme(trade, regions)) return null;
+                const cand = { ...trade, currentC: left };
+                const required = cand.toTier === 5 ? left : 1;
+                const path = new Set(visiting).add(trade);
+                let next = copyProbe(probe);
+                let available = materialAvailability(cand, next.trades, next.cargo);
+                if (available.blocked) return null;
+                // Probe only reachable production; neither candidates nor projected demand are mutated.
+                for (const producer of currentValidRemaining) {
+                    if (available.maxByMat >= required) break;
+                    if (producer.toClean !== cand.fromClean) continue;
+                    while (available.maxByMat < required) {
+                        const deficit = (required - available.maxByMat) * cand.reqA;
+                        const produced = supply(producer, Math.ceil(deficit / producer.mult), next, path);
+                        if (!produced) break;
+                        next = produced;
+                        available = materialAvailability(cand, next.trades, next.cargo);
+                    }
+                }
+                if (available.maxByMat < required) return null;
+                let limit = cand.toTier === 5 ? left : Math.min(left, wanted, available.maxByMat);
+                const jit = candidateJit(cand, next.trades, next.zone);
+                if (jit.isJitSupplier) limit = Math.min(limit, jit.jitRequiredExecs);
+                const { possibleK } = executableCount(cand, limit, next.trades, next.cargo,
+                    next.parley, next.zone, next.vip, jit.isJitSupplier);
+                if (!possibleK) return null;
+                const planned = { ...cand, execC: possibleK };
+                if (next.cargo[cand.fromClean] >= possibleK * cand.reqA) planned.isChained = true;
+                if (jit.isJitSupplier) planned.isJit = true;
+                if (!next.trades.length) next.zone = departureZone(cand, jit.isJitSupplier, jit.jitTargetZone);
+                next.trades.push(planned);
+                if (planned.isChained) next.cargo[cand.fromClean] -= possibleK * cand.reqA;
+                next.cargo[cand.toClean] = (next.cargo[cand.toClean] || 0) + possibleK * cand.mult;
+                next.counts.set(trade, (next.counts.get(trade) || 0) + possibleK);
+                const cost = possibleK * (cand.isCoin ? perTradeCrowP : perTradeP);
+                next.parley += cost;
+                if (cand.toTier === 5 && (cand.isUrgent || cand.isConsumedByT7)) next.vip -= cost;
+                return next;
+            };
+            return supply(seed, 1, initial, new Set()) !== null;
+        };
+
         let seedTrade = currentValidRemaining.find(t => {
             if (t.boundary !== 1 || t.isCoin || t.isSpec) return false;
             // 까주 대기 중일 때 5단은 씨앗(권역 설정자) 불가
             if (coinStillExists && t.toTier === 5) return false; 
-            return true;
+            return canSeedExecute(t);
         });
 
         // 만약 일반 재료가 싹 다 털려서 5단이나 까주/특수재료만 남았다면?
         if (!seedTrade && currentValidRemaining.length > 0) {
             // 까주가 있으면 까주를 우선 씨앗으로 삼아 동부/대양 버스를 강제 출차!
-            seedTrade = currentValidRemaining.find(t => t.toTier === 'coin');
+            seedTrade = currentValidRemaining.find(t => t.toTier === 'coin' && canSeedExecute(t));
             // 까주마저 없다면 남은 것 중 1등(5단 VIP 등)을 배차
-            if (!seedTrade) seedTrade = currentValidRemaining[0]; 
+            if (!seedTrade) seedTrade = currentValidRemaining.find(canSeedExecute);
         }
         
         if (seedTrade) {
@@ -682,10 +891,6 @@ function buildSorties(trades, mode) {
             else if (hasEastCoin) forceEastCoinSortie = true; // 중앙/대양 까주 버스 운행이 끝나면, 이어서 동해 까주 버스 강제 배차!
         }
 
-        // ⭐ VIP 5단을 위한 교섭력 락업 (찌꺼기들이 교섭력 스틸하는 것 방지)
-        let vipParleyNeeded = currentValidRemaining
-            .filter(t => t.toTier === 5 && (t.isUrgent || t.isConsumedByT7))
-            .reduce((sum, t) => sum + (t.currentC * perTradeP), 0);
 
         while (canAdd && currentValidRemaining.length > 0) {
             let bestIdx = -1; let bestFitness = -Infinity; let bestExecCount = 0; let bestSimTime = 0;
@@ -733,46 +938,7 @@ function buildSorties(trades, mode) {
                 else if (sortieZone === 'EAST_COIN') candStrict = isEastCoinNode;
                 else candStrict = (isRealOceanNode || isEastCoinNode || isCentralCoinNode);
 
-                let isJitSupplier = false;
-                let jitTargetZone = null;
-                let jitRequiredExecs = 0; 
-                
-                let activeZoneForJit = sortieZone;
-                if (!activeZoneForJit) {
-                    let targetOt = currentValidRemaining.find(ot => ot.toTier === 'coin' && ot.score > 0);
-                    if (targetOt) {
-                        let otCoords = getIslandCoords(targetOt.island) || {x:0, y:0};
-                        activeZoneForJit = (otCoords.x > 800) ? 'EAST_COIN' : 'OCEAN';
-                    }
-                }
-
-                if (!isT7Mode && (activeZoneForJit === 'OCEAN' || activeZoneForJit === 'EAST_COIN')) {
-                    let dependentOceanNodes = currentValidRemaining.filter(ot => 
-                        ot.toTier === 'coin' && ot.fromClean === cand.toClean && 
-                        ((activeZoneForJit === 'OCEAN' && ((getIslandCoords(ot.island) || {x:0}).isOcean || (getIslandCoords(ot.island) || {x:0}).x <= 800)) || 
-                         (activeZoneForJit === 'EAST_COIN' && (getIslandCoords(ot.island) || {x:0}).x > 800))
-                    );
-                    
-                    if (dependentOceanNodes.length > 0) {
-                        let totalReqForOcean = dependentOceanNodes.reduce((sum, ot) => sum + (ot.currentC * ot.reqA), 0);
-                        let baseStock = inventory[cand.toClean] ? inventory[cand.toClean].stock : 0;
-                        let usedG = globalUsedWarehouseStock[cand.toClean] || 0;
-                        let gainedG = globalGeneratedWarehouseStock[cand.toClean] || 0;
-                        let curSortieGained = 0;
-                        s.trades.forEach(t => { if (t.toClean === cand.toClean) curSortieGained += (t.execC * t.mult); });
-                        
-                        let realVirtualStock = baseStock - usedG + gainedG + curSortieGained;
-                        
-                        let deficit = totalReqForOcean - realVirtualStock;
-                        if (deficit > 0) { 
-                            let candDistToIliya = Math.sqrt(candCoords.x**2 + candCoords.y**2);
-                            if (candDistToIliya <= (APP_CONFIG.EFFICIENCY_THRESHOLD || 600)) {
-                                isJitSupplier = true; jitTargetZone = activeZoneForJit;
-                                jitRequiredExecs = Math.ceil(deficit / cand.mult);
-                            }
-                        }
-                    }
-                }
+                const { isJitSupplier, jitTargetZone, jitRequiredExecs } = candidateJit(cand, s.trades, sortieZone);
 
                 // ⭐ [Step 4-1] 출항 모드 판별 (까주 버스 vs 일반 택배)
                 let isOceanSortie = (sortieZone === 'OCEAN' || sortieZone === 'EAST_COIN') || (s.trades.length === 0 && (forceOceanSortie || forceEastCoinSortie));
@@ -863,112 +1029,23 @@ function buildSorties(trades, mode) {
                     // [Phase 2] 일반 재료 출항 중: V14 신규 스마트 권역 룰 적용!
                     if (cand.isCoin && !cand.isRandomCoin) continue; // 1회 까주만 일반 출항 금지 (4회 랜덤까주는 Phase 2 탑승 허용)
                     
-                    let candRegion = getIslandRegion(cand.island);
-                    let isAllowedRegion = activeThemeRegions.includes(candRegion) || candRegion === 'UNKNOWN';
+                    let isAllowedRegion = inTheme(cand, activeThemeRegions);
                     
                     if (!isAllowedRegion) continue; // 허용 권역이 아니면 가차 없이 탈락!
                     
                     isCrossRegion = false; // 일반 출항은 이미 테마로 묶였으므로 식구끼리 이동 시 페널티 완전 면제!
                 }
 
-                let reserve = 0; let ft = cand.fromTier;
-                if (ft === 'mat' || ft === 5 || ft === 'coin') reserve = schedulerNumberOrDefault(tierRules[5], 1);
-                else if (ft >= 1 && ft <= 4) reserve = schedulerNumberOrDefault(tierRules[ft], 20);
-
-                // ⭐ [뭉태기 교환] 특수재료·4회 랜덤까주: 목표선 무시. 교환 전 재고 ≥ reserve면 reserve 무시하고 뭉태기(횟수대로),
-                //    재고 < reserve면 이 출항엔 스킵. 집착도 140000↑이면 reserve 무시(무조건 실행). "되는 만큼 부분교환" 없음(물리 재료 한계만 별도).
-                if (cand.isSpec || cand.isRandomCoin) {
-                    let _bulkStock = inventory[cand.fromClean] ? inventory[cand.fromClean].stock : 0;
-                    if (_bulkStock >= reserve || (APP_CONFIG.SPECIAL_MAT_PRIORITY || 0) >= 140000) { reserve = 0; }
-                    else continue; // 시작부터 최소선(reserve) 아래 → 스킵 (빈 출항 시 @3649 가드가 종료 처리)
-                }
-
-                if (cand.isCoin && APP_CONFIG.CROW_COIN_PRIORITY >= 50000) reserve = 0;
-                if (isCandVIP) reserve = 0;
-
-                let baseStock = inventory[cand.fromClean] ? inventory[cand.fromClean].stock : 0;
-                let used = globalUsedWarehouseStock[cand.fromClean] || 0;
-                let gained = globalGeneratedWarehouseStock[cand.fromClean] || 0;
-                // 기존 재고가 보존선 미만이면 새 생산분으로 부족분부터 채운 뒤 남는 수량만 사용합니다.
-                let realWStock = Math.max(0, baseStock - used + gained - reserve);
-                let currentSortieUsed = s.trades.reduce((sum, planned) => {
-                    if (!planned.isChained && planned.fromClean === cand.fromClean) {
-                        return sum + (planned.execC * planned.reqA);
-                    }
-                    return sum;
-                }, 0);
-
-                let availableMat = (ft === 0) ? Infinity : (Math.max(0, realWStock - currentSortieUsed) + (shipCargo[cand.fromClean] || 0));
-
-                if (availableMat < cand.reqA) continue; 
-
-                let maxByMat = (ft === 0) ? cand.currentC : Math.floor(availableMat / cand.reqA);
+                const { maxByMat } = materialAvailability(cand, s.trades, shipCargo);
                 let execCount = Math.min(cand.currentC, maxByMat);
                 
                 if (isJitSupplier) {
                     execCount = Math.min(execCount, jitRequiredExecs);
                 }
 
-                let possibleK = 0; let tempSimTime = 0;
+                const { possibleK, tempSimTime } = executableCount(cand, execCount, s.trades,
+                    shipCargo, s.parleyUsed, sortieZone, vipParleyNeeded, isJitSupplier);
                 let wLimit = (mode === 'speed') ? normW : maxW;
-
-                for(let k = 1; k <= execCount; k++) {
-                    if (cand.toTier === 5 && k !== cand.currentC) continue; 
-
-                    let currentCost = k * pCost;
-                    if (usedP + s.parleyUsed + currentCost > maxP) break; 
-                    
-                    if (!isCandVIP && (maxP - (usedP + s.parleyUsed + currentCost)) < vipParleyNeeded) break;
-
-                    let tempTrade = { ...cand, execC: k };
-                    if (shipCargo[cand.fromClean] >= cand.reqA * k) tempTrade.isChained = true;
-                    if (isJitSupplier) tempTrade.isJit = true;
-
-                    let tempT = [...s.trades, tempTrade];
-                    
-                    let optTempT = (sortieZone === 'OCEAN') ? arrangeOceanAndInbounds(tempT) : getOptimalRoute(tempT, normW);
-                    let tempSim = simulateWeightsTemp(optTempT, normW); 
-                    
-                    let validWeight = true;
-                    if (tempSim.startW > normW) validWeight = false;
-                    if (tempSim.peakW > wLimit) validWeight = false;
-                    
-                    // ⭐ [근본 픽스] 쾌속 모드는 '귀환길 과적(returnOver)'도 빌드 단계에서 즉시 컷!
-                    // 무거운 짐이 동선 맨 끝(귀환 직전)에 와서 100%를 넘기는 케이스를 기존 peakW 검사가 놓쳤음.
-                    if (mode === 'speed' && tempSim.returnOver) validWeight = false;
-
-                    for (let sIdx = 0; sIdx < optTempT.length; sIdx++) {
-                        let tNode = optTempT[sIdx];
-                        let wBefore = (sIdx === 0) ? tempSim.startW : tempSim.stepData[sIdx - 1].afterW;
-                        let tCoords = getIslandCoords(tNode.island) || {x:0, y:0};
-                        
-                        let isOceanStrictNode = (tNode.isCoin || tCoords.isOcean) && tCoords.x < 800 && !tNode.island.includes('파딕스');
-                        if (isOceanStrictNode && wBefore > normW) { validWeight = false; break; }
-
-                        let prevCoords = (sIdx === 0) ? {x: 0, y: 0} : (getIslandCoords(optTempT[sIdx - 1].island) || {x: 0, y: 0});
-                        
-                        if (wBefore > normW) {
-                            if (prevCoords.x >= -500 && tCoords.x < -500) { validWeight = false; break; } 
-                            if (prevCoords.x <= 500 && tCoords.x > 500) { validWeight = false; break; }   
-                        }
-                    }
-
-                    // ⭐ [최종 검산 핀셋 패치] 연쇄(Chain)로 인한 초반 대량 과적 차단!
-                    // 일반 줍줍은 건드리지 않고, 오직 '다른 섬에 바쳐야 할 연쇄 재료'를 실었을 때
-                    // 그 직후 즉시 100%(normW)를 초과해버리면, 무거운 채로 바다를 건너지 않도록 횟수를 쪼갭니다.
-                    if (validWeight && mode === 'balance') {
-                        let isChainSource = currentValidRemaining.some(rt => rt.fromClean === cand.toClean && rt.currentC > 0);
-                        if (isChainSource) {
-                            let myStepIdx = optTempT.findIndex(t => t.island === cand.island && t.toClean === cand.toClean);
-                            if (myStepIdx !== -1 && tempSim.stepData[myStepIdx].afterW > normW) {
-                                validWeight = false; // 과적 컷! -> k(횟수)를 줄여서 다시 시뮬레이션 하도록 빠꾸시킴
-                            }
-                        }
-                    }
-
-                    if (validWeight) { possibleK = k; tempSimTime = tempSim.totalTime; } 
-                    else break;
-                }
 
                 if (possibleK === 0) continue;
 
@@ -1101,18 +1178,7 @@ function buildSorties(trades, mode) {
                 s.routingLogs.push(stepLog);
 
                 if (s.trades.length === 0) {
-                    if (pickedJitSupplier) {
-                        // JIT 공급자가 첫 빠따로 탔다면, 그놈이 공급하려는 대양 노드의 구역으로 강제 고정!
-                        sortieZone = pickedJitZone; 
-                    } else {
-                        let isRealO = APP_CONFIG.ALLOW_OCEAN === 'ocean' && pickedCoords.isOcean;
-                        let isEastC = picked.isCoin && !picked.isRandomCoin && pickedCoords.x > 800;
-                        let isCentralC = picked.isCoin && !picked.isRandomCoin && pickedCoords.x <= 800 && !picked.island.includes('파딕스');
-                        
-                        if (isRealO || isCentralC) sortieZone = 'OCEAN';
-                        else if (isEastC) sortieZone = 'EAST_COIN';
-                        else sortieZone = (pickedCoords.x >= 0) ? 'E' : 'W';
-                    }
+                    sortieZone = departureZone(picked, pickedJitSupplier, pickedJitZone);
                 }
 
                 let pCost = picked.isCoin ? perTradeCrowP : perTradeP;

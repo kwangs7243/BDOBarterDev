@@ -52,11 +52,6 @@ const ISLAND_CANONICAL_ALIASES = Object.freeze({
   "아레하자": "아레하자 마을",
   "하코번": "하코번 섬",
   "해모": "해모 섬",
-  "깊은 밤": "깊은 밤의 항구",
-  "소산 선착장": "소산 주둔지 선착장",
-  "소산 주둔지": "소산 주둔지 선착장",
-  "성전 해안": "성전 해안 정찰지",
-  "일리야": "일리야 섬",
 });
 
 export function canonicalizeIslandName(value) {
@@ -150,7 +145,10 @@ export function applyMasterNameRules(row, catalog) {
     const destination = getItemTier(row.fields.toItem.corrected, catalog.masterData, catalog.specialItems);
     const candidates = name === "island" ? islands : name === "fromItem" && Number.isInteger(destination) && destination >= 1 ? catalog.masterData[destination - 1] || [] : items;
     const readings = [field.rawOCR, ...(field.variants || []).map(v => v.text)].filter(Boolean);
-    const matches = readings.map(text => getSafeUniqueItemMatch(String(text).replace(/\[.*?\]\s*/g, "").trim(), candidates));
+    const matches = readings.map(text => {
+      const reading = String(text).replace(/\[.*?\]\s*/g, "").trim();
+      return getSafeUniqueItemMatch(name === "island" ? canonicalizeIslandName(reading) : reading, candidates);
+    });
     const values = [...new Set(matches.map(match => match.value).filter(Boolean))];
     if (values.length === 1) {
       Object.assign(field, {corrected: values[0], reviewRequired: false, valueSource: "MASTER", masterMatch: "RESOLVED"});

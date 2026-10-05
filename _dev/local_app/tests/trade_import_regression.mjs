@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  canonicalizeIslandName, getBestMatch, getItemTier, getSafeUniqueItemMatch, parseTradeJsonText, processParsedTrades,
+  applyMasterNameRules, getBestMatch, getItemTier, getSafeUniqueItemMatch, parseTradeJsonText, processParsedTrades,
 } from "../frontend/js/domain/trade-import.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -13,10 +13,7 @@ const baseline = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtur
 const correctedBaseline = structuredClone(baseline.catalog);
 correctedBaseline.masterData[6] = correctedBaseline.masterData[6].map(name => name === "고급 묵양함 상자" ? "고급 묵향함" : name);
 for (let tier = 1; tier <= 7; tier++) assert.deepEqual(catalog.masterData[tier], correctedBaseline.masterData[tier]);
-for (const key of ["islands", "t6Islands", "t7Islands"]) {
-  const canonicalBaseline = [...new Set(correctedBaseline[key].map(canonicalizeIslandName))];
-  assert.deepEqual(catalog[key], canonicalBaseline, `${key} stores canonical island names only`);
-}
+for (const key of ["islands", "t6Islands", "t7Islands"]) assert.deepEqual(catalog[key], correctedBaseline[key]);
 assert.ok(baseline.catalog.specialItems.filter(name => name !== "흑수정 장식 팔찌").every((name) => catalog.specialItems.includes(name)), "unrequested special items were removed");
 assert.ok(!catalog.specialItems.includes("흑수정 장식 팔찌"));
 
@@ -28,6 +25,18 @@ assert.equal(getSafeUniqueItemMatch("갈퀴꽃씨앗주머니", catalog.masterDa
 assert.equal(getSafeUniqueItemMatch("대상미등록품", catalog.masterData["1"]).status, "unmatched");
 assert.equal(getSafeUniqueItemMatch("abcdef", ["abcdeg", "abcdeh"]).status, "ambiguous");
 assert.equal(getBestMatch("소산 선착장", catalog.t7Islands, true), "소산 주둔지 선착장");
+for (const [alias, canonical] of [["아레하자", "아레하자 마을"], ["하코번", "하코번 섬"], ["해모", "해모 섬"]]) {
+  const fields = {
+    island: {rawOCR: alias, corrected: null, reviewRequired: true, variants: []},
+    fromItem: {rawOCR: catalog.masterData[1][0], corrected: null, reviewRequired: true, variants: []},
+    toItem: {rawOCR: catalog.masterData[2][0], corrected: null, reviewRequired: true, variants: []},
+  };
+  applyMasterNameRules({fields}, catalog);
+  assert.equal(fields.island.corrected, canonical, `${alias} is canonicalized before island master matching`);
+  assert.equal(fields.island.reviewRequired, false, `${alias} does not require review`);
+  assert.equal(fields.island.masterMatch, "RESOLVED");
+  assert.equal(fields.fromItem.corrected, catalog.masterData[1][0], "island canonicalizer does not alter item matching");
+}
 for (const [name, expected] of Object.entries(baseline.tiers)) {
   assert.equal(getItemTier(name, catalog.masterData, catalog.specialItems), name === "흑수정 장식 팔찌" ? 0 : expected);
 }
