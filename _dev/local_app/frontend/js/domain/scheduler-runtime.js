@@ -77,7 +77,7 @@ function generateSchedule(appState, setStatus) {
 }
 
 function canCompleteScheduleStep(schedule, si, ti) {
-    if (schedule.slice(0, si).some(s => s.trades.some(t => !t.completed))) {
+    if (schedule.slice(0, si).some(s => s.trades.some(t => !t.completed && (t.isWaypoint || t.execC !== 0)))) {
         showToast('앞 출항의 교환과 경유지를 먼저 완료하세요.');
         return false;
     }

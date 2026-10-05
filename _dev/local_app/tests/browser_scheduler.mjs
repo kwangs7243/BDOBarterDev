@@ -211,6 +211,73 @@ try {
        || saved.inventory.find(i=>i.programName==='정체불명의 암석').stock!==99)throw Error('tier7 completion missing');
     return {plannedTrades:ts.length,plannedCost:20586,remaining:saved.workingSession.remainingParley,tier5Stock:99};
   })()`);
+  const repeatedConflicts=[];
+  for (const scenario of ['repeated-conflict','shortage']) {
+    repeatedConflicts.push(await evaluate(`(async()=>{
+      const {state}=await import('/assets/js/state.js');const p=await import('/assets/js/persistence.js');const runtime=window.__bdoScheduleRuntime;
+      await p.whenPersistenceIdle();const source='갈퀴 꽃 씨앗 주머니',target='괴생물 촉수';
+      await p.saveInventory(Object.fromEntries(state.inventory.map(i=>[i.programName,{stock:i.programName===source?100:0}])));
+      state.session.config.ship.mode='inner';state.session.remainingParley=125000;
+      state.session.scannedTrades=[{island:'베이루와 섬',fromItem:source,toItem:target,reqAmount:1,count:3,yield:3,disabled:false,deleted:false}];
+      runtime.generateSchedule(state,()=>{});await p.whenPersistenceIdle();
+      const t=state.session.schedule.speed[0]?.trades[0];if(t?.execC!==3)throw Error('conflict scenario must consume exactly 3');
+      const original=window.fetch.bind(window),observer=window.__bdoCompletionInvocationObserver;let injected=0,calls=0;const requests=[];
+      const shortage=${JSON.stringify(scenario)}==='shortage';
+      const concurrent=async(stock,gain)=>{
+        const b=await original('/api/bootstrap').then(r=>r.json());
+        const r=await original('/api/inventory',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({mutationId:crypto.randomUUID(),baseRevision:b.revision,kind:'manual',patch:{items:{[source]:{stock},[target]:{stock:gain}}}})});
+        if(!r.ok)throw Error(await r.text());
+      };
+      const waitRetry=async()=>{const end=Date.now()+10000;while(document.querySelector('#retry-completion-save').hidden){if(Date.now()>end)throw Error('retry was not exposed');await new Promise(ok=>setTimeout(ok,20));}};
+      window.__bdoCompletionInvocationObserver=()=>calls++;
+      window.fetch=async(input,options={})=>{
+        if(String(input).includes('/api/working-session/completion')&&options.method==='POST'){
+          requests.push(JSON.parse(options.body));
+          if(injected<(shortage?1:3)){injected++;await concurrent(shortage?2:100+injected*100,injected*10);}
+        }
+        return original(input,options);
+      };
+      try {
+        window.completeTradeAndTimer(document.createElement('button'),'speed',0,0,t.originalIndex,t.island,t.toClean);
+        await waitRetry();await p.whenPersistenceIdle();
+        const blocked=await original('/api/bootstrap').then(r=>r.json());
+        if(!runtime.pending||blocked.workingSession.scannedTrades[0].count!==3||blocked.workingSession.remainingParley!==125000)throw Error('failed completion changed the durable session');
+        if(shortage){
+          if(requests.length!==1||blocked.inventory.find(x=>x.programName===source).stock!==2)throw Error('shortage was clamped and submitted');
+          await concurrent(10,10);
+        } else if(requests.length!==2)throw Error('expected two real revision conflicts');
+        await runtime.retryCompletion();await p.whenPersistenceIdle();
+        const b=await original('/api/bootstrap').then(r=>r.json()),expectedSource=shortage?7:397,expectedTarget=shortage?19:39;
+        if(runtime.pending||calls!==1||b.inventory.find(x=>x.programName===source).stock!==expectedSource||b.inventory.find(x=>x.programName===target).stock!==expectedTarget
+          ||b.workingSession.remainingParley!==125000-3*10293||b.workingSession.scannedTrades[0].count!==0)throw Error('retry corrupted the original completion deltas');
+        if(!shortage&&requests.length!==4)throw Error('expected three conflicts followed by one successful commit');
+        return {scenario:${JSON.stringify(scenario)},completionCalculatedOnce:calls===1,source:expectedSource,target:expectedTarget,remaining:b.workingSession.remainingParley,requests:requests.length};
+      } finally {window.fetch=original;window.__bdoCompletionInvocationObserver=observer;}
+    })()`));
+  }
+  const zeroCountProgress=await evaluate(`(async()=>{
+    const {state}=await import('/assets/js/state.js');const p=await import('/assets/js/persistence.js');await p.whenPersistenceIdle();
+    const source='갈퀴 꽃 씨앗 주머니',target='괴생물 촉수';
+    await p.saveInventory(Object.fromEntries(state.inventory.map(i=>[i.programName,{stock:i.programName===source?100:0}])));
+    state.session.remainingParley=125000;state.session.scannedTrades=[{island:'베이루와 섬',fromItem:source,toItem:target,count:3,reqAmount:1,yield:3}];
+    const cancelled={island:'베이루와 섬',fromClean:source,toClean:target,fromTier:1,toTier:2,execC:0,reqA:1,mult:3,originalIndex:0};
+    const next={...cancelled,execC:1};state.session.schedule={speed:[{trades:[cancelled]},{trades:[next]}],balance:[]};
+    window.__bdoScheduleRuntime.syncLegacyState(state);
+    window.completeTradeAndTimer(document.createElement('button'),'speed',1,0,0,next.island,target);
+    const until=Date.now()+10000;while(window.__bdoScheduleRuntime.pending){if(Date.now()>until)throw Error('zero-count completion pending');await new Promise(ok=>setTimeout(ok,20));}
+    await p.whenPersistenceIdle();const b=await fetch('/api/bootstrap').then(r=>r.json());
+    if(!next.completed||cancelled.completed||b.inventory.find(x=>x.programName===source).stock!==99||b.inventory.find(x=>x.programName===target).stock!==3
+      ||b.workingSession.scannedTrades[0].count!==2||b.workingSession.remainingParley!==114707)throw Error('zero-count previous departure blocked or deducted stock');
+    return true;
+  })()`);
+  const nativeAudio=await evaluate(`(()=>{
+    const Native=window.AudioContext||window.webkitAudioContext;if(!Native)return false;
+    window.__alarmContexts=[];window.AudioContext=class extends Native {constructor(){super();window.__alarmContexts.push(this);}};
+    try {for(let i=0;i<3;i++)window.playAlarmSound();} finally {window.AudioContext=Native;}
+    return true;
+  })()`);
+  if(nativeAudio)await waitFor(()=>evaluate("window.__alarmContexts.length===3 && window.__alarmContexts.every(x=>x.state==='closed')"),'native audio contexts closed');
+  console.log(JSON.stringify({repeatedConflicts,zeroCountProgress,nativeAudioContextsClosed:nativeAudio},null,2));
   console.log(JSON.stringify({activeSettingsAppliedAndReloaded:appliedSettings,completionKinds,tier7Completed},null,2));
   console.log(JSON.stringify({enteredParleyExactCompletion:exactCases,actualRemainder4to5:remainderCase,editedParleyInsufficientCompletionBlocked:blocked},null,2));
   console.log(JSON.stringify({ ok: true, browser: "Chrome headless", sameInputReferenceOutputExact: true, comparedScenarios: ["inner trade", "crow coin", "tier 7"], scheduleGenerated: generatedState, timerToggle: true, manualRouteReorder: true, manualCountAdjustment: true, waypointAddedAndCompletedWithMaterialPatch: true, completionResult: JSON.parse(sessionResult), lostResponseRetryUsedSameRequest: true, duplicateCompletionBlocked: true, inventoryUpdatedOnce: true, completionInvocationCounts: { waypoint: 1, tradeAfterResponseLossAndDuplicateClick: 1, tradeAfter409Rebase: conflictResult.calls }, actual409RebasedDelta: { source: conflictResult.source, target: conflictResult.target }, sessionRestoredOnReload: true, persistentInventorySurvivedReload: true, temporaryDatabase: true }, null, 2));

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import vm from 'node:vm';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -110,6 +110,17 @@ for(const initial5 of [5,8,20]){
  plan=buildTier7Sorties(rows,'t7_3region','speed').sorties;`,ctx);
  assert.equal(ctx.plan.flatMap(s=>s.trades).find(t=>t.toTier===5).execC,6);results.push({test:'existing tier5 target/whole batch policy retained',initial5,produced:6});
 }
+{
+ const {ctx}=environment();vm.runInContext(`
+ const next={fromClean:'갈퀴 꽃 씨앗 주머니',fromTier:1,toClean:'괴생물 촉수',toTier:2,execC:1,reqA:1,mult:2};
+ const cancelled={execC:0,completed:false};
+ zeroCountAllowed=canCompleteScheduleStep([{trades:[cancelled]},{trades:[next]}],1,0);
+ activeCountBlocked=canCompleteScheduleStep([{trades:[{...cancelled,execC:1}]},{trades:[next]}],1,0);
+ waypointBlocked=canCompleteScheduleStep([{trades:[{isWaypoint:true,completed:false}]},{trades:[next]}],1,0);`,ctx);
+ assert.equal(ctx.zeroCountAllowed,true);assert.equal(ctx.activeCountBlocked,false);assert.equal(ctx.waypointBlocked,false);
+ results.push({test:'zero-count trades do not block later departures while real trades and waypoints still do'});
+}
+mkdirSync(out,{recursive:true});
 writeFileSync(resolve(out,'causality-regression.json'),JSON.stringify({ok:true,results},null,2));console.log(JSON.stringify({ok:true,tests:results.length,results},null,2));
 
 }
