@@ -65,7 +65,12 @@ function generateSchedule(appState, setStatus) {
   const mode = appState.session.config.ship.mode || "inner";
   window.APP_CONFIG.ALLOW_OCEAN = mode;
   document.getElementById("maxParley").value = appState.session.remainingParley ?? appState.settings.parley?.defaultBudget ?? 1500000;
-  if (window.runAlgorithmAllModes(false) === false) return false;
+  try {
+    if (window.runAlgorithmAllModes(false) === false) return false;
+  } catch (error) {
+    showToast(`스케줄 계산에 실패해 기존 계획을 유지했습니다: ${error.message || error}`);
+    return false;
+  }
   appState.session.schedule = { speed: sortiesSpeed, balance: sortiesBalance };
   appState.session.completed = { speed: [], balance: [] };
   window.ACTIVE_TIMERS = appState.session.timers = {};

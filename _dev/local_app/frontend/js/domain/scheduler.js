@@ -1,4 +1,11 @@
 /* SPEC-005 T003 FUNCTIONS — copied from the selected final definitions in BDO_물교_v1.0.html. */
+function schedulerNumberOrDefault(value, fallback) {
+    if (value === null || value === undefined || (typeof value !== 'number' && typeof value !== 'string')
+        || (typeof value === 'string' && value.trim() === '')) return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function runAlgorithmAllModes(silent = false) {
     const syncVars = [
         {id: 'crow', val: APP_CONFIG.CROW_COIN_PRIORITY}, {id: 'spec', val: APP_CONFIG.SPECIAL_MAT_PRIORITY},
@@ -117,16 +124,78 @@ function runAlgorithmAllModes(silent = false) {
     // 2. 동적 목표치(Target) 및 가상 재고 시뮬레이션
     let dynamicTargets = {};
     let projectedStock = {};
+    let projectedProduction = {};
+    const projectedExecutions = new Map();
+    const projectionInfeasibleTrades = new Set();
     for (let key in inventory) { 
         dynamicTargets[key] = inventory[key].target || 0; 
         projectedStock[key] = inventory[key].stock || 0; 
+        projectedProduction[key] = 0;
     }
 
+    // Check source availability against stock above its reserve plus feasible lower-tier production.
+    // This is a projection-only allocation pool; final sorting and supplier ranking remain unchanged.
+    const projectedSourceReserve = (trade) => {
+        const tier = trade.fromTier;
+        let reserve = 0;
+        if (tier === 'mat' || tier === 5 || tier === 'coin') reserve = schedulerNumberOrDefault(tierRules[5], 1);
+        else if (tier >= 1 && tier <= 4) reserve = schedulerNumberOrDefault(tierRules[tier], 20);
+        if (trade.isSpec || trade.isRandomCoin) {
+            const sourceStock = Number(inventory[trade.fromClean]?.stock) || 0;
+            if (sourceStock >= reserve || (APP_CONFIG.SPECIAL_MAT_PRIORITY || 0) >= 140000) reserve = 0;
+            else return null;
+        }
+        if (trade.isCoin && APP_CONFIG.CROW_COIN_PRIORITY >= 50000) reserve = 0;
+        if (trade.toTier === 5 && (trade.isUrgent || trade.isConsumedByT7)) reserve = 0;
+        return reserve;
+    };
+    const projectedSourceQuantity = (itemName, sourceTrade, pool, visited = new Set(), requested = Infinity) => {
+        if (sourceTrade.fromTier === 0) return Infinity;
+        const reserve = projectedSourceReserve(sourceTrade);
+        if (reserve === null) return 0;
+        const baseStock = Number(inventory[itemName]?.stock) || 0;
+        const startingUsable = Math.max(0, baseStock - reserve);
+        const available = () => Math.max(0, startingUsable + (projectedProduction[itemName] || 0)
+            + (pool.generated[itemName] || 0) - (pool.consumed[itemName] || 0));
+        if (visited.has(itemName)) return available();
+
+        const path = new Set(visited);
+        path.add(itemName);
+        let total = available();
+        if (total >= requested) return total;
+        const suppliers = baseTrades.filter(candidate => candidate.toClean === itemName);
+        for (const supplier of suppliers) {
+            const remainingCount = Math.max(0, supplier.currentC - (projectedExecutions.get(supplier) || 0)
+                - (pool.remaining.get(supplier) || 0));
+            if (remainingCount <= 0 || supplier.mult <= 0) continue;
+            const needed = Math.max(0, requested - total);
+            const maxByNeed = Math.ceil(needed / supplier.mult);
+            const maxTry = Math.min(remainingCount, maxByNeed);
+            const sourceAvailable = projectedSourceQuantity(supplier.fromClean, supplier, pool, path, maxTry * supplier.reqA);
+            const executable = Math.min(maxTry, Math.floor(sourceAvailable / supplier.reqA));
+            if (executable <= 0) continue;
+            if (supplier.fromTier !== 0) {
+                pool.consumed[supplier.fromClean] = (pool.consumed[supplier.fromClean] || 0) + executable * supplier.reqA;
+            }
+            pool.remaining.set(supplier, (pool.remaining.get(supplier) || 0) + executable);
+            pool.generated[itemName] = (pool.generated[itemName] || 0) + executable * supplier.mult;
+            total = available();
+            if (total >= requested) break;
+        }
+        return total;
+    };
+    const hasProjectedSource = (trade, executions) => {
+        if (trade.fromTier === 0) return true;
+        const pool = { generated: {}, consumed: {}, remaining: new Map() };
+        const available = projectedSourceQuantity(trade.fromClean, trade, pool, new Set(), executions * trade.reqA);
+        return available >= executions * trade.reqA;
+    };
+
     let activeT67Regions = [];
-    if (allowOcean === 't7_3region') activeT67Regions = ["하코번 섬", "아레하자 마을", "하코번", "아레하자", "해모 섬", "달래나루", "해모", "그란디하", "깊은 밤의 항구", "깊은 밤"];
-    else if (allowOcean === 't7_2region') activeT67Regions = ["하코번 섬", "아레하자 마을", "하코번", "아레하자", "해모 섬", "달래나루", "해모"];
-    else if (allowOcean === 't7_2region_south') activeT67Regions = ["하코번 섬", "아레하자 마을", "하코번", "아레하자", "그란디하", "깊은 밤의 항구", "깊은 밤"];
-    else if (allowOcean === 't7_2region_arehazaX') activeT67Regions = ["해모 섬", "달래나루", "해모", "그란디하", "깊은 밤의 항구", "깊은 밤"];
+    if (allowOcean === 't7_3region') activeT67Regions = ["하코번 섬", "아레하자 마을", "해모 섬", "달래나루", "그란디하", "깊은 밤의 항구"];
+    else if (allowOcean === 't7_2region') activeT67Regions = ["하코번 섬", "아레하자 마을", "해모 섬", "달래나루"];
+    else if (allowOcean === 't7_2region_south') activeT67Regions = ["하코번 섬", "아레하자 마을", "그란디하", "깊은 밤의 항구"];
+    else if (allowOcean === 't7_2region_arehazaX') activeT67Regions = ["해모 섬", "달래나루", "그란디하", "깊은 밤의 항구"];
 
     // 최상위 티어부터 역순으로 수요(Consumption)를 전파
     const evaluationOrder = [7, 6, 'coin', 'mat', 5, 4, 3, 2, 1];
@@ -147,8 +216,16 @@ function runAlgorithmAllModes(silent = false) {
                 if (lack > 0) {
                     let neededExecutions = Math.ceil(lack / t.mult);
                     willExecute = Math.min(t.currentC, neededExecutions);
-                    projectedStock[t.toClean] = currentInv + (willExecute * t.mult); // 예측 재고 증가
                 }
+            }
+
+            const requestedExecutions = willExecute;
+            while (willExecute > 0 && !hasProjectedSource(t, willExecute)) willExecute--;
+            if (requestedExecutions > 0 && willExecute === 0 && t.fromTier !== 0) projectionInfeasibleTrades.add(t);
+            if (willExecute > 0 && t.toTier !== 6 && t.toTier !== 7 && t.toTier !== 'coin' && t.toTier !== 'mat') {
+                const produced = willExecute * t.mult;
+                projectedStock[t.toClean] = (projectedStock[t.toClean] || 0) + produced;
+                projectedProduction[t.toClean] = (projectedProduction[t.toClean] || 0) + produced;
             }
 
             if (willExecute > 0 && t.fromTier !== 0) {
@@ -156,11 +233,13 @@ function runAlgorithmAllModes(silent = false) {
                 let consumption = willExecute * t.reqA;
                 dynamicTargets[t.fromClean] = (dynamicTargets[t.fromClean] || 0) + consumption;
             }
+            if (willExecute > 0) projectedExecutions.set(t, (projectedExecutions.get(t) || 0) + willExecute);
         });
     });
 
     // 3. 예측된 동적 목표치(dynamicTargets)를 바탕으로 최종 점수 계산
     let preparedTrades = baseTrades.map(t => {
+        if (projectionInfeasibleTrades.has(t)) { t.currentC = 0; t.count = 0; t.origC = 0; }
         let score = 0; let lack = 0; let isUrgent = false;
         let toInv = inventory[t.toClean];
         let currentStock = toInv ? toInv.stock : 0;
@@ -226,11 +305,11 @@ function runAlgorithmAllModes(silent = false) {
                 else if (t.toTier === 4) score += APP_CONFIG.TIER_PRIORITY.T4;
                 else if (t.toTier === 5) score += APP_CONFIG.TIER_PRIORITY.T5;
 
-                if (t.toTier >= 1 && t.toTier <= 4 && (currentStock <= (parseInt(tierRules[t.toTier])||20) || isDemanded)) {
+                if (t.toTier >= 1 && t.toTier <= 4 && (currentStock <= schedulerNumberOrDefault(tierRules[t.toTier], 20) || isDemanded)) {
                     score += (APP_CONFIG.PRESERVATION_BONUS || 3000) + (isDemanded ? 10000 : 0);
                     isUrgent = true;
                 }
-                if (t.toTier === 5 && (currentStock < (parseInt(tierRules[5])||1) || isDemanded)) {
+                if (t.toTier === 5 && (currentStock < schedulerNumberOrDefault(tierRules[5], 1) || isDemanded)) {
                     score += (APP_CONFIG.EMERGENCY_BONUS || 5000);
                     isUrgent = true;
                 }
@@ -264,27 +343,43 @@ function runAlgorithmAllModes(silent = false) {
 
     // 3. 7단 하이브리드 엔진 분기
     // 👇 여기에도 t7_2region_south 추가
-    if (allowOcean === 't7_2region' || allowOcean === 't7_3region' || allowOcean === 't7_2region_south' || allowOcean === 't7_2region_arehazaX') {
-        sortiesSpeed = buildTier7Sorties(validTrades, allowOcean, 'speed').sorties;
-        sortiesBalance = buildTier7Sorties(validTrades, allowOcean, 'balance').sorties;
-    } else {
-        sortiesSpeed = buildSorties(validTrades, 'speed');
-        sortiesBalance = buildSorties(validTrades, 'balance');
-    }
-
-    // 🎴 [표시 후보정 — 최종] 무게컷으로 쪼개진 '인접 동일 교환' 카드를 한 장으로 병합(렌더 직전, 엔진 판정 불변)
+    const previousSpeed = sortiesSpeed;
+    const previousBalance = sortiesBalance;
+    const previousDebug = window.ENGINE_DEBUG;
+    const previousLastGen = window.__lastGen;
+    let nextSpeed;
+    let nextBalance;
     try {
-        let __mNormW = Number(document.getElementById('normalWeight').value) || 14379;
-        if (window.mergeAdjacentDupTrades) { window.mergeAdjacentDupTrades(sortiesSpeed, __mNormW); window.mergeAdjacentDupTrades(sortiesBalance, __mNormW); }
-    } catch(_) {}
+        // buildSorties records per-mode diagnostics globally; stage them until both modes validate.
+        window.ENGINE_DEBUG = { ...(previousDebug || {}) };
+        if (allowOcean === 't7_2region' || allowOcean === 't7_3region' || allowOcean === 't7_2region_south' || allowOcean === 't7_2region_arehazaX') {
+            nextSpeed = buildTier7Sorties(validTrades, allowOcean, 'speed').sorties;
+            nextBalance = buildTier7Sorties(validTrades, allowOcean, 'balance').sorties;
+        } else {
+            nextSpeed = buildSorties(validTrades, 'speed');
+            nextBalance = buildSorties(validTrades, 'balance');
+        }
 
-    renderModeColumn('col-speed', sortiesSpeed, 'speed');
-    renderModeColumn('col-balance', sortiesBalance, 'balance');
-    // ⭐ [진단용] 마지막 스케줄 생성 정보 기록 (기존 동작 무관 — 진단 복사에서 읽음)
-    try { window.__lastGen = { time: new Date().toLocaleString(), speed: (sortiesSpeed || []).length, balance: (sortiesBalance || []).length }; } catch(_) {}
-    openModal();
-    // ⭐ 메인창 계산 완료 시 지도 즉시 새로고침 (실시간 연동)
-    if (typeof updateGridAndCircles === 'function') updateGridAndCircles();
+        // 🎴 Display-only merge of adjacent identical trades; engine decisions remain unchanged.
+        try {
+            let __mNormW = Number(document.getElementById('normalWeight').value) || 14379;
+            if (window.mergeAdjacentDupTrades) { window.mergeAdjacentDupTrades(nextSpeed, __mNormW); window.mergeAdjacentDupTrades(nextBalance, __mNormW); }
+        } catch(_) {}
+
+        sortiesSpeed = nextSpeed;
+        sortiesBalance = nextBalance;
+        renderModeColumn('col-speed', sortiesSpeed, 'speed');
+        renderModeColumn('col-balance', sortiesBalance, 'balance');
+        try { window.__lastGen = { time: new Date().toLocaleString(), speed: (sortiesSpeed || []).length, balance: (sortiesBalance || []).length }; } catch(_) {}
+        openModal();
+        if (typeof updateGridAndCircles === 'function') updateGridAndCircles();
+    } catch (error) {
+        sortiesSpeed = previousSpeed;
+        sortiesBalance = previousBalance;
+        window.ENGINE_DEBUG = previousDebug;
+        window.__lastGen = previousLastGen;
+        throw error;
+    }
     return true;
 }
 
@@ -305,8 +400,8 @@ function buildSorties(trades, mode) {
     let t_def = parseInt(APP_CONFIG.tuneDeficit) || 10000;
     let t_emg = parseInt(APP_CONFIG.tuneEmergency) || 10000;
     let t_pres = parseInt(APP_CONFIG.tunePreservation) || 10000;
-    let t_distPen = parseInt(APP_CONFIG.tunePenW) || 4;
-    let t_pathEff = parseInt(APP_CONFIG.tuneScore) || 15000;
+    let t_distPen = schedulerNumberOrDefault(APP_CONFIG.DISTANCE_PENALTY_WEIGHT, 4);
+    let t_pathEff = schedulerNumberOrDefault(APP_CONFIG.PATH_EFFICIENCY_BONUS, 15000);
 
     // 👇 [여기에 이 한 줄을 추가해 줍니다! (전역 스위치 역할)]
     let isT7Mode = (APP_CONFIG.ALLOW_OCEAN === 't7_2region' || APP_CONFIG.ALLOW_OCEAN === 't7_3region' || APP_CONFIG.ALLOW_OCEAN === 't7_2region_south' || APP_CONFIG.ALLOW_OCEAN === 't7_2region_arehazaX');
@@ -397,13 +492,13 @@ function buildSorties(trades, mode) {
             
             // 대시보드 티어 가중치
             let basePrio = 0;
-            if (t.toTier === 1) basePrio = APP_CONFIG.TIER_PRIORITY.T1 || 5000;
-            else if (t.toTier === 2) basePrio = APP_CONFIG.TIER_PRIORITY.T2 || 1000;
-            else if (t.toTier === 3) basePrio = APP_CONFIG.TIER_PRIORITY.T3 || 1000;
-            else if (t.toTier === 4) basePrio = APP_CONFIG.TIER_PRIORITY.T4 || 2000;
-            else if (t.toTier === 5) basePrio = APP_CONFIG.TIER_PRIORITY.T5 || 8000;
+            if (t.toTier === 1) basePrio = schedulerNumberOrDefault(APP_CONFIG.TIER_PRIORITY.T1, 5000);
+            else if (t.toTier === 2) basePrio = schedulerNumberOrDefault(APP_CONFIG.TIER_PRIORITY.T2, 1000);
+            else if (t.toTier === 3) basePrio = schedulerNumberOrDefault(APP_CONFIG.TIER_PRIORITY.T3, 1000);
+            else if (t.toTier === 4) basePrio = schedulerNumberOrDefault(APP_CONFIG.TIER_PRIORITY.T4, 2000);
+            else if (t.toTier === 5) basePrio = schedulerNumberOrDefault(APP_CONFIG.TIER_PRIORITY.T5, 8000);
 
-            let minReserve = parseInt(tierRules[t.toTier]) || (t.toTier === 5 ? 1 : 20);
+            let minReserve = schedulerNumberOrDefault(tierRules[t.toTier], t.toTier === 5 ? 1 : 20);
 
            // [안전장치]
             let p_def = typeof t_def !== 'undefined' ? t_def : 10000;
@@ -777,8 +872,8 @@ function buildSorties(trades, mode) {
                 }
 
                 let reserve = 0; let ft = cand.fromTier;
-                if (ft === 'mat' || ft === 5 || ft === 'coin') reserve = parseInt(tierRules[5]) || 1;
-                else if (ft >= 1 && ft <= 4) reserve = parseInt(tierRules[ft]) || 20;
+                if (ft === 'mat' || ft === 5 || ft === 'coin') reserve = schedulerNumberOrDefault(tierRules[5], 1);
+                else if (ft >= 1 && ft <= 4) reserve = schedulerNumberOrDefault(tierRules[ft], 20);
 
                 // ⭐ [뭉태기 교환] 특수재료·4회 랜덤까주: 목표선 무시. 교환 전 재고 ≥ reserve면 reserve 무시하고 뭉태기(횟수대로),
                 //    재고 < reserve면 이 출항엔 스킵. 집착도 140000↑이면 reserve 무시(무조건 실행). "되는 만큼 부분교환" 없음(물리 재료 한계만 별도).
@@ -1030,8 +1125,6 @@ function buildSorties(trades, mode) {
 
                 s.trades.push(newTrade);
                 
-                let originalRef = remaining.find(rt => rt.island === picked.island && rt.toClean === picked.toClean && rt.fromClean === picked.fromClean);
-                if (originalRef) originalRef.currentC -= bestExecCount;
                 picked.currentC -= bestExecCount; 
 
                 // ⭐ 탄 만큼 VIP 락업 교섭력 차감

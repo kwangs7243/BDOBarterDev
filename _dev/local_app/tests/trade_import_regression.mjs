@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  getBestMatch, getItemTier, getSafeUniqueItemMatch, parseTradeJsonText, processParsedTrades,
+  canonicalizeIslandName, getBestMatch, getItemTier, getSafeUniqueItemMatch, parseTradeJsonText, processParsedTrades,
 } from "../frontend/js/domain/trade-import.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -13,7 +13,10 @@ const baseline = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtur
 const correctedBaseline = structuredClone(baseline.catalog);
 correctedBaseline.masterData[6] = correctedBaseline.masterData[6].map(name => name === "고급 묵양함 상자" ? "고급 묵향함" : name);
 for (let tier = 1; tier <= 7; tier++) assert.deepEqual(catalog.masterData[tier], correctedBaseline.masterData[tier]);
-for (const key of ["islands", "t6Islands", "t7Islands"]) assert.deepEqual(catalog[key], correctedBaseline[key]);
+for (const key of ["islands", "t6Islands", "t7Islands"]) {
+  const canonicalBaseline = [...new Set(correctedBaseline[key].map(canonicalizeIslandName))];
+  assert.deepEqual(catalog[key], canonicalBaseline, `${key} stores canonical island names only`);
+}
 assert.ok(baseline.catalog.specialItems.filter(name => name !== "흑수정 장식 팔찌").every((name) => catalog.specialItems.includes(name)), "unrequested special items were removed");
 assert.ok(!catalog.specialItems.includes("흑수정 장식 팔찌"));
 

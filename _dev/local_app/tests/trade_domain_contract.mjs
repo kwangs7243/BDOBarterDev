@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   getBestMatch, getItemTier, getSafeUniqueItemMatch, processParsedTrades,
+  canonicalizeIslandName,
 } from "../frontend/js/domain/trade-import.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -102,6 +103,20 @@ assert.equal(duplicate.trades.length, 1);
 const conflict = normalize(validTrade(), [{ island: catalog.islands[0], toItem: catalog.masterData["2"][0], fromItem: "different canonical input" }]);
 assert.equal(conflict.outcomes[0].status, "conflict");
 assert.equal(conflict.trades.length, 1, "existing row is retained on conflict");
+
+// A normal trade island has one canonical row; exact overlap captures are retained once.
+assert.equal(canonicalizeIslandName("아레하자"), "아레하자 마을");
+const tier6Trade = validTrade({ island: "하코번", fromItem: catalog.masterData[5][0], toItem: catalog.masterData[6][0] });
+const aliasPair = processParsedTrades([tier6Trade, {...tier6Trade, island:"하코번 섬"}], [], catalog);
+assert.deepEqual(aliasPair.outcomes.map(row => row.status), ["accepted", "duplicate"]);
+assert.equal(aliasPair.trades[0].island, "하코번 섬");
+const countConflict = processParsedTrades([tier6Trade, {...tier6Trade, count:tier6Trade.count + 1}], [], catalog);
+assert.deepEqual(countConflict.outcomes.map(row => row.status), ["accepted", "conflict"]);
+assert.equal(countConflict.trades.length, 1, "same-island conflicting counts are rejected, never added");
+const disabledConflict = normalize(validTrade(), [{...validTrade(), count:5, disabled:true}]);
+assert.equal(disabledConflict.outcomes[0].status, "conflict", "disabled but non-deleted rows still reserve their island");
+const deletedAllowed = normalize(validTrade(), [{...validTrade(), count:5, deleted:true}]);
+assert.equal(deletedAllowed.outcomes[0].status, "accepted", "deleted rows do not reserve their island");
 
 // R-S: count retains its compatibility key but denotes remaining exchanges; accepted DTO stays six-field.
 const accepted = normalize(validTrade()).trades[0];

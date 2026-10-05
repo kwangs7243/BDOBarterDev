@@ -1,7 +1,7 @@
 import { reviewExcludedTrades } from "./trade-import-review.js";
 import { state } from "./state.js";
 import { resetWorkingSession, saveWorkingSession } from "./persistence.js";
-import { getItemTier, parseTradeJsonText, processParsedTrades, compareTradeOrder } from "./domain/trade-import.js";
+import { canonicalizeIslandName, getItemTier, parseTradeJsonText, processParsedTrades, compareTradeOrder } from "./domain/trade-import.js";
 
 let catalogPromise;
 let catalog;
@@ -109,7 +109,26 @@ function addInput(row, field, type = 'text', min) {
     input.classList.add('tier-colored-item'); input.dataset.itemTone = tone;
     itemPrefix = document.createElement('span'); itemPrefix.className = 'tier-item-prefix'; itemPrefix.dataset.itemTone = tone; itemPrefix.textContent = tierLabel;
   }
-  input.addEventListener('change', () => { if (window.__bdoScheduleRuntime?.pending) { input.value = row[field] ?? ''; setStatusFn('완료 저장을 먼저 확인하거나 재시도하세요.', 'error'); return; } const trade = state.session.scannedTrades[Number(input.closest('tr').dataset.index)]; trade[field] = type === 'number' ? parseInt(input.value, 10) || 0 : input.value; changed(); });
+  input.addEventListener('change', () => {
+    if (window.__bdoScheduleRuntime?.pending) { input.value = row[field] ?? ''; setStatusFn('완료 저장을 먼저 확인하거나 재시도하세요.', 'error'); return; }
+    const index = Number(input.closest('tr').dataset.index);
+    const trade = state.session.scannedTrades[index];
+    if (field === 'island') {
+      const nextIsland = canonicalizeIslandName(input.value);
+      const duplicate = !trade.deleted && nextIsland && state.session.scannedTrades.some((other, otherIndex) =>
+        otherIndex !== index && !other.deleted && canonicalizeIslandName(other.island) === nextIsland);
+      if (duplicate) {
+        input.value = trade.island ?? '';
+        setStatusFn(`물교 목록에 이미 있는 섬입니다: ${nextIsland}`, 'error');
+        return;
+      }
+      trade.island = nextIsland;
+      input.value = nextIsland;
+    } else {
+      trade[field] = type === 'number' ? parseInt(input.value, 10) || 0 : input.value;
+    }
+    changed();
+  });
   if (itemPrefix) { const group = document.createElement('div'); group.className = 'tier-item-input'; group.append(itemPrefix, input); td.append(group); }
   else td.append(input);
   return td;
@@ -143,7 +162,17 @@ function renderTradeList() {
     for (const [field, type, min] of [["island", "text"], ["fromItem", "text"], ["reqAmount", "number", 1], ["toItem", "text"], ["count", "number", 0], ["yield", "number", 1]]) row.append(addInput(trade, field, type, min));
     const stateCell = document.createElement("td"); stateCell.className = "trade-row-state"; const label = el("label", undefined, "trade-toggle"); const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = !trade.disabled; checkbox.setAttribute("aria-label", "사용 · " + (trade.island || index + 1) + "행");
     checkbox.addEventListener("change", () => { if (window.__bdoScheduleRuntime?.pending) { checkbox.checked = !trade.disabled; setStatusFn("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; } trade.disabled = !checkbox.checked; changed(); }); label.append(checkbox, el("span", trade.disabled ? "제외" : "사용")); stateCell.append(label); if (trade.deleted) stateCell.append(el("span", "삭제됨", "trade-deleted-label")); row.append(stateCell);
-    const actionCell = document.createElement("td"); const toggleDeleted = el("button", trade.deleted ? "복원" : "삭제"); toggleDeleted.type = "button"; toggleDeleted.addEventListener("click", () => { if (window.__bdoScheduleRuntime?.pending) { setStatusFn("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; } trade.deleted = !trade.deleted; changed(); }); actionCell.append(toggleDeleted); row.append(actionCell); body.append(row);
+    const actionCell = document.createElement("td"); const toggleDeleted = el("button", trade.deleted ? "복원" : "삭제"); toggleDeleted.type = "button"; toggleDeleted.addEventListener("click", () => {
+      if (window.__bdoScheduleRuntime?.pending) { setStatusFn("완료 저장을 먼저 확인하거나 재시도하세요.", "error"); return; }
+      if (trade.deleted && trade.island) {
+        const island = canonicalizeIslandName(trade.island);
+        if (trades.some((other, otherIndex) => otherIndex !== index && !other.deleted && canonicalizeIslandName(other.island) === island)) {
+          setStatusFn(`물교 목록에 이미 있는 섬이라 복원할 수 없습니다: ${island}`, "error"); return;
+        }
+        trade.island = island;
+      }
+      trade.deleted = !trade.deleted; changed();
+    }); actionCell.append(toggleDeleted); row.append(actionCell); body.append(row);
   });
   table.append(body); root.append(table);
 }

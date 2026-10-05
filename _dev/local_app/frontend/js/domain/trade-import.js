@@ -48,6 +48,22 @@ export function getBestMatch(target, candidates, forceMatch = false) {
   return (forceMatch || min <= 3) ? best : target;
 }
 
+const ISLAND_CANONICAL_ALIASES = Object.freeze({
+  "아레하자": "아레하자 마을",
+  "하코번": "하코번 섬",
+  "해모": "해모 섬",
+  "깊은 밤": "깊은 밤의 항구",
+  "소산 선착장": "소산 주둔지 선착장",
+  "소산 주둔지": "소산 주둔지 선착장",
+  "성전 해안": "성전 해안 정찰지",
+  "일리야": "일리야 섬",
+});
+
+export function canonicalizeIslandName(value) {
+  const name = String(value || "").trim();
+  return ISLAND_CANONICAL_ALIASES[name] || name;
+}
+
 export function getSafeUniqueItemMatch(target, candidates) {
   const normalizedTarget = String(target || "").replace(/\s+/g, "");
   if (!normalizedTarget) return { value: "", status: "unmatched" };
@@ -207,7 +223,7 @@ export function processParsedTrades(newTrades, existingTrades, catalog) {
   const masterItems = [];
   for (let tier = 1; tier <= 7; tier++) masterItems.push(...(masterData[tier] || []));
   const allItems = [...masterItems, ...specialItems];
-  const trades = (existingTrades || []).map((trade) => ({ ...trade }));
+  const trades = (existingTrades || []).map((trade) => ({ ...trade, island: canonicalizeIslandName(trade.island) }));
   const outcomes = [];
   let addedCount = 0;
   let rejectedCount = 0;
@@ -220,7 +236,7 @@ export function processParsedTrades(newTrades, existingTrades, catalog) {
       outcomes.push({ index, status: "held", field: "island" });
       return;
     }
-    const rawIsland = String(nt.island || "").trim();
+    const rawIsland = canonicalizeIslandName(nt.island);
     const rawFrom = String(nt.fromItem || "").replace(/\[.*?\]\s*/g, "").replace(/\s*x\s*\d+/gi, "").trim();
     const rawTo = String(nt.toItem || "").replace(/\[.*?\]\s*/g, "").replace(/\s*x\s*\d+/gi, "").trim();
     const toMatch = getSafeUniqueItemMatch(rawTo, allItems);
@@ -252,6 +268,7 @@ export function processParsedTrades(newTrades, existingTrades, catalog) {
       if (toTier === "mat" || toTier === "coin") fromCandidates = allItems;
       else if (toTier > 1) fromCandidates = masterData[toTier - 1] || [];
     }
+    safeIsland = canonicalizeIslandName(safeIsland);
 
     if (toTier === 1 && masterData[0]) fromCandidates = masterData[0];
     if (toTier === 1 && rawFrom && !masterData[0]) safeFrom = rawFrom;
@@ -265,25 +282,30 @@ export function processParsedTrades(newTrades, existingTrades, catalog) {
       }
     }
 
-    const sameIslandAndOutput = (trade) => !trade.deleted && String(trade.island || "").trim() === safeIsland && String(trade.toItem || "").replace(/\s+/g, "") === safeTo.replace(/\s+/g, "");
-    const isDuplicate = trades.some((trade) => sameIslandAndOutput(trade) && String(trade.fromItem || "").replace(/\s+/g, "") === safeFrom.replace(/\s+/g, ""));
-    const hasInputConflict = trades.some((trade) => sameIslandAndOutput(trade) && String(trade.fromItem || "").replace(/\s+/g, "") !== safeFrom.replace(/\s+/g, ""));
-    if (hasInputConflict) {
-      rejectedCount++; conflictCount++;
-      outcomes.push({ index, status: "conflict" });
-      return;
-    }
-    if (isDuplicate) {
-      duplicateCount++;
-      outcomes.push({ index, status: "duplicate" });
-      return;
-    }
     const trade = {
       island: safeIsland, fromItem: safeFrom, toItem: safeTo,
       reqAmount: parseInt(String(nt.reqAmount).replace(/[^0-9]/g, "")) || 1,
       count: parseInt(String(nt.count).replace(/[^0-9]/g, "")) || 0,
       yield: rowYield,
     };
+    const sameIsland = (row) => !row.deleted && canonicalizeIslandName(row.island) === safeIsland;
+    const sameValue = (left, right) => String(left || "").replace(/\s+/g, "") === String(right || "").replace(/\s+/g, "");
+    const existing = trades.find(sameIsland);
+    if (existing) {
+      const isExactDuplicate = sameValue(existing.fromItem, trade.fromItem)
+        && sameValue(existing.toItem, trade.toItem)
+        && Number(existing.reqAmount ?? 1) === trade.reqAmount
+        && Number(existing.count ?? 0) === trade.count
+        && Number(existing.yield) === trade.yield;
+      if (isExactDuplicate) {
+        duplicateCount++;
+        outcomes.push({ index, status: "duplicate" });
+      } else {
+        rejectedCount++; conflictCount++;
+        outcomes.push({ index, status: "conflict" });
+      }
+      return;
+    }
     trades.push(trade);
     addedCount++;
     outcomes.push({ index, status: "accepted", trade });

@@ -12,9 +12,9 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     
     let usedP = 0;
     const regions = { 
-        east: ["하코번 섬", "아레하자 마을", "하코번", "아레하자"], 
-        west: ["해모 섬", "달래나루", "해모"], 
-        south: ["그란디하", "깊은 밤의 항구", "깊은 밤"] 
+        east: ["하코번 섬", "아레하자 마을"],
+        west: ["해모 섬", "달래나루"],
+        south: ["그란디하", "깊은 밤의 항구"]
     };
 
     let targetRegions = [];
@@ -407,9 +407,9 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             else if (t.toTier === 4) score += APP_CONFIG.TIER_PRIORITY.T4;
             else if (t.toTier === 5) score += APP_CONFIG.TIER_PRIORITY.T5;
 
-            if (t.toTier >= 1 && t.toTier <= 4 && virtualStock <= (parseInt(tierRules[t.toTier])||20)) {
+            if (t.toTier >= 1 && t.toTier <= 4 && virtualStock <= schedulerNumberOrDefault(tierRules[t.toTier], 20)) {
                 score += (APP_CONFIG.PRESERVATION_BONUS || 3000); t.isUrgent = true;
-            } else if (t.toTier === 5 && virtualStock < (parseInt(tierRules[5])||1)) {
+            } else if (t.toTier === 5 && virtualStock < schedulerNumberOrDefault(tierRules[5], 1)) {
                 score += (APP_CONFIG.EMERGENCY_BONUS || 10000); t.isUrgent = true;
             } else { t.isUrgent = false; }
             t.score = score; t.lack = lack;
@@ -505,7 +505,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
                         if (k < origLen) {
                             if (sim.stepData[k].afterW > normW) { isValid = false; break; }
                         } else {
-                            if (sim.stepData[k].afterW > wLimit) { isValid = false; break; }
+                            if (sim.stepData[k].afterW > weightLimit) { isValid = false; break; }
                         }
                     }
 

@@ -33,6 +33,26 @@ try {
   await send("Page.enable"); await send("Runtime.enable");
   await waitFor(async () => (await evaluate("document.querySelectorAll('.inventory-row').length")) === 70, "new app loaded");
 
+  const islandEdit = await evaluate(`(async()=>{
+    const {state}=await import('/assets/js/state.js');const {renderTradeList}=await import('/assets/js/trade-ui.js');
+    const original=state.session;
+    state.session={...original,scannedTrades:[
+      {island:'하코번 섬',fromItem:'팔랑나비 박제품',toItem:'발렌시아 사막 보검',reqAmount:1,count:1,yield:1},
+      {island:'올비아 해안',fromItem:'발렌시아 사막 보검',toItem:'최고급 하이델산 포도주',reqAmount:1,count:1,yield:1}
+    ]};renderTradeList();
+    let fields=[...document.querySelectorAll('.trade-field-island input')];
+    fields[1].value='하코번';fields[1].dispatchEvent(new Event('change',{bubbles:true}));
+    const duplicateRejected=state.session.scannedTrades[1].island==='올비아 해안'&&fields[1].value==='올비아 해안';
+    state.session.scannedTrades[0].deleted=true;renderTradeList();
+    fields=[...document.querySelectorAll('.trade-field-island input')];
+    fields[1].value='하코번';fields[1].dispatchEvent(new Event('change',{bubbles:true}));
+    const aliasCanonicalized=state.session.scannedTrades[1].island==='하코번 섬';
+    state.session=original;renderTradeList();
+    await import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle());
+    return {duplicateRejected,aliasCanonicalized};
+  })()`);
+  if(!islandEdit.duplicateRejected||!islandEdit.aliasCanonicalized)throw Error(`manual island identity validation failed: ${JSON.stringify(islandEdit)}`);
+
 
   const durations = await evaluate("import('/assets/js/duration.js').then(({totalDepartureDuration:f})=>[f([{totalTime:59.75},{totalTime:.5}]),f([{totalTime:.009},{totalTime:.009}]),f([{totalTime:1500}]),f([{totalTime:null}])])");
   if (JSON.stringify(durations)!==JSON.stringify(["1시간 0분 15초","0시간 0분 1초","25시간 0분 0초","미확인"])) throw Error(`duration contract changed: ${JSON.stringify(durations)}`);
@@ -280,7 +300,7 @@ try {
   console.log(JSON.stringify({repeatedConflicts,zeroCountProgress,nativeAudioContextsClosed:nativeAudio},null,2));
   console.log(JSON.stringify({activeSettingsAppliedAndReloaded:appliedSettings,completionKinds,tier7Completed},null,2));
   console.log(JSON.stringify({enteredParleyExactCompletion:exactCases,actualRemainder4to5:remainderCase,editedParleyInsufficientCompletionBlocked:blocked},null,2));
-  console.log(JSON.stringify({ ok: true, browser: "Chrome headless", sameInputReferenceOutputExact: true, comparedScenarios: ["inner trade", "crow coin", "tier 7"], scheduleGenerated: generatedState, timerToggle: true, manualRouteReorder: true, manualCountAdjustment: true, waypointAddedAndCompletedWithMaterialPatch: true, completionResult: JSON.parse(sessionResult), lostResponseRetryUsedSameRequest: true, duplicateCompletionBlocked: true, inventoryUpdatedOnce: true, completionInvocationCounts: { waypoint: 1, tradeAfterResponseLossAndDuplicateClick: 1, tradeAfter409Rebase: conflictResult.calls }, actual409RebasedDelta: { source: conflictResult.source, target: conflictResult.target }, sessionRestoredOnReload: true, persistentInventorySurvivedReload: true, temporaryDatabase: true }, null, 2));
+  console.log(JSON.stringify({ ok: true, browser: "Chrome headless", sameInputReferenceOutputExact: true, comparedScenarios: ["inner trade", "crow coin", "tier 7"], manualIslandIdentity: islandEdit, scheduleGenerated: generatedState, timerToggle: true, manualRouteReorder: true, manualCountAdjustment: true, waypointAddedAndCompletedWithMaterialPatch: true, completionResult: JSON.parse(sessionResult), lostResponseRetryUsedSameRequest: true, duplicateCompletionBlocked: true, inventoryUpdatedOnce: true, completionInvocationCounts: { waypoint: 1, tradeAfterResponseLossAndDuplicateClick: 1, tradeAfter409Rebase: conflictResult.calls }, actual409RebasedDelta: { source: conflictResult.source, target: conflictResult.target }, sessionRestoredOnReload: true, persistentInventorySurvivedReload: true, temporaryDatabase: true }, null, 2));
 } finally {
   if (!external) await fetch(`${baseUrl}__test__/shutdown`,{method:"POST"}).catch(()=>{});
   try { if(socket?.readyState===WebSocket.OPEN)await send("Browser.close"); } catch {} try { socket?.close(); } catch {} try { chrome?.kill(); } catch {} try { server?.kill(); } catch {}

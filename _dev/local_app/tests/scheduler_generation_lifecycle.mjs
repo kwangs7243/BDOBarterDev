@@ -55,6 +55,41 @@ for (const [label,change] of failures) {
 }
 {
   const {ctx,app,events,generate} = setup();
+  app.session.timers.return_speed_0 = {endTime:456,played:false};
+  const previousSchedule = app.session.schedule;
+  const previousCompleted = app.session.completed;
+  const previousDiagnostics = app.session.diagnostics;
+  const previousTimers = app.session.timers;
+  const previousSpeed = vm.runInContext('sortiesSpeed', ctx);
+  const previousBalance = vm.runInContext('sortiesBalance', ctx);
+  const previousDebug = ctx.ENGINE_DEBUG;
+  const previousDebugSnapshot = JSON.stringify(previousDebug);
+  const previousSessionSnapshot = JSON.stringify({schedule:app.session.schedule,completed:app.session.completed,
+    diagnostics:app.session.diagnostics,timers:app.session.timers});
+  const previousTrades = JSON.stringify(app.session.scannedTrades);
+  const previousInventory = JSON.stringify(app.inventory);
+  const originalBuild = ctx.buildSorties;
+  ctx.buildSorties = function(trades, mode) {
+    if (mode === 'balance') throw new Error('injected balance generation failure');
+    return originalBuild.call(this, trades, mode);
+  };
+  assert.equal(generate(), false, 'balance exception must fail the generation');
+  assert.equal(app.session.schedule, previousSchedule);
+  assert.equal(app.session.completed, previousCompleted);
+  assert.equal(app.session.diagnostics, previousDiagnostics);
+  assert.equal(app.session.timers, previousTimers);
+  assert.equal(vm.runInContext('sortiesSpeed', ctx), previousSpeed);
+  assert.equal(vm.runInContext('sortiesBalance', ctx), previousBalance);
+  assert.equal(ctx.ENGINE_DEBUG, previousDebug);
+  assert.equal(JSON.stringify(ctx.ENGINE_DEBUG), previousDebugSnapshot);
+  assert.equal(JSON.stringify({schedule:app.session.schedule,completed:app.session.completed,
+    diagnostics:app.session.diagnostics,timers:app.session.timers}), previousSessionSnapshot);
+  assert.equal(JSON.stringify(app.session.scannedTrades), previousTrades);
+  assert.equal(JSON.stringify(app.inventory), previousInventory);
+  assert.deepEqual(events, []);
+}
+{
+  const {ctx,app,events,generate} = setup();
   const plan = JSON.stringify(app.session.schedule), stock = JSON.stringify(app.inventory);
   const rows = JSON.stringify(app.session.scannedTrades);
   app.session.timers.return_speed_0 = {endTime:123,played:false};
@@ -77,4 +112,4 @@ for (const [label,change] of failures) {
   assert.equal(JSON.stringify(app.session.scannedTrades), rows);
   assert.ok(vm.runInContext('getRoutePermutationOrders.cache?.size || 0', ctx) <= 6);
 }
-console.log('PASS: 7 failed-generation cases preserve previous state; 20 regenerations reset timers, retain exact plans, and keep modes and source data independent');
+console.log('PASS: 7 early failures and balance exception preserve previous state; 20 regenerations reset timers, retain exact plans, and keep modes and source data independent');
