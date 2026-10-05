@@ -80,13 +80,27 @@ window.completeWaypoint = function(btn, mode, sortieIdx, tradeIdx) {
 };
 
 function playAlarmSound() {
+    let ctx, cleanupTimer, closed = false, remaining = 2;
+    const nodes = [];
+    const cleanup = () => {
+        if (closed) return;
+        closed = true;
+        clearTimeout(cleanupTimer);
+        for (const node of nodes) { try { node.disconnect(); } catch {} }
+        if (ctx) { try { Promise.resolve(ctx.close()).catch(() => {}); } catch {} }
+    };
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
-        const ctx = new AudioContext();
+        ctx = new AudioContext();
+        // A suspended context may never emit ended events when autoplay is blocked.
+        cleanupTimer = setTimeout(cleanup, 1000);
         const playTone = (freq, startTime, duration) => {
             const osc = ctx.createOscillator();
+            nodes.push(osc);
             const gain = ctx.createGain();
+            nodes.push(gain);
+            osc.onended = () => { if (--remaining === 0) cleanup(); };
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, startTime);
             gain.gain.setValueAtTime(1, startTime);
@@ -98,7 +112,7 @@ function playAlarmSound() {
         };
         playTone(880, ctx.currentTime, 0.3);       
         playTone(1108.73, ctx.currentTime + 0.15, 0.5); 
-    } catch(e) { console.warn("웹 오디오 에러"); }
+    } catch(e) { cleanup(); console.warn("웹 오디오 에러"); }
 }
 
 window.completeTrade = function(btn, mode, sortieIdx, tradeIdx, originalIdx) {
