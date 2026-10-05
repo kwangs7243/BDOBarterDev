@@ -126,6 +126,12 @@ export const deleteScheduleSlot = (slot) => enqueueMutation((envelope) => api.de
 // Reconciliation is allowed only for inventory edits while this working session is unchanged.
 export function saveCompletionInventory(request) {
   return enqueue(async () => {
+    if (request.beforeInventory && !Object.hasOwn(request, "inventoryDeltas")) {
+      // Rebasing mutates the request's absolute stocks; retries must retain the original consumption/gain.
+      Object.defineProperty(request, "inventoryDeltas", { value: Object.freeze(Object.fromEntries(
+        Object.entries(request.patch.items).map(([name, update]) => [name, update.stock - request.beforeInventory[name]])
+      )), enumerable: false });
+    }
     if (!request.session) request.session = runtime().snapshotWorkingSession(state);
     if (request.sessionRevision === undefined) {
       request.baseRevision = state.revision;
@@ -147,11 +153,15 @@ export function saveCompletionInventory(request) {
       if (!request.beforeInventory) throw error;
       const current = new Map(state.inventory.map((row) => [row.programName, row.stock]));
       const items = {};
-      for (const [name, update] of Object.entries(request.patch.items)) {
+      for (const name of Object.keys(request.patch.items)) {
         const stock = current.get(name);
         const before = request.beforeInventory[name];
         if (!Number.isSafeInteger(stock) || !Number.isSafeInteger(before)) throw new Error(`${name}의 재고가 미확인 상태입니다.`);
-        items[name] = { stock: Math.max(0, stock + update.stock - before) };
+        const delta = request.inventoryDeltas[name];
+        const next = stock + delta;
+        if (!Number.isSafeInteger(delta) || !Number.isSafeInteger(next)) throw new Error(`${name}의 재고 계산값이 올바르지 않습니다.`);
+        if (next < 0) throw new Error(`${name}의 현재 재고가 완료 차감량보다 부족합니다. 재고를 확인한 뒤 저장을 재시도하세요.`);
+        items[name] = { stock: next };
       }
       request.mutationId = createMutationId();
       request.baseRevision = state.revision;
