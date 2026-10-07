@@ -218,10 +218,11 @@ async function renderSlotPreviews() {
       if (context !== dialogContext || !dialog.open) return;
       const canvas = [...dialog.querySelectorAll("[data-slot-preview]")].find((node) => node.dataset.slotPreview === slot.slot);
       if (!canvas) continue;
-      const width = context.report.grid.slotWidth;
+      const width = slot.width ?? context.report.grid.slotWidth;
+      const height = slot.height ?? context.report.grid.slotWidth;
       const imageContext = canvas.getContext("2d");
       imageContext.imageSmoothingEnabled = false;
-      imageContext.drawImage(bitmap, slot.x, slot.y, width, width, 0, 0, canvas.width, canvas.height);
+      imageContext.drawImage(bitmap, slot.x, slot.y, width, height, 0, 0, canvas.width, canvas.height);
     }
   } finally { bitmap.close?.(); }
 }

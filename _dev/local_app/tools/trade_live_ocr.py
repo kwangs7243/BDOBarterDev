@@ -194,6 +194,53 @@ def merge_quantity_readings(primary, token, allowed_values=None, field=None):
     return {**primary, "variants": combined, "reviewRequired": primary["reviewRequired"] or bool(conflicts)}
 
 
+def read_outlined_requirement(reader, row):
+    """Keep numeral edges next to their dark outline without the bright item artwork."""
+    import cv2
+
+    crop = _crop(row, (.287, .55, .340, .93))
+    rgb = np.asarray(crop.convert("RGB")).astype(np.int16)
+    white = (rgb.min(axis=2) > 155) & (rgb.max(axis=2) - rgb.min(axis=2) < 55)
+    dark = (rgb.max(axis=2) < 100).astype(np.uint8)
+    mask = white & cv2.dilate(dark, np.ones((3, 3), dtype=np.uint8)).astype(bool)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), 8)
+    candidates = [index for index in range(1, count)
+                  if stats[index, cv2.CC_STAT_HEIGHT] >= crop.height * .30]
+    if not candidates:
+        return None
+    anchor = stats[max(candidates, key=lambda index: stats[index, cv2.CC_STAT_LEFT] + stats[index, cv2.CC_STAT_WIDTH])]
+    top, bottom = anchor[cv2.CC_STAT_TOP], anchor[cv2.CC_STAT_TOP] + anchor[cv2.CC_STAT_HEIGHT]
+    candidates = [index for index in candidates
+                  if min(bottom, stats[index, cv2.CC_STAT_TOP] + stats[index, cv2.CC_STAT_HEIGHT])
+                  - max(top, stats[index, cv2.CC_STAT_TOP])
+                  >= .7 * max(anchor[cv2.CC_STAT_HEIGHT], stats[index, cv2.CC_STAT_HEIGHT])]
+    selected = np.isin(labels, candidates)
+    ys, xs = np.nonzero(selected)
+    if not len(xs) or xs.min() == 0 or xs.max() == crop.width - 1 or ys.min() == 0 or ys.max() == crop.height - 1:
+        return None
+    filtered = Image.fromarray(np.where(selected[:, :, None], rgb, 0).astype(np.uint8))
+    filtered = ImageOps.expand(filtered.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)), 3, fill="black")
+    readings = [reader.read(filtered), reader.read(ImageOps.invert(filtered))]
+    if (not all(re.fullmatch(r"\d+", text) and int(text) >= 1 and score >= .8 for text, score in readings)
+            or int(readings[0][0]) != int(readings[1][0])):
+        return None
+    return {"corrected": int(readings[0][0]), "confidence": min(score for _, score in readings),
+            "variants": [{"text": text, "confidence": score, "method": "outline-mask"} for text, score in readings]}
+
+
+def read_requirement(reader, row):
+    result = merge_quantity_readings(read_numeric(reader, _requirement_crop(row), "reqAmount"),
+                                     read_quantity_token(reader, row, "reqAmount"), field="reqAmount")
+    if not result["reviewRequired"]:
+        return result
+    outlined = read_outlined_requirement(reader, row)
+    if outlined is None:
+        return result
+    # Saved small-font corrections still contain a missing digit; this remains a review candidate.
+    return {**result, **outlined, "variants": result["variants"] + outlined["variants"],
+            "reviewRequired": True, "valueSource": "OCR_CANDIDATE"}
+
+
 def read_numeric(reader, crop, field, allowed_values=None):
     mask = _ink(crop, numeric=True)
     # Item artwork can be white too; the number is the rightmost baseline token.
@@ -488,8 +535,7 @@ def recognize_live(captures, model_dir, batch_id):
                         source, destination = trade_stages(fields, item_stages)
                         allowed = (2, 3) if field == "yield" and (source, destination) in {(1, 2), (2, 3)} else None
                         fields[field] = (read_yield(reader, row, allowed, destination) if field == "yield"
-                                         else merge_quantity_readings(read_numeric(reader, crop, field, allowed_values=allowed),
-                                                                      read_quantity_token(reader, row, field), field=field))
+                                         else read_requirement(reader, row))
                     else:
                         fields[field] = read_catalog_name(reader, crop, islands if field == "island" else items,
                                                           land_items if field == "fromItem" else ())

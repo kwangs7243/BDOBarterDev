@@ -131,3 +131,13 @@ class LiveApiTests(unittest.TestCase):
         row["rowBox"]["width"] = 81
         self.assertEqual(self.post(feedback, field="feedback").status_code, 422)
         self.assertEqual(len(self.records()), 1)
+
+    def test_previous_worker_review_still_saves_after_recognition_upgrade(self):
+        result = self.post(self.batch()).get_json()["result"]
+        feedback = {"version": 2, "feedbackId": str(uuid4()), "captures": [self.capture], "engineId": ENGINE_ID,
+                    "modelVersion": MODEL_BUNDLE_SHA256, "workerVersion": "trade-live-worker-v9", "corrections": [],
+                    "snapshot": {"phase": "reviewed", "result": result}}
+        before = self.client.get("/api/bootstrap").get_json()
+        self.assertEqual(self.post(feedback, field="feedback").status_code, 200)
+        self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
+        self.assertEqual(json.loads(self.records()[0][5])["workerVersion"], "trade-live-worker-v9")

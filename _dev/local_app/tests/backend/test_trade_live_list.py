@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from PIL import Image
-from local_app.tools.trade_live_ocr import _requirement_crop, apply_trade_rules, detect_live_rows, read_count, read_numeric, read_yield, correct_name, read_catalog_name, recognize_live
+from local_app.tools.trade_live_ocr import _requirement_crop, apply_trade_rules, detect_live_rows, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
@@ -155,6 +155,51 @@ class LiveListTests(unittest.TestCase):
         with patch.dict("sys.modules", {"cv2": fake_cv2}):
             result = read_numeric(reader, image, "reqAmount")
         self.assertEqual(result["corrected"], 200)
+        self.assertTrue(result["reviewRequired"])
+
+    def test_outline_candidate_improves_value_and_preserves_original_evidence_and_review(self):
+        primary = {"rawOCR": "20", "corrected": 20, "confidence": .99, "reviewRequired": True,
+                   "variants": [{"text": "20", "confidence": .99}]}
+        token = {"corrected": None, "reviewRequired": True, "variants": []}
+        outlined = {"corrected": 200, "confidence": .98,
+                    "variants": [{"text": "200", "confidence": .98, "method": "outline-mask"}]}
+        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined):
+            result = read_requirement(None, Image.new("RGB", (1000, 70)))
+        self.assertEqual(result["corrected"], 200)
+        self.assertEqual(result["rawOCR"], "20")
+        self.assertEqual(result["variants"], primary["variants"] + outlined["variants"])
+        self.assertTrue(result["reviewRequired"])
+        self.assertEqual(primary["corrected"], 20)
+
+    def test_confirmed_requirement_bypasses_outline_candidate(self):
+        primary = {"rawOCR": "100", "corrected": 100, "confidence": .99, "reviewRequired": False, "variants": []}
+        token = {"corrected": None, "reviewRequired": True, "variants": []}
+        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("local_app.tools.trade_live_ocr.read_outlined_requirement") as outlined:
+            result = read_requirement(None, Image.new("RGB", (1000, 70)))
+        self.assertEqual(result, primary)
+        outlined.assert_not_called()
+
+    def test_unresolved_outline_does_not_replace_existing_requirement(self):
+        primary = {"rawOCR": "", "corrected": None, "confidence": 0, "reviewRequired": True, "variants": []}
+        token = {"corrected": None, "reviewRequired": True, "variants": []}
+        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=None):
+            result = read_requirement(None, Image.new("RGB", (1000, 70)))
+        self.assertEqual(result, primary)
+
+    def test_small_font_candidate_cannot_become_automatic_truth(self):
+        primary = {"rawOCR": "1", "corrected": 1, "confidence": .99, "reviewRequired": True, "variants": []}
+        token = {"corrected": None, "reviewRequired": True, "variants": []}
+        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value={"corrected": 1, "confidence": 1, "variants": []}):
+            result = read_requirement(None, Image.new("RGB", (658, 47)))
+        self.assertEqual(result["corrected"], 1)
         self.assertTrue(result["reviewRequired"])
 
     def test_real_rows_survive_image_scaling(self):

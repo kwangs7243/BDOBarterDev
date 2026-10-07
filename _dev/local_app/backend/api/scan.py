@@ -71,10 +71,11 @@ def warehouse_dataset():
                     for slot in report["slots"]:
                         crop_name = None
                         if all(type(slot.get(key)) is int for key in ("x", "y")) and type(report.get("grid", {}).get("slotWidth")) is int:
-                            width = report["grid"]["slotWidth"]
+                            width = slot.get("width", report["grid"]["slotWidth"])
+                            height = slot.get("height", report["grid"]["slotWidth"])
                             crop_name = f"{base}/slots/{slot['slot']}.png"
                             pixels = BytesIO()
-                            image.crop((slot["x"], slot["y"], slot["x"] + width, slot["y"] + width)).save(pixels, format="PNG")
+                            image.crop((slot["x"], slot["y"], slot["x"] + width, slot["y"] + height)).save(pixels, format="PNG")
                             bundle.writestr(crop_name, pixels.getvalue())
                         labels = [{"mutationId": entry["mutation_id"], "createdAt": entry["created_at"], "user": row,
                                    **label_verification(row)}

@@ -78,3 +78,18 @@ class FeedbackV2Tests(unittest.TestCase):
         body = self.body(); body["feedback"]["rows"][-1] = body["feedback"]["rows"][0]
         self.assertEqual(self.client.patch("/api/inventory", json=body).status_code, 422)
         self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
+
+    def test_export_preserves_capture_and_each_slot_dimensions(self):
+        image = io.BytesIO()
+        Image.new("RGB", (10, 10), (40, 60, 80)).save(image, format="PNG")
+        slot = {**self.slots[0], "width": 7, "height": 9}
+        report = {"slots": [slot], "grid": {"slotWidth": 10}}
+        scan_id = self.app.extensions["bdo_storage"].record_warehouse_scan(image.getvalue(), report, {})
+        response = self.client.get("/api/warehouse-dataset")
+        try:
+            with zipfile.ZipFile(io.BytesIO(response.data)) as archive:
+                self.assertEqual(archive.read(f"scans/{scan_id}/input.png"), image.getvalue())
+                with Image.open(io.BytesIO(archive.read(f"scans/{scan_id}/slots/R1C1.png"))) as crop:
+                    self.assertEqual(crop.size, (7, 9))
+        finally:
+            response.close()

@@ -12,7 +12,9 @@ const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\
 const profile = await mkdtemp(join(tmpdir(), "bdo-spec003-browser-"));
 const database = join(profile, "isolated.sqlite3");
 const fixture = resolve(root, "local_app/tests/fixtures/warehouse_patch/barter_only.png");
-const reviewFixture = resolve(root, "local_app/tests/fixtures/warehouse_patch/mixed.png");
+const scaledFixture = join(profile, "warehouse-scaled.png");
+const scaled = spawnSync(python, ["-B", "-c", "import sys; from PIL import Image; i=Image.open(sys.argv[1]); i.resize((round(i.width*.8),round(i.height*.8)),Image.Resampling.LANCZOS).save(sys.argv[2])", fixture, scaledFixture], { windowsHide: true, encoding: "utf8" });
+if (scaled.status !== 0) throw new Error(`Scaled fixture creation failed: ${scaled.stderr}`);
 const sitePackages = process.env.BDO_EXTRA_SITE_PACKAGES;
 const prelude = sitePackages ? `import sys; sys.path.append(${JSON.stringify(sitePackages)}); ` : "";
 const pythonCode = `${prelude}import os,threading; from local_app.backend.app import create_app; app=create_app(r'${database}', testing=True); app.add_url_rule('/__test__/shutdown',view_func=lambda:(threading.Timer(.2,lambda:os._exit(0)).start() or {'ok':True}),methods=['POST']); app.run(host='127.0.0.1', port=18767, use_reloader=False, threaded=True)`;
@@ -58,7 +60,7 @@ try {
   const scan = await evaluate(`(async()=>{const f=window.__warehouseTestFile;const d=new FormData();d.append('image',f);return fetch('/api/warehouse-scan',{method:'POST',body:d}).then(r=>r.json())})()`);
   const uncertain = scan.report.slots.filter(s=>!['MATCH','EMPTY','TIER5_IGNORE'].includes(s.decision));
   if (await evaluate("document.querySelectorAll('.patch-correction-row').length") !== uncertain.length) throw Error('review does not contain exactly uncertain slots');
-  const seeds=scan.report.slots.filter(s=>String(s.bestCandidate).includes('씨앗 주머니'));
+  const seeds=uncertain.filter(s=>String(s.bestCandidate).includes('씨앗 주머니'));
   const afterScan = await bootstrap();
   if (afterScan.revision!==before.revision) throw Error('scan changed inventory');
   await evaluate("document.querySelector('.patch-review-footer [data-action=cancel]').click()");
@@ -75,7 +77,8 @@ try {
   await evaluate("window.__warehouseWrites=[];window.__warehouseOriginalFetch=window.fetch.bind(window);window.fetch=(url,options)=>{if(String(url)==='/api/inventory'&&options?.method==='PATCH')window.__warehouseWrites.push(JSON.parse(options.body));return window.__warehouseOriginalFetch(url,options)};document.querySelector('.patch-review-footer [data-action=apply]').click()");
   await waitFor(async()=>!(await evaluate("document.querySelector('.patch-review-dialog').open")),'only uncertain edits saved');
   const writes=await evaluate('window.__warehouseWrites');
-  if(writes.length!==1||writes[0].feedback.rows.filter(r=>r.agreement==='item_only').length!==3||writes[0].feedback.rows.filter(r=>r.agreement==='unchecked').length!==50)throw Error('automatic MATCH treated as user verified truth');
+  const automaticCount=scan.report.slots.filter(s=>s.decision==='MATCH').length;
+  if(writes.length!==1||writes[0].feedback.rows.filter(r=>r.agreement==='item_only').length!==uncertain.length||writes[0].feedback.rows.filter(r=>r.agreement==='unchecked').length!==automaticCount)throw Error('automatic MATCH treated as user verified truth');
   const edited=await bootstrap();
   for(const seed of seeds)if(edited.inventory.find(i=>i.programName===seed.bestCandidate).stock!==seed.quantity.value+1)throw Error('selective edit missing');
   await evaluate('window.fetch=window.__warehouseOriginalFetch');
@@ -91,7 +94,7 @@ try {
   await waitFor(async()=>await evaluate("window.__warehouseStream.getTracks().every(t=>t.readyState==='ended')"),'warehouse stream disconnected after dialog close');
   console.log(JSON.stringify({ok:true,selectiveReview:uncertain.length,automaticMatches:Object.keys(scan.patch.items).length,seedDiagnostics:seeds.map(s=>({name:s.bestCandidate,decision:s.decision,gap:s.scoreGap})),inventorySavedOnce:true,roiResizeAndCapture:true,streamClosed:true},null,2));
 
-  async function uploadAndScan(viaDrop = false, imagePath = fixture) {
+  async function uploadAndScan(viaDrop = false, imagePath = scaledFixture) {
     const queuedBefore = Number(await evaluate("document.querySelector('#warehouse-scan-dialog')?.dataset.queueLength ?? 0"));
     await evaluate("document.querySelector('#open-warehouse-scan').click()");
     const doc = await send("DOM.getDocument", { depth: -1, pierce: true });

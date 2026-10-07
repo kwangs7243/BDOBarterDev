@@ -108,7 +108,7 @@ def process_warehouse_upload(
     temporary_directory: str | Path | None = None,
     record_scan=None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Call the unchanged reference converter with one validated temporary PNG."""
+    """Run the local converter with one validated temporary PNG."""
     if not upload.filename or Path(upload.filename).suffix.lower() != ".png":
         raise WarehouseScanError("unsupported_image_format", "PNG 이미지 한 장만 지원합니다.", 415)
     if not _SCAN_LOCK.acquire(blocking=False):
@@ -125,7 +125,9 @@ def process_warehouse_upload(
 
         root = Path(__file__).resolve().parents[3]
         reference_json = root / "reference" / "barter_items.json"
-        templates_path = root / "tools" / "warehouse_patch" / "quantity_templates.npz"
+        templates_path = root / "recognition-local" / "models" / "warehouse" / "quantity_templates.npz"
+        if not templates_path.is_file():
+            templates_path = root / "tools" / "warehouse_patch" / "quantity_templates.npz"
         patch, report = convert(temp_path, reference_json, templates_path)
         _validate_scanner_patch(patch, report, catalog)
         safe = _safe_report(report)
@@ -137,7 +139,7 @@ def process_warehouse_upload(
             safe["scanId"] = record_scan(temp_path.read_bytes(), safe, provenance)
         return patch, safe
     except GridDetectionError as error:
-        raise WarehouseScanError("SLOT_GRID_DETECTION_FAILED", "창고 슬롯 격자를 확인하지 못했습니다.", 422) from error
+        raise WarehouseScanError("SLOT_GRID_DETECTION_FAILED", "창고 칸의 테두리를 찾지 못했습니다. 칸이 가려지거나 잘리지 않도록 창고 영역을 캡처해 주세요.", 422) from error
     except WarehouseScanError:
         raise
     except Exception as error:

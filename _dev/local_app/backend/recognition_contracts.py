@@ -216,7 +216,7 @@ def validate_trade_corrections(feedback, captures):
     if (set(feedback) != expected
             or type(feedback["version"]) is not int or feedback["version"] not in (1, 2)
             or feedback["engineId"] != ENGINE_ID or feedback["modelVersion"] != MODEL_BUNDLE_SHA256
-            or feedback["workerVersion"] not in ({WORKER_VERSION, "trade-live-worker-v5", "trade-live-worker-v6", "trade-live-worker-v7", "trade-live-worker-v8"} if expanded else {WORKER_VERSION})):
+            or feedback["workerVersion"] not in ({WORKER_VERSION, "trade-live-worker-v5", "trade-live-worker-v6", "trade-live-worker-v7", "trade-live-worker-v8", "trade-live-worker-v9"} if expanded else {WORKER_VERSION})):
         fail()
     _uuid(feedback["feedbackId"], "feedbackId")
     rows = feedback["corrections"]

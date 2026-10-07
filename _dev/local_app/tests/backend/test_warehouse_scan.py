@@ -20,7 +20,9 @@ from tools.warehouse_patch.warehouse_patch import convert
 
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = ROOT / "reference" / "barter_items.json"
-TEMPLATES = ROOT / "tools" / "warehouse_patch" / "quantity_templates.npz"
+TEMPLATES = ROOT / "recognition-local/models/warehouse/quantity_templates.npz"
+if not TEMPLATES.is_file():
+    TEMPLATES = ROOT / "tools/warehouse_patch/quantity_templates.npz"
 
 
 class WarehouseScanApiTests(unittest.TestCase):
