@@ -33,7 +33,8 @@ def command():
               "heartbeat": {"action", "receiver", "generation", "count", "bytes", "busy", "context"},
               "ack": {"action", "receiver", "generation", "captureId"},
               "disarm": {"action", "receiver", "generation"}}
-    if not isinstance(action, str) or action not in fields or set(data) != fields[action]:
+    if not isinstance(action, str) or action not in fields or (set(data) != fields[action] and
+            not (action == "prepare" and set(data) == fields[action] | {"gameSession"})):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 요청입니다.", 422)
     if action != "prepare" and (type(data["generation"]) is not int or data["generation"] < 0):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 세대입니다.", 422)
@@ -41,9 +42,9 @@ def command():
         raise NativeCaptureError("invalid_command", "잘못된 캡처 ID입니다.", 422)
     value = controller()
     if action == "prepare":
-        if type(data["select"]) is not bool:
+        if type(data["select"]) is not bool or type(data.get("gameSession", False)) is not bool:
             raise NativeCaptureError("invalid_command", "영역 설정 요청이 올바르지 않습니다.", 422)
-        result = value.prepare(data["receiver"], data["mode"], data["target"], data["context"], select=data["select"])
+        result = value.prepare(data["receiver"], data["mode"], data["target"], data["context"], select=data["select"], game_session=data.get("gameSession", False))
     elif action == "heartbeat":
         result = value.heartbeat(data["receiver"], data["generation"], data["count"], data["bytes"], data["busy"], data["context"])
     elif action == "ack":

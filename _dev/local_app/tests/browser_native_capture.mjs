@@ -35,6 +35,10 @@ def ack(receiver,generation,capture_id):
 controller.acknowledge=ack
 @app.post('/__test__/hotkey')
 def hotkey(): return jsonify({'captured':controller.on_hotkey()})
+@app.post('/__test__/finish')
+def finish(): controller.finish(); return jsonify(ok=True)
+@app.post('/__test__/pause-lease')
+def pause_lease(): controller.deadline=0; controller.maintenance(); return jsonify(controller.snapshot())
 app.run(host='127.0.0.1',port=${Number(port)},use_reloader=False,threaded=True)
 `;
 let server;
@@ -69,13 +73,19 @@ try {
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
     if (!message.id || !pending.has(message.id)) return;
-    const { resolve: resolveMessage, reject } = pending.get(message.id);
+    const { resolve: resolveMessage, reject, timer } = pending.get(message.id);
+    clearTimeout(timer);
     pending.delete(message.id);
     message.error ? reject(new Error(message.error.message)) : resolveMessage(message.result);
   });
+  socket.addEventListener("close", () => {
+    for (const request of pending.values()) { clearTimeout(request.timer); request.reject(new Error("Chrome connection closed")); }
+    pending.clear();
+  });
   send = (method, params = {}) => new Promise((resolveMessage, reject) => {
     const id = ++nextId;
-    pending.set(id, { resolve: resolveMessage, reject });
+    const timer = setTimeout(() => { pending.delete(id); reject(new Error(`Chrome command timed out: ${method}`)); }, 10000);
+    pending.set(id, { resolve: resolveMessage, reject, timer });
     socket.send(JSON.stringify({ id, method, params }));
   });
   const evaluate = async (expression) => {
@@ -100,8 +110,8 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='1'"), "native PNG delivered to trade queue");
   await waitFor(async () => (await nativeStatus()).pending === 0, "retried packet acknowledged");
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "1", "duplicate heartbeat packet was inserted once");
-  assert.match(await evaluate("document.querySelector('.capture-draft-item').textContent"), /게임 F10/);
-  assert.match(await evaluate("document.querySelector('[data-role=trade-queue-summary]').textContent"), /게임 F10/);
+  assert.match(await evaluate("document.querySelector('.capture-draft-item').textContent"), /게임 캡처/);
+  assert.match(await evaluate("document.querySelector('[data-role=trade-queue-summary]').textContent"), /게임 캡처/);
   if (process.env.BDO_NATIVE_SCREENSHOT) {
     const screenshot = await send("Page.captureScreenshot", { format: "png" });
     await writeFile(process.env.BDO_NATIVE_SCREENSHOT, Buffer.from(screenshot.data, "base64"));
@@ -120,12 +130,30 @@ try {
   await waitFor(async () => (await nativeStatus()).mode === "WAREHOUSE" && (await nativeStatus()).state === "READY", "native warehouse ROI prepared");
   assert.equal((await hotkey()).captured, true);
   await waitFor(async () => evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength==='1'"), "native PNG delivered to warehouse queue");
-  assert.match(await evaluate("document.querySelector('.capture-queue-item').textContent"), /게임 F10/);
+  assert.match(await evaluate("document.querySelector('.capture-queue-item').textContent"), /게임 캡처/);
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "4", "warehouse input preserves trade queue");
   await evaluate("document.querySelector('#warehouse-scan-dialog').close(); document.querySelector('#open-trade-capture').click(); document.querySelector('[data-native-capture=trade] [data-native=prepare]').click()");
   await waitFor(async () => (await nativeStatus()).mode === "TRADE" && (await nativeStatus()).state === "READY", "saved trade ROI reused");
   await evaluate("document.querySelector('[data-native-capture=trade] [data-native=stop]').click()");
   await waitFor(async () => (await nativeStatus()).mode === "NONE", "explicit stop");
+  await evaluate(`navigator.mediaDevices.getDisplayMedia=async()=>{const c=document.createElement('canvas');c.width=640;c.height=360;const x=c.getContext('2d');x.fillStyle='green';x.fillRect(0,0,640,360);window.__nativeSharePaint=setInterval(()=>x.fillRect(0,0,640,360),30);return c.captureStream(30)};document.querySelector('#connect-screen-capture').click()`);
+  await waitFor(async()=> (await nativeStatus()).gameSession && (await nativeStatus()).captured===1, 'sharing automatically selects game region and Enter captures first frame');
+  await waitFor(async()=>evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='5'"),'first image without separate native button');
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog .trade-preview-stage').hidden"),true);
+  await send('Page.setWebLifecycleState',{state:'frozen'});
+  assert.equal((await (await fetch(`${baseUrl}__test__/pause-lease`,{method:'POST'})).json()).state,'READY','game input survives a paused browser');
+  assert.equal((await (await fetch(`${baseUrl}__test__/hotkey`,{method:'POST'})).json()).captured,true);
+  await waitFor(async()=> !(await nativeStatus()).busy, 'background capture finishes');
+  await fetch(`${baseUrl}__test__/finish`,{method:'POST'});
+  assert.equal((await nativeStatus()).state,'STOPPED');
+  await send('Page.setWebLifecycleState',{state:'active'});
+  await waitFor(async()=>evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='6'"),'finished game capture drains to browser queue');
+  await waitFor(async()=> (await nativeStatus()).mode==='NONE','game Esc finishes after completed frames are acknowledged');
+  await evaluate("document.querySelector('#disconnect-screen-capture').click();document.querySelector('#trade-capture-dialog').close();document.querySelector('#open-warehouse-scan').click();document.querySelector('#warehouse-scan-dialog [data-action=connect-screen]').click()");
+  await waitFor(async()=> (await nativeStatus()).mode==='WAREHOUSE' && (await nativeStatus()).captured===1,'warehouse sharing automatically starts native selection');
+  await waitFor(async()=>evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength==='1'"),'warehouse first Enter capture');
+  await evaluate("document.querySelector('#warehouse-scan-dialog [data-action=disconnect-screen]').click()");
+  await waitFor(async()=> (await nativeStatus()).mode==='NONE','sharing stop disarms native collection');
   const after = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.deepEqual(after, initial, "native capture-only flow leaves all durable state unchanged");
   console.log(JSON.stringify({ok:true,actualChrome:true,actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closeAndStop:'PASS',noAutomaticOCRApply:'PASS'}));

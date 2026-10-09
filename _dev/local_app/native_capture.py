@@ -58,6 +58,8 @@ class NativeCaptureController:
         self.profiles = {}
         self.worker = None
         self.runtime_failed = False
+        self.game_session = False
+        self.captured_count = 0
         try:
             data = json.loads(self.profile_path.read_text(encoding="utf-8"))
             if data.get("version") == 1 and isinstance(data.get("profiles"), dict):
@@ -76,6 +78,7 @@ class NativeCaptureController:
         self.mode, self.state, self.error = "NONE", "IDLE", error
         self.receiver, self.target, self.profile = None, None, None
         self.frames.clear()
+        self.game_session, self.captured_count = False, 0
         self.platform.cancel_selection()
 
     def disarm(self, receiver=None, generation=None):
@@ -86,6 +89,8 @@ class NativeCaptureController:
 
     def maintenance(self):
         with self.lock:
+            if (self.game_session and self.target is not None and self.platform.is_foreground(self.target)) or (self.state == "STOPPED" and self.frames):
+                self.deadline = self.clock() + LEASE_SECONDS
             if self.receiver and self.clock() > self.deadline:
                 self._clear("receiver_expired")
             if self.target is not None:
@@ -101,9 +106,11 @@ class NativeCaptureController:
             return {"available": not self.closed and not self.runtime_failed, "mode": self.mode, "state": self.state,
                     "generation": self.generation, "error": self.error,
                     "hotkeyRegistered": self.platform.hotkey_registered,
-                    "pending": len(self.frames)}
+                    "pending": len(self.frames), "captured": self.captured_count,
+                    "busy": self.busy or self.receiver_busy, "gameSession": self.game_session,
+                    "enterRegistered": getattr(self.platform, "enter_registered", False)}
 
-    def prepare(self, receiver, mode, target, context, *, select=False):
+    def prepare(self, receiver, mode, target, context, *, select=False, game_session=False):
         try:
             receiver = str(uuid.UUID(receiver))
         except (ValueError, TypeError, AttributeError):
@@ -121,6 +128,7 @@ class NativeCaptureController:
             self._clear()
             self.receiver, self.mode, self.target, self.context = receiver, mode.upper(), target, normalized
             self.deadline, self.receiver_busy = self.clock() + LEASE_SECONDS, False
+            self.game_session = game_session
             self.queue_count, self.queue_bytes = 0, 0
             generation = self.generation
             if select:
@@ -146,7 +154,10 @@ class NativeCaptureController:
             if generation != self.generation or self.state != "SELECTING":
                 return
             if roi is None:
-                self._clear("roi_cancelled")
+                if self.game_session and self.profile:
+                    self.state, self.error = "READY", "roi_cancelled"
+                else:
+                    self._clear("roi_cancelled")
                 return
             try:
                 current = self.platform.geometry(self.target)
@@ -167,11 +178,25 @@ class NativeCaptureController:
                 self.profiles, self.profile, self.state = profiles, profile, "READY"
             except (NativeCaptureError, OSError, ValueError):
                 self._clear("roi_save_failed")
+        if self.game_session and self.state == "READY":
+            self.on_hotkey()
+
+    def finish(self):
+        with self.lock:
+            if self.state == "READY":
+                self.state, self.game_session, self.error = "STOPPED", False, None
+
+    def reselect(self):
+        with self.lock:
+            if self.state != "READY" or self.busy or self.receiver_busy:
+                return
+            self.state, self.error = "SELECTING", None
+            self.platform.select(self.target, self.generation)
 
     def registration_failed(self):
         with self.lock:
             if self.state == "READY":
-                self.state, self.error = "ERROR", "hotkey_conflict"
+                self.error = "hotkey_conflict"
 
     def wants_hotkey(self):
         with self.lock:
@@ -258,6 +283,7 @@ class NativeCaptureController:
                     raise NativeCaptureError("queue_full", "대기 이미지의 전체 용량 제한에 도달했습니다.")
                 self.frames[metadata["captureId"]] = {"metadata": metadata, "png": png,
                                                         "sha256": hashlib.sha256(png).hexdigest()}
+                self.captured_count += 1
                 self.error = None
         except Exception as exc:
             with self.lock:

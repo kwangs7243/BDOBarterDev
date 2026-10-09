@@ -19,6 +19,15 @@ class Win32CapturePlatform:
         self.commands = queue.Queue()
         self.stopping = threading.Event()
         self.overlay = None
+        self.hud = None
+        self.hud_class = None
+        self.game_hotkeys = set()
+        self.enter_registered = False
+        self.suppress_hud = threading.Event()
+        self.hud_lock = threading.Lock()
+        self.hotkey_retry = 0
+        self.keys_down = set()
+        self.last_hotkey = {}
         self.thread = None
         if os.name != "nt":
             raise NativeCaptureError("native_unsupported", "Windows 실행기에서 사용하세요.", 503)
@@ -33,6 +42,7 @@ class Win32CapturePlatform:
         u, k, g = self.u, self.k, self.g
         bindings = [
             (u, "SetThreadDpiAwarenessContext", [ctypes.c_void_p], ctypes.c_void_p),
+            (u, "GetAsyncKeyState", [ctypes.c_int], ctypes.c_short),
             (u, "GetForegroundWindow", [], w.HWND), (u, "IsWindow", [w.HWND], w.BOOL),
             (u, "IsWindowVisible", [w.HWND], w.BOOL), (u, "IsIconic", [w.HWND], w.BOOL),
             (u, "GetClientRect", [w.HWND, ctypes.POINTER(w.RECT)], w.BOOL),
@@ -47,6 +57,7 @@ class Win32CapturePlatform:
             (u, "SetForegroundWindow", [w.HWND], w.BOOL),
             (u, "SetLayeredWindowAttributes", [w.HWND, w.DWORD, ctypes.c_ubyte, w.DWORD], w.BOOL),
             (u, "ShowWindow", [w.HWND, ctypes.c_int], w.BOOL),
+            (u, "SetWindowPos", [w.HWND, w.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, w.UINT], w.BOOL),
             (u, "UpdateWindow", [w.HWND], w.BOOL),
             (u, "DestroyWindow", [w.HWND], w.BOOL),
             (u, "SetCapture", [w.HWND], w.HWND), (u, "ReleaseCapture", [], w.BOOL),
@@ -69,6 +80,23 @@ class Win32CapturePlatform:
         for dll, name, args, result in bindings:
             function = getattr(dll, name)
             function.argtypes, function.restype = args, result
+        self.WindowProc = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
+        class WindowClass(ctypes.Structure):
+            _fields_ = [("style", w.UINT), ("proc", self.WindowProc), ("classExtra", ctypes.c_int),
+                        ("windowExtra", ctypes.c_int), ("instance", w.HINSTANCE), ("icon", w.HICON),
+                        ("cursor", w.HANDLE), ("background", w.HBRUSH), ("menu", w.LPCWSTR), ("name", w.LPCWSTR)]
+        class Paint(ctypes.Structure):
+            _fields_ = [("hdc", w.HDC), ("erase", w.BOOL), ("rect", w.RECT),
+                        ("restore", w.BOOL), ("update", w.BOOL), ("reserved", ctypes.c_byte * 32)]
+        self.WindowClass, self.Paint = WindowClass, Paint
+        u.RegisterClassW.argtypes, u.RegisterClassW.restype = [ctypes.POINTER(WindowClass)], w.ATOM
+        u.UnregisterClassW.argtypes, u.UnregisterClassW.restype = [w.LPCWSTR, w.HINSTANCE], w.BOOL
+        u.CreateWindowExW.argtypes = [w.DWORD, w.LPCWSTR, w.LPCWSTR, w.DWORD, ctypes.c_int, ctypes.c_int,
+                                     ctypes.c_int, ctypes.c_int, w.HWND, w.HMENU, w.HINSTANCE, ctypes.c_void_p]
+        u.CreateWindowExW.restype = w.HWND
+        u.BeginPaint.argtypes, u.BeginPaint.restype = [w.HWND, ctypes.POINTER(Paint)], w.HDC
+        u.EndPaint.argtypes, u.EndPaint.restype = [w.HWND, ctypes.POINTER(Paint)], w.BOOL
+        u.LoadCursorW.argtypes, u.LoadCursorW.restype = [w.HINSTANCE, ctypes.c_void_p], w.HANDLE
         class MonitorInfo(ctypes.Structure):
             _fields_ = [("size", w.DWORD), ("monitor", w.RECT), ("work", w.RECT),
                         ("flags", w.DWORD), ("device", w.WCHAR * 32)]
@@ -161,7 +189,15 @@ class Win32CapturePlatform:
     def capture(self, box):
         from PIL import ImageGrab
         self._dpi()
-        image = ImageGrab.grab(bbox=box, all_screens=True)
+        with self.hud_lock:
+            self.suppress_hud.set()
+            try:
+                if self.hud: self.u.ShowWindow(self.hud, 0)
+                if self.dwm.DwmFlush() != 0:
+                    raise NativeCaptureError("pixel_capture_failed", "게임 안내창을 숨기지 못했습니다.")
+                image = ImageGrab.grab(bbox=box, all_screens=True)
+            finally:
+                self.suppress_hud.clear()
         try:
             if image.size != (box[2]-box[0], box[3]-box[1]) or image.getbbox() is None:
                 raise NativeCaptureError("black_frame", "게임 화면을 읽지 못했습니다. 창모드/전체창모드를 확인하세요.")
@@ -203,16 +239,19 @@ class Win32CapturePlatform:
             while not self.stopping.is_set():
                 self.controller.maintenance()
                 wanted = self.controller.wants_hotkey()
-                if wanted and not self.hotkey_registered:
+                if wanted and not self.hotkey_registered and time.monotonic() >= self.hotkey_retry:
                     self.hotkey_registered = bool(self.u.RegisterHotKey(None, 0xBD0, 0x4000, 0x79))
                     if not self.hotkey_registered:
+                        self.hotkey_retry = time.monotonic() + 1
                         self.controller.registration_failed()
                 elif not wanted and self.hotkey_registered:
                     self.u.UnregisterHotKey(None, 0xBD0)
                     self.hotkey_registered = False
+                self._update_game_controls()
+                self._poll_game_keys()
                 while self.u.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
-                    if message.message == 0x0312 and message.wParam == 0xBD0:
-                        self.controller.on_hotkey()
+                    if message.message == 0x0312 and message.wParam in (0xBD0, 0xBD1, 0xBD2, 0xBD3):
+                        self._handle_hotkey(message.wParam)
                     else:
                         self.u.TranslateMessage(ctypes.byref(message))
                         self.u.DispatchMessageW(ctypes.byref(message))
@@ -224,6 +263,9 @@ class Win32CapturePlatform:
                     if self.hotkey_registered:
                         self.u.UnregisterHotKey(None, 0xBD0)
                         self.hotkey_registered = False
+                    for key in list(self.game_hotkeys): self.u.UnregisterHotKey(None, key)
+                    self.game_hotkeys.clear(); self.enter_registered = False
+                    if self.hud: self.u.ShowWindow(self.hud, 0)
                     if generation == self.controller.snapshot()["generation"]:
                         try:
                             self._select_overlay(target, generation)
@@ -239,9 +281,85 @@ class Win32CapturePlatform:
                 self.controller.runtime_failed = True
                 self.controller.error = "native_runtime_failed"
         finally:
+            for key in list(self.game_hotkeys): self.u.UnregisterHotKey(None, key)
+            self.game_hotkeys.clear(); self.enter_registered = False
+            if self.hud:
+                self.u.DestroyWindow(self.hud); self.hud = None
+            if self.hud_class:
+                self.u.UnregisterClassW(self.hud_class, self.k.GetModuleHandleW(None))
             if self.hotkey_registered:
                 self.u.UnregisterHotKey(None, 0xBD0)
                 self.hotkey_registered = False
+
+    def _handle_hotkey(self, key):
+        if not self.is_foreground(self.controller.target): return
+        now = time.monotonic()
+        if now - self.last_hotkey.get(key, -1) < .12: return
+        self.last_hotkey[key] = now
+        if key in (0xBD0, 0xBD1): self.controller.on_hotkey()
+        elif key == 0xBD2: self.controller.reselect()
+        elif key == 0xBD3: self.controller.finish()
+
+    def _read_keys_down(self):
+        return {key for key, virtual in ((0xBD0, 0x79), (0xBD1, 13), (0xBD2, 0x77), (0xBD3, 27))
+                if self.u.GetAsyncKeyState(virtual) & 0x8000}
+
+    def _poll_game_keys(self):
+        down = self._read_keys_down()
+        pressed, self.keys_down = down - self.keys_down, down
+        if self.controller.state == "READY" and self.is_foreground(self.controller.target):
+            for key in sorted(pressed): self._handle_hotkey(key)
+
+    def _create_hud(self):
+        u, g = self.u, self.g
+        def procedure(hwnd, msg, wp, lp):
+            if msg == 0x0084: return -1
+            if msg == 0x000f:
+                paint = self.Paint(); hdc = u.BeginPaint(hwnd, ctypes.byref(paint))
+                try:
+                    state = self.controller.snapshot()
+                    title = "물교" if state["mode"] == "TRADE" else "창고"
+                    text = f"{title} 캡처 · {state['captured']}장 촬영" + (" · 처리 중" if state["busy"] else "")
+                    errors = {"queue_full":"대기열이 가득 찼습니다", "black_frame":"검은 화면: 창 모드를 확인하세요",
+                              "pixel_capture_failed":"화면 캡처 실패", "hotkey_conflict":"F10 충돌: Enter를 사용하세요"}
+                    guide = errors.get(state["error"], "Enter / F10 캡처 · F8 영역 재지정 · Esc 캡처 종료")
+                    g.SetTextColor(hdc, 0xFFFFFF); g.SetBkMode(hdc, 1)
+                    g.TextOutW(hdc, 12, 10, text, len(text)); g.TextOutW(hdc, 12, 36, guide, len(guide))
+                finally: u.EndPaint(hwnd, ctypes.byref(paint))
+                return 0
+            return u.DefWindowProcW(hwnd, msg, wp, lp)
+        self.hud_callback = self.WindowProc(procedure)
+        self.hud_class = f"BDOBarterCaptureHUD-{os.getpid()}"
+        instance = self.k.GetModuleHandleW(None)
+        wc = self.WindowClass(0, self.hud_callback, 0, 0, instance, None, None, g.GetStockObject(4), None, self.hud_class)
+        if not u.RegisterClassW(ctypes.byref(wc)): raise ctypes.WinError(ctypes.get_last_error())
+        self.hud = u.CreateWindowExW(0x00080000 | 0x00000008 | 0x00000020 | 0x08000000,
+                                    self.hud_class, "BDO 게임 캡처 안내", 0x80000000, 0, 0, 760, 68,
+                                    None, None, instance, None)
+        if not self.hud or not u.SetLayeredWindowAttributes(self.hud, 0, 220, 2):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+    def _update_game_controls(self):
+        target = self.controller.target
+        active = self.controller.state == "READY" and target is not None and self.is_foreground(target)
+        for key, virtual in ((0xBD1, 13), (0xBD2, 0x77), (0xBD3, 27)):
+            if active and key not in self.game_hotkeys:
+                if self.u.RegisterHotKey(None, key, 0x4000, virtual): self.game_hotkeys.add(key)
+            elif not active and key in self.game_hotkeys:
+                self.u.UnregisterHotKey(None, key); self.game_hotkeys.remove(key)
+        self.enter_registered = 0xBD1 in self.game_hotkeys
+        if not self.hud_lock.acquire(blocking=False): return
+        try:
+            if not active or self.suppress_hud.is_set():
+                if self.hud: self.u.ShowWindow(self.hud, 0)
+                return
+            if not self.hud: self._create_hud()
+            geo = self.geometry(target)
+            self.u.SetWindowPos(self.hud, w.HWND(-1), geo["left"] + 12, geo["top"] + 12,
+                                min(760, geo["width"]-24), 68, 0x0010)
+            self.u.ShowWindow(self.hud, 4); self.u.InvalidateRect(self.hud, None, True)
+        finally:
+            self.hud_lock.release()
 
     def _wait_for_game(self, target, generation):
         self.u.SetForegroundWindow(int(target))
@@ -258,22 +376,7 @@ class Win32CapturePlatform:
         self._wait_for_game(target, generation)
         geo = self.geometry(target)
         u, g = self.u, self.g
-        proc_type = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
-        class WindowClass(ctypes.Structure):
-            _fields_ = [("style", w.UINT), ("proc", proc_type), ("classExtra", ctypes.c_int),
-                        ("windowExtra", ctypes.c_int), ("instance", w.HINSTANCE), ("icon", w.HICON),
-                        ("cursor", w.HANDLE), ("background", w.HBRUSH), ("menu", w.LPCWSTR), ("name", w.LPCWSTR)]
-        class Paint(ctypes.Structure):
-            _fields_ = [("hdc", w.HDC), ("erase", w.BOOL), ("rect", w.RECT),
-                        ("restore", w.BOOL), ("update", w.BOOL), ("reserved", ctypes.c_byte * 32)]
-        u.RegisterClassW.argtypes, u.RegisterClassW.restype = [ctypes.POINTER(WindowClass)], w.ATOM
-        u.UnregisterClassW.argtypes, u.UnregisterClassW.restype = [w.LPCWSTR, w.HINSTANCE], w.BOOL
-        u.CreateWindowExW.argtypes = [w.DWORD, w.LPCWSTR, w.LPCWSTR, w.DWORD, ctypes.c_int, ctypes.c_int,
-                                     ctypes.c_int, ctypes.c_int, w.HWND, w.HMENU, w.HINSTANCE, ctypes.c_void_p]
-        u.CreateWindowExW.restype = w.HWND
-        u.BeginPaint.argtypes, u.BeginPaint.restype = [w.HWND, ctypes.POINTER(Paint)], w.HDC
-        u.EndPaint.argtypes, u.EndPaint.restype = [w.HWND, ctypes.POINTER(Paint)], w.BOOL
-        u.LoadCursorW.argtypes, u.LoadCursorW.restype = [w.HINSTANCE, ctypes.c_void_p], w.HANDLE
+        proc_type, WindowClass, Paint = self.WindowProc, self.WindowClass, self.Paint
         selection, start, dragging, done, roi = None, None, False, False, None
         def point(value):
             return (max(0, min(geo["width"], ctypes.c_short(value & 0xffff).value)),
@@ -355,4 +458,5 @@ class Win32CapturePlatform:
             roi = None
         if u.IsWindow(int(target)):
             u.SetForegroundWindow(int(target))
+        self.keys_down = self._read_keys_down()
         self.controller.selected(generation, roi, geo)

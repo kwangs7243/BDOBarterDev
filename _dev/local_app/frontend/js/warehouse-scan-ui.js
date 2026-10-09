@@ -85,7 +85,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     for (const capture of captures) {
       const item = make("li", "capture-queue-item");
       item.dataset.captureId = capture.metadata.captureId;
-      const choose = make("button", "capture-queue-select", `${({ clipboard: "클립보드", file: "파일", "native-screen": "게임 F10", "browser-stream": "화면" }[capture.metadata.sourceType] ?? "이미지")} · ${capture.metadata.frame.width}×${capture.metadata.frame.height} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`);
+      const choose = make("button", "capture-queue-select", `${({ clipboard: "클립보드", file: "파일", "native-screen": "게임 캡처", "browser-stream": "화면" }[capture.metadata.sourceType] ?? "이미지")} · ${capture.metadata.frame.width}×${capture.metadata.frame.height} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`);
       choose.type = "button";
       choose.setAttribute("aria-pressed", String(capture.metadata.captureId === selectedCaptureId));
       choose.addEventListener("click", () => { selectedCaptureId = capture.metadata.captureId; renderQueue(); });
@@ -137,7 +137,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   video.addEventListener("resize", renderRoi);
   const resizeObserver = new ResizeObserver(renderRoi); resizeObserver.observe(stage);
   dialog.querySelector('[data-action="connect-screen"]').addEventListener("click", () => {
-    screenSession.connectScreen().then(() => { renderRoi(); message.textContent = "창고 캡처 범위를 지정하세요."; }).catch(reportCaptureError);
+    screenSession.connectScreen().then(() => { renderRoi(); message.textContent = "게임 화면에서 영역을 드래그하고 Enter를 누르세요."; }).catch(reportCaptureError);
   });
   dialog.querySelector('[data-action="disconnect-screen"]').addEventListener("click", () => screenSession.disconnectScreen());
   dialog.querySelector('[data-action="reset-roi"]').addEventListener("click", () => { region = { ...DEFAULT_TRADE_ROI }; renderRoi(); });
@@ -265,6 +265,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
 
   return {
     dialog,
+    screenSession,
     isActive: () => dialog.open,
     acceptCaptures,
     reportCaptureError,

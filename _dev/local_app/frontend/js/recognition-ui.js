@@ -422,7 +422,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       const regionLabel = capture.regionEvidence ? "선택 영역" : "캡처 이미지";
       heading.textContent = `${regionLabel} · ${capture.metadata.frame.width}×${capture.metadata.frame.height}`;
       const meta = document.createElement("span");
-      const sourceLabel = ({ clipboard: "클립보드", "browser-stream": "화면", "native-screen": "게임 F10", file: "파일" }[capture.metadata.sourceType] ?? "이미지");
+      const sourceLabel = ({ clipboard: "클립보드", "browser-stream": "화면", "native-screen": "게임 캡처", file: "파일" }[capture.metadata.sourceType] ?? "이미지");
       meta.textContent = `${sourceLabel} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`;
       const status = document.createElement("span");
       status.className = "capture-draft-state";
@@ -448,7 +448,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeDialog.dataset.queueLength = String(tradeQueue.length);
     tradeDialog.dataset.queueBytes = String(tradeQueue.bytes);
     const sourceCounts = tradeQueue.items.reduce((counts, capture) => {
-      const key = ({ "browser-stream": "화면", clipboard: "붙여넣기", "native-screen": "게임 F10", file: "파일" }[capture.metadata.sourceType] ?? "이미지");
+      const key = ({ "browser-stream": "화면", clipboard: "붙여넣기", "native-screen": "게임 캡처", file: "파일" }[capture.metadata.sourceType] ?? "이미지");
       counts[key] = (counts[key] ?? 0) + 1;
       return counts;
     }, {});
@@ -671,11 +671,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   document.addEventListener("paste", onPaste);
 
   const nativeUI = initNativeCaptureUI({
-    trade: { dialog: tradeDialog, isActive: () => tradeDialog.open,
+    trade: { dialog: tradeDialog, screenSession, isActive: () => tradeDialog.open,
       getContext: () => captureContext("trade"),
       getState: () => ({ count: tradeQueue.length, bytes: tradeQueue.bytes, busy: tradeRecognitionPending }),
       accept: appendTradeCaptures },
-    warehouse: { dialog: warehouseCaptureUI.dialog, isActive: warehouseCaptureUI.isActive,
+    warehouse: { dialog: warehouseCaptureUI.dialog, screenSession: warehouseCaptureUI.screenSession, isActive: warehouseCaptureUI.isActive,
       getContext: () => captureContext("warehouse"), getState: warehouseCaptureUI.getNativeQueueState,
       accept: warehouseCaptureUI.acceptCaptures },
   });

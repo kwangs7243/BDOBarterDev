@@ -98,4 +98,76 @@ class NativeWin32LifecycleTests(unittest.TestCase):
             grab.assert_called_once_with(bbox=(-100, -50, -20, 0), all_screens=True)
 
 
+    def test_game_keys_are_registered_only_while_game_is_foreground(self):
+        from unittest.mock import Mock
+        platform = Win32CapturePlatform()
+        controller = Mock(state="READY", target="42")
+        platform.controller = controller
+        with patch.object(platform, "is_foreground", return_value=True), patch.object(platform, "geometry", return_value=FakePlatform().geo), \
+             patch.object(platform, "_create_hud"), patch.object(platform.u, "RegisterHotKey", return_value=True) as register, \
+             patch.object(platform.u, "SetWindowPos"), patch.object(platform.u, "ShowWindow"), patch.object(platform.u, "InvalidateRect"):
+            platform._update_game_controls()
+            self.assertTrue(platform.enter_registered)
+            register.assert_any_call(None, 0xBD1, 0x4000, 13)
+            register.assert_any_call(None, 0xBD2, 0x4000, 0x77)
+            register.assert_any_call(None, 0xBD3, 0x4000, 27)
+        with patch.object(platform, "is_foreground", return_value=False), patch.object(platform.u, "UnregisterHotKey", return_value=True) as unregister:
+            platform._update_game_controls()
+            self.assertFalse(platform.enter_registered)
+            self.assertEqual(unregister.call_count, 3)
+
+    def test_enter_f10_reselect_and_finish_route_without_browser_focus(self):
+        from unittest.mock import Mock
+        platform = Win32CapturePlatform(); platform.controller = Mock(target="42")
+        with patch.object(platform, "is_foreground", return_value=True):
+            for key in (0xBD0, 0xBD1, 0xBD2, 0xBD3): platform._handle_hotkey(key)
+        self.assertEqual(platform.controller.on_hotkey.call_count, 2)
+        platform.controller.reselect.assert_called_once(); platform.controller.finish.assert_called_once()
+        with patch.object(platform, "is_foreground", return_value=False): platform._handle_hotkey(0xBD1)
+        self.assertEqual(platform.controller.on_hotkey.call_count, 2)
+
+    def test_physical_key_fallback_survives_missing_hotkey_messages_without_repeat(self):
+        from unittest.mock import Mock
+        platform = Win32CapturePlatform(); platform.controller = Mock(state="READY", target="42")
+        held = {13}
+        with patch.object(platform.u, "GetAsyncKeyState", side_effect=lambda key: 0x8000 if key in held else 0), \
+             patch.object(platform, "is_foreground", return_value=True), patch("local_app.native_win32.time.monotonic", return_value=10):
+            platform._poll_game_keys(); platform._poll_game_keys(); platform._handle_hotkey(0xBD1)
+            platform.controller.on_hotkey.assert_called_once()
+            held.clear(); platform._poll_game_keys()
+            held.add(0x79)
+            with patch("local_app.native_win32.time.monotonic", return_value=11): platform._poll_game_keys()
+            self.assertEqual(platform.controller.on_hotkey.call_count, 2)
+        with patch.object(platform.u, "GetAsyncKeyState", return_value=0x8000), patch.object(platform, "is_foreground", return_value=False):
+            platform._poll_game_keys()
+        self.assertEqual(platform.controller.on_hotkey.call_count, 2)
+
+    def test_real_hud_is_click_through_and_does_not_activate(self):
+        import ctypes
+        from ctypes import wintypes
+        platform = Win32CapturePlatform()
+        platform._create_hud()
+        try:
+            style = platform.u.GetWindowLongW(platform.hud, -20)
+            self.assertTrue(style & 0x08000000)
+            self.assertTrue(style & 0x20)
+            platform.u.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            platform.u.SendMessageW.restype = ctypes.c_ssize_t
+            self.assertEqual(platform.u.SendMessageW(platform.hud, 0x84, 0, 0), -1)
+        finally:
+            platform.u.DestroyWindow(platform.hud)
+            platform.u.UnregisterClassW(platform.hud_class, platform.k.GetModuleHandleW(None))
+
+    def test_hud_is_hidden_before_pixels_are_read(self):
+        from PIL import Image
+        platform = Win32CapturePlatform(); platform.hud = 123
+        def grab(**kwargs):
+            self.assertTrue(platform.suppress_hud.is_set())
+            return Image.new("RGB", (80, 50), (20, 40, 60))
+        with patch.object(platform.u, "ShowWindow") as hide, patch.object(platform.dwm, "DwmFlush", return_value=0), patch("PIL.ImageGrab.grab", side_effect=grab):
+            self.assertTrue(platform.capture((0, 0, 80, 50)))
+            hide.assert_called_once_with(123, 0)
+        self.assertFalse(platform.suppress_hud.is_set())
+
+
 if __name__ == "__main__": unittest.main()
