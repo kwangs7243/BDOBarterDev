@@ -1,6 +1,7 @@
+import { initCaptureRoiUI } from "./capture-roi-ui.js";
 import { api } from "./api.js";
 import { state } from "./state.js";
-import { CaptureQueue, PreviewRegistry, captureFromFile, ScreenCaptureSession, DEFAULT_TRADE_ROI, normalizeRegion, displayedVideoContentRect, moveNormalizedRegion, resizeNormalizedRegion } from "./capture.js";
+import { CaptureQueue, PreviewRegistry, captureFromFile, ScreenCaptureSession, DEFAULT_TRADE_ROI } from "./capture.js";
 
 const make = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -126,19 +127,15 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   const roiBox = stage.querySelector(".trade-roi-box");
   const captureButton = dialog.querySelector('[data-action="capture-roi"]');
   let region = { ...DEFAULT_TRADE_ROI };
-  const renderRoi = () => {
-    const content = displayedVideoContentRect(video, stage);
-    roiBox.hidden = !content || !screenSession.connected || !dialog.open;
-    if (roiBox.hidden) return;
-    const bounds = stage.getBoundingClientRect();
-    region = normalizeRegion(region);
-    Object.assign(roiBox.style, { left: `${content.left - bounds.left + region.x * content.width}px`, top: `${content.top - bounds.top + region.y * content.height}px`, width: `${region.width * content.width}px`, height: `${region.height * content.height}px` });
-    roiBox.dataset.normalized = JSON.stringify(region);
-  };
+  const roiUI = initCaptureRoiUI({
+    video, stage, box: roiBox,
+    getRegion: () => region, setRegion: (value) => { region = value; },
+    isVisible: () => screenSession.connected && dialog.open,
+    canInteract: () => screenSession.state === "CONNECTED",
+  });
+  const renderRoi = roiUI.render;
   screenSession.attachPreview(video);
   screenSession.subscribe(() => { captureButton.disabled = screenSession.state !== "CONNECTED"; renderRoi(); });
-  listen(video, "resize", renderRoi);
-  const resizeObserver = new ResizeObserver(renderRoi); resizeObserver.observe(stage);
   listen(dialog.querySelector('[data-action="connect-screen"]'), "click", () => {
     screenSession.connectScreen().then(() => { renderRoi(); message.textContent = "게임 화면에서 영역을 드래그하고 Enter를 누르세요."; }).catch(reportCaptureError);
   });
@@ -148,24 +145,6 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     try { acceptCaptures([await screenSession.captureRegion(captureContext(), region)]); }
     catch (error) { reportCaptureError(error); }
   });
-  listen(roiBox, "pointerdown", event => {
-    if (screenSession.state !== "CONNECTED") return;
-    const content = displayedVideoContentRect(video, stage);
-    const handle = event.target.closest("[data-roi-handle]")?.dataset.roiHandle;
-    if (!content || (!handle && !event.target.closest("[data-roi-move]"))) return;
-    event.preventDefault();
-    const start = { x: event.clientX, y: event.clientY, region: { ...region } };
-    const minimumWidth = Math.min(.95, 80 / content.width), minimumHeight = Math.min(.95, 60 / content.height);
-    event.target.setPointerCapture?.(event.pointerId);
-    const move = next => {
-      const dx = (next.clientX - start.x) / content.width, dy = (next.clientY - start.y) / content.height;
-      region = handle ? resizeNormalizedRegion(start.region, handle, dx, dy, minimumWidth, minimumHeight) : moveNormalizedRegion(start.region, dx, dy, minimumWidth, minimumHeight);
-      renderRoi();
-    };
-    const finish = () => { roiBox.removeEventListener("pointermove", move); roiBox.removeEventListener("pointerup", finish); roiBox.removeEventListener("pointercancel", finish); };
-    listen(roiBox, "pointermove", move); listen(roiBox, "pointerup", finish, { once: true }); listen(roiBox, "pointercancel", finish, { once: true });
-  });
-
   listen(openButton, "click", () => {
     message.textContent = "파일을 선택·놓거나 붙여넣기 버튼에 포커스를 둔 뒤 Ctrl+V를 사용하세요.";
     input.disabled = false;
@@ -265,7 +244,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     if (events.signal.aborted) return;
     events.abort();
     screenSession.dispose();
-    resizeObserver.disconnect();
+    roiUI.dispose();
     previews.clear();
     queue.clear();
     selectedCaptureId = previewUrl = null;

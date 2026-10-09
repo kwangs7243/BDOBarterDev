@@ -64,10 +64,12 @@ try {
   await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: stageRect.x+30, y: stageRect.y+20, button: "left", buttons: 0, clickCount: 1 });
   const movedLeft = await evaluate("parseFloat(document.querySelector('[data-role=trade-roi]').style.left)");
   assert.ok(movedLeft > beforeMoveLeft+15, "ROI pointer drag moves the box");
-  const se = await evaluate("JSON.stringify((()=>{const r=document.querySelector('[data-role=trade-roi]').getBoundingClientRect();return {x:r.right-1,y:r.bottom-1}})())").then(JSON.parse);
+  await evaluate("document.querySelector('[data-role=trade-roi] [data-roi-handle=se]').scrollIntoView({block:'center'})");
+  const se = await evaluate("JSON.stringify((()=>{const r=document.querySelector('[data-role=trade-roi] [data-roi-handle=se]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})())").then(JSON.parse);
+  assert.equal(await evaluate(`document.elementFromPoint(${se.x},${se.y})?.closest('[data-roi-handle]')?.dataset.roiHandle`), "se", "resize handle is inside the viewport and receives the pointer");
   await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: se.x, y: se.y }); await send("Input.dispatchMouseEvent", { type: "mousePressed", x: se.x, y: se.y, button: "left", buttons: 1, clickCount: 1 }); await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: se.x+24, y: se.y+18, button: "left", buttons: 1 }); await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: se.x+24, y: se.y+18, button: "left", buttons: 0, clickCount: 1 });
   const resized = await evaluate("JSON.stringify((()=>{const r=document.querySelector('[data-role=trade-roi]').getBoundingClientRect();return {width:r.width,height:r.height}})())").then(JSON.parse);
-  assert.ok(resized.width > initialRoi.width && resized.height > initialRoi.height, "SE handle resizes the ROI");
+  assert.ok(resized.width > initialRoi.width && resized.height > initialRoi.height, `SE handle resizes the ROI: ${JSON.stringify({initialRoi, resized, se})}`);
   const normalizedBeforePreviewResize = await evaluate("document.querySelector('[data-role=trade-roi]').dataset.normalized");
   await evaluate("document.querySelector('[data-role=trade-preview-stage]').style.width='80%'");
   await new Promise((resolveWait) => setTimeout(resolveWait, 100));
@@ -134,7 +136,29 @@ try {
   await waitFor(async () => evaluate("document.querySelector('#screen-capture-session')?.dataset.state==='CONNECTED' && window.__roiMock.calls===3"), "explicit reconnect after track end");
   assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"), "1", "reconnect preserves queued drafts");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-preview-video]').srcObject===window.__roiMock.streams.at(-1)"), true);
-  console.log(JSON.stringify({ ok:true, testType:"AUTOMATED_MOCK_PASS", chrome:"headless", previewSharedStream:"PASS", separateGetDisplayMedia:"NO", defaultRoiAndLetterbox:"PASS", pointerMove:"PASS", resizeEightHandlesPresentAndSEInteraction:"PASS", roiOnlyPngDimensionsAndProvenance:"PASS", repeatedBatchCapture:"PASS", removeAndClear:"PASS", dialogQueueStreamRoiPreserved:"PASS", disconnectReconnectTrackEnded:"PASS", noAutomaticReconnect:"PASS", warehouseFullFrameUnchanged:"PASS", mainDbSemanticStateUnchanged:"PASS", actualPermissionPicker:"PENDING", actualBDOWindow:"PENDING" },null,2));
+  await evaluate("document.querySelector('#trade-capture-dialog [data-close-trade-capture]').click(); document.querySelector('#open-warehouse-scan').click(); document.querySelector('#warehouse-scan-dialog [data-action=connect-screen]').click()");
+  await waitFor(async () => evaluate("document.querySelector('#warehouse-scan-dialog video').videoWidth===640 && !document.querySelector('#warehouse-scan-dialog .trade-roi-box').hidden"), "warehouse ROI preview");
+  const warehouseRegion = () => evaluate("JSON.parse(document.querySelector('#warehouse-scan-dialog .trade-roi-box').dataset.normalized)");
+  const warehouseBefore = await warehouseRegion();
+  const warehouseDrag = async (selector, dx, dy) => {
+    await evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center'})`);
+    const point = await evaluate(`(() => { const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; })()`);
+    await send("Input.dispatchMouseEvent", {type:"mouseMoved",x:point.x,y:point.y});
+    await send("Input.dispatchMouseEvent", {type:"mousePressed",x:point.x,y:point.y,button:"left",buttons:1,clickCount:1});
+    await send("Input.dispatchMouseEvent", {type:"mouseMoved",x:point.x+dx,y:point.y+dy,button:"left",buttons:1});
+    await send("Input.dispatchMouseEvent", {type:"mouseReleased",x:point.x+dx,y:point.y+dy,button:"left",buttons:0,clickCount:1});
+  };
+  await warehouseDrag('#warehouse-scan-dialog [data-roi-move]', 12, 8);
+  const warehouseMoved = await warehouseRegion();
+  assert.ok(warehouseMoved.x>warehouseBefore.x && warehouseMoved.y>warehouseBefore.y, "warehouse pointer drag moves the ROI");
+  await warehouseDrag('#warehouse-scan-dialog [data-roi-handle=nw]', -8, -8);
+  const warehouseResized = await warehouseRegion();
+  assert.ok(warehouseResized.width>warehouseMoved.width && warehouseResized.height>warehouseMoved.height, "warehouse corner resize changes the ROI");
+  await evaluate("document.querySelector('#warehouse-scan-dialog [data-action=capture-roi]').click()");
+  await waitFor(async () => evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength==='1' && document.querySelector('#warehouse-scan-dialog .warehouse-preview').naturalWidth<640"), "warehouse cropped ROI queued");
+  const warehouseAfter = await (await fetch(`${baseUrl}api/bootstrap`)).json();
+  assert.equal(warehouseAfter.revision, initial.revision); assert.deepEqual(warehouseAfter.inventory, initial.inventory);
+  console.log(JSON.stringify({ ok:true, testType:"AUTOMATED_MOCK_PASS", chrome:"headless", previewSharedStream:"PASS", separateGetDisplayMedia:"NO", defaultRoiAndLetterbox:"PASS", pointerMove:"PASS", resizeEightHandlesPresentAndSEInteraction:"PASS", roiOnlyPngDimensionsAndProvenance:"PASS", repeatedBatchCapture:"PASS", removeAndClear:"PASS", dialogQueueStreamRoiPreserved:"PASS", disconnectReconnectTrackEnded:"PASS", noAutomaticReconnect:"PASS", warehouseFullFrameUnchanged:"PASS", warehouseRoiMoveResizeCapture:"PASS", mainDbSemanticStateUnchanged:"PASS", actualPermissionPicker:"PENDING", actualBDOWindow:"PENDING" },null,2));
 } finally {
   try { if (socket?.readyState===WebSocket.OPEN) await Promise.race([send("Browser.close"),new Promise(r=>setTimeout(r,1000))]); } catch {}
   try { socket?.close(); } catch {}
