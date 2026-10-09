@@ -211,7 +211,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     preview.removeAttribute("src");
     preview.hidden = true;
     previews.clear();
-    if (!keepQueueOnClose) {
+    if (!keepQueueOnClose && !queue.items.some(capture => capture.metadata.sourceType === "native-screen")) {
       queue.clear();
       selectedCaptureId = null;
       list.replaceChildren();

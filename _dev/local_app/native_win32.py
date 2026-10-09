@@ -7,8 +7,6 @@ import os
 import queue
 import threading
 import time
-import sys
-import traceback
 from ctypes import wintypes as w
 
 from local_app.native_capture import NativeCaptureError, adjust_roi
@@ -21,25 +19,14 @@ class Win32CapturePlatform:
         self.commands = queue.Queue()
         self.stopping = threading.Event()
         self.overlay = None
-        self.hud = None
+        self.sink = None
+        self.sink_class = None
         self.roi_frame = None
         self.roi_frame_class = None
         self.roi_frame_visible = False
         self.frame_drag = None
         self.frame_bounds = None
-        self.hud_class = None
-        self.hud_buttons = []
-        self.panel_generation = None
-        self.raw_registered = False
-        self.panel_visible = False
-        self.display_excluded = False
-        self.last_ui_tick = time.monotonic()
-        self.watchdog = None
-        self.last_panel_status = None
-        self.enter_registered = False
         self.hotkey_retry = 0
-        self.keys_down = set()
-        self.last_hotkey = {}
         self.thread = None
         if os.name != "nt":
             raise NativeCaptureError("native_unsupported", "Windows 실행기에서 사용하세요.", 503)
@@ -54,9 +41,7 @@ class Win32CapturePlatform:
         u, k, g = self.u, self.k, self.g
         bindings = [
             (u, "SetThreadDpiAwarenessContext", [ctypes.c_void_p], ctypes.c_void_p),
-            (u, "IsChild", [w.HWND, w.HWND], w.BOOL),
             (u, "SetWindowDisplayAffinity", [w.HWND, w.DWORD], w.BOOL),
-            (u, "IsWindowEnabled", [w.HWND], w.BOOL),
             (u, "GetCursorPos", [ctypes.POINTER(w.POINT)], w.BOOL),
             (u, "WindowFromPoint", [w.POINT], w.HWND),
             (u, "GetForegroundWindow", [], w.HWND), (u, "IsWindow", [w.HWND], w.BOOL),
@@ -99,16 +84,6 @@ class Win32CapturePlatform:
         for dll, name, args, result in bindings:
             function = getattr(dll, name)
             function.argtypes, function.restype = args, result
-        class RawDevice(ctypes.Structure):
-            _fields_ = [("usagePage", w.USHORT), ("usage", w.USHORT), ("flags", w.DWORD), ("target", w.HWND)]
-        class RawHeader(ctypes.Structure):
-            _fields_ = [("kind", w.DWORD), ("size", w.DWORD), ("device", w.HANDLE), ("parameter", w.WPARAM)]
-        class RawKeyboard(ctypes.Structure):
-            _fields_ = [("scan", w.USHORT), ("flags", w.USHORT), ("reserved", w.USHORT),
-                        ("key", w.USHORT), ("message", w.UINT), ("extra", w.ULONG)]
-        self.RawDevice, self.RawHeader, self.RawKeyboard = RawDevice, RawHeader, RawKeyboard
-        u.RegisterRawInputDevices.argtypes, u.RegisterRawInputDevices.restype = [ctypes.POINTER(RawDevice), w.UINT, w.UINT], w.BOOL
-        u.GetRawInputData.argtypes, u.GetRawInputData.restype = [w.HANDLE, w.UINT, ctypes.c_void_p, ctypes.POINTER(w.UINT), w.UINT], w.UINT
         self.WindowProc = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
         class WindowClass(ctypes.Structure):
             _fields_ = [("style", w.UINT), ("proc", self.WindowProc), ("classExtra", ctypes.c_int),
@@ -223,15 +198,12 @@ class Win32CapturePlatform:
                     self._window_pid(foreground) == self._window_pid(int(target)) != 0))
 
     def is_foreground(self, target):
-        foreground = self.u.GetForegroundWindow()
-        return target is not None and (self._game_is_foreground(target) or
-                (foreground in (self.hud, self.roi_frame) and foreground is not None and
-                 self.controller is not None and self.controller.target == target))
+        return self._game_is_foreground(target)
 
     def capture(self, box):
         from PIL import ImageGrab
         self._dpi()
-        # Window mutations belong to the UI thread. WDA excludes our controls from GDI capture.
+        # WDA excludes the persistent ROI without hiding it or changing game focus.
         image = ImageGrab.grab(bbox=box, all_screens=True)
         try:
             if image.size != (box[2]-box[0], box[3]-box[1]) or image.getbbox() is None:
@@ -253,43 +225,48 @@ class Win32CapturePlatform:
         self.controller = controller
         self.thread = threading.Thread(target=self._run, name="bdo-native-ui", daemon=True)
         self.thread.start()
-        self.watchdog = threading.Thread(target=self._watch, name="bdo-native-watch", daemon=True)
-        self.watchdog.start()
 
     def stop(self):
         self.stopping.set()
         self.cancel_selection()
         if self.thread and self.thread is not threading.current_thread():
             self.thread.join(timeout=3)
-        if self.watchdog and self.watchdog is not threading.current_thread(): self.watchdog.join(timeout=3)
 
     def _record(self, event, **fields):
         if self.controller is not None:
             foreground = self.u.GetForegroundWindow()
-            self.controller.record(event, foreground=foreground, foregroundPid=self._window_pid(foreground),
-                                   targetPid=self._window_pid(int(self.controller.target)) if self.controller.target else None,
-                                   panel=self.hud, **fields)
+            self.controller.record(event, foreground=foreground, foregroundPid=self._window_pid(foreground), **fields)
 
-    def _watch(self):
-        reported = False
-        while not self.stopping.wait(2):
-            if self.controller.state not in {"READY", "SELECTING"}: continue
-            age = time.monotonic() - self.last_ui_tick
-            point = w.POINT()
-            self.u.GetCursorPos(ctypes.byref(point))
-            self._record("runtime_health", uiAgeMs=round(age*1000), uiAlive=self.thread.is_alive(),
-                         rawRegistered=self.raw_registered, hotkeyRegistered=self.hotkey_registered,
-                         panelVisible=bool(self.hud and self.u.IsWindowVisible(self.hud)),
-                         panelEnabled=bool(self.hud and self.u.IsWindowEnabled(self.hud)),
-                         pointerWindow=self.u.WindowFromPoint(point),
-                         workerAlive=bool(self.controller.worker and self.controller.worker.is_alive()))
-            if age > 5 and not reported:
-                frames = sys._current_frames()
-                stacks = {t.name: "".join(traceback.format_stack(frames[t.ident]))
-                          for t in threading.enumerate() if t.name.startswith("bdo-native") and t.ident in frames}
-                self._record("ui_stalled", stacks=stacks)
-                reported = True
-            elif age <= 5: reported = False
+    def _create_input_sink(self):
+        def procedure(hwnd, message, wp, lp):
+            if message == 0x0312 and wp == 0xBD0:
+                self._record("hotkey_received", key="F10")
+                self.controller.on_hotkey()
+                return 0
+            return self.u.DefWindowProcW(hwnd, message, wp, lp)
+        self.sink_callback = self._window_callback(procedure)
+        self.sink_class = f"BDOBarterInputSink-{os.getpid()}"
+        instance = self.k.GetModuleHandleW(None)
+        wc = self.WindowClass(0, self.sink_callback, 0, 0, instance, None, None, None, None, self.sink_class)
+        if not self.u.RegisterClassW(ctypes.byref(wc)): raise ctypes.WinError(ctypes.get_last_error())
+        self.sink = self.u.CreateWindowExW(0, self.sink_class, "", 0, 0, 0, 0, 0,
+                                         w.HWND(-3), None, instance, None)  # HWND_MESSAGE.
+        if not self.sink: raise ctypes.WinError(ctypes.get_last_error())
+        self._record("input_sink_created")
+
+    def _update_hotkey(self):
+        wanted = self.controller.state == "READY"
+        if wanted and not self.hotkey_registered and time.monotonic() >= self.hotkey_retry:
+            self.hotkey_registered = bool(self.u.RegisterHotKey(self.sink, 0xBD0, 0x4000, 0x79))
+            self._record("f10_registered", success=self.hotkey_registered,
+                         winError=ctypes.get_last_error() if not self.hotkey_registered else 0)
+            if not self.hotkey_registered:
+                self.hotkey_retry = time.monotonic()+5
+                self.controller.registration_failed()
+            elif self.controller.error == "hotkey_conflict": self.controller.error = None
+        elif not wanted and self.hotkey_registered:
+            self.u.UnregisterHotKey(self.sink, 0xBD0)
+            self.hotkey_registered = False
 
     def _run(self):
         try:
@@ -301,113 +278,37 @@ class Win32CapturePlatform:
             self.u.PeekMessageW.argtypes, self.u.PeekMessageW.restype = [ctypes.POINTER(Message), w.HWND, w.UINT, w.UINT, w.UINT], w.BOOL
             self.u.TranslateMessage.argtypes = [ctypes.POINTER(Message)]
             self.u.DispatchMessageW.argtypes, self.u.DispatchMessageW.restype = [ctypes.POINTER(Message)], ctypes.c_ssize_t
-            self._create_hud()
+            self._create_input_sink()
             self._create_roi_frame()
-            device = self.RawDevice(1, 6, 0x100, self.hud)  # RIDEV_INPUTSINK, without suppressing game input.
-            self.raw_registered = bool(self.u.RegisterRawInputDevices(ctypes.byref(device), 1, ctypes.sizeof(device)))
-            self.enter_registered = self.raw_registered
-            self._record("raw_input_registered", success=self.raw_registered, winError=ctypes.get_last_error() if not self.raw_registered else 0)
             message = Message()
             while not self.stopping.is_set():
-                self.last_ui_tick = time.monotonic()
                 self.controller.maintenance()
-                wanted = self.controller.state == "READY"
-                if wanted and not self.hotkey_registered and time.monotonic() >= self.hotkey_retry:
-                    self.hotkey_registered = bool(self.u.RegisterHotKey(None, 0xBD0, 0x4000, 0x79))
-                    self._record("f10_registered", success=self.hotkey_registered, winError=ctypes.get_last_error() if not self.hotkey_registered else 0)
-                    if not self.hotkey_registered: self.hotkey_retry = time.monotonic() + 5
-                elif not wanted and self.hotkey_registered:
-                    self.u.UnregisterHotKey(None, 0xBD0)
-                    self.hotkey_registered = False
-                self._update_game_controls()
+                self._update_hotkey()
+                self._update_roi_frame(self.controller.state == "READY")
                 while self.u.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
-                    if message.message == 0x0312 and message.wParam == 0xBD0:
-                        self._key_action(0x79, "hotkey")
-                    elif (message.message == 0x0100 and self.hud and
-                          (message.hwnd == self.hud or self.u.IsChild(self.hud, message.hwnd)) and
-                          self._handle_panel_key(message.wParam, message.lParam)):
-                        pass
-                    else:
-                        self.u.TranslateMessage(ctypes.byref(message))
-                        self.u.DispatchMessageW(ctypes.byref(message))
-                try:
-                    target, generation = self.commands.get_nowait()
+                    self.u.TranslateMessage(ctypes.byref(message)); self.u.DispatchMessageW(ctypes.byref(message))
+                try: target, generation = self.commands.get_nowait()
                 except queue.Empty: pass
                 else:
-                    self.u.ShowWindow(self.hud, 0); self.panel_visible = False
-                    if generation == self.controller.snapshot()["generation"]:
+                    if generation == self.controller.generation:
                         try: self._select_overlay(target, generation)
                         except NativeCaptureError as error:
                             self.controller.diagnostics.exception("selection_failed", code=error.code)
-                            with self.controller.lock:
-                                if generation == self.controller.generation:
-                                    self.controller.disarm(); self.controller.error = error.code
-                self.stopping.wait(.01)
+                            self.controller.stop_capture(error.code)
+                self.stopping.wait(.02)
         except Exception:
             self.controller.diagnostics.exception("native_ui_failed")
-            self.controller.disarm()
-            with self.controller.lock:
-                self.controller.runtime_failed = True; self.controller.error = "native_runtime_failed"
+            self.controller.stop_capture("native_runtime_failed")
+            self.controller.runtime_failed = True
         finally:
-            if self.raw_registered:
-                device = self.RawDevice(1, 6, 1, None)
-                self.u.RegisterRawInputDevices(ctypes.byref(device), 1, ctypes.sizeof(device))
-            self.raw_registered = self.enter_registered = False
-            if self.hotkey_registered: self.u.UnregisterHotKey(None, 0xBD0)
+            if self.hotkey_registered: self.u.UnregisterHotKey(self.sink, 0xBD0)
             self.hotkey_registered = False
+            instance = self.k.GetModuleHandleW(None)
             if self.roi_frame: self.u.DestroyWindow(self.roi_frame); self.roi_frame = None
-            if self.roi_frame_class: self.u.UnregisterClassW(self.roi_frame_class, self.k.GetModuleHandleW(None))
-            if self.hud: self.u.DestroyWindow(self.hud); self.hud = None
-            if self.hud_class: self.u.UnregisterClassW(self.hud_class, self.k.GetModuleHandleW(None))
+            if self.roi_frame_class: self.u.UnregisterClassW(self.roi_frame_class, instance)
+            if self.sink: self.u.DestroyWindow(self.sink); self.sink = None
+            if self.sink_class: self.u.UnregisterClassW(self.sink_class, instance)
             self._record("native_ui_stopped")
-
-    def _raw_input(self, handle):
-        size = w.UINT()
-        header_size = ctypes.sizeof(self.RawHeader)
-        if self.u.GetRawInputData(handle, 0x10000003, None, ctypes.byref(size), header_size) == 0xffffffff:
-            self._record("raw_input_read_failed", winError=ctypes.get_last_error()); return
-        if not header_size <= size.value <= 4096: return
-        data = ctypes.create_string_buffer(size.value)
-        result = self.u.GetRawInputData(handle, 0x10000003, data, ctypes.byref(size), header_size)
-        if result == 0xffffffff:
-            self._record("raw_input_read_failed", winError=ctypes.get_last_error()); return
-        header = self.RawHeader.from_buffer_copy(data)
-        if header.kind != 1 or result < header_size + ctypes.sizeof(self.RawKeyboard): return
-        keyboard = self.RawKeyboard.from_buffer_copy(data, header_size)
-        self._raw_key(keyboard.key, bool(keyboard.flags & 1))
-
-    def _raw_key(self, key, released):
-        if key not in (13, 0x79, 0x77, 27): return
-        if released: self.keys_down.discard(key); return
-        if key in self.keys_down: return
-        self.keys_down.add(key)
-        self._key_action(key, "raw-input")
-
-    def _key_action(self, key, source):
-        if self.controller is None or self.controller.state != "READY": return
-        action = {13: 101, 0x79: 101, 0x77: 102, 27: 103}.get(key)
-        if action is None: return
-        self._record("key_received", key=key, source=source)
-        if not self.is_foreground(self.controller.target):
-            self._record("key_ignored", reason="other_foreground"); return
-        now = time.monotonic()
-        # WM_INPUT, WM_KEYDOWN and WM_HOTKEY can describe the same physical press.
-        previous = self.last_hotkey.get(key)
-        if previous and now - previous[0] < .12 and previous[1] != source: return
-        self.last_hotkey[key] = (now, source)
-        self._panel_action(action, source)
-
-    def _handle_panel_key(self, key, flags=0):
-        if key not in (13, 0x79, 0x77, 27): return False
-        if not flags & (1 << 30): self._key_action(key, "panel-key")
-        return True
-
-    def _panel_action(self, action, source="button"):
-        if self.controller is None: return
-        self._record("panel_action", action=action, source=source)
-        if action == 101: self.controller.on_hotkey()
-        elif action == 102: self.controller.reselect()
-        elif action == 103: self.controller.finish()
 
     def _window_callback(self, procedure):
         def checked(hwnd, message, wp, lp):
@@ -420,59 +321,6 @@ class Win32CapturePlatform:
                     self._finish_frame_drag(True); self.u.ReleaseCapture()
                 return self.u.DefWindowProcW(hwnd, message, wp, lp)
         return self.WindowProc(checked)
-
-    def _create_hud(self):
-        u, g = self.u, self.g
-        def procedure(hwnd, msg, wp, lp):
-            if msg == 0x00ff:
-                self._raw_input(lp)
-                return u.DefWindowProcW(hwnd, msg, wp, lp)
-            if msg == 0x0210 and wp & 0xffff == 0x0201:
-                self._record("panel_mouse_down")
-            if msg == 0x0111:
-                if wp >> 16 == 0: self._panel_action(wp & 0xffff)
-                return 0
-            if msg == 0x0100 and self._handle_panel_key(wp, lp): return 0
-            if msg == 0x0010:
-                self._panel_action(103); u.ShowWindow(hwnd, 0); return 0
-            if msg == 0x000f:
-                paint = self.Paint(); hdc = u.BeginPaint(hwnd, ctypes.byref(paint))
-                try:
-                    state = self.controller.snapshot()
-                    title = "물교" if state["mode"] == "TRADE" else "창고"
-                    text = f"{title} · {state['captured']}장 캡처" + (" · 처리 중" if state["busy"] else "")
-                    errors = {"queue_full":"대기열이 가득 찼습니다. 브라우저에서 이미지를 확인하세요.",
-                              "black_frame":"검은 화면입니다. 게임을 표시한 뒤 다시 캡처하세요.",
-                              "pixel_capture_failed":"캡처 실패. 게임 화면과 영역을 확인하세요.",
-                              "foreground_required":"게임 화면을 앞에 둔 뒤 이 창의 캡처 버튼을 누르세요.",
-                              "capture_busy":"이전 캡처 또는 인식 처리 중입니다. 잠시 기다리세요.",
-                              "hotkey_conflict":"F10 충돌. 이 창의 캡처 버튼 또는 Enter를 사용하세요."}
-                    guide = errors.get(state["error"], "테두리 드래그: 이동 · 모서리: 크기 · Enter / F10: 캡처")
-                    g.SetTextColor(hdc, 0xFFFFFF); g.SetBkMode(hdc, 1)
-                    g.TextOutW(hdc, 12, 10, text, len(text)); g.TextOutW(hdc, 12, 38, guide, len(guide))
-                finally: u.EndPaint(hwnd, ctypes.byref(paint))
-                return 0
-            return u.DefWindowProcW(hwnd, msg, wp, lp)
-        self.hud_callback = self._window_callback(procedure)
-        self.hud_class = f"BDOBarterCapturePanel-{os.getpid()}"
-        instance = self.k.GetModuleHandleW(None)
-        wc = self.WindowClass(0, self.hud_callback, 0, 0, instance, None, None, g.GetStockObject(4), None, self.hud_class)
-        if not u.RegisterClassW(ctypes.byref(wc)): raise ctypes.WinError(ctypes.get_last_error())
-        self.hud = u.CreateWindowExW(0x00000008 | 0x00000080, self.hud_class,
-                                    "BDO 캡처 · Enter / F10 / 버튼", 0x80C80000,
-                                    0, 0, 600, 155, None, None, instance, None)
-        if not self.hud: raise ctypes.WinError(ctypes.get_last_error())
-        self.display_excluded = bool(u.SetWindowDisplayAffinity(self.hud, 0x11))
-        self._record("panel_created", displayExcluded=self.display_excluded,
-                     winError=ctypes.get_last_error() if not self.display_excluded else 0)
-        if not self.display_excluded:
-            raise NativeCaptureError("capture_exclusion_failed", "캡처 조작창 제외를 지원하지 않는 Windows 환경입니다.")
-        self.hud_buttons = []
-        for index, (label, action) in enumerate((("캡처 · Enter", 101), ("영역 변경 · F8", 102), ("종료 · Esc", 103))):
-            button = u.CreateWindowExW(0, "BUTTON", label, 0x50010000,
-                                       12 + index*192, 76, 182, 32, self.hud, w.HMENU(action), instance, None)
-            if not button: raise ctypes.WinError(ctypes.get_last_error())
-            self.hud_buttons.append(button)
 
     def _create_roi_frame(self):
         u, g = self.u, self.g
@@ -567,33 +415,10 @@ class Win32CapturePlatform:
         if not self.frame_drag: self._position_roi_frame(self.controller.profile["roi"], self.geometry(self.controller.target))
         if not self.roi_frame_visible: self.u.ShowWindow(self.roi_frame, 4); self.roi_frame_visible = True
 
-    def _update_game_controls(self):
-        state = self.controller.snapshot()
-        active = state["state"] == "READY" and self.controller.target is not None
-        self._update_roi_frame(active)
-        if not active:
-            if self.panel_visible:
-                self.u.ShowWindow(self.hud, 0); self.panel_visible = False
-                self._record("panel_hidden", reason=state["state"])
-            return
-        if self.panel_generation != state["generation"]:
-            geo = self.geometry(self.controller.target)
-            if not self.u.SetWindowPos(self.hud, w.HWND(-1), geo["left"]+12, geo["top"]+12, 600, 155, 0x0010):
-                raise ctypes.WinError(ctypes.get_last_error())
-            self.panel_generation = state["generation"]
-        if not self.panel_visible:
-            self.u.ShowWindow(self.hud, 4); self.panel_visible = True
-            self._record("panel_shown")
-        status = (state["mode"], state["captured"], state["busy"], state["error"])
-        if status != self.last_panel_status:
-            self.last_panel_status = status
-            self.u.InvalidateRect(self.hud, None, True)
-
     def _wait_for_game(self, target, generation):
         self.u.SetForegroundWindow(int(target))
         deadline = time.monotonic() + 30
         while not self._game_is_foreground(target):
-            self.last_ui_tick = time.monotonic()
             if self.stopping.is_set() or generation != self.controller.snapshot()["generation"]:
                 raise NativeCaptureError("roi_cancelled", "영역 지정을 취소했습니다.")
             if time.monotonic() > deadline:
@@ -676,7 +501,6 @@ class Win32CapturePlatform:
             u.ShowWindow(hwnd, 5); u.UpdateWindow(hwnd); u.SetForegroundWindow(hwnd)
             message = self.Message()
             while not done and not self.stopping.is_set():
-                self.last_ui_tick = time.monotonic()
                 self.controller.maintenance()
                 while u.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
                     u.TranslateMessage(ctypes.byref(message)); u.DispatchMessageW(ctypes.byref(message))
@@ -690,5 +514,4 @@ class Win32CapturePlatform:
             roi = None
         if u.IsWindow(int(target)):
             u.SetForegroundWindow(int(target))
-        self.panel_generation = None
         self.controller.selected(generation, roi, geo)

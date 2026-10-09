@@ -14,7 +14,7 @@ from PIL import Image
 
 from local_app.backend.app import create_app
 from local_app.backend.recognition_contracts import RecognitionContractError, validate_capture_metadata
-from local_app.native_capture import NativeCaptureController, NativeCaptureError, MAX_BYTES, LEASE_SECONDS, adjust_roi
+from local_app.native_capture import NativeCaptureController, NativeCaptureError, MAX_BYTES, adjust_roi
 from .test_trade_batch_runtime import ReadyRuntime, fake_worker
 
 
@@ -52,8 +52,7 @@ class NativeFixture(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.platform = FakePlatform()
-        self.now = 100
-        self.controller = NativeCaptureController(self.platform, Path(self.temp.name)/"profiles.json", clock=lambda: self.now)
+        self.controller = NativeCaptureController(self.platform, Path(self.temp.name)/"profiles.json")
         self.receiver = str(uuid.uuid4())
         self.context = {"baseRevision": 0, "sessionId": None, "sessionRevision": None}
         self.roi = {"x": 100, "y": 80, "width": 80, "height": 50}
@@ -107,9 +106,9 @@ class NativeCaptureTests(NativeFixture):
         self.platform.foreground = False
         self.assertFalse(self.controller.on_hotkey())
         self.platform.foreground = True
-        self.heartbeat(busy=True)
+        self.controller.busy=True
         self.assertFalse(self.controller.on_hotkey())
-        self.heartbeat()
+        self.controller.busy=False
         self.platform.release.clear()
         self.assertTrue(self.controller.on_hotkey())
         self.assertFalse(self.controller.on_hotkey())
@@ -125,7 +124,7 @@ class NativeCaptureTests(NativeFixture):
         packet = self.capture()
         self.assertEqual(packet["metadata"]["taskType"], "warehouse")
         self.controller.close()
-        self.controller = NativeCaptureController(self.platform, Path(self.temp.name)/"profiles.json", clock=lambda: self.now)
+        self.controller = NativeCaptureController(self.platform, Path(self.temp.name)/"profiles.json")
         self.prepare(select=False)
         self.assertEqual(self.controller.profile["id"], trade_id)
 
@@ -149,7 +148,7 @@ class NativeCaptureTests(NativeFixture):
             original = self.platform.geo[key]
             self.platform.geo[key] = value
             self.controller.maintenance()
-            self.assertEqual(self.controller.mode, "NONE", key)
+            self.assertEqual(self.controller.state, "STOPPED", key)
             with self.assertRaises(NativeCaptureError): self.prepare(select=False)
             self.platform.geo[key] = original
             self.prepare(select=False)
@@ -164,55 +163,41 @@ class NativeCaptureTests(NativeFixture):
         self.controller.selected(result["generation"], {**self.roi, "x": -1}, self.platform.geo)
         self.assertFalse(self.controller.profiles)
 
-    def test_lease_close_and_generation_drop_in_flight_capture(self):
-        self.prepare()
-        self.platform.release.clear()
+    def test_mode_switch_cannot_drop_pending_or_in_flight_capture(self):
+        self.prepare(); self.platform.release.clear()
         self.assertTrue(self.controller.on_hotkey())
-        old = self.controller.generation
-        self.prepare("warehouse")
-        self.controller.disarm(self.receiver, old)
-        self.assertEqual(self.controller.mode, "WAREHOUSE")
-        self.platform.release.set()
-        self.wait_capture()
-        self.assertFalse(self.controller.frames)
-        self.now += LEASE_SECONDS + 1
-        self.controller.maintenance()
-        self.assertEqual(self.controller.mode, "NONE")
-        self.assertFalse(self.controller.wants_hotkey())
-        self.prepare()
+        generation=self.controller.generation
+        with self.assertRaises(NativeCaptureError): self.prepare("warehouse")
+        self.assertEqual(self.controller.generation,generation)
+        self.platform.release.set(); self.wait_capture()
+        with self.assertRaises(NativeCaptureError): self.prepare("warehouse")
+        self.assertEqual(len(self.controller.frames),1)
         self.controller.close()
         self.assertFalse(self.controller.snapshot()["available"])
         self.assertTrue(self.platform.stopped)
 
-    def test_expired_image_and_wrong_receiver_never_deliver(self):
-        self.prepare()
-        packet = self.capture()
-        capture_id = packet["metadata"]["captureId"]
-        with self.assertRaises(NativeCaptureError): self.controller.image(str(uuid.uuid4()), packet["generation"], capture_id)
-        self.now += LEASE_SECONDS + 1
-        with self.assertRaises(NativeCaptureError): self.controller.image(self.receiver, packet["generation"], capture_id)
+    def test_wrong_receiver_rejected_but_browser_delay_keeps_image(self):
+        self.prepare(); packet=self.capture(); capture_id=packet["metadata"]["captureId"]
+        with self.assertRaises(NativeCaptureError):self.controller.image(str(uuid.uuid4()),packet["generation"],capture_id)
+        self.platform.foreground=False
+        with patch("local_app.native_capture.time.monotonic",return_value=10000):self.controller.maintenance()
+        self.assertTrue(self.controller.image(self.receiver,packet["generation"],capture_id))
 
-    def test_background_browser_tick_delay_does_not_expire_prepared_input(self):
-        self.prepare()
-        for _ in range(3):
-            self.now += 65
-            self.controller.maintenance()
-            self.assertEqual(self.controller.state, "READY")
-            self.assertTrue(self.heartbeat()["owned"])
-        self.capture()
-        self.now += LEASE_SECONDS + 1
-        self.controller.maintenance()
-        self.assertEqual(self.controller.mode, "NONE")
-        self.assertFalse(self.controller.frames)
+    def test_browser_pause_and_receiver_busy_do_not_stop_native_capture(self):
+        self.prepare(); self.heartbeat(busy=True)
+        with patch("local_app.native_capture.time.monotonic",return_value=10000):self.controller.maintenance()
+        self.assertEqual(self.controller.state,"READY")
+        self.assertTrue(self.controller.on_hotkey());self.wait_capture()
+        self.assertEqual(len(self.controller.frames),1)
+        self.platform.foreground=False;self.controller.maintenance()
+        self.assertEqual(self.controller.state,"READY")
 
-    def test_session_change_disarms_without_delivering_old_capture(self):
-        for key, value in (("sessionId", str(uuid.uuid4())), ("sessionRevision", 1), ("baseRevision", 1)):
-            self.prepare()
-            self.capture()
-            result = self.heartbeat(context={**self.context, key: value})
-            self.assertFalse(result["owned"])
-            self.assertFalse(result["frames"])
-            self.assertFalse(self.controller.frames)
+    def test_context_change_stops_capture_but_preserves_pending_evidence(self):
+        self.prepare();packet=self.capture()
+        result=self.heartbeat(context={**self.context,"baseRevision":1})
+        self.assertFalse(result["owned"]);self.assertEqual(self.controller.state,"STOPPED")
+        self.assertEqual(len(self.controller.frames),1)
+        self.assertTrue(self.controller.image(self.receiver,packet["generation"],packet["metadata"]["captureId"]))
 
     def test_queue_limits_pending_retry_and_idempotent_ack(self):
         self.prepare()
@@ -252,18 +237,14 @@ class NativeCaptureTests(NativeFixture):
         self.assertFalse(self.controller.frames)
         self.controller.registration_failed()
         self.assertEqual(self.controller.error, "hotkey_conflict")
-        self.assertTrue(self.controller.wants_hotkey(), "Enter must remain usable when F10 registration fails")
+        self.assertTrue(self.controller.wants_hotkey(), "controller retains pending state during hotkey conflict")
 
-    def test_rejected_capture_reports_busy_and_wrong_foreground(self):
-        self.prepare()
-        self.controller.receiver_busy = True
-        self.assertFalse(self.controller.on_hotkey())
-        self.assertEqual(self.controller.error, "capture_busy")
-        self.controller.receiver_busy = False; self.platform.foreground = False
-        self.assertFalse(self.controller.on_hotkey())
-        self.assertEqual(self.controller.error, "foreground_required")
-        self.platform.foreground = True
-        self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
+    def test_capture_rejection_for_pixel_busy_and_wrong_foreground(self):
+        self.prepare();self.controller.busy=True
+        self.assertFalse(self.controller.on_hotkey());self.assertEqual(self.controller.error,"capture_busy")
+        self.controller.busy=False;self.platform.foreground=False
+        self.assertFalse(self.controller.on_hotkey());self.assertEqual(self.controller.error,"foreground_required")
+        self.platform.foreground=True;self.assertTrue(self.controller.on_hotkey());self.wait_capture()
         self.assertIsNone(self.controller.error)
 
     def test_move_region_preserves_pending_images_and_generation_and_uses_new_box(self):
@@ -273,7 +254,7 @@ class NativeCaptureTests(NativeFixture):
         old_profile = old_frame["metadata"]["profileId"]
         self.assertTrue(self.controller.begin_roi_adjustment())
         self.assertFalse(self.controller.on_hotkey())
-        self.controller.reselect(); self.assertEqual(self.controller.state, "READY")
+        self.assertEqual(self.controller.state, "READY")
         moved = adjust_roi(self.roi, "", 140, 30, self.platform.geo)
         self.assertTrue(self.controller.update_roi(generation, moved, dict(self.platform.geo)))
         self.assertEqual(self.controller.generation, generation)
@@ -316,63 +297,43 @@ class NativeCaptureTests(NativeFixture):
             with self.assertRaises(RecognitionContractError): validate_capture_metadata(invalid)
 
 
-    def test_share_session_enter_select_captures_first_image(self):
-        generation = self.controller.prepare(self.receiver, "trade", "42", self.context, select=True, game_session=True)["generation"]
+    def test_roi_confirmation_does_not_capture_until_f10(self):
+        self.prepare();self.assertEqual(self.controller.captured_count,0)
         self.assertFalse(self.controller.frames)
-        self.controller.selected(generation, self.roi, dict(self.platform.geo))
-        self.wait_capture()
-        self.assertEqual(self.controller.captured_count, 1)
-        self.assertEqual(len(self.heartbeat()["frames"]), 1)
-        self.assertTrue(self.controller.on_hotkey())
-        self.wait_capture()
-        self.assertEqual(self.controller.captured_count, 2)
+        self.assertTrue(self.controller.on_hotkey());self.wait_capture()
+        self.assertEqual(self.controller.captured_count,1)
 
-    def test_game_session_survives_browser_pause_but_expires_after_game_leaves(self):
-        generation = self.controller.prepare(self.receiver, "trade", "42", self.context, select=True, game_session=True)["generation"]
-        self.controller.selected(generation, self.roi, dict(self.platform.geo)); self.wait_capture()
-        self.now += 600
-        self.controller.maintenance()
-        self.assertEqual(self.controller.state, "READY")
-        self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
-        self.platform.foreground = False
-        self.now += LEASE_SECONDS + 1
-        self.controller.maintenance()
-        self.assertEqual(self.controller.mode, "NONE")
-
-    def test_game_finish_keeps_completed_frames_until_browser_acknowledges(self):
-        generation = self.controller.prepare(self.receiver, "trade", "42", self.context, select=True, game_session=True)["generation"]
-        self.controller.selected(generation, self.roi, dict(self.platform.geo)); self.wait_capture()
-        self.controller.finish()
+    def test_target_loss_stops_input_and_preserves_pending_frames(self):
+        self.prepare();self.capture()
+        with patch.object(self.platform,"geometry",side_effect=NativeCaptureError("target_unavailable","gone")):
+            self.controller.maintenance()
+        self.assertEqual(self.controller.state,"STOPPED");self.assertEqual(len(self.controller.frames),1)
         self.assertFalse(self.controller.wants_hotkey())
-        self.platform.foreground = False; self.now += 600
-        packet = self.heartbeat()["frames"][0]
-        self.assertEqual(self.controller.state, "STOPPED")
-        self.assertTrue(self.controller.image(self.receiver, generation, packet["metadata"]["captureId"]))
-        self.controller.acknowledge(self.receiver, generation, packet["metadata"]["captureId"])
-        self.assertFalse(self.controller.frames)
 
-    def test_cancel_reselect_keeps_old_roi_and_pending_images(self):
-        generation = self.controller.prepare(self.receiver, "trade", "42", self.context, select=True, game_session=True)["generation"]
-        self.controller.selected(generation, self.roi, dict(self.platform.geo)); self.wait_capture()
-        first = self.heartbeat()["frames"][0]
-        self.controller.reselect()
-        self.controller.selected(generation, None, dict(self.platform.geo))
-        self.assertEqual(self.controller.state, "READY")
-        self.assertEqual(self.heartbeat()["frames"][0], first)
-        self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
-        self.assertEqual(self.controller.captured_count, 2)
+    def test_finish_retains_frames_until_ack_then_next_mode_can_start(self):
+        generation=self.prepare();packet=self.capture();self.controller.finish()
+        self.assertFalse(self.controller.wants_hotkey());self.platform.foreground=False
+        self.assertEqual(len(self.heartbeat()["frames"]),1)
+        self.assertTrue(self.controller.image(self.receiver,generation,packet["metadata"]["captureId"]))
+        self.controller.acknowledge(self.receiver,generation,packet["metadata"]["captureId"])
+        self.platform.foreground=True;self.prepare("warehouse")
+        self.assertEqual(self.controller.mode,"WAREHOUSE")
 
-    def test_game_reselect_preserves_existing_capture_and_captures_new_region(self):
-        generation = self.controller.prepare(self.receiver, "trade", "42", self.context, select=True, game_session=True)["generation"]
-        self.controller.selected(generation, self.roi, dict(self.platform.geo)); self.wait_capture()
-        first = self.heartbeat()["frames"][0]
-        self.controller.reselect()
-        self.assertEqual(self.controller.state, "SELECTING")
-        self.controller.selected(generation, {**self.roi, "x": 120}, dict(self.platform.geo)); self.wait_capture()
-        frames = self.heartbeat()["frames"]
-        self.assertEqual(len(frames), 2)
-        self.assertEqual(frames[0], first)
-        self.assertEqual(frames[1]["metadata"]["nativeEvidence"]["roi"]["x"], 120)
+    def test_attach_new_browser_retains_generation_and_frames(self):
+        generation=self.prepare();packet=self.capture();replacement=str(uuid.uuid4())
+        self.controller.attach(replacement)
+        self.assertFalse(self.heartbeat()["owned"])
+        self.assertEqual(self.controller.generation,generation)
+        self.assertTrue(self.controller.image(replacement,generation,packet["metadata"]["captureId"]))
+
+    def test_resize_preserves_old_capture_and_next_capture_has_new_size(self):
+        generation=self.prepare();first=self.capture()
+        self.assertTrue(self.controller.begin_roi_adjustment())
+        resized=adjust_roi(self.roi,"se",20,30,self.platform.geo)
+        self.assertTrue(self.controller.update_roi(generation,resized,self.platform.geo))
+        self.assertTrue(self.controller.on_hotkey());self.wait_capture();frames=self.heartbeat()["frames"]
+        self.assertEqual(len(frames),2);self.assertEqual(frames[0],first)
+        self.assertEqual(frames[1]["metadata"]["frame"],{"width":100,"height":80})
 
 
 class NativeApiTests(NativeFixture):
@@ -402,12 +363,30 @@ class NativeApiTests(NativeFixture):
         self.assertEqual(self.post(command).status_code, 422)
         self.assertEqual(self.controller.state, "READY")
         command["reason"] = "dialog_closed"
+        self.assertEqual(self.post(command).status_code, 422)
+        self.assertEqual(self.controller.state, "READY")
+        command["reason"] = "finished"
         self.assertEqual(self.post(command).status_code, 200)
         response = self.client.get("/api/native-capture/diagnostics", base_url="http://localhost:18765")
         self.assertEqual(response.status_code, 200)
         events = response.get_json()["recent"]
-        self.assertTrue(any(e["event"] == "session_disarmed" and e["reason"] == "dialog_closed" for e in events))
+        self.assertTrue(any(e["event"] == "session_disarmed" and e["reason"] == "finished" for e in events))
         self.assertTrue(any(e["event"] == "api_rejected" and e["code"] == "invalid_command" for e in events))
+
+    def test_stop_and_attach_keep_pending_and_enforce_current_receiver(self):
+        self.prepare();packet=self.capture();generation=self.controller.generation
+        other=str(uuid.uuid4())
+        command={"action":"stop","receiver":other,"generation":generation}
+        self.assertEqual(self.post(command).status_code,409)
+        self.assertEqual(self.controller.state,"READY")
+        result=self.post({"action":"attach","receiver":other}).get_json()
+        self.assertEqual(result["generation"],generation);self.assertEqual(result["pending"],1)
+        command["receiver"]=self.receiver
+        self.assertEqual(self.post(command).status_code,409)
+        command["receiver"]=other
+        self.assertEqual(self.post(command).get_json()["state"],"STOPPED")
+        self.assertEqual(len(self.controller.frames),1)
+        self.assertEqual(self.post({"action":"ack","receiver":other,"generation":generation,"captureId":packet["metadata"]["captureId"]}).get_json()["pending"],0)
 
     def test_png_bridge_does_not_mutate_inventory_or_trigger_ocr(self):
         before = self.client.get("/api/bootstrap").get_json()

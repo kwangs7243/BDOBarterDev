@@ -27,7 +27,7 @@ assert.equal(trade.length, 1); assert.equal(reads, 1, "retry acknowledges withou
 assert.equal(await receiver.receive(packet(0), getBlob, adapter, decode), false);
 assert.equal(await receiver.receive(packet(1,"warehouse"), getBlob, adapter, decode), false);
 busy = true; assert.equal(await receiver.receive(packet(), getBlob, adapter, decode), false); busy = false;
-active = false; assert.equal(await receiver.receive(packet(), getBlob, adapter, decode), false); active = true;
+active = false; const closedPacket = packet(); assert.equal(await receiver.receive(closedPacket, getBlob, adapter, decode), true); trade.remove(closedPacket.metadata.captureId); active = true;
 let resolveBlob;
 const delayed = receiver.receive(packet(), () => new Promise(resolve => { resolveBlob = resolve; }), adapter, decode);
 receiver.activate("warehouse", 2); resolveBlob(blob);

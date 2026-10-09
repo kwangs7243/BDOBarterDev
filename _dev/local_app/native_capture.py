@@ -16,8 +16,6 @@ from local_app.backend.recognition_contracts import validate_capture_metadata, v
 
 MAX_BYTES = 20 * 1024 * 1024
 MAX_FRAMES = 100
-# Hidden Chrome timers can be batched once per minute. Keep two missed ticks tolerable.
-LEASE_SECONDS = 150
 
 
 class NativeCaptureError(Exception):
@@ -63,18 +61,17 @@ def screen_box(geometry, roi):
 
 
 class NativeCaptureController:
-    def __init__(self, platform, profile_path: Path, *, clock=time.monotonic):
-        self.platform, self.profile_path, self.clock = platform, Path(profile_path), clock
+    def __init__(self, platform, profile_path: Path):
+        self.platform, self.profile_path = platform, Path(profile_path)
         self.lock = threading.RLock()
         self.mode, self.state, self.error = "NONE", "IDLE", None
-        self.generation, self.receiver, self.deadline = 0, None, 0
+        self.generation, self.receiver = 0, None
         self.target, self.context, self.profile = None, None, None
         self.frames, self.queue_count, self.queue_bytes = {}, 0, 0
         self.receiver_busy, self.busy, self.closed = False, False, False
         self.profiles = {}
         self.worker = None
         self.runtime_failed = False
-        self.game_session = False
         self.captured_count = 0
         self.roi_adjusting = False
         self.diagnostics = CaptureDiagnostics(self.profile_path.parent / "logs" / "native-capture.jsonl")
@@ -102,7 +99,7 @@ class NativeCaptureController:
         self.mode, self.state, self.error = "NONE", "IDLE", error
         self.receiver, self.target, self.profile = None, None, None
         self.frames.clear()
-        self.game_session, self.captured_count = False, 0
+        self.captured_count = 0
         self.roi_adjusting = False
         self.platform.cancel_selection()
 
@@ -113,19 +110,29 @@ class NativeCaptureController:
                 self._clear()
             return self.snapshot()
 
+    def stop_capture(self, error=None):
+        with self.lock:
+            self.state, self.error, self.target = "STOPPED", error, None
+            self.roi_adjusting = False
+            self.platform.cancel_selection()
+            self.record("capture_stopped", reason=error or "user_stop")
+
+    def attach(self, receiver):
+        try: receiver = str(uuid.UUID(receiver))
+        except (ValueError, TypeError, AttributeError):
+            raise NativeCaptureError("invalid_receiver", "캡처 수신기를 다시 여세요.", 422) from None
+        with self.lock:
+            self.receiver = receiver
+            return self.snapshot()
+
     def maintenance(self):
         with self.lock:
-            if (self.game_session and self.target is not None and self.platform.is_foreground(self.target)) or (self.state == "STOPPED" and self.frames):
-                self.deadline = self.clock() + LEASE_SECONDS
-            if self.receiver and self.clock() > self.deadline:
-                self._clear("receiver_expired")
             if self.target is not None:
                 try:
                     geo = self.platform.geometry(self.target)
                     if self.profile and signature(geo) != self.profile["signature"]:
-                        self._clear("profile_changed")
-                except (NativeCaptureError, OSError):
-                    self._clear("target_unavailable")
+                        self.stop_capture("profile_changed")
+                except (NativeCaptureError, OSError): self.stop_capture("target_unavailable")
 
     def snapshot(self):
         with self.lock:
@@ -133,12 +140,11 @@ class NativeCaptureController:
                     "generation": self.generation, "error": self.error,
                     "hotkeyRegistered": self.platform.hotkey_registered,
                     "pending": len(self.frames), "captured": self.captured_count,
-                    "busy": self.busy or self.receiver_busy, "gameSession": self.game_session,
-                    "enterRegistered": getattr(self.platform, "enter_registered", False),
-                    "rawInputRegistered": getattr(self.platform, "raw_registered", False),
+                    "busy": self.busy, "receiverBusy": self.receiver_busy,
+                    "context": copy.deepcopy(self.context), "inputSinkReady": bool(getattr(self.platform, "sink", None)),
                     "diagnostics": {"path": str(self.diagnostics.path), "loggingError": self.diagnostics.error}}
 
-    def prepare(self, receiver, mode, target, context, *, select=False, game_session=False):
+    def prepare(self, receiver, mode, target, context, *, select=False):
         try:
             receiver = str(uuid.UUID(receiver))
         except (ValueError, TypeError, AttributeError):
@@ -153,10 +159,11 @@ class NativeCaptureController:
                 raise NativeCaptureError("native_runtime_failed", "네이티브 캡처가 중단되었습니다. 앱을 다시 실행하세요.", 503)
             if self.closed:
                 raise NativeCaptureError("capture_closed", "앱이 종료 중입니다.")
+            if self.frames or self.busy:
+                raise NativeCaptureError("pending_capture", "기존 캡처를 먼저 수신한 뒤 모드를 변경하세요.")
             self._clear()
             self.receiver, self.mode, self.target, self.context = receiver, mode.upper(), target, normalized
-            self.deadline, self.receiver_busy = self.clock() + LEASE_SECONDS, False
-            self.game_session = game_session
+            self.receiver_busy = False
             self.queue_count, self.queue_bytes = 0, 0
             generation = self.generation
             if select:
@@ -175,7 +182,7 @@ class NativeCaptureController:
                     self._clear("roi_missing")
                     raise NativeCaptureError("roi_missing", "게임 화면에서 영역을 먼저 지정하세요.") from None
                 self.profile, self.state = copy.deepcopy(profile), "READY"
-            self.record("session_prepared", select=select, mode=mode, gameSession=game_session)
+            self.record("session_prepared", select=select, mode=mode)
             return self.snapshot()
 
     def selected(self, generation, roi, geo):
@@ -184,7 +191,7 @@ class NativeCaptureController:
             if generation != self.generation or self.state != "SELECTING":
                 return
             if roi is None:
-                if self.game_session and self.profile:
+                if self.profile:
                     self.state, self.error = "READY", "roi_cancelled"
                 else:
                     self._clear("roi_cancelled")
@@ -200,8 +207,6 @@ class NativeCaptureController:
             except (NativeCaptureError, OSError, ValueError):
                 self.diagnostics.exception("roi_save_failed")
                 self._clear("roi_save_failed")
-        if self.game_session and self.state == "READY":
-            self.on_hotkey()
 
     def _store_profile(self, roi, geometry):
         key = self.mode.lower()
@@ -217,7 +222,7 @@ class NativeCaptureController:
 
     def begin_roi_adjustment(self):
         with self.lock:
-            if self.state != "READY" or self.busy or self.receiver_busy or not self.profile: return False
+            if self.state != "READY" or self.busy or not self.profile: return False
             self.roi_adjusting = True
             self.record("roi_drag_started")
             return True
@@ -240,19 +245,11 @@ class NativeCaptureController:
                 return False
             finally: self.roi_adjusting = False
 
-    def finish(self):
+    def finish(self, receiver=None, generation=None):
         with self.lock:
-            if self.state == "READY":
-                self.record("session_finished")
-                self.state, self.game_session, self.error = "STOPPED", False, None
-
-    def reselect(self):
-        with self.lock:
-            if self.state != "READY" or self.busy or self.receiver_busy or self.roi_adjusting:
-                return
-            self.record("roi_reselect")
-            self.state, self.error = "SELECTING", None
-            self.platform.select(self.target, self.generation)
+            if receiver is not None and (receiver != self.receiver or generation != self.generation):
+                raise NativeCaptureError("stale_capture", "다른 수신기의 캡처입니다.")
+            self.stop_capture()
 
     def registration_failed(self):
         with self.lock:
@@ -261,7 +258,7 @@ class NativeCaptureController:
 
     def wants_hotkey(self):
         with self.lock:
-            return self.state == "READY" and not self.closed and not self.busy and not self.receiver_busy and not self.roi_adjusting
+            return self.state == "READY" and not self.closed and not self.busy and not self.roi_adjusting
 
     def heartbeat(self, receiver, generation, count, size, busy, context):
         if (type(count) is not int or not 0 <= count <= MAX_FRAMES or type(size) is not int
@@ -272,9 +269,8 @@ class NativeCaptureController:
             if receiver != self.receiver or generation != self.generation:
                 return {**self.snapshot(), "frames": [], "owned": False}
             if not isinstance(context, dict) or context != self.context:
-                self._clear("session_changed")
+                self.stop_capture("session_changed")
                 return {**self.snapshot(), "frames": [], "owned": False}
-            self.deadline = self.clock() + LEASE_SECONDS
             receiver_status = (count, size, busy)
             if receiver_status != self.last_receiver_status:
                 self.record("receiver_status", queueCount=count, queueBytes=size, busy=busy)
@@ -355,8 +351,8 @@ class NativeCaptureController:
                 raise NativeCaptureError("target_changed", "캡처 중 게임 창이 바뀌었습니다.")
             validate_capture_payload(json.dumps(metadata), png, content_type="image/png", expected_task=mode)
             with self.lock:
-                if generation != self.generation or self.closed or self.clock() > self.deadline:
-                    self.record("frame_discarded", captureGeneration=generation, closed=self.closed, expired=self.clock()>self.deadline)
+                if generation != self.generation or self.closed:
+                    self.record("frame_discarded", captureGeneration=generation, closed=self.closed)
                     return
                 if self.queue_count + len(self.frames) >= MAX_FRAMES:
                     raise NativeCaptureError("queue_full", "대기 이미지 개수 제한에 도달했습니다.")

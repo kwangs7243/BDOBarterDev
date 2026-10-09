@@ -671,11 +671,11 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   document.addEventListener("paste", onPaste);
 
   const nativeUI = initNativeCaptureUI({
-    trade: { dialog: tradeDialog, screenSession, isActive: () => tradeDialog.open,
+    trade: { dialog: tradeDialog,
       getContext: () => captureContext("trade"),
       getState: () => ({ count: tradeQueue.length, bytes: tradeQueue.bytes, busy: tradeRecognitionPending }),
       accept: appendTradeCaptures },
-    warehouse: { dialog: warehouseCaptureUI.dialog, screenSession: warehouseCaptureUI.screenSession, isActive: warehouseCaptureUI.isActive,
+    warehouse: { dialog: warehouseCaptureUI.dialog,
       getContext: () => captureContext("warehouse"), getState: warehouseCaptureUI.getNativeQueueState,
       accept: warehouseCaptureUI.acceptCaptures },
   });
