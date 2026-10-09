@@ -105,10 +105,15 @@ const results=[];
 }
 for(const initial5 of [5,8,20]){
  const {ctx}=environment();ctx.initial5=initial5;vm.runInContext(`APP_CONFIG.ALLOW_OCEAN='t7_3region';inventory={'자수정 파편':{stock:6,target:80},'102년 묵은 황금초':{stock:initial5,target:5}};
- const rows=[{island:'아지르 섬',fromClean:'자수정 파편',toClean:'102년 묵은 황금초',fromTier:4,toTier:5,count:6,reqA:1,mult:1,score:100000},
+ const rows=[{island:'아지르 섬',fromClean:'자수정 파편',toClean:'102년 묵은 황금초',fromTier:4,toTier:5,count:6,origC:6,reqA:1,mult:1,score:100000},
  {island:'달래나루',fromClean:'102년 묵은 황금초',toClean:'최고급 감투 상자',fromTier:5,toTier:6,count:5,reqA:1,mult:1,score:999999}];
  plan=buildTier7Sorties(rows,'t7_3region','speed').sorties;`,ctx);
- assert.equal(ctx.plan.flatMap(s=>s.trades).find(t=>t.toTier===5).execC,6);results.push({test:'existing tier5 target/whole batch policy retained',initial5,produced:6});
+ assert.ok(!ctx.plan[0].trades.some(t=>t.toTier===5));
+ assert.equal(ctx.plan[0].reqItems['102년 묵은 황금초'].count,5);
+ const replenished=ctx.plan.slice(1).flatMap(s=>s.trades).filter(t=>t.toTier===5);
+ assert.equal(replenished.length,initial5-5<5?1:0);
+ if(replenished.length)assert.equal(replenished[0].execC,6);
+ results.push({test:'tier5 target consumption and whole-batch replenishment',initial5});
 }
 {
  const {ctx}=environment();vm.runInContext(`

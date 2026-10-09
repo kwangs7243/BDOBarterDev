@@ -56,7 +56,12 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
         let virtualT5Cargo = {};
         let localUsedWarehouseStock = {};
 
-        let chain5TTrades = remaining.filter(t => t.toTier === 5 && allowedT5.includes(t.island) && needed5T[t.toClean] > 0 && t.currentC > 0);
+        const directT5Items = new Set(Object.keys(needed5T).filter(name => {
+            const item = regionalInventory[name];
+            return Number.isSafeInteger(item?.stock) && item.stock > 0
+                && Number.isSafeInteger(item.target) && item.target >= 0 && item.stock >= item.target;
+        }));
+        let chain5TTrades = remaining.filter(t => t.toTier === 5 && !directT5Items.has(t.toClean) && allowedT5.includes(t.island) && needed5T[t.toClean] > 0 && t.currentC > 0);
         
         chain5TTrades.forEach(t => {
             let needed = needed5T[t.toClean];
