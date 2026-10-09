@@ -118,6 +118,44 @@ class NativeWin32LifecycleTests(unittest.TestCase):
                     controller.close()
                     if platform.u.GetForegroundWindow()==surface and previous:platform.u.SetForegroundWindow(previous)
 
+    def test_diagnostic_observer_only_logs_f10_and_never_captures_or_consumes_keys(self):
+        platform=Win32CapturePlatform()
+        with tempfile.TemporaryDirectory() as folder:
+            controller=NativeCaptureController(platform,Path(folder)/"profiles.json")
+            platform.controller=controller
+            with patch.object(platform.u,"CallNextHookEx",return_value=17) as forward,patch.object(controller,"on_hotkey") as capture:
+                event=platform.KeyboardEvent(0x41,30,0,1,0)
+                self.assertEqual(platform._observe_f10(0,0x100,ctypes.addressof(event)),17)
+                self.assertTrue(platform.input_events.empty())
+                event=platform.KeyboardEvent(0x79,68,0x10,2,0)
+                self.assertEqual(platform._observe_f10(0,0x100,ctypes.addressof(event)),17)
+                name,data=platform.input_events.get_nowait()
+                self.assertEqual(name,"f10_low_level_observed");self.assertTrue(data["down"]);self.assertTrue(data["injected"])
+                event.flags=0x80
+                platform._observe_f10(0,0x101,ctypes.addressof(event))
+                self.assertFalse(platform.input_events.get_nowait()[1]["down"])
+                platform._observe_f10(-1,0,0)
+                self.assertEqual(forward.call_count,4);capture.assert_not_called()
+            controller.close()
+
+    def test_real_diagnostic_observer_registration_security_health_and_cleanup(self):
+        platform=Win32CapturePlatform()
+        with tempfile.TemporaryDirectory() as folder:
+            controller=NativeCaptureController(platform,Path(folder)/"profiles.json")
+            controller.start()
+            try:
+                self.wait(lambda:platform.input_hook is not None or controller.runtime_failed)
+                self.assertFalse(controller.runtime_failed,self.events(controller))
+                self.wait(lambda:any(e["event"]=="input_runtime_health" for e in self.events(controller)))
+                self.assertTrue(platform.input_observer.is_alive());self.assertTrue(platform.input_logger.is_alive())
+                security=platform._process_security(os.getpid())
+                self.assertIn("integrityRid",security);self.assertIn("elevated",security)
+                self.assertEqual(controller.captured_count,0)
+            finally:controller.close()
+            self.assertFalse(platform.input_observer.is_alive());self.assertFalse(platform.input_logger.is_alive())
+            self.assertIsNone(platform.input_hook)
+            self.assertTrue(any(e["event"]=="input_observer_unregistered" for e in self.events(controller)))
+
     def test_real_window_move_follows_without_reset_and_size_change_stops(self):
         platform=Win32CapturePlatform()
         with tempfile.TemporaryDirectory() as folder,self.owned_window(platform) as surface:

@@ -139,6 +139,14 @@ class NativeCaptureTests(NativeFixture):
         self.prepare(select=False)
         self.assertTrue(self.controller.wants_hotkey())
 
+    def test_target_validation_failure_records_exact_reason_before_stopping(self):
+        self.prepare()
+        with patch.object(self.platform,"geometry",side_effect=NativeCaptureError("target_unavailable","window is minimized")):
+            self.controller.maintenance()
+        event=next(e for e in self.controller.diagnostics.snapshot()["recent"] if e["event"]=="target_validation_failed")
+        self.assertEqual(event["target"],"42");self.assertIn("window is minimized",event["detail"])
+        self.assertEqual(self.controller.state,"STOPPED")
+
     def test_geometry_changes_require_new_profile_but_same_monitor_move_is_safe(self):
         self.prepare()
         self.platform.geo["left"] = -1800

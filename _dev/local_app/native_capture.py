@@ -138,7 +138,10 @@ class NativeCaptureController:
                     elif self.profile and signature(geo) != self.profile["signature"]:
                         self.stop_capture("profile_changed")
                     else: return geo
-                except (NativeCaptureError, OSError): self.stop_capture("target_unavailable")
+                except (NativeCaptureError, OSError) as exc:
+                    self.diagnostics.exception("target_validation_failed", target=self.target, targetPid=self.target_pid,
+                        code=getattr(exc, "code", None), winError=getattr(exc, "winerror", None), detail=str(exc))
+                    self.stop_capture("target_unavailable")
 
     def snapshot(self):
         with self.lock:

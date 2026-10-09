@@ -32,6 +32,13 @@ class Win32CapturePlatform:
         self.hotkey_retry = 0
         self.identity_cache = None
         self.identity_lock = threading.Lock()
+        self.input_events = queue.Queue(maxsize=256)
+        self.input_observer = self.input_logger = None
+        self.input_hook = None
+        self.input_callback = None
+        self.ui_tick = self.observer_tick = 0
+        self.input_observed = self.hotkey_received = self.input_events_dropped = 0
+        self.last_diagnostic_target = None
         self.thread = None
         if os.name != "nt":
             raise NativeCaptureError("native_unsupported", "Windows 실행기에서 사용하세요.", 503)
@@ -40,6 +47,7 @@ class Win32CapturePlatform:
         self.g = ctypes.WinDLL("gdi32", use_last_error=True)
         self.dwm = ctypes.WinDLL("dwmapi", use_last_error=True)
         self.shcore = ctypes.WinDLL("shcore", use_last_error=True)
+        self.a = ctypes.WinDLL("advapi32", use_last_error=True)
         self._bind()
 
     def _bind(self):
@@ -58,6 +66,9 @@ class Win32CapturePlatform:
             (u, "GetDpiForWindow", [w.HWND], w.UINT),
             (u, "GetWindowLongW", [w.HWND, ctypes.c_int], ctypes.c_long),
             (u, "MonitorFromWindow", [w.HWND, w.DWORD], w.HANDLE),
+            (u, "GetAsyncKeyState", [ctypes.c_int], ctypes.c_short),
+            (u, "UnhookWindowsHookEx", [w.HANDLE], w.BOOL),
+            (u, "CallNextHookEx", [w.HANDLE, ctypes.c_int, w.WPARAM, w.LPARAM], ctypes.c_ssize_t),
             (u, "RegisterHotKey", [w.HWND, ctypes.c_int, w.UINT, w.UINT], w.BOOL),
             (u, "UnregisterHotKey", [w.HWND, ctypes.c_int], w.BOOL),
             (u, "SetForegroundWindow", [w.HWND], w.BOOL),
@@ -89,6 +100,15 @@ class Win32CapturePlatform:
         for dll, name, args, result in bindings:
             function = getattr(dll, name)
             function.argtypes, function.restype = args, result
+        self.HookProc = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, ctypes.c_int, w.WPARAM, w.LPARAM)
+        u.SetWindowsHookExW.argtypes, u.SetWindowsHookExW.restype = [ctypes.c_int, self.HookProc, w.HINSTANCE, w.DWORD], w.HANDLE
+        self.a.OpenProcessToken.argtypes, self.a.OpenProcessToken.restype = [w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE)], w.BOOL
+        self.a.GetTokenInformation.argtypes, self.a.GetTokenInformation.restype = [w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD, ctypes.POINTER(w.DWORD)], w.BOOL
+        self.a.GetSidSubAuthorityCount.argtypes, self.a.GetSidSubAuthorityCount.restype = [ctypes.c_void_p], ctypes.POINTER(ctypes.c_ubyte)
+        self.a.GetSidSubAuthority.argtypes, self.a.GetSidSubAuthority.restype = [ctypes.c_void_p, w.DWORD], ctypes.POINTER(w.DWORD)
+        class KeyboardEvent(ctypes.Structure):
+            _fields_ = [("vk", w.DWORD), ("scan", w.DWORD), ("flags", w.DWORD), ("time", w.DWORD), ("extra", ctypes.c_size_t)]
+        self.KeyboardEvent = KeyboardEvent
         self.WindowProc = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
         class WindowClass(ctypes.Structure):
             _fields_ = [("style", w.UINT), ("proc", self.WindowProc), ("classExtra", ctypes.c_int),
@@ -132,11 +152,11 @@ class Win32CapturePlatform:
         self.u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
         handle = self.k.OpenProcess(0x1000, False, pid.value)
         if not handle:
-            raise NativeCaptureError("target_unavailable", "게임 프로세스를 확인하지 못했습니다.")
+            raise NativeCaptureError("target_unavailable", f"게임 프로세스 조회 실패 (WinError {ctypes.get_last_error()}).")
         try:
             name, length = ctypes.create_unicode_buffer(32768), w.DWORD(32768)
             if not self.k.QueryFullProcessImageNameW(handle, 0, name, ctypes.byref(length)):
-                raise NativeCaptureError("target_unavailable", "게임 프로세스를 확인하지 못했습니다.")
+                raise NativeCaptureError("target_unavailable", f"게임 실행 경로 조회 실패 (WinError {ctypes.get_last_error()}).")
             return name.value.lower(), pid.value
         finally:
             self.k.CloseHandle(handle)
@@ -189,8 +209,12 @@ class Win32CapturePlatform:
                 raise ValueError()
         except (ValueError, TypeError):
             raise NativeCaptureError("invalid_target", "게임 창을 선택하세요.", 422) from None
-        if not self.u.IsWindow(hwnd) or self.u.IsIconic(hwnd) or not self.u.IsWindowVisible(hwnd):
-            raise NativeCaptureError("target_unavailable", "선택한 검은사막 창을 사용할 수 없습니다.")
+        if not self.u.IsWindow(hwnd):
+            raise NativeCaptureError("target_unavailable", "선택한 검은사막 창이 없어졌습니다.")
+        if self.u.IsIconic(hwnd):
+            raise NativeCaptureError("target_unavailable", "선택한 검은사막 창이 최소화되었습니다.")
+        if not self.u.IsWindowVisible(hwnd):
+            raise NativeCaptureError("target_unavailable", "선택한 검은사막 창이 숨겨졌습니다.")
         identity, pid = self._geometry_identity(hwnd)
         rect, origin = w.RECT(), w.POINT(0, 0)
         if not self.u.GetClientRect(hwnd, ctypes.byref(rect)) or not self.u.ClientToScreen(hwnd, ctypes.byref(origin)):
@@ -250,8 +274,124 @@ class Win32CapturePlatform:
     def stop(self):
         self.stopping.set()
         self.cancel_selection()
-        if self.thread and self.thread is not threading.current_thread():
-            self.thread.join(timeout=3)
+        for thread in (self.thread, self.input_observer, self.input_logger):
+            if thread and thread is not threading.current_thread(): thread.join(timeout=3)
+
+    def _process_security(self, pid):
+        result = {"pid": pid}
+        handle = self.k.OpenProcess(0x1000, False, pid) if pid else None
+        if not handle:
+            return {**result, "queryError": ctypes.get_last_error() if pid else None}
+        token = w.HANDLE()
+        try:
+            if not self.a.OpenProcessToken(handle, 8, ctypes.byref(token)):
+                return {**result, "tokenError": ctypes.get_last_error()}
+            length, value = w.DWORD(), w.DWORD()
+            if self.a.GetTokenInformation(token, 20, ctypes.byref(value), 4, ctypes.byref(length)):
+                result["elevated"] = bool(value.value)
+            else: result["elevationError"] = ctypes.get_last_error()
+            self.a.GetTokenInformation(token, 25, None, 0, ctypes.byref(length))
+            if not length.value: return {**result, "integrityError": ctypes.get_last_error()}
+            buffer = ctypes.create_string_buffer(length.value)
+            if not self.a.GetTokenInformation(token, 25, buffer, length.value, ctypes.byref(length)):
+                return {**result, "integrityError": ctypes.get_last_error()}
+            sid = ctypes.cast(buffer, ctypes.POINTER(ctypes.c_void_p))[0]
+            rid = self.a.GetSidSubAuthority(sid, self.a.GetSidSubAuthorityCount(sid)[0]-1)[0]
+            result["integrityRid"] = rid
+            result["integrity"] = {4096:"LOW", 8192:"MEDIUM", 12288:"HIGH", 16384:"SYSTEM"}.get(rid, "OTHER")
+            return result
+        finally:
+            if token: self.k.CloseHandle(token)
+            self.k.CloseHandle(handle)
+
+    def _queue_input_event(self, event, **fields):
+        try: self.input_events.put_nowait((event, fields))
+        except queue.Full: self.input_events_dropped += 1
+
+    def _observe_f10(self, code, message, pointer):
+        # Observe only F10; always pass through and never invoke capture here.
+        try:
+            if code == 0:
+                key = ctypes.cast(pointer, ctypes.POINTER(self.KeyboardEvent)).contents
+                if key.vk == 0x79:
+                    foreground = self.u.GetForegroundWindow()
+                    self.input_observed += 1
+                    self._queue_input_event("f10_low_level_observed", key="F10", message=int(message),
+                        down=not bool(key.flags & 0x80), injected=bool(key.flags & 0x10),
+                        lowerIntegrityInjected=bool(key.flags & 2), alt=bool(key.flags & 0x20),
+                        inputTime=key.time, observedCount=self.input_observed,
+                        foreground=foreground, foregroundPid=self._window_pid(foreground),
+                        observedState=self.controller.state, observedGeneration=self.controller.generation,
+                        hotkeyRegistered=self.hotkey_registered)
+        except Exception as exc:
+            self._queue_input_event("input_observer_callback_failed", error=type(exc).__name__)
+        return self.u.CallNextHookEx(None, code, message, pointer)
+
+    def _start_input_diagnostics(self):
+        self.input_logger = threading.Thread(target=self._log_input_diagnostics, name="bdo-input-diagnostics", daemon=True)
+        self.input_observer = threading.Thread(target=self._run_input_observer, name="bdo-f10-observer", daemon=True)
+        self.input_logger.start(); self.input_observer.start()
+
+    def _run_input_observer(self):
+        try:
+            self.input_callback = self.HookProc(self._observe_f10)
+            self.input_hook = self.u.SetWindowsHookExW(13, self.input_callback, self.k.GetModuleHandleW(None), 0)
+            self._queue_input_event("input_observer_registered", success=bool(self.input_hook),
+                winError=0 if self.input_hook else ctypes.get_last_error(), diagnosticOnly=True)
+            message = self.Message(); previous_down = False
+            while not self.stopping.is_set():
+                self.observer_tick = time.monotonic()
+                while self.u.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
+                    self.u.TranslateMessage(ctypes.byref(message)); self.u.DispatchMessageW(ctypes.byref(message))
+                down = bool(self.u.GetAsyncKeyState(0x79) & 0x8000)
+                if down != previous_down:
+                    foreground = self.u.GetForegroundWindow()
+                    self._queue_input_event("f10_async_state", down=down, foreground=foreground,
+                        foregroundPid=self._window_pid(foreground), diagnosticOnly=True)
+                    previous_down = down
+                self.stopping.wait(.02)
+        except Exception as exc:
+            self._queue_input_event("input_observer_failed", error=type(exc).__name__)
+        finally:
+            if self.input_hook:
+                success = bool(self.u.UnhookWindowsHookEx(self.input_hook))
+                self._queue_input_event("input_observer_unregistered", success=success)
+            self.input_hook = None
+
+    def _log_input_diagnostics(self):
+        try:
+            security_cache = {}; next_health = 0
+            while not self.stopping.is_set() or (self.input_observer and self.input_observer.is_alive()) or not self.input_events.empty():
+                try:
+                    event, fields = self.input_events.get(timeout=.1)
+                    self.controller.record(event, **fields)
+                except queue.Empty: pass
+                now = time.monotonic()
+                if now < next_health or self.stopping.is_set(): continue
+                next_health = now + 2
+                foreground = self.u.GetForegroundWindow(); foreground_pid = self._window_pid(foreground)
+                target = self.controller.target
+                if target: self.last_diagnostic_target = target
+                target = target or self.last_diagnostic_target
+                target_pid = self._window_pid(int(target)) if target else 0
+                pids = {os.getpid(), foreground_pid, target_pid} - {0}
+                security_cache = {pid:data for pid,data in security_cache.items() if pid in pids}
+                for pid in pids:
+                    if pid not in security_cache or now-security_cache[pid][0] >= 10:
+                        security_cache[pid] = (now, self._process_security(pid))
+                self.controller.record("input_runtime_health", foreground=foreground, foregroundPid=foreground_pid,
+                    diagnosticTarget=target, targetPid=target_pid,
+                    targetVisible=bool(target and self.u.IsWindowVisible(int(target))),
+                    targetMinimized=bool(target and self.u.IsIconic(int(target))),
+                    uiAlive=bool(self.thread and self.thread.is_alive()), uiAgeMs=round((now-self.ui_tick)*1000) if self.ui_tick else None,
+                    observerAlive=bool(self.input_observer and self.input_observer.is_alive()),
+                    observerAgeMs=round((now-self.observer_tick)*1000) if self.observer_tick else None,
+                    observerConfigured=bool(self.input_hook), lowLevelF10Events=self.input_observed,
+                    wmHotkeyEvents=self.hotkey_received, hotkeyRegistered=self.hotkey_registered,
+                    droppedDiagnosticEvents=self.input_events_dropped,
+                    processSecurity=[security_cache[pid][1] for pid in sorted(pids)])
+        except Exception:
+            self.controller.diagnostics.exception("input_diagnostics_failed")
 
     def _record(self, event, **fields):
         if self.controller is not None:
@@ -261,7 +401,8 @@ class Win32CapturePlatform:
     def _create_input_sink(self):
         def procedure(hwnd, message, wp, lp):
             if message == 0x0312 and wp == 0xBD0:
-                self._record("hotkey_received", key="F10")
+                self.hotkey_received += 1
+                self._record("hotkey_received", key="F10", receivedCount=self.hotkey_received)
                 self.controller.on_hotkey()
                 return 0
             return self.u.DefWindowProcW(hwnd, message, wp, lp)
@@ -301,9 +442,11 @@ class Win32CapturePlatform:
             self.u.DispatchMessageW.argtypes, self.u.DispatchMessageW.restype = [ctypes.POINTER(Message)], ctypes.c_ssize_t
             self._create_input_sink()
             self._create_roi_frame()
+            self._start_input_diagnostics()
             message = Message()
             next_geometry, frame_state = 0, None
             while not self.stopping.is_set():
+                self.ui_tick = time.monotonic()
                 state = (self.controller.generation, self.controller.state)
                 now = time.monotonic()
                 if state != frame_state or now >= next_geometry:

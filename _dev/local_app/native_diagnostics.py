@@ -25,7 +25,7 @@ class CaptureDiagnostics:
             self.logger.addHandler(handler)
         except OSError as exc:
             self.error = type(exc).__name__
-        self.write("diagnostics_started", implementation="persistent-roi-f10-v2")
+        self.write("diagnostics_started", implementation="persistent-roi-f10-diagnostics-v3")
 
     def write(self, event, **fields):
         record = {"time": datetime.now(timezone.utc).isoformat(), "pid": os.getpid(),
