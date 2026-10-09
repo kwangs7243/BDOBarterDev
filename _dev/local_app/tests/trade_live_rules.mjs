@@ -49,6 +49,9 @@ assert.equal(processParsedTrades([Object.fromEntries(Object.entries(row.fields).
 duplicate.fields.yield.corrected=383;
 assert.equal(prepareLiveTradeRows(result,catalog).length,2);
 assert.equal(row.fields.yield.reviewRequired,true);
+assert.equal(duplicate.fields.yield.reviewRequired,true);
+assert.equal(row.fields.fromItem.reviewRequired,false);
+assert.equal(duplicate.fields.fromItem.reviewRequired,false);
 duplicate.excluded=true;
 prepareLiveTradeRows(result,catalog);
 assert.equal(row.fields.yield.reviewRequired,false);
@@ -57,3 +60,17 @@ const ordered = ["까마귀 주화", "파도의 블랙스톤", ...[7,6,5,4,3,2,1
 ordered.sort((left,right)=>compareTradeOrder(left,right,catalog));
 assert.deepEqual(ordered.map(r=>r.toItem), [...[1,2,3,4,5,6,7].map(t=>catalog.masterData[t][0]),"파도의 블랙스톤","까마귀 주화"]);
 console.log("PASS: fixed display order, including stage 3 to 4, special exchanges and crow coins");
+
+const quantityRow = {fields:fields(catalog.masterData[4][0], "까마귀 주화",1,134)};
+const quantityPeer = structuredClone(quantityRow);
+quantityPeer.fields.count.corrected=2;
+prepareLiveTradeRows({rows:[quantityRow,quantityPeer]},catalog);
+assert.equal(quantityRow.fields.count.reviewRequired,true);
+assert.equal(quantityPeer.fields.count.reviewRequired,true);
+assert.equal(quantityPeer.fields.fromItem.reviewRequired,false);
+const namePeer=structuredClone(quantityRow);
+namePeer.fields.fromItem.corrected=catalog.masterData[4][1];
+namePeer.fields.fromItem.rawOCR=catalog.masterData[4][1];
+prepareLiveTradeRows({rows:[quantityRow,namePeer]},catalog);
+assert.equal(namePeer.fields.fromItem.reviewRequired,true,'different required items retain import holds');
+console.log('PASS: yield/count conflicts review both rows without replacing name-conflict holds');

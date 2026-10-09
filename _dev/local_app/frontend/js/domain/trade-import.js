@@ -179,7 +179,15 @@ export function prepareLiveTradeRows(result, catalog) {
       }
       applyLiveTradeRules(ready[outcome.index], catalog);
     } else {
-      const field = ready[outcome.index].fields[outcome.field ?? "fromItem"];
+      const fields = ready[outcome.index].fields;
+      const normalized = (value) => String(value ?? "").replace(/\s+/g, "");
+      const peer = parsed.trades.find((trade) => normalized(canonicalizeIslandName(trade.island)) === normalized(canonicalizeIslandName(fields.island.corrected)));
+      if (outcome.status === "conflict" && peer &&
+          ["fromItem", "toItem"].every((name) => normalized(peer[name]) === normalized(fields[name].corrected))) {
+        // Quantity disagreements are reviewed on both source rows below.
+        continue;
+      }
+      const field = fields[outcome.field ?? "fromItem"];
       Object.assign(field, {reviewRequired: true, importReview: true,
         reviewReason: outcome.status === "conflict" ? "같은 섬·결과의 요구 품목이 다릅니다. 한 행을 제외하거나 품목을 수정하세요." : outcome.candidates?.length ? `마스터 후보: ${outcome.candidates.join(" / ")}` : "마스터에서 품목을 찾지 못했습니다. 이름을 수정하거나 행을 제외하세요."});
     }
