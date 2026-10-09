@@ -21,6 +21,8 @@ class Win32CapturePlatform:
         self.overlay = None
         self.hud = None
         self.hud_class = None
+        self.hud_buttons = []
+        self.panel_generation = None
         self.game_hotkeys = set()
         self.enter_registered = False
         self.suppress_hud = threading.Event()
@@ -42,6 +44,8 @@ class Win32CapturePlatform:
         u, k, g = self.u, self.k, self.g
         bindings = [
             (u, "SetThreadDpiAwarenessContext", [ctypes.c_void_p], ctypes.c_void_p),
+            (u, "IsChild", [w.HWND, w.HWND], w.BOOL),
+            (u, "EnableWindow", [w.HWND, w.BOOL], w.BOOL),
             (u, "GetAsyncKeyState", [ctypes.c_int], ctypes.c_short),
             (u, "GetForegroundWindow", [], w.HWND), (u, "IsWindow", [w.HWND], w.BOOL),
             (u, "IsWindowVisible", [w.HWND], w.BOOL), (u, "IsIconic", [w.HWND], w.BOOL),
@@ -183,21 +187,36 @@ class Win32CapturePlatform:
                 "monitor": f"{monitor.device}:{monitor.monitor.right-monitor.monitor.left}x{monitor.monitor.bottom-monitor.monitor.top}",
                 "mode": "windowed" if self.u.GetWindowLongW(hwnd, -16) & 0x00C00000 else "borderless"}
 
-    def is_foreground(self, target):
+    def _game_is_foreground(self, target):
         return target is not None and self.u.GetForegroundWindow() == int(target)
+
+    def is_foreground(self, target):
+        foreground = self.u.GetForegroundWindow()
+        return target is not None and (foreground == int(target) or
+                (self.hud is not None and foreground == self.hud and
+                 self.controller is not None and self.controller.target == target))
 
     def capture(self, box):
         from PIL import ImageGrab
         self._dpi()
+        restore_focus = self.hud is not None and self.u.GetForegroundWindow() == self.hud
         with self.hud_lock:
             self.suppress_hud.set()
             try:
                 if self.hud: self.u.ShowWindow(self.hud, 0)
+                if restore_focus:
+                    self.u.SetForegroundWindow(int(self.controller.target))
+                    if not self._game_is_foreground(self.controller.target):
+                        raise NativeCaptureError("foreground_required", "게임 창을 앞에 둔 뒤 캡처하세요.")
                 if self.dwm.DwmFlush() != 0:
                     raise NativeCaptureError("pixel_capture_failed", "게임 안내창을 숨기지 못했습니다.")
                 image = ImageGrab.grab(bbox=box, all_screens=True)
             finally:
                 self.suppress_hud.clear()
+                if self.hud and self.controller and self.controller.state == "READY":
+                    self.u.ShowWindow(self.hud, 4)
+                    if restore_focus and self._game_is_foreground(self.controller.target):
+                        self.u.SetForegroundWindow(self.hud)
         try:
             if image.size != (box[2]-box[0], box[3]-box[1]) or image.getbbox() is None:
                 raise NativeCaptureError("black_frame", "게임 화면을 읽지 못했습니다. 창모드/전체창모드를 확인하세요.")
@@ -252,6 +271,10 @@ class Win32CapturePlatform:
                 while self.u.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
                     if message.message == 0x0312 and message.wParam in (0xBD0, 0xBD1, 0xBD2, 0xBD3):
                         self._handle_hotkey(message.wParam)
+                    elif (message.message == 0x0100 and self.hud and
+                          (message.hwnd == self.hud or self.u.IsChild(self.hud, message.hwnd)) and
+                          self._handle_panel_key(message.wParam, message.lParam)):
+                        pass
                     else:
                         self.u.TranslateMessage(ctypes.byref(message))
                         self.u.DispatchMessageW(ctypes.byref(message))
@@ -307,45 +330,71 @@ class Win32CapturePlatform:
     def _poll_game_keys(self):
         down = self._read_keys_down()
         pressed, self.keys_down = down - self.keys_down, down
-        if self.controller.state == "READY" and self.is_foreground(self.controller.target):
+        if self.controller.state == "READY" and self._game_is_foreground(self.controller.target):
             for key in sorted(pressed): self._handle_hotkey(key)
+
+    def _handle_panel_key(self, key, flags=0):
+        action = {13: 101, 0x79: 101, 0x77: 102, 27: 103}.get(key)
+        if action is None: return False
+        if not flags & (1 << 30): self._panel_action(action)
+        return True
+
+    def _panel_action(self, action):
+        if self.controller is None: return
+        if action == 101: self.controller.on_hotkey()
+        elif action == 102: self.controller.reselect()
+        elif action == 103: self.controller.finish()
 
     def _create_hud(self):
         u, g = self.u, self.g
         def procedure(hwnd, msg, wp, lp):
-            if msg == 0x0084: return -1
+            if msg == 0x0111:
+                self._panel_action(wp & 0xffff); return 0
+            if msg == 0x0100 and self._handle_panel_key(wp, lp): return 0
+            if msg == 0x0010:
+                self._panel_action(103); u.ShowWindow(hwnd, 0); return 0
             if msg == 0x000f:
                 paint = self.Paint(); hdc = u.BeginPaint(hwnd, ctypes.byref(paint))
                 try:
                     state = self.controller.snapshot()
                     title = "물교" if state["mode"] == "TRADE" else "창고"
-                    text = f"{title} 캡처 · {state['captured']}장 촬영" + (" · 처리 중" if state["busy"] else "")
-                    errors = {"queue_full":"대기열이 가득 찼습니다", "black_frame":"검은 화면: 창 모드를 확인하세요",
-                              "pixel_capture_failed":"화면 캡처 실패", "hotkey_conflict":"F10 충돌: Enter를 사용하세요"}
-                    guide = errors.get(state["error"], "Enter / F10 캡처 · F8 영역 재지정 · Esc 캡처 종료")
+                    text = f"{title} · {state['captured']}장 캡처" + (" · 처리 중" if state["busy"] else "")
+                    errors = {"queue_full":"대기열이 가득 찼습니다. 브라우저에서 이미지를 확인하세요.",
+                              "black_frame":"검은 화면입니다. 게임을 표시한 뒤 다시 캡처하세요.",
+                              "pixel_capture_failed":"캡처 실패. 게임 화면과 영역을 확인하세요.",
+                              "foreground_required":"게임 화면을 앞에 둔 뒤 이 창의 캡처 버튼을 누르세요.",
+                              "capture_busy":"이전 캡처 또는 인식 처리 중입니다. 잠시 기다리세요.",
+                              "hotkey_conflict":"F10 충돌. 이 창의 캡처 버튼 또는 Enter를 사용하세요."}
+                    guide = errors.get(state["error"], "이 창에서 Enter / 버튼으로 캡처 · 게임에서 F10은 보조")
                     g.SetTextColor(hdc, 0xFFFFFF); g.SetBkMode(hdc, 1)
-                    g.TextOutW(hdc, 12, 10, text, len(text)); g.TextOutW(hdc, 12, 36, guide, len(guide))
+                    g.TextOutW(hdc, 12, 10, text, len(text)); g.TextOutW(hdc, 12, 38, guide, len(guide))
                 finally: u.EndPaint(hwnd, ctypes.byref(paint))
                 return 0
             return u.DefWindowProcW(hwnd, msg, wp, lp)
         self.hud_callback = self.WindowProc(procedure)
-        self.hud_class = f"BDOBarterCaptureHUD-{os.getpid()}"
+        self.hud_class = f"BDOBarterCapturePanel-{os.getpid()}"
         instance = self.k.GetModuleHandleW(None)
         wc = self.WindowClass(0, self.hud_callback, 0, 0, instance, None, None, g.GetStockObject(4), None, self.hud_class)
         if not u.RegisterClassW(ctypes.byref(wc)): raise ctypes.WinError(ctypes.get_last_error())
-        self.hud = u.CreateWindowExW(0x00080000 | 0x00000008 | 0x00000020 | 0x08000000,
-                                    self.hud_class, "BDO 게임 캡처 안내", 0x80000000, 0, 0, 760, 68,
-                                    None, None, instance, None)
-        if not self.hud or not u.SetLayeredWindowAttributes(self.hud, 0, 220, 2):
-            raise ctypes.WinError(ctypes.get_last_error())
+        self.hud = u.CreateWindowExW(0x00000008 | 0x00000080, self.hud_class,
+                                    "BDO 캡처 · 창을 클릭하면 Enter로 연속 캡처", 0x80C80000,
+                                    0, 0, 600, 155, None, None, instance, None)
+        if not self.hud: raise ctypes.WinError(ctypes.get_last_error())
+        self.hud_buttons = []
+        for index, (label, action) in enumerate((("캡처 · Enter", 101), ("영역 변경 · F8", 102), ("종료 · Esc", 103))):
+            button = u.CreateWindowExW(0, "BUTTON", label, 0x50010000,
+                                       12 + index*192, 76, 182, 32, self.hud, w.HMENU(action), instance, None)
+            if not button: raise ctypes.WinError(ctypes.get_last_error())
+            self.hud_buttons.append(button)
 
     def _update_game_controls(self):
         target = self.controller.target
+        game_active = self.controller.state == "READY" and target is not None and self._game_is_foreground(target)
         active = self.controller.state == "READY" and target is not None and self.is_foreground(target)
         for key, virtual in ((0xBD1, 13), (0xBD2, 0x77), (0xBD3, 27)):
-            if active and key not in self.game_hotkeys:
+            if game_active and key not in self.game_hotkeys:
                 if self.u.RegisterHotKey(None, key, 0x4000, virtual): self.game_hotkeys.add(key)
-            elif not active and key in self.game_hotkeys:
+            elif not game_active and key in self.game_hotkeys:
                 self.u.UnregisterHotKey(None, key); self.game_hotkeys.remove(key)
         self.enter_registered = 0xBD1 in self.game_hotkeys
         if not self.hud_lock.acquire(blocking=False): return
@@ -355,16 +404,22 @@ class Win32CapturePlatform:
                 return
             if not self.hud: self._create_hud()
             geo = self.geometry(target)
-            self.u.SetWindowPos(self.hud, w.HWND(-1), geo["left"] + 12, geo["top"] + 12,
-                                min(760, geo["width"]-24), 68, 0x0010)
-            self.u.ShowWindow(self.hud, 4); self.u.InvalidateRect(self.hud, None, True)
+            generation = self.controller.snapshot()["generation"]
+            first_show = self.panel_generation != generation
+            if first_show:
+                self.u.SetWindowPos(self.hud, w.HWND(-1), geo["left"]+12, geo["top"]+12, 600, 155, 0x0010)
+                self.panel_generation = generation
+            self.u.ShowWindow(self.hud, 4)
+            for button in self.hud_buttons[:2]: self.u.EnableWindow(button, not self.controller.snapshot()["busy"])
+            self.u.InvalidateRect(self.hud, None, True)
+            if first_show: self.u.SetForegroundWindow(self.hud)
         finally:
             self.hud_lock.release()
 
     def _wait_for_game(self, target, generation):
         self.u.SetForegroundWindow(int(target))
         deadline = time.monotonic() + 30
-        while not self.is_foreground(target):
+        while not self._game_is_foreground(target):
             if self.stopping.is_set() or generation != self.controller.snapshot()["generation"]:
                 raise NativeCaptureError("roi_cancelled", "영역 지정을 취소했습니다.")
             if time.monotonic() > deadline:
@@ -459,4 +514,5 @@ class Win32CapturePlatform:
         if u.IsWindow(int(target)):
             u.SetForegroundWindow(int(target))
         self.keys_down = self._read_keys_down()
+        self.panel_generation = None
         self.controller.selected(generation, roi, geo)

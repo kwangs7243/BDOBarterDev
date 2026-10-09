@@ -234,7 +234,11 @@ class NativeCaptureController:
     def on_hotkey(self):
         self.maintenance()
         with self.lock:
-            if not self.wants_hotkey() or not self.platform.is_foreground(self.target):
+            if not self.wants_hotkey():
+                if self.state == "READY": self.error = "capture_busy"
+                return False
+            if not self.platform.is_foreground(self.target):
+                self.error = "foreground_required"
                 return False
             if self.queue_count + len(self.frames) >= MAX_FRAMES or self.queue_bytes >= MAX_BYTES:
                 self.error = "queue_full"

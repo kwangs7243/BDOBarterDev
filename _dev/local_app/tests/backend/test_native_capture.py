@@ -254,6 +254,18 @@ class NativeCaptureTests(NativeFixture):
         self.assertEqual(self.controller.error, "hotkey_conflict")
         self.assertTrue(self.controller.wants_hotkey(), "Enter must remain usable when F10 registration fails")
 
+    def test_rejected_capture_reports_busy_and_wrong_foreground(self):
+        self.prepare()
+        self.controller.receiver_busy = True
+        self.assertFalse(self.controller.on_hotkey())
+        self.assertEqual(self.controller.error, "capture_busy")
+        self.controller.receiver_busy = False; self.platform.foreground = False
+        self.assertFalse(self.controller.on_hotkey())
+        self.assertEqual(self.controller.error, "foreground_required")
+        self.platform.foreground = True
+        self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
+        self.assertIsNone(self.controller.error)
+
     def test_native_metadata_is_strict_and_cannot_impersonate_file(self):
         self.prepare()
         metadata = self.capture()["metadata"]

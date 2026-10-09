@@ -115,7 +115,7 @@ export function initNativeCaptureUI(adapters) {
   for (const [mode, adapter] of Object.entries(adapters)) {
     const panel = document.createElement("section"); panel.className = "trade-roi-panel";
     panel.dataset.nativeCapture = mode;
-    panel.innerHTML = `<h3>게임에서 연속 캡처 · Enter / F10</h3><details><summary>영역 재설정·연결 확인</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>게임에서 영역 지정</button><button type="button" data-native="prepare" disabled>저장 영역으로 F10 준비</button><button type="button" data-native="stop">F10 준비 종료</button></div></details><p>화면 공유를 시작한 뒤 게임에서 영역 드래그 → Enter로 첫 캡처. 이후 게임에서 Enter 또는 F10으로 계속 캡처하세요. F8은 영역 재지정, Esc는 캡처 종료입니다. 누적 이미지는 마지막에 여기에서 인식·검토·적용하세요.</p><p role="status" aria-live="polite">아래 화면 연결을 눌러 게임 창을 공유하세요.</p>`;
+    panel.innerHTML = `<h3>게임 위 캡처 조작창</h3><details><summary>영역 재설정·연결 확인</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>게임에서 영역 지정</button><button type="button" data-native="prepare" disabled>저장 영역으로 F10 준비</button><button type="button" data-native="stop">F10 준비 종료</button></div></details><p>화면 공유 → 게임에서 영역 드래그 → Enter로 첫 캡처. 이후 게임 위의 작은 조작창에서 캡처 버튼 또는 Enter로 계속 캡처하세요. 게임을 스크롤한 뒤에도 조작창 버튼을 바로 누르면 됩니다. F10은 보조 단축키입니다. 누적 이미지는 마지막에 여기에서 인식·검토·적용하세요.</p><p role="status" aria-live="polite">아래 화면 연결을 눌러 게임 창을 공유하세요.</p>`;
     adapter.dialog.querySelector(".trade-roi-panel").before(panel);
     const refs = { target: panel.querySelector("select"), status: panel.querySelector('[role="status"]'), select: panel.querySelector('[data-native="select"]'), prepare: panel.querySelector('[data-native="prepare"]') };
     panels.set(mode, refs);
@@ -159,7 +159,7 @@ export function initNativeCaptureUI(adapters) {
       const result = await command({ action: "heartbeat", generation, count: state.count, bytes: state.bytes, busy: state.busy, context: nativeContext(adapter.getContext()) });
       if (ticket !== epoch) return;
       if (!result.owned) { stop(); report(mode, errorText[result.error] || "입력 준비가 만료되었습니다. 다시 준비하세요."); return; }
-      report(mode, result.error ? (errorText[result.error] || "캡처를 확인하지 못했습니다. 다시 준비하세요.") : result.state === "SELECTING" ? "게임 창을 앞에 두세요 → 영역 드래그 → Enter 확정 / Esc 취소" : state.busy ? "인식·검토 처리 중에는 F10 입력이 잠시 중지됩니다." : (result.hotkeyRegistered || result.enterRegistered) ? `게임에서 Enter / F10 캡처 · ${result.captured ?? 0}장 촬영` : "F10 준비 중…");
+      report(mode, result.error ? (errorText[result.error] || "캡처를 확인하지 못했습니다. 다시 준비하세요.") : result.state === "SELECTING" ? "게임 창을 앞에 두세요 → 영역 드래그 → Enter 확정 / Esc 취소" : state.busy ? "인식·검토 처리 중에는 F10 입력이 잠시 중지됩니다." : (result.hotkeyRegistered || result.enterRegistered) ? `캡처 조작창의 버튼 / Enter · ${result.captured ?? 0}장 촬영` : "F10 준비 중…");
       for (const packet of result.frames ?? []) {
         if (ticket !== epoch || adapter.getState().busy) break;
         const accepted = await receiver.receive(packet, async () => {

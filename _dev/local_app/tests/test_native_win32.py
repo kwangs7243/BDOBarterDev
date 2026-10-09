@@ -62,12 +62,12 @@ class NativeWin32LifecycleTests(unittest.TestCase):
             controller = NativeCaptureController(platform, Path(folder)/"profiles.json")
             platform.controller = controller
             with patch.object(platform.u, "SetForegroundWindow", return_value=False), \
-                 patch.object(platform, "is_foreground", side_effect=[False, True]), \
+                 patch.object(platform, "_game_is_foreground", side_effect=[False, True]), \
                  patch.object(controller, "maintenance"), patch.object(platform.stopping, "wait"):
                 platform._wait_for_game("42", controller.generation)
             from local_app.native_capture import NativeCaptureError
             with patch.object(platform.u, "SetForegroundWindow", return_value=False), \
-                 patch.object(platform, "is_foreground", return_value=False), \
+                 patch.object(platform, "_game_is_foreground", return_value=False), \
                  patch("local_app.native_win32.time.monotonic", side_effect=[100, 131]):
                 with self.assertRaises(NativeCaptureError) as failure:
                     platform._wait_for_game("42", controller.generation)
@@ -102,8 +102,9 @@ class NativeWin32LifecycleTests(unittest.TestCase):
         from unittest.mock import Mock
         platform = Win32CapturePlatform()
         controller = Mock(state="READY", target="42")
+        controller.snapshot.return_value = {"generation": 1, "busy": False}
         platform.controller = controller
-        with patch.object(platform, "is_foreground", return_value=True), patch.object(platform, "geometry", return_value=FakePlatform().geo), \
+        with patch.object(platform, "is_foreground", return_value=True), patch.object(platform, "_game_is_foreground", return_value=True), patch.object(platform, "geometry", return_value=FakePlatform().geo), \
              patch.object(platform, "_create_hud"), patch.object(platform.u, "RegisterHotKey", return_value=True) as register, \
              patch.object(platform.u, "SetWindowPos"), patch.object(platform.u, "ShowWindow"), patch.object(platform.u, "InvalidateRect"):
             platform._update_game_controls()
@@ -111,7 +112,7 @@ class NativeWin32LifecycleTests(unittest.TestCase):
             register.assert_any_call(None, 0xBD1, 0x4000, 13)
             register.assert_any_call(None, 0xBD2, 0x4000, 0x77)
             register.assert_any_call(None, 0xBD3, 0x4000, 27)
-        with patch.object(platform, "is_foreground", return_value=False), patch.object(platform.u, "UnregisterHotKey", return_value=True) as unregister:
+        with patch.object(platform, "is_foreground", return_value=False), patch.object(platform, "_game_is_foreground", return_value=False), patch.object(platform.u, "UnregisterHotKey", return_value=True) as unregister:
             platform._update_game_controls()
             self.assertFalse(platform.enter_registered)
             self.assertEqual(unregister.call_count, 3)
@@ -131,32 +132,106 @@ class NativeWin32LifecycleTests(unittest.TestCase):
         platform = Win32CapturePlatform(); platform.controller = Mock(state="READY", target="42")
         held = {13}
         with patch.object(platform.u, "GetAsyncKeyState", side_effect=lambda key: 0x8000 if key in held else 0), \
-             patch.object(platform, "is_foreground", return_value=True), patch("local_app.native_win32.time.monotonic", return_value=10):
+             patch.object(platform, "_game_is_foreground", return_value=True), patch.object(platform, "is_foreground", return_value=True), patch("local_app.native_win32.time.monotonic", return_value=10):
             platform._poll_game_keys(); platform._poll_game_keys(); platform._handle_hotkey(0xBD1)
             platform.controller.on_hotkey.assert_called_once()
             held.clear(); platform._poll_game_keys()
             held.add(0x79)
             with patch("local_app.native_win32.time.monotonic", return_value=11): platform._poll_game_keys()
             self.assertEqual(platform.controller.on_hotkey.call_count, 2)
-        with patch.object(platform.u, "GetAsyncKeyState", return_value=0x8000), patch.object(platform, "is_foreground", return_value=False):
+        with patch.object(platform.u, "GetAsyncKeyState", return_value=0x8000), patch.object(platform, "_game_is_foreground", return_value=False):
             platform._poll_game_keys()
         self.assertEqual(platform.controller.on_hotkey.call_count, 2)
 
-    def test_real_hud_is_click_through_and_does_not_activate(self):
+    def test_real_panel_accepts_button_and_enter_and_ignores_held_key(self):
         import ctypes
         from ctypes import wintypes
-        platform = Win32CapturePlatform()
+        from unittest.mock import Mock
+        platform = Win32CapturePlatform(); platform.controller = Mock()
         platform._create_hud()
         try:
             style = platform.u.GetWindowLongW(platform.hud, -20)
-            self.assertTrue(style & 0x08000000)
-            self.assertTrue(style & 0x20)
+            self.assertFalse(style & 0x08000000)
+            self.assertFalse(style & 0x20)
+            self.assertEqual(len(platform.hud_buttons), 3)
             platform.u.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             platform.u.SendMessageW.restype = ctypes.c_ssize_t
-            self.assertEqual(platform.u.SendMessageW(platform.hud, 0x84, 0, 0), -1)
+            self.assertNotEqual(platform.u.SendMessageW(platform.hud, 0x84, 0, 0), -1)
+            platform.u.SendMessageW(platform.hud, 0x111, 101, 0)
+            platform.u.SendMessageW(platform.hud, 0x100, 13, 0)
+            platform.u.SendMessageW(platform.hud, 0x100, 13, 1 << 30)
+            self.assertEqual(platform.controller.on_hotkey.call_count, 2)
+            platform.u.SendMessageW(platform.hud, 0x111, 102, 0)
+            platform.controller.reselect.assert_called_once()
+            platform.u.SendMessageW(platform.hud, 0x111, 103, 0)
+            platform.controller.finish.assert_called_once()
         finally:
             platform.u.DestroyWindow(platform.hud)
             platform.u.UnregisterClassW(platform.hud_class, platform.k.GetModuleHandleW(None))
+
+    def test_real_ui_message_loop_repeated_panel_enter_reaches_capture_queue(self):
+        import ctypes, uuid
+        from ctypes import wintypes
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder:
+            platform = Win32CapturePlatform()
+            controller = NativeCaptureController(platform, Path(folder)/"profiles.json")
+            foreground = [42]
+            def activate(hwnd): foreground[0] = hwnd; return True
+            platform.u.PostMessageW.argtypes = [wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+            with patch.object(platform, "geometry", return_value=FakePlatform().geo), \
+                 patch.object(platform, "select"), patch.object(platform.u, "GetForegroundWindow", side_effect=lambda:foreground[0]), \
+                 patch.object(platform.u, "SetForegroundWindow", side_effect=activate), patch.object(platform.u, "ShowWindow"), \
+                 patch.object(platform.u, "SetWindowPos"), patch.object(platform.u, "RegisterHotKey", return_value=True), \
+                 patch.object(platform.u, "UnregisterHotKey", return_value=True), patch.object(platform.u, "GetAsyncKeyState", return_value=0), \
+                 patch.object(platform.dwm, "DwmFlush", return_value=0), \
+                 patch("PIL.ImageGrab.grab", side_effect=lambda **kw:Image.new("RGB",(80,50),(20,40,60))):
+                receiver=str(uuid.uuid4()); context={"baseRevision":0,"sessionId":None,"sessionRevision":None}
+                state=controller.prepare(receiver,"trade","42",context,select=True,game_session=True)
+                controller.selected(state["generation"],{"x":100,"y":80,"width":80,"height":50},dict(FakePlatform().geo))
+                controller.start()
+                try:
+                    self.wait(lambda:controller.captured_count==1 and len(platform.hud_buttons)==3)
+                    for expected in (2,3):
+                        self.wait(lambda:not controller.busy)
+                        platform.u.PostMessageW(platform.hud_buttons[0],0x100,13,0)
+                        self.wait(lambda:controller.captured_count==expected)
+                    self.assertEqual(len(controller.frames),3)
+                    self.assertEqual(foreground[0],platform.hud)
+                    platform.u.PostMessageW(platform.hud,0x111,103,0)
+                    self.wait(lambda:controller.state=="STOPPED")
+                    self.assertEqual(len(controller.frames),3)
+                finally: controller.close()
+
+    def test_only_game_or_own_panel_is_a_valid_capture_foreground(self):
+        from unittest.mock import Mock
+        platform = Win32CapturePlatform(); platform.hud = 123
+        platform.controller = Mock(target="42")
+        with patch.object(platform.u, "GetForegroundWindow", return_value=123):
+            self.assertTrue(platform.is_foreground("42"))
+            self.assertFalse(platform.is_foreground("43"))
+            self.assertFalse(platform._game_is_foreground("42"))
+        with patch.object(platform.u, "GetForegroundWindow", return_value=456):
+            self.assertFalse(platform.is_foreground("42"))
+
+    def test_panel_capture_hides_controls_switches_to_game_and_restores_panel_focus(self):
+        from PIL import Image
+        from unittest.mock import Mock
+        platform = Win32CapturePlatform(); platform.hud = 123
+        platform.controller = Mock(target="42", state="READY")
+        foreground=[123]
+        def activate(hwnd): foreground[0]=hwnd; return True
+        def grab(**kwargs):
+            self.assertEqual(foreground[0], 42)
+            self.assertTrue(platform.suppress_hud.is_set())
+            return Image.new("RGB", (80,50), (20,40,60))
+        with patch.object(platform.u, "GetForegroundWindow", side_effect=lambda:foreground[0]), \
+             patch.object(platform.u, "SetForegroundWindow", side_effect=activate), \
+             patch.object(platform.u, "ShowWindow") as show, patch.object(platform.dwm, "DwmFlush", return_value=0), \
+             patch("PIL.ImageGrab.grab", side_effect=grab):
+            self.assertTrue(platform.capture((0,0,80,50)))
+            self.assertEqual(foreground[0], 123)
+            show.assert_any_call(123, 0); show.assert_any_call(123, 4)
 
     def test_hud_is_hidden_before_pixels_are_read(self):
         from PIL import Image
