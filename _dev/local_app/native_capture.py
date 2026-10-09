@@ -67,6 +67,7 @@ class NativeCaptureController:
         self.mode, self.state, self.error = "NONE", "IDLE", None
         self.generation, self.receiver = 0, None
         self.target, self.context, self.profile = None, None, None
+        self.target_pid = None
         self.frames, self.queue_count, self.queue_bytes = {}, 0, 0
         self.receiver_busy, self.busy, self.closed = False, False, False
         self.profiles = {}
@@ -98,6 +99,7 @@ class NativeCaptureController:
         self.generation += 1
         self.mode, self.state, self.error = "NONE", "IDLE", error
         self.receiver, self.target, self.profile = None, None, None
+        self.target_pid = None
         self.frames.clear()
         self.captured_count = 0
         self.roi_adjusting = False
@@ -113,6 +115,7 @@ class NativeCaptureController:
     def stop_capture(self, error=None):
         with self.lock:
             self.state, self.error, self.target = "STOPPED", error, None
+            self.target_pid = None
             self.roi_adjusting = False
             self.platform.cancel_selection()
             self.record("capture_stopped", reason=error or "user_stop")
@@ -130,8 +133,11 @@ class NativeCaptureController:
             if self.target is not None:
                 try:
                     geo = self.platform.geometry(self.target)
-                    if self.profile and signature(geo) != self.profile["signature"]:
+                    if geo["pid"] != self.target_pid:
+                        self.stop_capture("target_unavailable")
+                    elif self.profile and signature(geo) != self.profile["signature"]:
                         self.stop_capture("profile_changed")
+                    else: return geo
                 except (NativeCaptureError, OSError): self.stop_capture("target_unavailable")
 
     def snapshot(self):
@@ -144,13 +150,15 @@ class NativeCaptureController:
                     "context": copy.deepcopy(self.context), "inputSinkReady": bool(getattr(self.platform, "sink", None)),
                     "diagnostics": {"path": str(self.diagnostics.path), "loggingError": self.diagnostics.error}}
 
-    def prepare(self, receiver, mode, target, context, *, select=False):
+    def prepare(self, receiver, mode, target, context, *, select=False, count=0, size=0):
         try:
             receiver = str(uuid.UUID(receiver))
         except (ValueError, TypeError, AttributeError):
             raise NativeCaptureError("invalid_receiver", "캡처 수신기를 다시 여세요.", 422) from None
         if not isinstance(mode, str) or mode not in {"trade", "warehouse"}:
             raise NativeCaptureError("invalid_mode", "물교 또는 창고 모드를 선택하세요.", 422)
+        if type(count) is not int or not 0 <= count <= MAX_FRAMES or type(size) is not int or not 0 <= size <= MAX_BYTES:
+            raise NativeCaptureError("invalid_queue", "대기열 상태가 올바르지 않습니다.", 422)
         geo = self.platform.geometry(target)
         skeleton = self._metadata(mode, context, geo, {"x": 0, "y": 0, "width": 8, "height": 8}, None)
         normalized = validate_capture_metadata(skeleton)["context"]
@@ -163,8 +171,9 @@ class NativeCaptureController:
                 raise NativeCaptureError("pending_capture", "기존 캡처를 먼저 수신한 뒤 모드를 변경하세요.")
             self._clear()
             self.receiver, self.mode, self.target, self.context = receiver, mode.upper(), target, normalized
+            self.target_pid = geo["pid"]
             self.receiver_busy = False
-            self.queue_count, self.queue_bytes = 0, 0
+            self.queue_count, self.queue_bytes = count, size
             generation = self.generation
             if select:
                 self.state = "SELECTING"
@@ -269,7 +278,10 @@ class NativeCaptureController:
             if receiver != self.receiver or generation != self.generation:
                 return {**self.snapshot(), "frames": [], "owned": False}
             if not isinstance(context, dict) or context != self.context:
-                self.stop_capture("session_changed")
+                self.record("stale_frames_discarded", reason="session_changed",
+                            discardedCount=len(self.frames), discardedBytes=sum(len(v["png"]) for v in self.frames.values()),
+                            invalidatedCaptureGeneration=self.generation)
+                self._clear("session_changed")
                 return {**self.snapshot(), "frames": [], "owned": False}
             receiver_status = (count, size, busy)
             if receiver_status != self.last_receiver_status:
@@ -310,7 +322,7 @@ class NativeCaptureController:
                 return False
             self.busy = True
             self.record("capture_accepted")
-            args = (self.generation, self.target, copy.deepcopy(self.profile), copy.deepcopy(self.context), self.mode.lower())
+            args = (self.generation, self.target, copy.deepcopy(self.profile), copy.deepcopy(self.context), self.mode.lower(), self.target_pid)
             self.worker = threading.Thread(target=self._capture, args=args, name="bdo-native-pixels", daemon=True)
             self.worker.start()
             return True
@@ -332,11 +344,13 @@ class NativeCaptureController:
                                    "screenOrigin": {"x": geo["left"], "y": geo["top"]},
                                    "windowMode": geo["mode"], "monitor": geo["monitor"]}}
 
-    def _capture(self, generation, target, profile, context, mode):
+    def _capture(self, generation, target, profile, context, mode, target_pid):
         started = time.monotonic()
         self.record("capture_worker_started")
         try:
             geo = self.platform.geometry(target)
+            if geo["pid"] != target_pid:
+                raise NativeCaptureError("target_changed", "게임 프로세스가 바뀌었습니다.")
             if signature(geo) != profile["signature"]:
                 raise NativeCaptureError("profile_changed", "게임 화면 환경이 바뀌었습니다.")
             if not self.platform.is_foreground(target):
@@ -352,7 +366,7 @@ class NativeCaptureController:
             validate_capture_payload(json.dumps(metadata), png, content_type="image/png", expected_task=mode)
             with self.lock:
                 if generation != self.generation or self.closed:
-                    self.record("frame_discarded", captureGeneration=generation, closed=self.closed)
+                    self.record("frame_discarded", captureGeneration=generation, closed=self.closed, discardedBytes=len(png))
                     return
                 if self.queue_count + len(self.frames) >= MAX_FRAMES:
                     raise NativeCaptureError("queue_full", "대기 이미지 개수 제한에 도달했습니다.")

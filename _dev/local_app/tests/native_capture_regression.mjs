@@ -39,6 +39,14 @@ await assert.rejects(captureFromNative(blob, { ...packet(), sha256: "wrong" }, c
 await assert.rejects(captureFromNative(blob, packet(), { ...context, baseRevision: 8 }, decode), { code: "stale_capture" });
 await assert.rejects(captureFromNative(blob, packet(), context, { decode: async () => ({ width: 79, height: 50 }) }), { code: "invalid_native_image" });
 receiver.deactivate(); assert.equal(await receiver.receive(packet(2,"warehouse"), getBlob, warehouseAdapter, decode), false);
+receiver.activate("trade",4);
+const staleContextPacket=packet(4);
+const contextDelay=receiver.receive(staleContextPacket,()=>new Promise(resolve=>{resolveBlob=resolve;}),adapter,decode);
+context.baseRevision=8;resolveBlob(blob);
+await assert.rejects(contextDelay,{code:"stale_capture"});
+assert.equal(trade.length,1,"context change cannot append a stale pending image or erase an earlier capture");
+context.baseRevision=7;
+
 const full = new CaptureQueue(); full.append(Array.from({ length: 100 }, () => trade.items[0]));
 receiver.activate("trade", 3);
 const overflow = packet(3);

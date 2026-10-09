@@ -192,12 +192,50 @@ class NativeCaptureTests(NativeFixture):
         self.platform.foreground=False;self.controller.maintenance()
         self.assertEqual(self.controller.state,"READY")
 
-    def test_context_change_stops_capture_but_preserves_pending_evidence(self):
-        self.prepare();packet=self.capture()
-        result=self.heartbeat(context={**self.context,"baseRevision":1})
-        self.assertFalse(result["owned"]);self.assertEqual(self.controller.state,"STOPPED")
-        self.assertEqual(len(self.controller.frames),1)
-        self.assertTrue(self.controller.image(self.receiver,packet["generation"],packet["metadata"]["captureId"]))
+    def test_context_change_discards_only_unacknowledged_frames_and_restarts(self):
+        for mode in ("trade", "warehouse"):
+            with self.subTest(mode=mode):
+                self.prepare(mode);packet=self.capture();generation=self.controller.generation
+                changed={**self.context,"baseRevision":self.context["baseRevision"]+1}
+                result=self.heartbeat(context=changed)
+                self.assertFalse(result["owned"]);self.assertEqual(result["frames"],[])
+                self.assertEqual(self.controller.mode,"NONE");self.assertFalse(self.controller.frames)
+                self.assertGreater(self.controller.generation,generation)
+                with self.assertRaises(NativeCaptureError):self.controller.image(self.receiver,generation,packet["metadata"]["captureId"])
+                events=self.controller.diagnostics.snapshot()["recent"]
+                discarded=next(e for e in reversed(events) if e["event"]=="stale_frames_discarded")
+                self.assertEqual(discarded["discardedCount"],1);self.assertEqual(discarded["discardedBytes"],packet["bytes"])
+                self.context=changed
+                self.controller.prepare(self.receiver,mode,"42",changed,select=False)
+                self.assertEqual(self.controller.state,"READY")
+
+    def test_context_change_invalidates_in_flight_result_without_stale_injection(self):
+        self.prepare();self.platform.release.clear();self.assertTrue(self.controller.on_hotkey())
+        generation=self.controller.generation;changed={**self.context,"baseRevision":1}
+        self.heartbeat(context=changed)
+        self.platform.release.set();self.wait_capture()
+        self.assertFalse(self.controller.frames)
+        self.assertGreater(self.controller.generation,generation)
+        self.context=changed;self.controller.prepare(self.receiver,"trade","42",changed,select=False)
+        self.assertEqual(self.controller.state,"READY")
+
+    def test_frozen_browser_context_change_clears_multiple_frames_and_old_ack_is_harmless(self):
+        self.prepare();generation=self.controller.generation
+        for _ in range(3):self.assertTrue(self.controller.on_hotkey());self.wait_capture()
+        packets=self.heartbeat()["frames"];self.assertEqual(len(packets),3)
+        changed={**self.context,"sessionId":str(uuid.uuid4()),"sessionRevision":1}
+        self.heartbeat(context=changed);self.assertFalse(self.controller.frames)
+        self.context=changed;self.controller.prepare(self.receiver,"trade","42",changed,select=False)
+        fresh=self.capture()
+        self.controller.acknowledge(self.receiver,generation,packets[0]["metadata"]["captureId"])
+        self.assertEqual(self.heartbeat()["frames"],[fresh])
+        self.assertEqual(fresh["metadata"]["context"],changed)
+
+    def test_target_process_replacement_stops_and_holds_frames_without_reusing_stale_roi(self):
+        self.prepare();self.capture();self.platform.geo["pid"]=43
+        self.controller.maintenance()
+        self.assertEqual(self.controller.state,"STOPPED");self.assertEqual(self.controller.error,"target_unavailable")
+        self.assertEqual(len(self.controller.frames),1);self.assertFalse(self.controller.on_hotkey())
 
     def test_queue_limits_pending_retry_and_idempotent_ack(self):
         self.prepare()
@@ -220,6 +258,8 @@ class NativeCaptureTests(NativeFixture):
         self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
         self.assertEqual(self.controller.error, "queue_full")
         self.assertFalse(self.controller.frames)
+        self.heartbeat();self.assertTrue(self.controller.on_hotkey());self.wait_capture()
+        self.assertEqual(len(self.controller.frames),1)
 
     def test_capture_failure_focus_change_and_hotkey_collision_are_explicit(self):
         self.prepare()
@@ -347,7 +387,7 @@ class NativeApiTests(NativeFixture):
         return self.client.post("/api/native-capture", json=data, base_url="http://localhost:18765", headers=self.headers if headers is None else headers)
 
     def test_commands_require_exact_origin_and_strict_shape(self):
-        command = {"action": "prepare", "receiver": self.receiver, "mode": "trade", "target": "42", "context": self.context, "select": True}
+        command = {"action": "prepare", "receiver": self.receiver, "mode": "trade", "target": "42", "context": self.context, "select": True, "count":0, "bytes":0}
         for headers in ({}, {"Origin": "http://evil.test"}, {"Origin": "http://127.0.0.1:18765"}, {**self.headers, "Sec-Fetch-Site": "cross-site"}):
             self.assertEqual(self.post(command, headers).status_code, 403)
         self.assertEqual(self.post({"action": []}).status_code, 422)
@@ -356,6 +396,16 @@ class NativeApiTests(NativeFixture):
         generation = self.controller.generation
         self.assertEqual(self.post({"action": "disarm", "receiver": self.receiver, "generation": True}).status_code, 422)
         self.assertEqual(self.post({"action": "disarm", "receiver": self.receiver, "generation": generation}).get_json()["mode"], "NONE")
+
+    def test_prepare_includes_current_browser_queue_limits_before_first_heartbeat(self):
+        self.prepare()
+        command={"action":"prepare","receiver":self.receiver,"mode":"trade","target":"42","context":self.context,"select":False,"count":100,"bytes":0}
+        self.assertEqual(self.post(command).status_code,200)
+        self.assertFalse(self.controller.on_hotkey());self.assertEqual(self.controller.error,"queue_full")
+        self.heartbeat();self.assertTrue(self.controller.on_hotkey());self.wait_capture()
+        self.assertEqual(len(self.controller.frames),1)
+        command["count"]=True
+        self.assertEqual(self.post(command).status_code,422);self.assertEqual(len(self.controller.frames),1)
 
     def test_diagnostics_retain_reason_and_reject_invalid_reason_without_reset(self):
         generation = self.prepare()
@@ -403,6 +453,20 @@ class NativeApiTests(NativeFixture):
         self.assertEqual(self.client.get(url.replace(self.receiver, str(uuid.uuid4()))).status_code, 404)
         self.post({"action": "ack", "receiver": self.receiver, "generation": packet["generation"], "captureId": packet["metadata"]["captureId"]})
         self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_native_warehouse_png_passes_existing_scan_bridge_only_on_explicit_request(self):
+        self.prepare("warehouse");packet=self.capture();metadata=packet["metadata"]
+        png=self.controller.image(self.receiver,packet["generation"],metadata["captureId"])
+        before=self.client.get("/api/bootstrap").get_json()
+        from local_app.backend.services import warehouse_scan
+        output={"type":"master_inventory_patch","version":1,"items":{}}
+        report={"input":{},"slots":[]}
+        with patch.object(warehouse_scan,"convert",return_value=(output,report)) as scan:
+            self.assertEqual(self.client.get("/api/bootstrap").get_json(),before);scan.assert_not_called()
+            result=self.client.post("/api/warehouse-scan",base_url="http://localhost:18765",headers=self.headers,
+                data={"image":(io.BytesIO(png),"native.png","image/png")})
+            self.assertEqual(result.status_code,200,result.get_json());scan.assert_called_once()
+        self.assertEqual(self.client.get("/api/bootstrap").get_json(),before,"recognition never applies inventory automatically")
 
     def test_native_capture_is_accepted_by_existing_trade_ocr_and_feedback(self):
         self.prepare()

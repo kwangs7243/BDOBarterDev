@@ -11,6 +11,9 @@ from ctypes import wintypes as w
 
 from local_app.native_capture import NativeCaptureError, adjust_roi
 
+GEOMETRY_INTERVAL = .15
+IDENTITY_INTERVAL = 1.0
+
 
 class Win32CapturePlatform:
     def __init__(self):
@@ -27,6 +30,8 @@ class Win32CapturePlatform:
         self.frame_drag = None
         self.frame_bounds = None
         self.hotkey_retry = 0
+        self.identity_cache = None
+        self.identity_lock = threading.Lock()
         self.thread = None
         if os.name != "nt":
             raise NativeCaptureError("native_unsupported", "Windows 실행기에서 사용하세요.", 503)
@@ -140,6 +145,22 @@ class Win32CapturePlatform:
         identity, _ = self._identity(hwnd)
         return os.path.basename(identity).startswith("blackdesert") and identity.endswith(".exe")
 
+    def _geometry_identity(self, hwnd):
+        pid = self._window_pid(hwnd)
+        if not pid:
+            raise NativeCaptureError("target_unavailable", "게임 프로세스를 확인하지 못했습니다.")
+        with self.identity_lock:
+            now = time.monotonic()
+            cached = self.identity_cache
+            if cached and cached[:2] == (hwnd, pid) and now < cached[3]:
+                return cached[2], pid
+            identity, verified_pid = self._identity(hwnd)
+            if verified_pid != pid or not os.path.basename(identity).startswith("blackdesert") or not identity.endswith(".exe"):
+                self.identity_cache = None
+                raise NativeCaptureError("target_unavailable", "선택한 검은사막 창을 사용할 수 없습니다.")
+            self.identity_cache = (hwnd, pid, identity, now + IDENTITY_INTERVAL)
+            return identity, pid
+
     def targets(self):
         self._dpi()
         items = []
@@ -168,8 +189,9 @@ class Win32CapturePlatform:
                 raise ValueError()
         except (ValueError, TypeError):
             raise NativeCaptureError("invalid_target", "게임 창을 선택하세요.", 422) from None
-        if not self.u.IsWindow(hwnd) or self.u.IsIconic(hwnd) or not self.u.IsWindowVisible(hwnd) or not self._is_game(hwnd):
+        if not self.u.IsWindow(hwnd) or self.u.IsIconic(hwnd) or not self.u.IsWindowVisible(hwnd):
             raise NativeCaptureError("target_unavailable", "선택한 검은사막 창을 사용할 수 없습니다.")
+        identity, pid = self._geometry_identity(hwnd)
         rect, origin = w.RECT(), w.POINT(0, 0)
         if not self.u.GetClientRect(hwnd, ctypes.byref(rect)) or not self.u.ClientToScreen(hwnd, ctypes.byref(origin)):
             raise NativeCaptureError("target_unavailable", "게임 창 좌표를 읽지 못했습니다.")
@@ -181,7 +203,6 @@ class Win32CapturePlatform:
         monitor_handle = self.u.MonitorFromWindow(hwnd, 2)
         if not self.u.GetMonitorInfoW(monitor_handle, ctypes.byref(monitor)):
             raise NativeCaptureError("target_unavailable", "게임 모니터를 확인하지 못했습니다.")
-        identity, pid = self._identity(hwnd)
         return {"identity": identity, "pid": pid, "width": width, "height": height,
                 "left": origin.x, "top": origin.y, "dpi": self._monitor_dpi(monitor_handle), "windowDpi": self.u.GetDpiForWindow(hwnd),
                 "monitor": f"{monitor.device}:{monitor.monitor.right-monitor.monitor.left}x{monitor.monitor.bottom-monitor.monitor.top}",
@@ -281,10 +302,15 @@ class Win32CapturePlatform:
             self._create_input_sink()
             self._create_roi_frame()
             message = Message()
+            next_geometry, frame_state = 0, None
             while not self.stopping.is_set():
-                self.controller.maintenance()
+                state = (self.controller.generation, self.controller.state)
+                now = time.monotonic()
+                if state != frame_state or now >= next_geometry:
+                    geometry = self.controller.maintenance()
+                    self._update_roi_frame(self.controller.state == "READY", geometry)
+                    next_geometry, frame_state = now + GEOMETRY_INTERVAL, state
                 self._update_hotkey()
-                self._update_roi_frame(self.controller.state == "READY")
                 while self.u.PeekMessageW(ctypes.byref(message), None, 0, 0, 1):
                     self.u.TranslateMessage(ctypes.byref(message)); self.u.DispatchMessageW(ctypes.byref(message))
                 try: target, generation = self.commands.get_nowait()
@@ -406,13 +432,13 @@ class Win32CapturePlatform:
         if not self.u.SetWindowPos(self.roi_frame, w.HWND(-1), x, y, width, height, 0x0010): raise ctypes.WinError(ctypes.get_last_error())
         self.u.InvalidateRect(self.roi_frame, None, True)
 
-    def _update_roi_frame(self, active):
+    def _update_roi_frame(self, active, geometry=None):
         if not self.roi_frame: return
         if not active or not self.controller.profile:
             if self.frame_drag: self._finish_frame_drag(True); self.u.ReleaseCapture()
             if self.roi_frame_visible: self.u.ShowWindow(self.roi_frame, 0); self.roi_frame_visible = False
             return
-        if not self.frame_drag: self._position_roi_frame(self.controller.profile["roi"], self.geometry(self.controller.target))
+        if not self.frame_drag: self._position_roi_frame(self.controller.profile["roi"], geometry or self.geometry(self.controller.target))
         if not self.roi_frame_visible: self.u.ShowWindow(self.roi_frame, 4); self.roi_frame_visible = True
 
     def _wait_for_game(self, target, generation):

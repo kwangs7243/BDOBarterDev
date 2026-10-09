@@ -34,7 +34,7 @@ def command():
     if not isinstance(data, dict):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 요청입니다.", 422)
     action = data.get("action")
-    fields = {"prepare": {"action", "receiver", "mode", "target", "context", "select"},
+    fields = {"prepare": {"action", "receiver", "mode", "target", "context", "select", "count", "bytes"},
               "heartbeat": {"action", "receiver", "generation", "count", "bytes", "busy", "context"},
               "ack": {"action", "receiver", "generation", "captureId"},
               "disarm": {"action", "receiver", "generation"},
@@ -54,7 +54,7 @@ def command():
     if action == "prepare":
         if type(data["select"]) is not bool:
             raise NativeCaptureError("invalid_command", "영역 설정 요청이 올바르지 않습니다.", 422)
-        result = value.prepare(data["receiver"], data["mode"], data["target"], data["context"], select=data["select"])
+        result = value.prepare(data["receiver"], data["mode"], data["target"], data["context"], select=data["select"], count=data["count"], size=data["bytes"])
     elif action == "attach":
         result = value.attach(data["receiver"])
     elif action == "stop":

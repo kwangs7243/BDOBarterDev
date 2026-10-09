@@ -35,7 +35,7 @@ const errorText = {
   roi_cancelled: "영역 지정을 취소했습니다.",
   profile_changed: "게임 크기·배율이 바뀌었습니다. 영역을 다시 지정하세요.",
   target_unavailable: "게임 창을 사용할 수 없어 촬영을 중지했습니다.",
-  session_changed: "작업 세션이 바뀌어 촬영을 중지했습니다. 이전 이미지는 보존됩니다.",
+  session_changed: "작업 세션이 바뀌어 촬영을 중지하고 미수신 이미지를 폐기했습니다. 캡처를 다시 시작하세요.",
   queue_full: "대기열이 가득 찼습니다. 기존 이미지를 먼저 확인하세요.",
   black_frame: "게임 화면을 읽지 못했습니다. 게임 창 모드를 확인하세요.",
   pixel_capture_failed: "게임 화면 캡처에 실패했습니다. 진단 기록을 확인하세요.",
@@ -90,7 +90,8 @@ export function initNativeCaptureUI(adapters) {
     serial = serial.catch(() => {}).then(async () => {
       const data = await refresh(mode);
       if (disposed || !data?.available || adapters[mode].getState().busy) return;
-      const payload = { action: "prepare", mode, target: panels.get(mode).target.value,
+      const queue = adapters[mode].getState();
+      const payload = { action: "prepare", mode, count: queue.count, bytes: queue.bytes, target: panels.get(mode).target.value,
         context: nativeContext(adapters[mode].getContext()), select };
       let result;
       try { result = await command(payload); }

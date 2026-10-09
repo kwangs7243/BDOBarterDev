@@ -39,6 +39,10 @@ def hotkey(): return jsonify({'captured':controller.on_hotkey()})
 def finish(): controller.finish(); return jsonify(ok=True)
 @app.post('/__test__/maintenance')
 def maintenance(): controller.maintenance(); return jsonify(controller.snapshot())
+@app.post('/__test__/context-change')
+def context_change():
+    changed={**controller.context,'baseRevision':controller.context['baseRevision']+1}
+    return jsonify(controller.heartbeat(controller.receiver,controller.generation,0,0,False,changed))
 app.run(host='127.0.0.1',port=${Number(port)},use_reloader=False,threaded=True)
 `;
 let server;
@@ -140,6 +144,15 @@ try {
   assert.equal((await hotkey()).captured, true);
   await waitFor(async () => evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength==='2'"), "closed warehouse dialog preserves and receives captures");
   await waitFor(async () => (await nativeStatus()).pending === 0, "warehouse ACK before mode switch");
+  await send('Page.setWebLifecycleState', {state:'frozen'});
+  for (let i=0;i<3;i++) {
+    assert.equal((await (await fetch(`${baseUrl}__test__/hotkey`,{method:'POST'})).json()).captured,true);
+    await waitFor(async () => !(await nativeStatus()).busy,'frozen warehouse capture finishes');
+  }
+  assert.equal((await nativeStatus()).pending,3);
+  await send('Page.setWebLifecycleState',{state:'active'});
+  await waitFor(async () => evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength==='5'"),'closed warehouse dialog drains three frozen captures');
+  await waitFor(async () => (await nativeStatus()).pending===0,'frozen warehouse captures ACK');
   await evaluate("document.querySelector('#open-trade-capture').click(); document.querySelector('[data-native-capture=trade] [data-native=prepare]').click()");
   await waitFor(async () => (await nativeStatus()).mode === "TRADE" && (await nativeStatus()).state === "READY", "saved trade ROI reused");
   assert.equal((await nativeStatus()).captured, 0, "saved ROI waits for F10");
@@ -166,14 +179,38 @@ try {
   await send('Page.setWebLifecycleState', {state:'active'});
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='8'"), 'finished captures drain while dialog remains closed');
   await waitFor(async () => (await nativeStatus()).mode === 'NONE', 'finished capture disarms only after ACK');
-  assert.equal(await evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength"), "2", "trade input preserves warehouse queue");
+  assert.equal(await evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength"), "5", "trade input preserves warehouse queue");
   await evaluate("document.querySelector('#open-trade-capture').click(); document.querySelector('[data-native-capture=trade] [data-native=prepare]').click()");
   await waitFor(async () => (await nativeStatus()).state === "READY", "explicit start without screen sharing");
+  await evaluate("document.querySelector('#trade-capture-dialog').close()");
+  await send('Page.setWebLifecycleState',{state:'frozen'});
+  for (let i=0;i<3;i++) {
+    assert.equal((await (await fetch(`${baseUrl}__test__/hotkey`,{method:'POST'})).json()).captured,true);
+    await waitFor(async () => !(await nativeStatus()).busy,'pre-context-change capture completes');
+  }
+  const oldGeneration=(await nativeStatus()).generation;
+  assert.equal((await nativeStatus()).pending,3);
+  const changed=await (await fetch(`${baseUrl}__test__/context-change`,{method:'POST'})).json();
+  assert.equal(changed.owned,false);assert.equal(changed.pending,0);assert.equal(changed.mode,'NONE');
+  assert.ok(changed.generation>oldGeneration);
+  const diagnostics=await (await fetch(`${baseUrl}api/native-capture/diagnostics`)).json();
+  const discarded=diagnostics.recent.findLast(e=>e.event==='stale_frames_discarded');
+  assert.equal(discarded.discardedCount,3);assert.ok(discarded.discardedBytes>0);
+  await send('Page.setWebLifecycleState',{state:'active'});
+  await evaluate("import('/assets/js/state.js').then(({state})=>{state.revision+=1})");
+  await waitFor(async () => evaluate("document.querySelector('[data-native-capture=trade] [role=status]').textContent.includes('미수신 이미지를 폐기')"),'frontend reports context reset');
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"),'8','ACKed trade captures survive context reset');
+  assert.equal(await evaluate("document.querySelector('#warehouse-scan-dialog').dataset.queueLength"),'5','ACKed warehouse captures survive context reset');
+  await evaluate("document.querySelector('#open-trade-capture').click();document.querySelector('[data-native-capture=trade] [data-native=prepare]').click()");
+  await waitFor(async () => (await nativeStatus()).state==='READY' && (await nativeStatus()).context.baseRevision===initial.revision+1,'new context immediately restarts capture');
+  assert.equal((await hotkey()).captured,true);
+  await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='9'"),'only fresh-context image is appended');
+  await waitFor(async () => (await nativeStatus()).pending===0,'fresh-context ACK');
   await evaluate("document.querySelector('[data-native-capture=trade] [data-native=stop]').click()");
   await waitFor(async () => (await nativeStatus()).mode === "NONE", "explicit UI stop");
   const after = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.deepEqual(after, initial, "native capture-only flow leaves all durable state unchanged");
-  console.log(JSON.stringify({ok:true,actualChrome:true,actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closedDialog:'PASS',screenShareIndependence:'PASS',frozenBrowserBuffer:'PASS',explicitStop:'PASS',noAutomaticOCRApply:'PASS'}));
+  console.log(JSON.stringify({ok:true,actualChrome:true,actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closedDialog:'PASS',screenShareIndependence:'PASS',frozenBrowserBuffer:'PASS',frozenWarehouseBuffer:'PASS',contextResetAndRestart:'PASS',noStaleInjection:'PASS',ackedQueuesPreserved:'PASS',explicitStop:'PASS',noAutomaticOCRApply:'PASS'}));
 
 } finally {
   try { if (socket?.readyState === WebSocket.OPEN) await send("Browser.close"); } catch {}
