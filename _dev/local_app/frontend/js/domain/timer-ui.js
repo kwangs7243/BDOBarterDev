@@ -67,6 +67,7 @@ window.toggleReturnTimer = function(btn, mode, sortieIdx, estT) {
 };
 // ⏱️ 전역 타이머 틱 (1초마다 무한 루프)
 setInterval(() => {
+    if (typeof sortiesSpeed === 'undefined' || typeof sortiesBalance === 'undefined') return;
     const now = Date.now();
     ['speed', 'balance'].forEach(mode => {
         let arrRef = (mode === 'speed') ? sortiesSpeed : sortiesBalance;
