@@ -98,9 +98,15 @@ try {
     await send("DOM.setFileInputFiles", { nodeId: input.nodeId, files: [join(root, "local_app/tests/fixtures/trade-recognition", mapping[imageIndex].image)] });
     await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='1'"), "real PNG input");
     await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
-    await waitFor(async () => evaluate(`document.querySelector('[data-role=trade-live-list] > .trade-recognition-table-wrap tbody')?.rows.length===${expectedRows} && !document.querySelector('[data-action=recognize-trade]').disabled`), "visible six-field table");
+    try {
+      await waitFor(async () => evaluate(`document.querySelector('[data-role=trade-live-list] > .trade-recognition-table-wrap tbody, [data-role=trade-live-list] > .trade-ready-list > .trade-recognition-table-wrap tbody')?.rows.length===${expectedRows} && !document.querySelector('[data-action=recognize-trade]').disabled`), "visible six-field table");
+    } catch (error) {
+      const diagnostic = await evaluate(`({status:document.querySelector('[data-role=trade-recognition-status]').textContent, table:document.querySelector('[data-role=trade-live-list]').innerText, busy:document.querySelector('[data-action=recognize-trade]').disabled, crashes:${JSON.stringify(crashes)}})`);
+      await writeFile(join(output, 'recognition-timeout.json'), JSON.stringify(diagnostic, null, 2));
+      throw new Error(`${error.message}; ${JSON.stringify(diagnostic)}`, {cause:error});
+    }
     const visible = await evaluate(`(() => {
-      const section=document.querySelector('[data-role=trade-live-list]'); const table=section.querySelector('table');
+      const section=document.querySelector('[data-role=trade-live-list]'); const ready=section.querySelector(':scope > .trade-ready-list'); if(ready)ready.open=true; const table=section.querySelector(':scope > .trade-recognition-table-wrap table, :scope > .trade-ready-list > .trade-recognition-table-wrap table');
       return {visible:section.checkVisibility() && table.checkVisibility(),rows:[...table.tBodies[0].rows].map(row=>[...row.cells].map(cell=>cell.innerText)), headers:[...table.tHead.rows[0].cells].map(cell=>cell.innerText),status:document.querySelector('[data-role=trade-recognition-status]').innerText};
     })()`);
     assert.equal(visible.visible, true); assert.equal(visible.rows.length, expectedRows); assert.equal(visible.headers.length, 6);
@@ -137,7 +143,7 @@ try {
   }
   await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
   const variable = await recognize(5, 5);
-  assert.deepEqual(variable.rows.map((row) => row[5]), ["2", "2", "2", "2", "2"]);
+  assert.deepEqual(variable.rows.map((row) => row[5].split("\n")[0]), ["2", "2", "2", "2", "2"]);
   await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
   const highStage = await recognize(11, 6);
   for (const row of highStage.rows) {

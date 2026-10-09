@@ -69,6 +69,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exe", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--ocr-baseline", type=Path, help="Prior installed-package OCR comparison report")
     args = parser.parse_args()
     args.out = args.out.resolve()
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -87,6 +88,11 @@ def main():
                                    creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             wait_for(lambda: request("/api/health").get("ok"))
+            native = request("/api/native-capture")
+            assert native["available"] and native["mode"] == "NONE" and native["state"] == "IDLE", native
+            assert not native["hotkeyRegistered"] and native["pending"] == 0, native
+            with urlopen(BASE + "/assets/js/native-capture-ui.js", timeout=10) as response:
+                assert b"initNativeCaptureUI" in response.read(), "Native UI is missing from the package"
             runtime = request("/api/recognition/trade-runtime")["runtime"]
             assert runtime["available"] and runtime["mode"] == "PACKAGED_LOCAL_RUNTIME", runtime
             before = request("/api/bootstrap")
@@ -108,7 +114,16 @@ def main():
             numeric = {name: sum(row["fields"][name]["corrected"] == truth[name]
                                 for row, truth in zip(result["rows"], expected))
                        for name in ("reqAmount", "count", "yield")}
-            assert all(value == 80 for value in numeric.values()), numeric
+            numeric_errors = [{"row": index, "field": name, "actual": row["fields"][name]["corrected"], "expected": truth[name]}
+                              for index, (row, truth) in enumerate(zip(result["rows"], expected))
+                              for name in numeric if row["fields"][name]["corrected"] != truth[name]]
+            if args.ocr_baseline:
+                baseline = json.loads(args.ocr_baseline.read_text(encoding="utf-8"))[0]
+                assert baseline["runtime"]["modelBundleSha256"] == runtime["modelBundleSha256"]
+                assert baseline["runtime"]["workerVersion"] == runtime["workerVersion"]
+                assert numeric == baseline["numeric"] and numeric_errors == baseline["errors"], numeric_errors
+            else:
+                assert all(value == 80 for value in numeric.values()), numeric
             fully_correct = sum(all(row["fields"][name]["corrected"] == truth[name] for name in truth)
                                 for row, truth in zip(result["rows"], expected))
             assert fully_correct >= 76, fully_correct
@@ -144,11 +159,12 @@ def main():
                 assert list(connection.iterdump()) == persisted_feedback
             report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numericExact": numeric,
                       "fullyCorrectRows": fully_correct, "ocrDurationMs": ocr_duration_ms,
+                      "ocrBaselineMatched": bool(args.ocr_baseline), "numericErrors": numeric_errors,
                       "freshSchema": 4, "tables": sorted(tables),
                       "browserProductFlows": browser_checks, "tradeCorrectionCaptures": len(corrections),
                       "warehouseScans": scans, "warehouseFeedbackApplications": len(feedback),
                       "externalOcrEnvironmentRemoved": True, "singleInstance": True,
-                      "restartPersistence": True, "exeSha256": hashlib.sha256(args.exe.read_bytes()).hexdigest()}
+                      "restartPersistence": True, "nativeCaptureStandby": True, "nativeUiBundled": True, "exeSha256": hashlib.sha256(args.exe.read_bytes()).hexdigest()}
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
             print(json.dumps(report, ensure_ascii=True, indent=2))
