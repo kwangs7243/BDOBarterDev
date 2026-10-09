@@ -6,14 +6,13 @@ from copy import deepcopy
 from flask import Blueprint, current_app, jsonify, request
 
 from ..contracts import (
-    ContractError,
     canonical_request_hash,
     validate_inventory_patch,
     validate_order,
     validate_setting_section,
     validate_settings_patch,
 )
-from ..storage import MutationConflict, RevisionConflict, SCHEMA_VERSION
+from ..storage import SCHEMA_VERSION
 
 api = Blueprint("state_api", __name__, url_prefix="/api")
 

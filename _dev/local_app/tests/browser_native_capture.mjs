@@ -210,7 +210,35 @@ try {
   await waitFor(async () => (await nativeStatus()).mode === "NONE", "explicit UI stop");
   const after = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.deepEqual(after, initial, "native capture-only flow leaves all durable state unchanged");
-  console.log(JSON.stringify({ok:true,actualChrome:true,actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closedDialog:'PASS',screenShareIndependence:'PASS',frozenBrowserBuffer:'PASS',frozenWarehouseBuffer:'PASS',contextResetAndRestart:'PASS',noStaleInjection:'PASS',ackedQueuesPreserved:'PASS',explicitStop:'PASS',noAutomaticOCRApply:'PASS'}));
+  const cleanupCheck = await evaluate(`(async () => {
+    const { initNativeCaptureUI } = await import('/assets/js/native-capture-ui.js');
+    const originalFetch = window.fetch;
+    const dialog = document.createElement('dialog');
+    dialog.innerHTML = '<div class="trade-preview-stage"></div><div class="trade-roi-panel"></div>';
+    document.body.append(dialog);
+    const legacy = [...dialog.children];
+    let resolveStatus, requests = 0;
+    window.fetch = () => { requests++; return new Promise(resolve => { resolveStatus = resolve; }); };
+    try {
+      const adapter = { dialog, getContext: () => ({}), getState: () => ({busy:false}), accept() {} };
+      const ui = initNativeCaptureUI({trade: adapter});
+      const removedButton = dialog.querySelector('[data-native="refresh"]');
+      window.dispatchEvent(new Event('beforeunload'));
+      if (dialog.querySelectorAll('[data-native-capture]').length !== 1) throw new Error('cancelled unload must keep UI alive');
+      const cachedHide = new Event('pagehide'); Object.defineProperty(cachedHide, 'persisted', {value:true});
+      window.dispatchEvent(cachedHide);
+      if (dialog.querySelectorAll('[data-native-capture]').length !== 1) throw new Error('cached page must keep UI alive');
+      window.dispatchEvent(new Event('pagehide'));
+      ui.cleanup(); ui.cleanup();
+      removedButton.click();
+      dialog.setAttribute('open','');
+      resolveStatus({ok:true,json:async()=>({mode:'TRADE',context:{},generation:1})});
+      await new Promise(resolve => setTimeout(resolve, 20));
+      return {requests, panels:dialog.querySelectorAll('[data-native-capture]').length, hidden:legacy.map(node=>node.hidden)};
+    } finally { window.fetch = originalFetch; dialog.remove(); }
+  })()`);
+  assert.deepEqual(cleanupCheck, {requests:1,panels:0,hidden:[false,false]}, 'cleanup removes handlers, observers and panels; delayed status cannot reattach');
+  console.log(JSON.stringify({ok:true,actualChrome:true,cleanupLifecycle:"PASS",actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closedDialog:'PASS',screenShareIndependence:'PASS',frozenBrowserBuffer:'PASS',frozenWarehouseBuffer:'PASS',contextResetAndRestart:'PASS',noStaleInjection:'PASS',ackedQueuesPreserved:'PASS',explicitStop:'PASS',noAutomaticOCRApply:'PASS'}));
 
 } finally {
   try { if (socket?.readyState === WebSocket.OPEN) await send("Browser.close"); } catch {}

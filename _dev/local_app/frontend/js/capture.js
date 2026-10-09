@@ -333,7 +333,7 @@ export async function captureFromPaste(event, context, adapters = {}) {
   return { handled: true, inputs };
 }
 
-const SCREEN_DISCONNECT_REASONS = new Set(["user", "track-ended", "pagehide", "beforeunload", "connect-error", "capture-error"]);
+const SCREEN_DISCONNECT_REASONS = new Set(["user", "track-ended", "pagehide", "beforeunload", "connect-error", "capture-error", "cleanup"]);
 
 export class ScreenCaptureSession {
   #mediaDevices;
@@ -352,6 +352,7 @@ export class ScreenCaptureSession {
   #generation = 0;
   #connectPromise = null;
   #capturing = false;
+  #disposed = false;
   #listeners = new Set();
   #previewElements = new Set();
   #onTrackEnded = () => this.disconnectScreen("track-ended");
@@ -414,6 +415,7 @@ export class ScreenCaptureSession {
   }
 
   connectScreen() {
+    if (this.#disposed) return Promise.reject(new CaptureError("screen_disposed", "화면 연결 객체가 종료되었습니다."));
     if (this.#state === "CONNECTED") return Promise.resolve(this.#stream);
     if (this.#state === "CAPTURING") return Promise.reject(new CaptureError("capture_in_progress", "화면 캡처가 끝난 뒤 다시 연결해 주세요."));
     if (this.#connectPromise) return this.#connectPromise;
@@ -711,6 +713,16 @@ export class ScreenCaptureSession {
     for (const track of stream?.getTracks?.() ?? []) {
       try { track.stop?.(); } catch {}
     }
+  }
+
+  dispose() {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#lifecycleTarget?.removeEventListener?.("pagehide", this.#onPageHide);
+    this.#lifecycleTarget?.removeEventListener?.("beforeunload", this.#onBeforeUnload);
+    this.disconnectScreen("cleanup");
+    this.#listeners.clear();
+    this.#previewElements.clear();
   }
 
   disconnectScreen(reason = "user") {

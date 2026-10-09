@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import math
-import re
 import uuid
 from datetime import datetime, timezone
 from io import BytesIO

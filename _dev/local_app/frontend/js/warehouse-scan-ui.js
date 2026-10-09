@@ -27,6 +27,8 @@ function captureErrorText(error) {
 }
 
 export function initWarehouseScanUI({ setStatus, onPatch }) {
+  const events = new AbortController();
+  const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: events.signal });
   const openButton = document.querySelector("#open-warehouse-scan");
   const dialog = make("dialog", "warehouse-dialog");
   dialog.id = "warehouse-scan-dialog";
@@ -109,6 +111,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   };
 
   const acceptCaptures = (captures) => {
+    if (events.signal.aborted) return;
     queue.append(captures);
     if (!selectedCaptureId) selectedCaptureId = captures[0]?.metadata.captureId ?? null;
     else if (captures.length) selectedCaptureId = captures[0].metadata.captureId;
@@ -134,18 +137,18 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   };
   screenSession.attachPreview(video);
   screenSession.subscribe(() => { captureButton.disabled = screenSession.state !== "CONNECTED"; renderRoi(); });
-  video.addEventListener("resize", renderRoi);
+  listen(video, "resize", renderRoi);
   const resizeObserver = new ResizeObserver(renderRoi); resizeObserver.observe(stage);
-  dialog.querySelector('[data-action="connect-screen"]').addEventListener("click", () => {
+  listen(dialog.querySelector('[data-action="connect-screen"]'), "click", () => {
     screenSession.connectScreen().then(() => { renderRoi(); message.textContent = "게임 화면에서 영역을 드래그하고 Enter를 누르세요."; }).catch(reportCaptureError);
   });
-  dialog.querySelector('[data-action="disconnect-screen"]').addEventListener("click", () => screenSession.disconnectScreen());
-  dialog.querySelector('[data-action="reset-roi"]').addEventListener("click", () => { region = { ...DEFAULT_TRADE_ROI }; renderRoi(); });
-  captureButton.addEventListener("click", async () => {
+  listen(dialog.querySelector('[data-action="disconnect-screen"]'), "click", () => screenSession.disconnectScreen());
+  listen(dialog.querySelector('[data-action="reset-roi"]'), "click", () => { region = { ...DEFAULT_TRADE_ROI }; renderRoi(); });
+  listen(captureButton, "click", async () => {
     try { acceptCaptures([await screenSession.captureRegion(captureContext(), region)]); }
     catch (error) { reportCaptureError(error); }
   });
-  roiBox.addEventListener("pointerdown", event => {
+  listen(roiBox, "pointerdown", event => {
     if (screenSession.state !== "CONNECTED") return;
     const content = displayedVideoContentRect(video, stage);
     const handle = event.target.closest("[data-roi-handle]")?.dataset.roiHandle;
@@ -160,17 +163,17 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
       renderRoi();
     };
     const finish = () => { roiBox.removeEventListener("pointermove", move); roiBox.removeEventListener("pointerup", finish); roiBox.removeEventListener("pointercancel", finish); };
-    roiBox.addEventListener("pointermove", move); roiBox.addEventListener("pointerup", finish, { once: true }); roiBox.addEventListener("pointercancel", finish, { once: true });
+    listen(roiBox, "pointermove", move); listen(roiBox, "pointerup", finish, { once: true }); listen(roiBox, "pointercancel", finish, { once: true });
   });
 
-  openButton.addEventListener("click", () => {
+  listen(openButton, "click", () => {
     message.textContent = "파일을 선택·놓거나 붙여넣기 버튼에 포커스를 둔 뒤 Ctrl+V를 사용하세요.";
     input.disabled = false;
     renderQueue();
     dialog.showModal();
     pasteTarget.focus();
   });
-  input.addEventListener("change", async () => {
+  listen(input, "change", async () => {
     const file = input.files?.[0];
     input.value = "";
     if (!file) return;
@@ -182,15 +185,15 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
       reportCaptureError(error);
     }
   });
-  for (const eventName of ["dragenter", "dragover"]) dropZone.addEventListener(eventName, (event) => {
+  for (const eventName of ["dragenter", "dragover"]) listen(dropZone, eventName, (event) => {
     event.preventDefault();
     dropZone.classList.add("drag-active");
   });
-  for (const eventName of ["dragleave", "drop"]) dropZone.addEventListener(eventName, (event) => {
+  for (const eventName of ["dragleave", "drop"]) listen(dropZone, eventName, (event) => {
     event.preventDefault();
     dropZone.classList.remove("drag-active");
   });
-  dropZone.addEventListener("drop", async (event) => {
+  listen(dropZone, "drop", async (event) => {
     const files = event.dataTransfer?.files;
     if (files?.length !== 1) {
       message.textContent = "한 번에 이미지 파일 한 장씩 놓아 주세요.";
@@ -203,8 +206,8 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
       reportCaptureError(error);
     }
   });
-  dialog.querySelectorAll('[data-action="close"], [data-action="cancel"]').forEach((button) => button.addEventListener("click", () => dialog.close()));
-  dialog.addEventListener("close", () => {
+  dialog.querySelectorAll('[data-action="close"], [data-action="cancel"]').forEach((button) => listen(button, "click", () => dialog.close()));
+  listen(dialog, "close", () => {
     screenSession.disconnectScreen("dialog-close");
     if (previewUrl) previews.revoke(previewUrl);
     previewUrl = null;
@@ -221,7 +224,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     keepQueueOnClose = false;
   });
 
-  scanButton.addEventListener("click", async () => {
+  listen(scanButton, "click", async () => {
     const capture = selectedCapture();
     if (!capture || scanButton.disabled) return;
     scanPending = true;
@@ -258,10 +261,19 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     }
   });
 
-  window.addEventListener("beforeunload", () => {
+  const cleanup = () => {
+    if (events.signal.aborted) return;
+    events.abort();
+    screenSession.dispose();
+    resizeObserver.disconnect();
     previews.clear();
     queue.clear();
-  });
+    selectedCaptureId = previewUrl = null;
+    preview.removeAttribute("src");
+    list.replaceChildren();
+    dialog.remove();
+  };
+  listen(window, "pagehide", (event) => { if (!event.persisted) cleanup(); });
 
   return {
     dialog,
@@ -271,11 +283,6 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     reportCaptureError,
     getQueueLength: () => queue.length,
     getNativeQueueState: () => ({ count: queue.length, bytes: queue.bytes, busy: scanPending }),
-    cleanup: () => {
-      screenSession.disconnectScreen("cleanup");
-      resizeObserver.disconnect();
-      previews.clear();
-      queue.clear();
-    },
+    cleanup,
   };
 }

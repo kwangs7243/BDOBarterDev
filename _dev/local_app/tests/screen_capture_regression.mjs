@@ -9,6 +9,7 @@ class EventHub {
     this.#listeners.set(type, listeners);
   }
   removeEventListener(type, listener) { this.#listeners.get(type)?.delete(listener); }
+  get listenerCount() { return [...this.#listeners.values()].reduce((sum, listeners) => sum + listeners.size, 0); }
   dispatch(type) { for (const listener of [...(this.#listeners.get(type) ?? [])]) listener({ type }); }
 }
 
@@ -180,8 +181,33 @@ assert.equal(lifecycleRig.session.state, "DISCONNECTED");
 assert.equal(lifecycleRig.session.reason, "beforeunload");
 assert.equal(lifecycleRig.tracks[3].stopped, 1);
 
+const disposedRig = makeRig();
+const preview = { srcObject: null, play: async () => {}, pause() {} };
+disposedRig.session.attachPreview(preview);
+await disposedRig.session.connectScreen();
+assert.equal(disposedRig.lifecycle.listenerCount, 2);
+disposedRig.session.dispose();
+assert.equal(disposedRig.lifecycle.listenerCount, 0, "dispose releases global lifecycle handlers");
+assert.equal(disposedRig.tracks[0].stopped, 1);
+assert.equal(preview.srcObject, null);
+assert.equal(disposedRig.tracks[0].listeners.size, 0);
+const disposedStateCount = disposedRig.states.length;
+disposedRig.session.disconnectScreen();
+assert.equal(disposedRig.states.length, disposedStateCount, "disposed subscriptions cannot retain UI callbacks");
+disposedRig.session.dispose();
+assert.equal(disposedRig.tracks[0].stopped, 1, "dispose is idempotent");
+await assert.rejects(disposedRig.session.connectScreen(), { code: "screen_disposed" });
+assert.equal(disposedRig.requestOptions.length, 1, "disposed sessions cannot request sharing again");
+const pendingRig = makeRig();
+const pendingConnect = pendingRig.session.connectScreen();
+pendingRig.session.dispose();
+await assert.rejects(pendingConnect, { code: "screen_disconnected" });
+assert.equal(pendingRig.tracks[0].stopped, 1, "late permission result cannot keep a disposed stream alive");
+assert.equal(pendingRig.lifecycle.listenerCount, 0);
+
 console.log(JSON.stringify({
   ok: true,
+  disposeHandlersPreviewsSubscriptionsAndPendingShare: "PASS",
   userInitiatedConnectRequest: "PASS",
   audioFalse: "PASS",
   connectAndPermissionLifecycle: "PASS",

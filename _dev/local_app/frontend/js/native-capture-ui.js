@@ -43,28 +43,30 @@ const errorText = {
 };
 
 export function initNativeCaptureUI(adapters) {
+  const events = new AbortController();
+  const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: events.signal });
   const receiverId = crypto.randomUUID();
   const receiver = new NativeCaptureReceiver();
   const panels = new Map();
   let disposed = false;
   let polling = false;
   let serial = Promise.resolve();
-  const report = (mode, text) => { if (panels.has(mode)) panels.get(mode).status.textContent = text; };
+  const report = (mode, text) => { if (!disposed && panels.has(mode)) panels.get(mode).status.textContent = text; };
   const command = async data => {
     const response = await fetch("/api/native-capture", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, receiver: receiverId }) });
+      signal: events.signal, body: JSON.stringify({ ...data, receiver: receiverId }) });
     const result = await response.json();
     if (!response.ok || !result.ok) throw new CaptureError(result.error?.code, result.error?.message || "캡처 요청을 처리하지 못했습니다.");
     return result;
   };
   const status = async () => {
-    const response = await fetch("/api/native-capture", { cache: "no-store" });
+    const response = await fetch("/api/native-capture", { cache: "no-store", signal: events.signal });
     if (!response.ok) throw new CaptureError("native_unavailable", "캡처 연결을 확인하지 못했습니다.");
     return response.json();
   };
   const attach = async data => {
     const mode = data.mode?.toLowerCase();
-    if (!adapters[mode] || receiver.mode || !data.context) return;
+    if (disposed || !adapters[mode] || receiver.mode || !data.context) return;
     const result = await command({ action: "attach" });
     if (!disposed && result.mode?.toLowerCase() === mode) receiver.activate(mode, result.generation);
   };
@@ -72,6 +74,7 @@ export function initNativeCaptureUI(adapters) {
     const refs = panels.get(mode);
     try {
       const data = await status();
+      if (disposed) return null;
       const selected = refs.target.value;
       refs.target.replaceChildren();
       for (const item of data.targets ?? []) {
@@ -116,13 +119,14 @@ export function initNativeCaptureUI(adapters) {
     const label = mode === "trade" ? "물교" : "창고";
     panel.innerHTML = `<h3>게임 영역 캡처</h3><div class="trade-roi-actions"><button type="button" data-native="prepare" disabled>${label} 캡처 시작</button><button type="button" data-native="stop">캡처 중지</button></div><details><summary>게임 창·영역 설정</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>영역 새로 지정</button></div></details><p>게임 목록을 스크롤하고 F10으로 캡처하세요. 테두리 드래그는 이동, 모서리 드래그는 크기 조절입니다. 영역 안쪽은 게임 조작을 그대로 받습니다. 화면 공유나 열린 대화상자는 필요 없습니다. 누적 이미지의 인식·검토·적용은 여기서 실행하세요.</p><p role="status" aria-live="polite"></p>`;
     adapter.dialog.querySelector(".trade-roi-panel").before(panel);
-    panels.set(mode, { target: panel.querySelector("select"), start: panel.querySelector('[data-native="prepare"]'),
+    const legacy = [...adapter.dialog.querySelectorAll('.trade-preview-stage, .trade-roi-panel:not([data-native-capture])')];
+    panels.set(mode, { root: panel, target: panel.querySelector("select"), start: panel.querySelector('[data-native="prepare"]'),
       select: panel.querySelector('[data-native="select"]'), status: panel.querySelector('[role="status"]'),
-      legacy: [...adapter.dialog.querySelectorAll('.trade-preview-stage, .trade-roi-panel:not([data-native-capture])')] });
-    panel.querySelector('[data-native="prepare"]').addEventListener("click", () => prepare(mode));
-    panel.querySelector('[data-native="select"]').addEventListener("click", () => prepare(mode, true));
-    panel.querySelector('[data-native="refresh"]').addEventListener("click", () => void refresh(mode));
-    panel.querySelector('[data-native="stop"]').addEventListener("click", () => void stop(mode));
+      legacy, legacyHidden: legacy.map(node => node.hidden) });
+    listen(panel.querySelector('[data-native="prepare"]'), "click", () => prepare(mode));
+    listen(panel.querySelector('[data-native="select"]'), "click", () => prepare(mode, true));
+    listen(panel.querySelector('[data-native="refresh"]'), "click", () => void refresh(mode));
+    listen(panel.querySelector('[data-native="stop"]'), "click", () => void stop(mode));
     const observer = new MutationObserver(() => { if (adapter.dialog.open) void refresh(mode); });
     observer.observe(adapter.dialog, { attributes: true, attributeFilter: ["open"] });
     listeners.push(() => observer.disconnect());
@@ -143,7 +147,7 @@ export function initNativeCaptureUI(adapters) {
         if (!current() || adapter.getState().busy) break;
         const accepted = await receiver.receive(packet, async () => {
           const query = new URLSearchParams({ receiver: receiverId, generation: String(generation) });
-          const response = await fetch(`/api/native-capture/${encodeURIComponent(packet.metadata.captureId)}.png?${query}`, { cache: "no-store" });
+          const response = await fetch(`/api/native-capture/${encodeURIComponent(packet.metadata.captureId)}.png?${query}`, { cache: "no-store", signal: events.signal });
           if (!response.ok) throw new CaptureError("stale_capture", "캡처를 수신하지 못했습니다.");
           return response.blob();
         }, adapter);
@@ -159,7 +163,20 @@ export function initNativeCaptureUI(adapters) {
   };
   const timer = setInterval(() => void poll(), 500);
   void status().then(attach).catch(() => {});
-  const cleanup = () => { disposed = true; clearInterval(timer); receiver.deactivate(); for (const remove of listeners) remove(); };
-  window.addEventListener("beforeunload", cleanup, { once: true });
+  const cleanup = () => {
+    if (disposed) return;
+    disposed = true;
+    events.abort();
+    clearInterval(timer);
+    receiver.deactivate();
+    for (const remove of listeners) remove();
+    listeners.length = 0;
+    for (const refs of panels.values()) {
+      refs.legacy.forEach((node, index) => { node.hidden = refs.legacyHidden[index]; });
+      refs.root.remove();
+    }
+    panels.clear();
+  };
+  listen(window, "pagehide", (event) => { if (!event.persisted) cleanup(); });
   return { cleanup };
 }

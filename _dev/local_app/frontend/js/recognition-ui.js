@@ -24,6 +24,8 @@ function explain(error) {
 }
 
 export function initRecognitionUI({ warehouseCaptureUI }) {
+  const events = new AbortController();
+  const listen = (target, type, handler, options = {}) => target.addEventListener(type, handler, { ...options, signal: events.signal });
   const tradeDialog = document.querySelector("#trade-capture-dialog");
   const openTradeButton = document.querySelector("#open-trade-capture");
   const tradeInput = tradeDialog.querySelector("#trade-capture-files");
@@ -374,7 +376,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     const scale = Number(getComputedStyle(document.body).zoom) || 1;
     tradeDialog.style.width = `${Math.min(1180, (window.innerWidth - 24) / scale)}px`;
   };
-  window.addEventListener("resize", resizeTradeDialog);
+  listen(window, "resize", resizeTradeDialog);
   const refreshTradeRuntime = async () => {
     tradeRuntimeAvailable = false;
     tradeRuntimeStatus.textContent = "로컬 인식 엔진 확인 중…";
@@ -396,8 +398,8 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeRecognitionResultRegion.hidden = true;
     tradeRecognitionStatus.textContent = message;
   };
-  tradePreview.addEventListener("loadedmetadata", initializeRoi);
-  tradePreview.addEventListener("resize", renderTradeRoi);
+  listen(tradePreview, "loadedmetadata", initializeRoi);
+  listen(tradePreview, "resize", renderTradeRoi);
   if (typeof ResizeObserver === "function") {
     previewResizeObserver = new ResizeObserver(renderTradeRoi);
     previewResizeObserver.observe(tradePreviewStage);
@@ -459,6 +461,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
 
   const appendTradeCaptures = (captures) => {
+    if (events.signal.aborted) return;
     tradeQueue.append(captures);
     tradeQueueRevision += 1;
     invalidateRecognitionResult();
@@ -493,15 +496,15 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
 
   screenSession.subscribe(renderScreenState);
   renderScreenState();
-  connectScreenButton.addEventListener("click", () => {
+  listen(connectScreenButton, "click", () => {
     // Keep connectScreen invocation directly in the click handler for browser user activation.
     const connection = screenSession.connectScreen();
     void connection.catch(() => {});
   });
-  disconnectScreenButton.addEventListener("click", () => screenSession.disconnectScreen("user"));
+  listen(disconnectScreenButton, "click", () => screenSession.disconnectScreen("user"));
 
   const captureScreenInto = (taskType, button, accept, reportError) => {
-    button.addEventListener("click", async () => {
+    listen(button, "click", async () => {
       if (screenSession.state !== "CONNECTED") return;
       try {
         const capture = await screenSession.captureFrame(captureContext(taskType));
@@ -517,7 +520,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     });
   };
   captureScreenInto("warehouse", warehouseScreenCaptureButton, warehouseCaptureUI.acceptCaptures, warehouseCaptureUI.reportCaptureError);
-  tradeScreenCaptureButton.addEventListener("click", async () => {
+  listen(tradeScreenCaptureButton, "click", async () => {
     if (tradeRecognitionPending || screenSession.state !== "CONNECTED") return;
     if (!tradeBatchId) tradeBatchId = globalThis.crypto?.randomUUID?.() ?? null;
     if (!tradeBatchId) { tradeStatus.textContent = "안전한 캡처 묶음 ID를 만들 수 없습니다."; return; }
@@ -532,7 +535,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       if (tradeQueue.items.every((item) => item.metadata.sourceType !== "browser-stream")) tradeBatchId = null;
     } finally { renderScreenState(); }
   });
-  tradeClearButton.addEventListener("click", () => {
+  listen(tradeClearButton, "click", () => {
     if (tradeRecognitionPending) return;
     tradeQueue.clear();
     tradeQueueRevision += 1;
@@ -542,9 +545,9 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     renderTradeQueue();
     tradeStatus.textContent = "대기 이미지를 모두 삭제했습니다. 화면 연결과 영역은 유지됩니다.";
   });
-  tradeRoiReset.addEventListener("click", () => { tradeRoi = { ...DEFAULT_TRADE_ROI }; roiInitialized = true; renderTradeRoi(); });
+  listen(tradeRoiReset, "click", () => { tradeRoi = { ...DEFAULT_TRADE_ROI }; roiInitialized = true; renderTradeRoi(); });
 
-  tradeRecognitionButton.addEventListener("click", async () => {
+  listen(tradeRecognitionButton, "click", async () => {
     if (tradeRecognitionButton.disabled) return;
     const requestRevision = tradeQueueRevision;
     const captures = [...tradeQueue.items];
@@ -593,13 +596,13 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeRoiBox.removeEventListener("pointerup", finish);
       tradeRoiBox.removeEventListener("pointercancel", finish);
     };
-    tradeRoiBox.addEventListener("pointermove", move);
-    tradeRoiBox.addEventListener("pointerup", finish, { once: true });
-    tradeRoiBox.addEventListener("pointercancel", finish, { once: true });
+    listen(tradeRoiBox, "pointermove", move);
+    listen(tradeRoiBox, "pointerup", finish, { once: true });
+    listen(tradeRoiBox, "pointercancel", finish, { once: true });
   };
-  tradeRoiBox.addEventListener("pointerdown", roiPointerStart);
+  listen(tradeRoiBox, "pointerdown", roiPointerStart);
 
-  openTradeButton.addEventListener("click", () => {
+  listen(openTradeButton, "click", () => {
     tradeStatus.textContent = "파일을 선택하거나 붙여넣기 버튼을 누른 뒤 Ctrl+V를 사용하세요.";
     renderTradeQueue();
     resizeTradeDialog();
@@ -611,14 +614,14 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     renderScreenState();
     tradePasteTarget.focus({ preventScroll: true });
   });
-  tradeDialog.querySelectorAll("[data-close-trade-capture]").forEach((button) => button.addEventListener("click", () => tradeDialog.close()));
-  tradeDialog.addEventListener("close", () => {
+  tradeDialog.querySelectorAll("[data-close-trade-capture]").forEach((button) => listen(button, "click", () => tradeDialog.close()));
+  listen(tradeDialog, "close", () => {
     if (tradeDialog.open) return;
     tradePreviews.clear();
     screenSession.detachPreview(tradePreview);
     tradeRoiBox.hidden = true;
   });
-  tradeInput.addEventListener("change", async () => {
+  listen(tradeInput, "change", async () => {
     if (tradeRecognitionPending) { tradeInput.value = ""; return; }
     const files = [...(tradeInput.files ?? [])];
     tradeInput.value = "";
@@ -668,7 +671,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       if (result.handled && openCaptureContext()?.taskType === active.taskType) active.accept(result.inputs);
     }).catch(active.reportError);
   };
-  document.addEventListener("paste", onPaste);
+  listen(document, "paste", onPaste);
 
   const nativeUI = initNativeCaptureUI({
     trade: { dialog: tradeDialog,
@@ -680,22 +683,23 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       accept: warehouseCaptureUI.acceptCaptures },
   });
 
-  window.addEventListener("beforeunload", (event) => {
-    screenSession.disconnectScreen("beforeunload");
+  const cleanup = () => {
+    if (events.signal.aborted) return;
+    events.abort();
+    nativeUI.cleanup();
+    screenSession.dispose();
+    previewResizeObserver?.disconnect();
     tradePreviews.clear();
+    reviewPreviews.clear();
     tradeQueue.clear();
-  });
-
-  return {
-    getTradeDraftCount: () => tradeQueue.length,
-    cleanup: () => {
-      nativeUI.cleanup();
-      document.removeEventListener("paste", onPaste);
-      window.removeEventListener("resize", resizeTradeDialog);
-      screenSession.disconnectScreen("beforeunload");
-      previewResizeObserver?.disconnect();
-      tradePreviews.clear();
-      tradeQueue.clear();
-    },
+    liveListResult = null;
+    tradeList.replaceChildren();
+    liveListSection.replaceChildren();
+    liveListSection.remove();
+    recognitionDiagnostics.remove();
+    warehouseScreenCaptureButton.remove();
   };
+  listen(window, "pagehide", (event) => { if (!event.persisted) cleanup(); });
+
+  return { getTradeDraftCount: () => tradeQueue.length, cleanup };
 }

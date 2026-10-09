@@ -15,7 +15,7 @@ class CaptureDiagnostics:
         self.path = path
         self.events = deque(maxlen=30)
         self.error = None
-        self.logger = logging.getLogger("bdo.capture." + uuid.uuid4().hex)
+        self.logger = logging.Logger("bdo.capture." + uuid.uuid4().hex, logging.INFO)
         self.logger.setLevel(logging.INFO)
         self.logger.propagate = False
         try:

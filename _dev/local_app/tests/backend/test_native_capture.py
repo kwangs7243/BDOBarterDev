@@ -1,6 +1,7 @@
 import copy
 import io
 import json
+import logging
 import tempfile
 import threading
 import time
@@ -14,6 +15,7 @@ from PIL import Image
 
 from local_app.backend.app import create_app
 from local_app.backend.recognition_contracts import RecognitionContractError, validate_capture_metadata
+from local_app.native_diagnostics import CaptureDiagnostics
 from local_app.native_capture import NativeCaptureController, NativeCaptureError, MAX_BYTES, adjust_roi
 from .test_trade_batch_runtime import ReadyRuntime, fake_worker
 
@@ -492,6 +494,21 @@ class NativeApiTests(NativeFixture):
         with closing(sqlite3.connect(records.database_path)) as db:
             saved = db.execute("SELECT details_json FROM trade_correction").fetchone()
         self.assertEqual(json.loads(saved[0])["metadata"]["nativeEvidence"], metadata["nativeEvidence"])
+
+
+class DiagnosticsLifecycleTests(unittest.TestCase):
+    def test_repeated_diagnostics_close_does_not_retain_global_loggers(self):
+        registered = set(logging.Logger.manager.loggerDict)
+        with tempfile.TemporaryDirectory() as directory:
+            for index in range(3):
+                diagnostics = CaptureDiagnostics(Path(directory) / f"capture-{index}.jsonl")
+                diagnostics.write("lifecycle_test")
+                diagnostics.close()
+                diagnostics.close()
+                self.assertFalse(diagnostics.logger.handlers)
+                events = [json.loads(line)["event"] for line in diagnostics.path.read_text(encoding="utf-8").splitlines()]
+                self.assertIn("lifecycle_test", events)
+        self.assertEqual(set(logging.Logger.manager.loggerDict), registered)
 
 
 if __name__ == "__main__": unittest.main()
