@@ -38,6 +38,20 @@ def validate_roi(roi, geometry):
     return dict(roi)
 
 
+def adjust_roi(roi, handle, dx, dy, geometry):
+    x, y, width, height = (roi[k] for k in ("x", "y", "width", "height"))
+    if not handle:
+        return {"x": max(0, min(geometry["width"]-width, x+dx)),
+                "y": max(0, min(geometry["height"]-height, y+dy)), "width": width, "height": height}
+    left, top, right, bottom = x, y, x+width, y+height
+    minimum_width, minimum_height = min(80, width), min(60, height)
+    if "w" in handle: left = max(0, min(right-minimum_width, left+dx))
+    if "e" in handle: right = min(geometry["width"], max(left+minimum_width, right+dx))
+    if "n" in handle: top = max(0, min(bottom-minimum_height, top+dy))
+    if "s" in handle: bottom = min(geometry["height"], max(top+minimum_height, bottom+dy))
+    return {"x": left, "y": top, "width": right-left, "height": bottom-top}
+
+
 def signature(geometry):
     return {**{k: geometry[k] for k in ("identity", "width", "height", "dpi", "monitor", "mode")},
             "windowDpi": geometry.get("windowDpi", geometry["dpi"])}
@@ -62,6 +76,7 @@ class NativeCaptureController:
         self.runtime_failed = False
         self.game_session = False
         self.captured_count = 0
+        self.roi_adjusting = False
         self.diagnostics = CaptureDiagnostics(self.profile_path.parent / "logs" / "native-capture.jsonl")
         self.last_receiver_status = None
         try:
@@ -79,7 +94,7 @@ class NativeCaptureController:
 
     def record(self, event, **fields):
         self.diagnostics.write(event, generation=self.generation, state=self.state, target=self.target,
-                               workerBusy=self.busy, receiverBusy=self.receiver_busy, **fields)
+                               workerBusy=self.busy, receiverBusy=self.receiver_busy, roiAdjusting=self.roi_adjusting, **fields)
 
     def _clear(self, error=None):
         self.record("session_cleared", reason=error or "explicit_reset")
@@ -88,6 +103,7 @@ class NativeCaptureController:
         self.receiver, self.target, self.profile = None, None, None
         self.frames.clear()
         self.game_session, self.captured_count = False, 0
+        self.roi_adjusting = False
         self.platform.cancel_selection()
 
     def disarm(self, receiver=None, generation=None, reason="unspecified"):
@@ -178,24 +194,51 @@ class NativeCaptureController:
                 if current != geo:
                     raise NativeCaptureError("profile_changed", "게임 화면 환경이 바뀌었습니다. 다시 지정하세요.")
                 roi = validate_roi(roi, current)
-                key = self.mode.lower()
-                old = self.profiles.get(key, {})
-                profile = {"id": str(uuid.uuid4()), "version": 1,
-                           "signature": signature(current), "roi": roi}
-                if type(old.get("version")) is int:
-                    profile["version"] = max(1, old["version"] + 1)
-                profiles = {**self.profiles, key: profile}
-                self.profile_path.parent.mkdir(parents=True, exist_ok=True)
-                temporary = self.profile_path.with_suffix(".tmp")
-                temporary.write_text(json.dumps({"version": 1, "profiles": profiles}, ensure_ascii=False), encoding="utf-8")
-                temporary.replace(self.profile_path)
-                self.profiles, self.profile, self.state = profiles, profile, "READY"
+                self._store_profile(roi, current)
+                self.state = "READY"
                 self.record("roi_saved", roi=roi)
             except (NativeCaptureError, OSError, ValueError):
                 self.diagnostics.exception("roi_save_failed")
                 self._clear("roi_save_failed")
         if self.game_session and self.state == "READY":
             self.on_hotkey()
+
+    def _store_profile(self, roi, geometry):
+        key = self.mode.lower()
+        old = self.profiles.get(key, {})
+        profile = {"id": str(uuid.uuid4()), "version": 1, "signature": signature(geometry), "roi": roi}
+        if type(old.get("version")) is int: profile["version"] = max(1, old["version"]+1)
+        profiles = {**self.profiles, key: profile}
+        self.profile_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.profile_path.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"version": 1, "profiles": profiles}, ensure_ascii=False), encoding="utf-8")
+        temporary.replace(self.profile_path)
+        self.profiles, self.profile = profiles, profile
+
+    def begin_roi_adjustment(self):
+        with self.lock:
+            if self.state != "READY" or self.busy or self.receiver_busy or not self.profile: return False
+            self.roi_adjusting = True
+            self.record("roi_drag_started")
+            return True
+
+    def update_roi(self, generation, roi, geometry):
+        with self.lock:
+            try:
+                if generation != self.generation or self.state != "READY" or not self.profile: return False
+                current = self.platform.geometry(self.target)
+                if current != geometry or signature(current) != self.profile["signature"]:
+                    raise NativeCaptureError("profile_changed", "ゲーム 창 환경이 바뀌었습니다.")
+                roi = validate_roi(roi, current)
+                if roi != self.profile["roi"]: self._store_profile(roi, current)
+                self.error = None
+                self.record("roi_updated", roi=roi)
+                return True
+            except (NativeCaptureError, OSError, ValueError) as exc:
+                self.error = getattr(exc, "code", "roi_save_failed")
+                self.diagnostics.exception("roi_update_failed", code=self.error)
+                return False
+            finally: self.roi_adjusting = False
 
     def finish(self):
         with self.lock:
@@ -205,7 +248,7 @@ class NativeCaptureController:
 
     def reselect(self):
         with self.lock:
-            if self.state != "READY" or self.busy or self.receiver_busy:
+            if self.state != "READY" or self.busy or self.receiver_busy or self.roi_adjusting:
                 return
             self.record("roi_reselect")
             self.state, self.error = "SELECTING", None
@@ -218,7 +261,7 @@ class NativeCaptureController:
 
     def wants_hotkey(self):
         with self.lock:
-            return self.state == "READY" and not self.closed and not self.busy and not self.receiver_busy
+            return self.state == "READY" and not self.closed and not self.busy and not self.receiver_busy and not self.roi_adjusting
 
     def heartbeat(self, receiver, generation, count, size, busy, context):
         if (type(count) is not int or not 0 <= count <= MAX_FRAMES or type(size) is not int

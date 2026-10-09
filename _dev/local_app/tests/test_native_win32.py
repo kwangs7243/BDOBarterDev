@@ -183,6 +183,52 @@ class NativeWin32LifecycleTests(unittest.TestCase):
             self.assertIn("window callback failed",failure["traceback"])
             controller.close()
 
+    def test_real_frame_shape_has_clickable_border_and_hollow_game_interior(self):
+        with tempfile.TemporaryDirectory() as folder:
+            platform=Win32CapturePlatform(); controller=NativeCaptureController(platform,Path(folder)/"profiles.json")
+            platform.controller=controller; platform._create_roi_frame()
+            try:
+                platform._position_roi_frame({"x":100,"y":80,"width":80,"height":50},dict(FakePlatform().geo))
+                platform.u.GetWindowRgn.argtypes=[w.HWND,w.HANDLE];platform.u.GetWindowRgn.restype=ctypes.c_int
+                platform.g.PtInRegion.argtypes=[w.HANDLE,ctypes.c_int,ctypes.c_int];platform.g.PtInRegion.restype=w.BOOL
+                region=platform.g.CreateRectRgn(0,0,0,0)
+                try:
+                    self.assertNotEqual(platform.u.GetWindowRgn(platform.roi_frame,region),0)
+                    self.assertTrue(platform.g.PtInRegion(region,30,3))
+                    self.assertFalse(platform.g.PtInRegion(region,30,20))
+                    self.assertFalse(platform.g.PtInRegion(region,8,8))
+                finally:platform.g.DeleteObject(region)
+                self.assertTrue(platform.u.GetWindowLongW(platform.roi_frame,-20) & 0x08000000)
+            finally:
+                platform.u.DestroyWindow(platform.roi_frame);platform.roi_frame=None
+                platform.u.UnregisterClassW(platform.roi_frame_class,platform.k.GetModuleHandleW(None));controller.close()
+
+    def test_real_frame_drag_updates_saved_roi_without_capture_or_selection(self):
+        with tempfile.TemporaryDirectory() as folder:
+            platform=Win32CapturePlatform();controller=NativeCaptureController(platform,Path(folder)/"profiles.json")
+            platform.controller=controller
+            with patch.object(platform,"geometry",return_value=FakePlatform().geo),patch.object(platform,"select") as select:
+                controller.prepare(str(uuid.uuid4()),"trade","42",{"baseRevision":0,"sessionId":None,"sessionRevision":None},select=True)
+                controller.selected(controller.generation,{"x":100,"y":80,"width":80,"height":50},dict(FakePlatform().geo))
+                select.reset_mock();platform._create_roi_frame()
+                platform._position_roi_frame(controller.profile["roi"],dict(FakePlatform().geo))
+                cursor=[100,80]
+                def point(output):
+                    value=ctypes.cast(output,ctypes.POINTER(w.POINT)).contents;value.x,value.y=cursor;return True
+                platform.u.SendMessageW.argtypes=[w.HWND,w.UINT,w.WPARAM,w.LPARAM];platform.u.SendMessageW.restype=ctypes.c_ssize_t
+                try:
+                    with patch.object(platform.u,"GetCursorPos",side_effect=point):
+                        platform.u.SendMessageW(platform.roi_frame,0x201,1,(3<<16)|30)
+                        self.assertTrue(controller.roi_adjusting)
+                        cursor[:]=[120,95];platform.u.SendMessageW(platform.roi_frame,0x200,1,0)
+                        platform.u.SendMessageW(platform.roi_frame,0x202,0,0)
+                    self.assertEqual(controller.profile["roi"],{"x":120,"y":95,"width":80,"height":50})
+                    self.assertFalse(controller.roi_adjusting);self.assertEqual(controller.captured_count,0)
+                    select.assert_not_called()
+                finally:
+                    platform.u.DestroyWindow(platform.roi_frame);platform.roi_frame=None
+                    platform.u.UnregisterClassW(platform.roi_frame_class,platform.k.GetModuleHandleW(None));controller.close()
+
     def test_target_validation_and_black_frame_rejection(self):
         platform=Win32CapturePlatform()
         with self.assertRaises(NativeCaptureError): platform.geometry("not-a-window")

@@ -11,7 +11,7 @@ import sys
 import traceback
 from ctypes import wintypes as w
 
-from local_app.native_capture import NativeCaptureError
+from local_app.native_capture import NativeCaptureError, adjust_roi
 
 
 class Win32CapturePlatform:
@@ -22,6 +22,11 @@ class Win32CapturePlatform:
         self.stopping = threading.Event()
         self.overlay = None
         self.hud = None
+        self.roi_frame = None
+        self.roi_frame_class = None
+        self.roi_frame_visible = False
+        self.frame_drag = None
+        self.frame_bounds = None
         self.hud_class = None
         self.hud_buttons = []
         self.panel_generation = None
@@ -71,6 +76,9 @@ class Win32CapturePlatform:
             (u, "SetWindowPos", [w.HWND, w.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, w.UINT], w.BOOL),
             (u, "UpdateWindow", [w.HWND], w.BOOL),
             (u, "DestroyWindow", [w.HWND], w.BOOL),
+            (u, "SetWindowRgn", [w.HWND, w.HANDLE, w.BOOL], ctypes.c_int),
+            (g, "CreateRectRgn", [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int], w.HANDLE),
+            (g, "CombineRgn", [w.HANDLE, w.HANDLE, w.HANDLE, ctypes.c_int], ctypes.c_int),
             (u, "SetCapture", [w.HWND], w.HWND), (u, "ReleaseCapture", [], w.BOOL),
             (u, "InvalidateRect", [w.HWND, ctypes.POINTER(w.RECT), w.BOOL], w.BOOL),
             (u, "PostMessageW", [w.HWND, w.UINT, w.WPARAM, w.LPARAM], w.BOOL),
@@ -217,7 +225,7 @@ class Win32CapturePlatform:
     def is_foreground(self, target):
         foreground = self.u.GetForegroundWindow()
         return target is not None and (self._game_is_foreground(target) or
-                (self.hud is not None and foreground == self.hud and
+                (foreground in (self.hud, self.roi_frame) and foreground is not None and
                  self.controller is not None and self.controller.target == target))
 
     def capture(self, box):
@@ -294,6 +302,7 @@ class Win32CapturePlatform:
             self.u.TranslateMessage.argtypes = [ctypes.POINTER(Message)]
             self.u.DispatchMessageW.argtypes, self.u.DispatchMessageW.restype = [ctypes.POINTER(Message)], ctypes.c_ssize_t
             self._create_hud()
+            self._create_roi_frame()
             device = self.RawDevice(1, 6, 0x100, self.hud)  # RIDEV_INPUTSINK, without suppressing game input.
             self.raw_registered = bool(self.u.RegisterRawInputDevices(ctypes.byref(device), 1, ctypes.sizeof(device)))
             self.enter_registered = self.raw_registered
@@ -346,6 +355,8 @@ class Win32CapturePlatform:
             self.raw_registered = self.enter_registered = False
             if self.hotkey_registered: self.u.UnregisterHotKey(None, 0xBD0)
             self.hotkey_registered = False
+            if self.roi_frame: self.u.DestroyWindow(self.roi_frame); self.roi_frame = None
+            if self.roi_frame_class: self.u.UnregisterClassW(self.roi_frame_class, self.k.GetModuleHandleW(None))
             if self.hud: self.u.DestroyWindow(self.hud); self.hud = None
             if self.hud_class: self.u.UnregisterClassW(self.hud_class, self.k.GetModuleHandleW(None))
             self._record("native_ui_stopped")
@@ -405,6 +416,8 @@ class Win32CapturePlatform:
                 if self.controller is not None:
                     self.controller.diagnostics.exception("window_callback_failed", message=message)
                     self.controller.error = "native_runtime_failed"
+                if hwnd == self.roi_frame and self.frame_drag:
+                    self._finish_frame_drag(True); self.u.ReleaseCapture()
                 return self.u.DefWindowProcW(hwnd, message, wp, lp)
         return self.WindowProc(checked)
 
@@ -434,7 +447,7 @@ class Win32CapturePlatform:
                               "foreground_required":"게임 화면을 앞에 둔 뒤 이 창의 캡처 버튼을 누르세요.",
                               "capture_busy":"이전 캡처 또는 인식 처리 중입니다. 잠시 기다리세요.",
                               "hotkey_conflict":"F10 충돌. 이 창의 캡처 버튼 또는 Enter를 사용하세요."}
-                    guide = errors.get(state["error"], "게임에서 Enter / F10 · 버튼 캡처 · F8 영역 변경")
+                    guide = errors.get(state["error"], "테두리 드래그: 이동 · 모서리: 크기 · Enter / F10: 캡처")
                     g.SetTextColor(hdc, 0xFFFFFF); g.SetBkMode(hdc, 1)
                     g.TextOutW(hdc, 12, 10, text, len(text)); g.TextOutW(hdc, 12, 38, guide, len(guide))
                 finally: u.EndPaint(hwnd, ctypes.byref(paint))
@@ -461,9 +474,103 @@ class Win32CapturePlatform:
             if not button: raise ctypes.WinError(ctypes.get_last_error())
             self.hud_buttons.append(button)
 
+    def _create_roi_frame(self):
+        u, g = self.u, self.g
+        def procedure(hwnd, message, wp, lp):
+            if message == 0x0201:
+                geometry = self.geometry(self.controller.target)
+                if not self.controller.begin_roi_adjustment(): return 0
+                point = w.POINT(); u.GetCursorPos(ctypes.byref(point))
+                roi = dict(self.controller.profile["roi"])
+                x, y = ctypes.c_short(lp & 0xffff).value, ctypes.c_short(lp >> 16 & 0xffff).value
+                width, height = roi["width"]+16, roi["height"]+16
+                horizontal = "w" if x < 16 else "e" if x >= width-16 else ""
+                vertical = "n" if y < 16 else "s" if y >= height-16 else ""
+                self.frame_drag = {"roi": roi, "handle": vertical+horizontal if horizontal and vertical else "",
+                                   "point": (point.x, point.y), "geometry": geometry,
+                                   "generation": self.controller.generation, "current": roi}
+                u.SetCapture(hwnd)
+                return 0
+            if message == 0x0200 and self.frame_drag:
+                point = w.POINT(); u.GetCursorPos(ctypes.byref(point))
+                drag = self.frame_drag
+                drag["current"] = adjust_roi(drag["roi"], drag["handle"], point.x-drag["point"][0], point.y-drag["point"][1], drag["geometry"])
+                self._position_roi_frame(drag["current"], drag["geometry"])
+                return 0
+            if message == 0x0202 and self.frame_drag:
+                self._finish_frame_drag(False); u.ReleaseCapture(); return 0
+            if message in (0x0215, 0x001f) and self.frame_drag:
+                self._finish_frame_drag(True); return 0
+            if message == 0x000f:
+                paint = self.Paint(); hdc = u.BeginPaint(hwnd, ctypes.byref(paint))
+                try:
+                    if self.frame_bounds:
+                        width, height = self.frame_bounds[2:]
+                        pen = g.CreatePen(0, 3, 0x00ff00)
+                        old_pen, old_brush = g.SelectObject(hdc, pen), g.SelectObject(hdc, g.GetStockObject(5))
+                        try:
+                            g.Rectangle(hdc, 3, 3, width-3, height-3)
+                            for x, y in ((1,1),(width-13,1),(1,height-13),(width-13,height-13)):
+                                g.Rectangle(hdc, x, y, x+12, y+12)
+                        finally:
+                            g.SelectObject(hdc, old_brush); g.SelectObject(hdc, old_pen); g.DeleteObject(pen)
+                finally: u.EndPaint(hwnd, ctypes.byref(paint))
+                return 0
+            return u.DefWindowProcW(hwnd, message, wp, lp)
+        self.roi_frame_callback = self._window_callback(procedure)
+        self.roi_frame_class = f"BDOBarterRegionFrame-{os.getpid()}"
+        instance = self.k.GetModuleHandleW(None)
+        wc = self.WindowClass(0, self.roi_frame_callback, 0, 0, instance, None,
+                              u.LoadCursorW(None, ctypes.c_void_p(32646)), g.GetStockObject(4), None, self.roi_frame_class)
+        if not u.RegisterClassW(ctypes.byref(wc)): raise ctypes.WinError(ctypes.get_last_error())
+        self.roi_frame = u.CreateWindowExW(0x08000088, self.roi_frame_class, "BDO 캡처 영역", 0x80000000,
+                                         0, 0, 1, 1, None, None, instance, None)
+        if not self.roi_frame: raise ctypes.WinError(ctypes.get_last_error())
+        if not u.SetWindowDisplayAffinity(self.roi_frame, 0x11): raise ctypes.WinError(ctypes.get_last_error())
+        self._record("roi_frame_created")
+
+    def _finish_frame_drag(self, cancel):
+        drag, self.frame_drag = self.frame_drag, None
+        if cancel:
+            with self.controller.lock: self.controller.roi_adjusting = False
+            self._record("roi_drag_cancelled")
+        else: self.controller.update_roi(drag["generation"], drag["current"], drag["geometry"])
+        self.frame_bounds = None
+
+    def _position_roi_frame(self, roi, geometry):
+        bounds = (geometry["left"]+roi["x"]-8, geometry["top"]+roi["y"]-8, roi["width"]+16, roi["height"]+16)
+        if bounds == self.frame_bounds: return
+        x, y, width, height = bounds
+        outer = self.g.CreateRectRgn(0, 0, width, height)
+        inner = self.g.CreateRectRgn(8, 8, width-8, height-8)
+        if not outer or not inner:
+            if outer: self.g.DeleteObject(outer)
+            if inner: self.g.DeleteObject(inner)
+            raise ctypes.WinError(ctypes.get_last_error())
+        try:
+            if not self.g.CombineRgn(outer, outer, inner, 4): raise ctypes.WinError(ctypes.get_last_error())
+            if not self.u.SetWindowRgn(self.roi_frame, outer, True): raise ctypes.WinError(ctypes.get_last_error())
+            outer = None  # SetWindowRgn takes ownership on success.
+        finally:
+            self.g.DeleteObject(inner)
+            if outer: self.g.DeleteObject(outer)
+        self.frame_bounds = bounds
+        if not self.u.SetWindowPos(self.roi_frame, w.HWND(-1), x, y, width, height, 0x0010): raise ctypes.WinError(ctypes.get_last_error())
+        self.u.InvalidateRect(self.roi_frame, None, True)
+
+    def _update_roi_frame(self, active):
+        if not self.roi_frame: return
+        if not active or not self.controller.profile:
+            if self.frame_drag: self._finish_frame_drag(True); self.u.ReleaseCapture()
+            if self.roi_frame_visible: self.u.ShowWindow(self.roi_frame, 0); self.roi_frame_visible = False
+            return
+        if not self.frame_drag: self._position_roi_frame(self.controller.profile["roi"], self.geometry(self.controller.target))
+        if not self.roi_frame_visible: self.u.ShowWindow(self.roi_frame, 4); self.roi_frame_visible = True
+
     def _update_game_controls(self):
         state = self.controller.snapshot()
         active = state["state"] == "READY" and self.controller.target is not None
+        self._update_roi_frame(active)
         if not active:
             if self.panel_visible:
                 self.u.ShowWindow(self.hud, 0); self.panel_visible = False

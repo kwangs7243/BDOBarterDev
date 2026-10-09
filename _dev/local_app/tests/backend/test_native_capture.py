@@ -14,7 +14,7 @@ from PIL import Image
 
 from local_app.backend.app import create_app
 from local_app.backend.recognition_contracts import RecognitionContractError, validate_capture_metadata
-from local_app.native_capture import NativeCaptureController, NativeCaptureError, MAX_BYTES, LEASE_SECONDS
+from local_app.native_capture import NativeCaptureController, NativeCaptureError, MAX_BYTES, LEASE_SECONDS, adjust_roi
 from .test_trade_batch_runtime import ReadyRuntime, fake_worker
 
 
@@ -265,6 +265,45 @@ class NativeCaptureTests(NativeFixture):
         self.platform.foreground = True
         self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
         self.assertIsNone(self.controller.error)
+
+    def test_move_region_preserves_pending_images_and_generation_and_uses_new_box(self):
+        generation = self.prepare()
+        self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
+        old_frame = next(iter(self.controller.frames.values()))
+        old_profile = old_frame["metadata"]["profileId"]
+        self.assertTrue(self.controller.begin_roi_adjustment())
+        self.assertFalse(self.controller.on_hotkey())
+        self.controller.reselect(); self.assertEqual(self.controller.state, "READY")
+        moved = adjust_roi(self.roi, "", 140, 30, self.platform.geo)
+        self.assertTrue(self.controller.update_roi(generation, moved, dict(self.platform.geo)))
+        self.assertEqual(self.controller.generation, generation)
+        self.assertEqual(len(self.controller.frames), 1)
+        self.assertEqual(old_frame["metadata"]["nativeEvidence"]["roi"], self.roi)
+        self.assertEqual(old_frame["metadata"]["profileId"], old_profile)
+        self.assertTrue(self.controller.on_hotkey()); self.wait_capture()
+        new_frame = list(self.controller.frames.values())[-1]
+        self.assertEqual(new_frame["metadata"]["nativeEvidence"]["roi"], moved)
+        self.assertNotEqual(new_frame["metadata"]["profileId"], old_profile)
+        self.assertEqual(self.platform.boxes[-1], (-1680,10,-1600,60))
+        with closing(NativeCaptureController(FakePlatform(),self.controller.profile_path)) as restored:
+            self.assertEqual(restored.profiles["trade"]["roi"], moved)
+
+    def test_region_move_resize_clamps_to_game_and_minimum_size(self):
+        self.assertEqual(adjust_roi(self.roi,"",-200,-100,self.platform.geo),{**self.roi,"x":0,"y":0})
+        self.assertEqual(adjust_roi(self.roi,"",5000,5000,self.platform.geo),{**self.roi,"x":1840,"y":1030})
+        resized=adjust_roi(self.roi,"se",20,30,self.platform.geo)
+        self.assertEqual(resized,{"x":100,"y":80,"width":100,"height":80})
+        self.assertEqual(adjust_roi(self.roi,"nw",500,500,self.platform.geo), self.roi)
+
+    def test_failed_region_save_preserves_previous_region_and_unblocks_input(self):
+        generation=self.prepare(); previous=copy.deepcopy(self.controller.profile)
+        self.assertTrue(self.controller.begin_roi_adjustment())
+        with patch.object(self.controller,"_store_profile",side_effect=OSError("readonly profile")):
+            self.assertFalse(self.controller.update_roi(generation,{**self.roi,"x":200},dict(self.platform.geo)))
+        self.assertEqual(self.controller.profile,previous)
+        self.assertFalse(self.controller.roi_adjusting)
+        self.assertEqual(self.controller.error,"roi_save_failed")
+        self.assertTrue(self.controller.wants_hotkey())
 
     def test_native_metadata_is_strict_and_cannot_impersonate_file(self):
         self.prepare()
