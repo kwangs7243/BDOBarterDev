@@ -23,6 +23,11 @@ def status():
     return jsonify({"ok": True, **value.snapshot(), "targets": value.targets()})
 
 
+@native_capture_api.get("/diagnostics")
+def diagnostics():
+    return jsonify({"ok": True, **controller().diagnostics.snapshot()})
+
+
 @native_capture_api.post("")
 def command():
     data = request.get_json()
@@ -34,13 +39,18 @@ def command():
               "ack": {"action", "receiver", "generation", "captureId"},
               "disarm": {"action", "receiver", "generation"}}
     if not isinstance(action, str) or action not in fields or (set(data) != fields[action] and
-            not (action == "prepare" and set(data) == fields[action] | {"gameSession"})):
+            not ((action == "prepare" and set(data) == fields[action] | {"gameSession"}) or
+                 (action == "disarm" and set(data) == fields[action] | {"reason"}))):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 요청입니다.", 422)
     if action != "prepare" and (type(data["generation"]) is not int or data["generation"] < 0):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 세대입니다.", 422)
     if action == "ack" and not isinstance(data["captureId"], str):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 ID입니다.", 422)
     value = controller()
+    if action != "heartbeat": value.record("api_command", action=action)
+    reason = data.get("reason", "unspecified")
+    if action == "disarm" and (not isinstance(reason, str) or reason not in {"unspecified", "prepare", "user_stop", "dialog_closed", "stream_disconnected", "adapter_closed", "ownership_lost", "finished", "receiver_error", "unload"}):
+        raise NativeCaptureError("invalid_command", "잘못된 종료 사유입니다.", 422)
     if action == "prepare":
         if type(data["select"]) is not bool or type(data.get("gameSession", False)) is not bool:
             raise NativeCaptureError("invalid_command", "영역 설정 요청이 올바르지 않습니다.", 422)
@@ -51,7 +61,7 @@ def command():
         value.acknowledge(data["receiver"], data["generation"], data["captureId"])
         result = value.snapshot()
     else:
-        result = value.disarm(data["receiver"], data["generation"])
+        result = value.disarm(data["receiver"], data["generation"], data.get("reason", "unspecified"))
     return jsonify({"ok": True, **result})
 
 
@@ -68,4 +78,7 @@ def image(capture_id):
 @native_capture_api.errorhandler(NativeCaptureError)
 @native_capture_api.errorhandler(RecognitionContractError)
 def capture_error(error):
+    value = current_app.extensions.get("native_capture")
+    data = request.get_json(silent=True)
+    if value is not None: value.record("api_rejected", code=error.code, action=data.get("action") if isinstance(data, dict) else None)
     return jsonify({"ok": False, "error": {"code": error.code, "message": str(error)}}), error.status

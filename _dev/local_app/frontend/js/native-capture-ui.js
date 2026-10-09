@@ -43,6 +43,7 @@ const errorText = {
   queue_full: "이미지 대기열이 가득 찼습니다. 기존 이미지는 유지됩니다.",
   black_frame: "검은 화면이 캡처되었습니다. 창 모드와 게임 화면을 확인하세요.",
   pixel_capture_failed: "게임 화면을 캡처하지 못했습니다. 다시 준비하세요.",
+  capture_exclusion_failed: "조작창을 캡처에서 제외하지 못했습니다. 앱 진단 기록을 확인하세요.",
   native_runtime_failed: "네이티브 캡처가 중단되었습니다. 앱을 다시 실행하세요.",
 };
 
@@ -65,13 +66,13 @@ export function initNativeCaptureUI(adapters) {
     return result;
   };
   const report = (mode, text) => { if (panels.has(mode)) panels.get(mode).status.textContent = text; };
-  const stop = () => {
+  const stop = (reason = "user_stop") => {
     epoch += 1;
     pendingMode = null;
     const generation = receiver.generation;
     const mode = receiver.mode;
     receiver.deactivate();
-    if (generation != null) serial = serial.catch(() => {}).then(() => command({ action: "disarm", generation })).catch(() => {});
+    if (generation != null) serial = serial.catch(() => {}).then(() => command({ action: "disarm", generation, reason })).catch(() => {});
     if (mode) report(mode, "F10 입력 준비를 종료했습니다.");
   };
   const refresh = async (mode) => {
@@ -94,7 +95,7 @@ export function initNativeCaptureUI(adapters) {
     } catch { report(mode, "네이티브 캡처 연결을 확인하지 못했습니다."); return null; }
   };
   const prepare = (mode, select, gameSession = false) => {
-    stop();
+    stop("prepare");
     const ticket = epoch;
     pendingMode = mode;
     const adapter = adapters[mode];
@@ -115,7 +116,7 @@ export function initNativeCaptureUI(adapters) {
   for (const [mode, adapter] of Object.entries(adapters)) {
     const panel = document.createElement("section"); panel.className = "trade-roi-panel";
     panel.dataset.nativeCapture = mode;
-    panel.innerHTML = `<h3>게임 위 캡처 조작창</h3><details><summary>영역 재설정·연결 확인</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>게임에서 영역 지정</button><button type="button" data-native="prepare" disabled>저장 영역으로 F10 준비</button><button type="button" data-native="stop">F10 준비 종료</button></div></details><p>화면 공유 → 게임에서 영역 드래그 → Enter로 첫 캡처. 이후 게임 위의 작은 조작창에서 캡처 버튼 또는 Enter로 계속 캡처하세요. 게임을 스크롤한 뒤에도 조작창 버튼을 바로 누르면 됩니다. F10은 보조 단축키입니다. 누적 이미지는 마지막에 여기에서 인식·검토·적용하세요.</p><p role="status" aria-live="polite">아래 화면 연결을 눌러 게임 창을 공유하세요.</p>`;
+    panel.innerHTML = `<h3>게임 위 캡처 조작창</h3><details><summary>영역 재설정·연결 확인</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>게임에서 영역 지정</button><button type="button" data-native="prepare" disabled>저장 영역으로 F10 준비</button><button type="button" data-native="stop">F10 준비 종료</button></div></details><p>화면 공유 → 게임에서 영역 드래그 → Enter로 첫 캡처. 이후 게임에서 Enter 또는 F10으로 계속 캡처하세요. 게임 위의 작은 조작창 버튼도 사용할 수 있습니다. F8은 영역 변경, Esc는 캡처 종료입니다. 누적 이미지는 마지막에 여기에서 인식·검토·적용하세요.</p><p role="status" aria-live="polite">아래 화면 연결을 눌러 게임 창을 공유하세요.</p>`;
     adapter.dialog.querySelector(".trade-roi-panel").before(panel);
     const refs = { target: panel.querySelector("select"), status: panel.querySelector('[role="status"]'), select: panel.querySelector('[data-native="select"]'), prepare: panel.querySelector('[data-native="prepare"]') };
     panels.set(mode, refs);
@@ -123,7 +124,7 @@ export function initNativeCaptureUI(adapters) {
     refs.select.addEventListener("click", () => prepare(mode, true));
     refs.prepare.addEventListener("click", () => prepare(mode, false));
     panel.querySelector('[data-native="stop"]').addEventListener("click", () => { if (receiver.mode === mode || pendingMode === mode) stop(); });
-    adapter.dialog.addEventListener("close", () => { if (receiver.mode === mode || pendingMode === mode) stop(); });
+    adapter.dialog.addEventListener("close", () => { if (receiver.mode === mode || pendingMode === mode) stop("dialog_closed"); });
     let sharing = false;
     const legacy = adapter.dialog.querySelector('.trade-preview-stage');
     const legacyActions = [...adapter.dialog.querySelectorAll('[data-action="capture-trade-roi"], [data-action="reset-trade-roi"], [data-action="capture-roi"], [data-action="reset-roi"]')];
@@ -141,7 +142,7 @@ export function initNativeCaptureUI(adapters) {
         });
       } else if (["DISCONNECTED", "IDLE"].includes(state)) {
         sharing = false;
-        if (receiver.mode === mode || pendingMode === mode) stop();
+        if (receiver.mode === mode || pendingMode === mode) stop("stream_disconnected");
         showBrowserRegion(true);
       }
     }));
@@ -154,12 +155,12 @@ export function initNativeCaptureUI(adapters) {
     const generation = receiver.generation;
     const adapter = adapters[mode];
     try {
-      if (!adapter.isActive()) { stop(); return; }
+      if (!adapter.isActive()) { stop("adapter_closed"); return; }
       const state = adapter.getState();
       const result = await command({ action: "heartbeat", generation, count: state.count, bytes: state.bytes, busy: state.busy, context: nativeContext(adapter.getContext()) });
       if (ticket !== epoch) return;
-      if (!result.owned) { stop(); report(mode, errorText[result.error] || "입력 준비가 만료되었습니다. 다시 준비하세요."); return; }
-      report(mode, result.error ? (errorText[result.error] || "캡처를 확인하지 못했습니다. 다시 준비하세요.") : result.state === "SELECTING" ? "게임 창을 앞에 두세요 → 영역 드래그 → Enter 확정 / Esc 취소" : state.busy ? "인식·검토 처리 중에는 F10 입력이 잠시 중지됩니다." : (result.hotkeyRegistered || result.enterRegistered) ? `캡처 조작창의 버튼 / Enter · ${result.captured ?? 0}장 촬영` : "F10 준비 중…");
+      if (!result.owned) { stop("ownership_lost"); report(mode, errorText[result.error] || "입력 준비가 만료되었습니다. 다시 준비하세요."); return; }
+      report(mode, result.error ? (errorText[result.error] || "캡처를 확인하지 못했습니다. 다시 준비하세요.") : result.state === "SELECTING" ? "게임 창을 앞에 두세요 → 영역 드래그 → Enter 확정 / Esc 취소" : state.busy ? "인식·검토 처리 중에는 F10 입력이 잠시 중지됩니다." : (result.hotkeyRegistered || result.enterRegistered) ? `게임에서 Enter / F10 또는 조작창 버튼 · ${result.captured ?? 0}장 촬영` : "F10 준비 중…");
       for (const packet of result.frames ?? []) {
         if (ticket !== epoch || adapter.getState().busy) break;
         const accepted = await receiver.receive(packet, async () => {
@@ -171,16 +172,16 @@ export function initNativeCaptureUI(adapters) {
         if (accepted && ticket === epoch) await command({ action: "ack", generation, captureId: packet.metadata.captureId });
       }
       if (result.state === "STOPPED" && !result.busy) {
-        if (!(result.frames?.length)) { stop(); report(mode, "게임 캡처를 종료했습니다. 누적 이미지를 확인하세요."); }
+        if (!(result.frames?.length)) { stop("finished"); report(mode, "게임 캡처를 종료했습니다. 누적 이미지를 확인하세요."); }
       }
     } catch (error) {
-      if (ticket === epoch) { stop(); report(mode, error.message); }
+      if (ticket === epoch) { stop("receiver_error"); report(mode, error.message); }
     } finally { polling = false; }
   };
   const timer = setInterval(() => void poll(), 500);
   const unload = () => {
     disposed = true; clearInterval(timer); epoch += 1;
-    if (receiver.generation != null) void command({ action: "disarm", generation: receiver.generation }, true).catch(() => {});
+    if (receiver.generation != null) void command({ action: "disarm", generation: receiver.generation, reason: "unload" }, true).catch(() => {});
     receiver.deactivate();
   };
   window.addEventListener("beforeunload", unload);

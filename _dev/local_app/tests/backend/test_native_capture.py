@@ -357,6 +357,19 @@ class NativeApiTests(NativeFixture):
         self.assertEqual(self.post({"action": "disarm", "receiver": self.receiver, "generation": True}).status_code, 422)
         self.assertEqual(self.post({"action": "disarm", "receiver": self.receiver, "generation": generation}).get_json()["mode"], "NONE")
 
+    def test_diagnostics_retain_reason_and_reject_invalid_reason_without_reset(self):
+        generation = self.prepare()
+        command = {"action": "disarm", "receiver": self.receiver, "generation": generation, "reason": []}
+        self.assertEqual(self.post(command).status_code, 422)
+        self.assertEqual(self.controller.state, "READY")
+        command["reason"] = "dialog_closed"
+        self.assertEqual(self.post(command).status_code, 200)
+        response = self.client.get("/api/native-capture/diagnostics", base_url="http://localhost:18765")
+        self.assertEqual(response.status_code, 200)
+        events = response.get_json()["recent"]
+        self.assertTrue(any(e["event"] == "session_disarmed" and e["reason"] == "dialog_closed" for e in events))
+        self.assertTrue(any(e["event"] == "api_rejected" and e["code"] == "invalid_command" for e in events))
+
     def test_png_bridge_does_not_mutate_inventory_or_trigger_ocr(self):
         before = self.client.get("/api/bootstrap").get_json()
         self.prepare()

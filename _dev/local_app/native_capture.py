@@ -10,6 +10,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from local_app.native_diagnostics import CaptureDiagnostics
+
 from local_app.backend.recognition_contracts import validate_capture_metadata, validate_capture_payload
 
 MAX_BYTES = 20 * 1024 * 1024
@@ -60,6 +62,8 @@ class NativeCaptureController:
         self.runtime_failed = False
         self.game_session = False
         self.captured_count = 0
+        self.diagnostics = CaptureDiagnostics(self.profile_path.parent / "logs" / "native-capture.jsonl")
+        self.last_receiver_status = None
         try:
             data = json.loads(self.profile_path.read_text(encoding="utf-8"))
             if data.get("version") == 1 and isinstance(data.get("profiles"), dict):
@@ -73,7 +77,12 @@ class NativeCaptureController:
     def targets(self):
         return self.platform.targets()
 
+    def record(self, event, **fields):
+        self.diagnostics.write(event, generation=self.generation, state=self.state, target=self.target,
+                               workerBusy=self.busy, receiverBusy=self.receiver_busy, **fields)
+
     def _clear(self, error=None):
+        self.record("session_cleared", reason=error or "explicit_reset")
         self.generation += 1
         self.mode, self.state, self.error = "NONE", "IDLE", error
         self.receiver, self.target, self.profile = None, None, None
@@ -81,9 +90,10 @@ class NativeCaptureController:
         self.game_session, self.captured_count = False, 0
         self.platform.cancel_selection()
 
-    def disarm(self, receiver=None, generation=None):
+    def disarm(self, receiver=None, generation=None, reason="unspecified"):
         with self.lock:
             if receiver is None or (self.receiver == receiver and generation == self.generation):
+                self.record("session_disarmed", reason=reason)
                 self._clear()
             return self.snapshot()
 
@@ -108,7 +118,9 @@ class NativeCaptureController:
                     "hotkeyRegistered": self.platform.hotkey_registered,
                     "pending": len(self.frames), "captured": self.captured_count,
                     "busy": self.busy or self.receiver_busy, "gameSession": self.game_session,
-                    "enterRegistered": getattr(self.platform, "enter_registered", False)}
+                    "enterRegistered": getattr(self.platform, "enter_registered", False),
+                    "rawInputRegistered": getattr(self.platform, "raw_registered", False),
+                    "diagnostics": {"path": str(self.diagnostics.path), "loggingError": self.diagnostics.error}}
 
     def prepare(self, receiver, mode, target, context, *, select=False, game_session=False):
         try:
@@ -147,9 +159,11 @@ class NativeCaptureController:
                     self._clear("roi_missing")
                     raise NativeCaptureError("roi_missing", "게임 화면에서 영역을 먼저 지정하세요.") from None
                 self.profile, self.state = copy.deepcopy(profile), "READY"
+            self.record("session_prepared", select=select, mode=mode, gameSession=game_session)
             return self.snapshot()
 
     def selected(self, generation, roi, geo):
+        self.record("roi_result", accepted=roi is not None, selectionGeneration=generation)
         with self.lock:
             if generation != self.generation or self.state != "SELECTING":
                 return
@@ -176,7 +190,9 @@ class NativeCaptureController:
                 temporary.write_text(json.dumps({"version": 1, "profiles": profiles}, ensure_ascii=False), encoding="utf-8")
                 temporary.replace(self.profile_path)
                 self.profiles, self.profile, self.state = profiles, profile, "READY"
+                self.record("roi_saved", roi=roi)
             except (NativeCaptureError, OSError, ValueError):
+                self.diagnostics.exception("roi_save_failed")
                 self._clear("roi_save_failed")
         if self.game_session and self.state == "READY":
             self.on_hotkey()
@@ -184,12 +200,14 @@ class NativeCaptureController:
     def finish(self):
         with self.lock:
             if self.state == "READY":
+                self.record("session_finished")
                 self.state, self.game_session, self.error = "STOPPED", False, None
 
     def reselect(self):
         with self.lock:
             if self.state != "READY" or self.busy or self.receiver_busy:
                 return
+            self.record("roi_reselect")
             self.state, self.error = "SELECTING", None
             self.platform.select(self.target, self.generation)
 
@@ -214,6 +232,10 @@ class NativeCaptureController:
                 self._clear("session_changed")
                 return {**self.snapshot(), "frames": [], "owned": False}
             self.deadline = self.clock() + LEASE_SECONDS
+            receiver_status = (count, size, busy)
+            if receiver_status != self.last_receiver_status:
+                self.record("receiver_status", queueCount=count, queueBytes=size, busy=busy)
+                self.last_receiver_status = receiver_status
             self.queue_count, self.queue_bytes, self.receiver_busy = count, size, busy
             return {**self.snapshot(), "owned": True,
                     "frames": [{"metadata": copy.deepcopy(v["metadata"]), "generation": generation,
@@ -229,21 +251,26 @@ class NativeCaptureController:
     def acknowledge(self, receiver, generation, capture_id):
         with self.lock:
             if receiver == self.receiver and generation == self.generation:
-                self.frames.pop(capture_id, None)
+                removed = self.frames.pop(capture_id, None)
+                self.record("frame_acknowledged", removed=removed is not None)
 
     def on_hotkey(self):
         self.maintenance()
         with self.lock:
             if not self.wants_hotkey():
                 if self.state == "READY": self.error = "capture_busy"
+                self.record("capture_rejected", reason="busy_or_inactive")
                 return False
             if not self.platform.is_foreground(self.target):
                 self.error = "foreground_required"
+                self.record("capture_rejected", reason=self.error)
                 return False
             if self.queue_count + len(self.frames) >= MAX_FRAMES or self.queue_bytes >= MAX_BYTES:
                 self.error = "queue_full"
+                self.record("capture_rejected", reason=self.error)
                 return False
             self.busy = True
+            self.record("capture_accepted")
             args = (self.generation, self.target, copy.deepcopy(self.profile), copy.deepcopy(self.context), self.mode.lower())
             self.worker = threading.Thread(target=self._capture, args=args, name="bdo-native-pixels", daemon=True)
             self.worker.start()
@@ -267,19 +294,26 @@ class NativeCaptureController:
                                    "windowMode": geo["mode"], "monitor": geo["monitor"]}}
 
     def _capture(self, generation, target, profile, context, mode):
+        started = time.monotonic()
+        self.record("capture_worker_started")
         try:
             geo = self.platform.geometry(target)
-            if signature(geo) != profile["signature"] or not self.platform.is_foreground(target):
+            if signature(geo) != profile["signature"]:
                 raise NativeCaptureError("profile_changed", "게임 화면 환경이 바뀌었습니다.")
+            if not self.platform.is_foreground(target):
+                raise NativeCaptureError("foreground_required", "게임 화면을 앞에 두세요.")
             roi = validate_roi(profile["roi"], geo)
             metadata = self._metadata(mode, context, geo, roi, profile)
+            self.record("pixel_read_started")
             png = self.platform.capture(screen_box(geo, roi))
+            self.record("pixel_read_done", bytes=len(png))
             current = self.platform.geometry(target)
             if current != geo or not self.platform.is_foreground(target):
                 raise NativeCaptureError("target_changed", "캡처 중 게임 창이 바뀌었습니다.")
             validate_capture_payload(json.dumps(metadata), png, content_type="image/png", expected_task=mode)
             with self.lock:
                 if generation != self.generation or self.closed or self.clock() > self.deadline:
+                    self.record("frame_discarded", captureGeneration=generation, closed=self.closed, expired=self.clock()>self.deadline)
                     return
                 if self.queue_count + len(self.frames) >= MAX_FRAMES:
                     raise NativeCaptureError("queue_full", "대기 이미지 개수 제한에 도달했습니다.")
@@ -289,7 +323,9 @@ class NativeCaptureController:
                                                         "sha256": hashlib.sha256(png).hexdigest()}
                 self.captured_count += 1
                 self.error = None
+                self.record("capture_completed", captured=self.captured_count, elapsedMs=round((time.monotonic()-started)*1000))
         except Exception as exc:
+            self.diagnostics.exception("capture_failed", code=getattr(exc, "code", "pixel_capture_failed"))
             with self.lock:
                 if generation == self.generation:
                     self.error = getattr(exc, "code", "pixel_capture_failed")
@@ -304,3 +340,4 @@ class NativeCaptureController:
         self.platform.stop()
         if self.worker and self.worker is not threading.current_thread():
             self.worker.join(timeout=3)
+        self.diagnostics.close()
