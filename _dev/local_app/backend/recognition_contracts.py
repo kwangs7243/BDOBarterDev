@@ -18,7 +18,7 @@ MAX_IMAGE_PIXELS = 32_000_000
 MAX_ID_LENGTH = 128
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
 TASK_TYPES = {"warehouse", "trade"}
-SOURCE_TYPES = {"file", "clipboard", "browser-stream"}
+SOURCE_TYPES = {"file", "clipboard", "browser-stream", "native-screen"}
 
 
 class RecognitionContractError(ValueError):
@@ -103,7 +103,7 @@ def _utc_timestamp(value: Any) -> str:
 
 def validate_capture_metadata(value: dict[str, Any], *, expected_task: str | None = None) -> dict[str, Any]:
     _keys(value, {"version", "captureId", "batchId", "taskType", "sourceType", "capturedAt", "frame",
-                  "fidelity", "profileId", "profileVersion", "context", "observed"})
+                  "fidelity", "profileId", "profileVersion", "context", "observed"}, {"nativeEvidence"})
     if value["version"] != 1 or type(value["version"]) is not int:
         raise RecognitionContractError("unsupported_version", "Capture metadata version 1 is required.")
     task = value["taskType"]
@@ -133,8 +133,35 @@ def validate_capture_metadata(value: dict[str, Any], *, expected_task: str | Non
         raise RecognitionContractError("invalid_contract", "Source dimensions must both be known or both be null.")
     if fidelity["rescaled"] is not None and type(fidelity["rescaled"]) is not bool:
         raise RecognitionContractError("invalid_contract", "fidelity.rescaled must be boolean or null.")
-    if not isinstance(fidelity["evidence"], str) or fidelity["evidence"] not in {"track-settings", "file-metadata", "user-observed", "unknown"}:
+    if not isinstance(fidelity["evidence"], str) or fidelity["evidence"] not in {"track-settings", "file-metadata", "user-observed", "unknown", "native-pixels"}:
         raise RecognitionContractError("invalid_contract", "fidelity.evidence is not supported.")
+
+    native_evidence = value.get("nativeEvidence")
+    if source == "native-screen":
+        if not isinstance(native_evidence, dict):
+            raise RecognitionContractError("invalid_contract", "Native capture evidence is required.")
+        _keys(native_evidence, {"provider", "roi", "clientSize", "screenOrigin", "windowMode", "monitor"})
+        if native_evidence["provider"] != "gdi" or not isinstance(native_evidence["windowMode"], str) or native_evidence["windowMode"] not in {"windowed", "borderless"}:
+            raise RecognitionContractError("invalid_contract", "Unsupported native pixel provider or window mode.")
+        roi, size, origin = (native_evidence[k] for k in ("roi", "clientSize", "screenOrigin"))
+        if not all(isinstance(v, dict) for v in (roi, size, origin)):
+            raise RecognitionContractError("invalid_contract", "Native coordinate evidence is invalid.")
+        _keys(roi, {"x", "y", "width", "height"}); _keys(size, {"width", "height"}); _keys(origin, {"x", "y"})
+        for key, item in roi.items():
+            _integer(item, "roi." + key, minimum=8 if key in {"width", "height"} else 0)
+        for key, item in size.items():
+            _integer(item, "clientSize." + key, minimum=8)
+        if (roi["x"] + roi["width"] > size["width"] or roi["y"] + roi["height"] > size["height"]
+                or {"width": roi["width"], "height": roi["height"]} != frame
+                or fidelity != {"sourceWidth": size["width"], "sourceHeight": size["height"],
+                                "rescaled": False, "evidence": "native-pixels"}):
+            raise RecognitionContractError("invalid_contract", "Native ROI, frame and fidelity do not agree.")
+        for key, item in origin.items():
+            _integer(item, "screenOrigin." + key, minimum=-MAX_SAFE_INTEGER)
+        if not isinstance(native_evidence["monitor"], str) or not 1 <= len(native_evidence["monitor"]) <= 128:
+            raise RecognitionContractError("invalid_contract", "Native monitor evidence is invalid.")
+    elif native_evidence is not None or "nativeEvidence" in value or fidelity["evidence"] == "native-pixels":
+        raise RecognitionContractError("invalid_contract", "Native evidence requires a native source.")
 
     context = value["context"]
     if not isinstance(context, dict):
@@ -170,6 +197,7 @@ def validate_capture_metadata(value: dict[str, Any], *, expected_task: str | Non
         "profileVersion": profile_version,
         "context": context,
         "observed": observed,
+        **({"nativeEvidence": native_evidence} if source == "native-screen" else {}),
     }
 
 

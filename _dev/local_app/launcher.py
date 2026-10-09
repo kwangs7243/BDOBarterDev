@@ -165,6 +165,9 @@ def _run_manager_window(server, server_thread: threading.Thread, app) -> None:
     close_lock = threading.Lock()
 
     def close_server() -> None:
+        native = app.extensions.get("native_capture")
+        if native is not None:
+            native.close()
         with close_lock:
             if server_closed.is_set():
                 return
@@ -263,6 +266,7 @@ def _run_manager_window(server, server_thread: threading.Thread, app) -> None:
 
 def run_launcher() -> int:
     instance = SingleInstance()
+    native_capture = None
     try:
         if not instance.acquire():
             deadline = time.monotonic() + 12
@@ -281,7 +285,12 @@ def run_launcher() -> int:
             return 0
 
         packaged_root = resource_root()
-        app = create_app(reference_path=packaged_root / "reference" / "barter_items.json")
+        if os.name == "nt":
+            from local_app.native_capture import NativeCaptureController
+            from local_app.native_win32 import Win32CapturePlatform
+            from local_app.backend.storage import default_database_path
+            native_capture = NativeCaptureController(Win32CapturePlatform(), default_database_path().with_name("native-capture-profiles.json"))
+        app = create_app(reference_path=packaged_root / "reference" / "barter_items.json", native_capture=native_capture)
         try:
             from waitress import create_server
 
@@ -296,6 +305,9 @@ def run_launcher() -> int:
             server_thread.join(timeout=5)
             raise RuntimeError(f"localhost:{PORT} 서버가 준비 시간 안에 응답하지 않았습니다.")
 
+        if native_capture is not None:
+            native_capture.start()
+
         # Open the browser only after the fixed loopback health endpoint responds.
         webbrowser.open_new_tab(APP_URL)
         _run_manager_window(server, server_thread, app)
@@ -304,6 +316,8 @@ def run_launcher() -> int:
         _message_box("BDO 물교 시작 실패", _friendly_start_error(error), error=True)
         return 1
     finally:
+        if native_capture is not None:
+            native_capture.close()
         instance.release()
 
 

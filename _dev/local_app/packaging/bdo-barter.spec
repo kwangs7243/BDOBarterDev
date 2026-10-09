@@ -32,6 +32,10 @@ hiddenimports = [
     "local_app.backend.api.state",
     "local_app.backend.services.warehouse_scan",
     "tools.warehouse_patch.warehouse_patch",
+    "local_app.native_capture",
+    "local_app.native_win32",
+    "local_app.backend.api.native_capture",
+    "PIL.ImageGrab",
     "waitress",
     "waitress.server",
 ]

@@ -207,6 +207,23 @@ export async function captureFromFile(file, context, adapters = {}) {
   return captureBlob(file, context, "file", null, adapters);
 }
 
+export async function captureFromNative(blob, packet, context, adapters = {}) {
+  const metadata = packet?.metadata;
+  if (metadata?.sourceType !== "native-screen" || metadata.taskType !== context.taskType ||
+      metadata.context?.baseRevision !== context.baseRevision ||
+      metadata.context?.sessionId !== context.sessionId ||
+      metadata.context?.sessionRevision !== context.sessionRevision) {
+    throw new CaptureError("stale_capture", "현재 입력 대상과 다른 캡처입니다. 다시 준비하세요.");
+  }
+  const capture = await captureBlob(blob, context, "native-screen", null, adapters);
+  if (capture.reencoded || capture.sha256 !== packet.sha256 || capture.bytes !== packet.bytes ||
+      capture.metadata.frame.width !== metadata.frame.width || capture.metadata.frame.height !== metadata.frame.height ||
+      metadata.fidelity?.evidence !== "native-pixels" || metadata.nativeEvidence?.provider !== "gdi") {
+    throw new CaptureError("invalid_native_image", "네이티브 이미지의 원본과 크기를 확인하지 못했습니다.");
+  }
+  return { ...capture, metadata: structuredClone(metadata) };
+}
+
 async function captureBlob(blob, rawContext, sourceType, batchId, adapters) {
   if (!blob || typeof blob.size !== "number" || typeof blob.arrayBuffer !== "function") {
     throw new CaptureError("invalid_file", "이미지 파일을 읽을 수 없습니다.");

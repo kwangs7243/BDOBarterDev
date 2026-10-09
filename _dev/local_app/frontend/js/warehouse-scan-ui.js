@@ -62,6 +62,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   const pasteTarget = dialog.querySelector("[data-capture-paste-target]");
   const scanButton = dialog.querySelector('[data-action="scan"]');
   const queue = new CaptureQueue();
+  let scanPending = false;
   const previews = new PreviewRegistry();
   let selectedCaptureId = null;
   let previewUrl = null;
@@ -84,7 +85,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     for (const capture of captures) {
       const item = make("li", "capture-queue-item");
       item.dataset.captureId = capture.metadata.captureId;
-      const choose = make("button", "capture-queue-select", `${capture.metadata.sourceType === "clipboard" ? "클립보드" : "파일"} · ${capture.metadata.frame.width}×${capture.metadata.frame.height} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`);
+      const choose = make("button", "capture-queue-select", `${({ clipboard: "클립보드", file: "파일", "native-screen": "게임 F10", "browser-stream": "화면" }[capture.metadata.sourceType] ?? "이미지")} · ${capture.metadata.frame.width}×${capture.metadata.frame.height} · ${(capture.bytes / 1024 / 1024).toFixed(2)} MiB${capture.reencoded ? " · PNG 변환" : ""}`);
       choose.type = "button";
       choose.setAttribute("aria-pressed", String(capture.metadata.captureId === selectedCaptureId));
       choose.addEventListener("click", () => { selectedCaptureId = capture.metadata.captureId; renderQueue(); });
@@ -223,6 +224,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   scanButton.addEventListener("click", async () => {
     const capture = selectedCapture();
     if (!capture || scanButton.disabled) return;
+    scanPending = true;
     scanButton.disabled = true;
     input.disabled = true;
     message.textContent = "이미지를 확인하고 V1 창고 스캐너로 판독하는 중입니다…";
@@ -251,6 +253,8 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
       setStatus(`창고 이미지를 판독하지 못했습니다: ${error.message}`, "error");
       scanButton.disabled = false;
       input.disabled = false;
+    } finally {
+      scanPending = false;
     }
   });
 
@@ -265,6 +269,7 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
     acceptCaptures,
     reportCaptureError,
     getQueueLength: () => queue.length,
+    getNativeQueueState: () => ({ count: queue.length, bytes: queue.bytes, busy: scanPending }),
     cleanup: () => {
       screenSession.disconnectScreen("cleanup");
       resizeObserver.disconnect();

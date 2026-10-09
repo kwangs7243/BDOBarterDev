@@ -13,6 +13,7 @@ from .api.maintenance import maintenance_api
 from .api.state import api
 from .api.session import session_api
 from .api.recognition import recognition_api
+from .api.native_capture import native_capture_api
 from .contracts import ContractError
 from .services.trade_batch_runtime import TradeBatchRuntime
 from .storage import MutationConflict, RevisionConflict, Storage, default_database_path, load_catalog
@@ -25,7 +26,7 @@ MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 2 * 1024 * 1024 + 128 * 1024
 
 
 def create_app(database_path: str | Path | None = None, *, reference_path: str | Path | None = None,
-               testing: bool = False) -> Flask:
+               testing: bool = False, native_capture=None) -> Flask:
     root = Path(__file__).resolve().parents[1]
     frontend = root / "frontend"
     catalog, order = load_catalog(Path(reference_path) if reference_path else None)
@@ -36,6 +37,8 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
     store.initialize()
     app.extensions["bdo_storage"] = store
     app.extensions["trade_batch_runtime"] = TradeBatchRuntime()
+    if native_capture is not None:
+        app.extensions["native_capture"] = native_capture
     mutation_condition = threading.Condition()
     app.extensions["bdo_mutation_condition"] = mutation_condition
     app.extensions["bdo_mutation_state"] = {"active": 0, "stopping": False}
@@ -45,6 +48,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
     app.register_blueprint(scan_api)
     app.register_blueprint(maintenance_api)
     app.register_blueprint(recognition_api)
+    app.register_blueprint(native_capture_api)
 
     @app.before_request
     def restrict_to_local_origin():
@@ -56,6 +60,8 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
             return jsonify({"ok": False, "error": {"code": "invalid_host", "message": "Only the local application host is accepted."}}), 400
         recognition_request = request.path == "/api/recognition" or request.path.startswith("/api/recognition/")
         session_mutation = request.path.startswith("/api/working-session") and request.method in {"PATCH", "PUT", "POST", "DELETE"}
+        capture_request = request.path.startswith("/api/native-capture")
+        capture_mutation = capture_request and request.method in {"PATCH", "PUT", "POST", "DELETE"}
         recognition_mutation = recognition_request and request.method in {"PATCH", "PUT", "POST", "DELETE"}
         if recognition_request and request.method == "OPTIONS":
             return jsonify({"ok": False, "error": {"code": "cors_preflight_denied", "message": "Cross-origin preflight is not accepted."}}), 403
@@ -66,7 +72,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
                 allowed_origins.add(origin)
             if origin not in allowed_origins:
                 return jsonify({"ok": False, "error": {"code": "invalid_origin", "message": "Cross-origin requests are not accepted."}}), 403
-        if recognition_mutation or session_mutation:
+        if recognition_mutation or session_mutation or capture_mutation:
             expected_origin = f"http://{host}"
             if origin is None:
                 return jsonify({"ok": False, "error": {"code": "origin_required", "message": "A same-origin request is required."}}), 403
@@ -78,7 +84,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         state_mutation = request.method in {"PATCH", "PUT", "POST", "DELETE"} and (request.path in {
             "/api/inventory", "/api/inventory/order", "/api/settings", "/api/warehouse-scan"
         } or request.path.startswith(("/api/working-session", "/api/schedule-slots/")))
-        if recognition_request or state_mutation:
+        if recognition_request or state_mutation or capture_request:
             with mutation_condition:
                 state = app.extensions["bdo_mutation_state"]
                 if state["stopping"]:
