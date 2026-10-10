@@ -78,12 +78,12 @@
         <div class="actions trade-roi-actions">
           <button type="button" data-action="capture-trade-roi" disabled>선택 영역 캡처</button>
           <button type="button" data-action="reset-trade-roi">영역 초기화</button>
-          <button type="button" data-action="clear-trade-queue" disabled>대기 이미지 전체 삭제</button>
         </div>
       </section>
       <label class="field" for="trade-capture-files">이미지 파일 선택<input id="trade-capture-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple></label>
       <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
       <p class="capture-status" data-role="capture-status" role="status" aria-live="polite"></p>
+      <div class="actions"><button type="button" data-action="clear-trade-queue" disabled>스크린샷 전체삭제</button></div>
       <ol class="capture-draft-list" data-role="capture-list"></ol>
       <section class="trade-recognition-panel" data-role="trade-recognition" aria-labelledby="trade-recognition-title" aria-busy="false">
         <div class="trade-recognition-toolbar">

@@ -5,9 +5,10 @@ import { applyLiveTradeRules, prepareLiveTradeRows } from "./domain/trade-import
 import { whenPersistenceIdle } from "./persistence.js";
 import { applyLiveTradeRows } from "./trade-ui.js";
 
-export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog, getPending, setPending, onResult }) {
+export function createTradeLiveListUI({ elements, getCatalog, getPending, setPending, onResult, onApplied }) {
   const { liveListSection, tradeRecognitionStatus, tradeRecognitionRegion, tradeRecognitionResultRegion, recognitionDiagnostics } = elements;
   const reviewPreviews = new PreviewRegistry();
+  let reviewCaptures = [];
   let disposed = false;
   const resultTable = (section, title, headers, rows) => {
     const heading = document.createElement("h3"); heading.textContent = title;
@@ -23,8 +24,9 @@ export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog,
     wrap.append(table); section.replaceChildren(heading, wrap);
   };
   const fieldLabels = ["섬", "교환 아이템", "필요 수량", "결과 아이템", "교환 횟수", "결과 수량"];
-  const renderLiveList = (result) => {
+  const renderLiveList = (result, captures = reviewCaptures) => {
     if (disposed) return;
+    reviewCaptures = captures;
     const tradeCatalog = getCatalog();
     reviewPreviews.clear();
     const visibleRows = prepareLiveTradeRows(result, tradeCatalog);
@@ -116,7 +118,7 @@ export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog,
         overview.textContent = `${row.fields.fromItem.corrected ?? row.fields.fromItem.rawOCR} → ${row.fields.toItem.corrected ?? row.fields.toItem.rawOCR} · 요구 ${row.fields.reqAmount.corrected ?? "?"} / 결과 ${row.fields.yield.corrected ?? "?"} · 남은 ${row.fields.count.corrected ?? "?"}회`;
         const fields = document.createElement("div"); fields.className = "trade-review-fields";
         const unresolved = row.reviewFields.filter((name) => row.fields[name].reviewRequired && row.fields[name].valueSource !== "TRADE_RULE");
-        const capture = tradeQueue.items.find((item) => item.metadata.captureId === row.captureId);
+        const capture = reviewCaptures.find((item) => item.metadata.captureId === row.captureId);
         const preview = document.createElement("div"); preview.className = "trade-review-source";
         if (capture && row.rowBox) {
           const box = row.rowBox;
@@ -209,7 +211,7 @@ export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog,
           confirm.disabled = true;
           for (const control of form.elements) control.disabled = true;
           setPending(true);
-          try { await saveTradeCorrections(tradeQueue.items, candidate, corrections, feedbackId, "reviewed"); }
+          try { await saveTradeCorrections(reviewCaptures, candidate, corrections, feedbackId, "reviewed"); }
           catch (failure) { error.textContent = failure.message; return; }
           finally {
             for (const control of form.elements) control.disabled = false;
@@ -223,15 +225,19 @@ export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog,
       review.append(title, guidance, counts, form, error); liveListSection.prepend(review);
     }
     const apply = async (mode, button) => {
+      if (getPending() || button.disabled) return;
       const includedRows = prepareLiveTradeRows(result, tradeCatalog).map(({row}) => row).filter((row) => !row.excluded);
       if (mode === "new" && state.session.scannedTrades !== null && !window.confirm("현재 회차를 이 최종 물교 목록으로 바꿀까요?")) return;
       button.disabled = true;
+      setPending(true);
+      updateApplyState();
       try {
-        await saveTradeCorrections(tradeQueue.items, result, [], crypto.randomUUID(), "reviewed");
+        await saveTradeCorrections(reviewCaptures, result, [], crypto.randomUUID(), "reviewed");
         const rows = includedRows.map((row) => Object.fromEntries(Object.entries(row.fields).map(([key, field]) => [key, field.corrected])));
         const applied = await applyLiveTradeRows(rows, mode);
         await whenPersistenceIdle();
         tradeRecognitionStatus.textContent = `최종 물교 ${applied.trades.length}행을 현재 회차에 적용했습니다. 물교 목록에서 스케줄을 생성할 수 있습니다.`;
+        onApplied();
       } catch (error) {
         for (const outcome of error.outcomes ?? []) {
           const row = includedRows[outcome.index];
@@ -244,7 +250,7 @@ export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog,
           ? `리스트 생성 보류: ${error.outcomes.map((outcome) => `${result.rows.indexOf(includedRows[outcome.index]) + 1}행 ${fieldLabels[["island","fromItem","reqAmount","toItem","count","yield"].indexOf(outcome.field)] ?? "기존 목록 충돌"}: ${outcome.candidates?.length ? `후보 ${outcome.candidates.join(" / ")}` : outcome.field ? `마스터에서 품목을 찾지 못함 (${includedRows[outcome.index].fields[outcome.field].corrected})` : "같은 섬·결과 품목의 요구 품목이 다름"}`).join(" · ")}`
           : error.message;
       }
-      finally { updateApplyState(); }
+      finally { setPending(false); updateApplyState(); }
     };
     applyNew.addEventListener("click", () => void apply("new", applyNew));
     applyAppend.addEventListener("click", () => void apply("append", applyAppend));
@@ -265,6 +271,7 @@ export function createTradeLiveListUI({ elements, queue: tradeQueue, getCatalog,
   };
   const clear = () => {
     reviewPreviews.clear();
+    reviewCaptures = [];
     liveListSection.replaceChildren();
     liveListSection.hidden = true;
   };

@@ -94,11 +94,14 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   };
   const liveListUI = createTradeLiveListUI({
     elements: { liveListSection, tradeRecognitionStatus, tradeRecognitionRegion, tradeRecognitionResultRegion, recognitionDiagnostics },
-    queue: tradeQueue,
     getCatalog: () => tradeCatalog,
     getPending: () => tradeRecognitionPending,
     setPending: (pending) => { tradeRecognitionPending = pending; updateRecognitionControls(); renderTradeQueue(); },
     onResult: (result) => { liveListResult = result; },
+    onApplied: () => {
+      invalidateRecognitionResult(tradeRecognitionStatus.textContent);
+      tradeDialog.close();
+    },
   });
   const renderLiveList = liveListUI.render;
   const initializeRoi = () => {
@@ -298,7 +301,13 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       await tradeCatalogReady;
       const result = await recognizeTradeLiveList(captures);
       if (requestRevision !== tradeQueueRevision) return;
-      renderLiveList(result);
+      renderLiveList(result, captures);
+      if (result.rows.length) {
+        tradeQueue.clear();
+        tradeQueueRevision += 1;
+        tradeBatchId = null;
+        tradeStatus.textContent = "인식한 스크린샷을 모두 비웠습니다.";
+      }
       const reviewCount = result.rows.reduce((n, row) => n + Object.values(row.fields).filter(f => f.reviewRequired).length, 0);
       tradeRecognitionStatus.textContent = result.rows.length
         ? `물교 ${result.rows.length}행 · 확인 필요 ${reviewCount}곳. 고정 수량은 교환 규칙으로 반영했습니다.`

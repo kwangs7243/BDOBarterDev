@@ -93,13 +93,14 @@ try {
   const snapshotUrl = `${baseUrl}api/bootstrap`;
   const before = await (await fetch(snapshotUrl)).json();
   const recognize = async (imageIndex, expectedRows) => {
+    await evaluate("if (!document.querySelector('#trade-capture-dialog').open) document.querySelector('#open-trade-capture').click()");
     const document = await send("DOM.getDocument");
     const input = await send("DOM.querySelector", { nodeId: document.root.nodeId, selector: "#trade-capture-files" });
     await send("DOM.setFileInputFiles", { nodeId: input.nodeId, files: [join(root, "local_app/tests/fixtures/trade-recognition", mapping[imageIndex].image)] });
     await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='1'"), "real PNG input");
     await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
     try {
-      await waitFor(async () => evaluate(`document.querySelector('[data-role=trade-live-list] > .trade-recognition-table-wrap tbody, [data-role=trade-live-list] > .trade-ready-list > .trade-recognition-table-wrap tbody')?.rows.length===${expectedRows} && !document.querySelector('[data-action=recognize-trade]').disabled`), "visible six-field table");
+      await waitFor(async () => evaluate(`document.querySelector('[data-role=trade-live-list] > .trade-recognition-table-wrap tbody, [data-role=trade-live-list] > .trade-ready-list > .trade-recognition-table-wrap tbody')?.rows.length===${expectedRows} && document.querySelector('[data-role=trade-recognition]').getAttribute('aria-busy')==='false' && document.querySelector('#trade-capture-dialog').dataset.queueLength==='0'`), "visible six-field table");
     } catch (error) {
       const diagnostic = await evaluate(`({status:document.querySelector('[data-role=trade-recognition-status]').textContent, table:document.querySelector('[data-role=trade-live-list]').innerText, busy:document.querySelector('[data-action=recognize-trade]').disabled, crashes:${JSON.stringify(crashes)}})`);
       await writeFile(join(output, 'recognition-timeout.json'), JSON.stringify(diagnostic, null, 2));
@@ -233,6 +234,13 @@ try {
   const appended=await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.equal(appended.workingSession.scannedTrades.length,11);
   assert.ok(!appended.workingSession.scannedTrades.some(row=>row.island===truth[0].island&&row.fromItem===truth[0].fromItem),'excluded row is absent from appended list');
+  assert.equal(await evaluate("document.querySelector('#trade-capture-dialog').open"), false, 'successful append closes capture dialog');
+  await recognize(0,6);
+  await evaluate(`document.querySelector('[data-action=include-live-list-row][aria-label="1행 목록 포함"]').click();
+    document.querySelectorAll('[data-role=live-list-review] input[data-field]').forEach(input=>{
+      input.value=${JSON.stringify(truth)}[Number(input.dataset.row)][input.dataset.field];input.dispatchEvent(new Event('input',{bubbles:true}));
+    });document.querySelector('[data-role=live-list-review] form').requestSubmit();`);
+  await waitFor(async()=>evaluate("!document.querySelector('[data-action=apply-live-new]').disabled"),'new recognized list reviewed');
   await evaluate("window.confirm=()=>true; document.querySelector('[data-action=apply-live-new]').click()");
   await waitFor(async()=> (await (await fetch(`${baseUrl}api/bootstrap`)).json()).workingSession.scannedTrades.length===5,'included rows used for new session');
   const replaced=await (await fetch(`${baseUrl}api/bootstrap`)).json();
