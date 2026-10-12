@@ -83,6 +83,8 @@ def detect_live_rows(image: Image.Image):
         return []
     spacing = statistics.median(bottom - top for top, bottom in spans)
     rows = [(top, bottom) for top, bottom in spans if .65 * spacing <= bottom - top <= 1.4 * spacing]
+    if peaks and .95 * spacing <= peaks[0] <= 1.10 * spacing:
+        rows.insert(0, (0, peaks[0]))
     # The bottom border can fall outside a capture while the entire row is visible.
     if peaks and .90 * spacing <= image.height - peaks[-1] <= 1.10 * spacing:
         rows.append((peaks[-1], image.height))
@@ -194,11 +196,11 @@ def merge_quantity_readings(primary, token, allowed_values=None, field=None):
     return {**primary, "variants": combined, "reviewRequired": primary["reviewRequired"] or bool(conflicts)}
 
 
-def read_outlined_requirement(reader, row):
+def read_outlined_quantity(reader, row, field):
     """Keep numeral edges next to their dark outline without the bright item artwork."""
     import cv2
 
-    crop = _crop(row, (.287, .55, .340, .93))
+    crop = _crop(row, (.287, .55, .340, .93) if field == "reqAmount" else (.663, .50, .724, .95))
     rgb = np.asarray(crop.convert("RGB")).astype(np.int16)
     white = (rgb.min(axis=2) > 155) & (rgb.max(axis=2) - rgb.min(axis=2) < 55)
     dark = (rgb.max(axis=2) < 100).astype(np.uint8)
@@ -228,6 +230,25 @@ def read_outlined_requirement(reader, row):
             "variants": [{"text": text, "confidence": score, "method": "outline-mask"} for text, score in readings]}
 
 
+def read_outlined_requirement(reader, row):
+    return read_outlined_quantity(reader, row, "reqAmount")
+
+
+def accept_quantity_consensus(result, outlined):
+    value = result.get("corrected")
+    if (not result["reviewRequired"] or type(value) is not int or outlined is None
+            or outlined["corrected"] != value or outlined["confidence"] < .95):
+        return result
+    readings = [reading for reading in result["variants"]
+                if re.fullmatch(r"\d+", reading["text"]) and reading["confidence"] >= .75]
+    strong = sum(int(reading["text"]) == value and reading["confidence"] >= .98 for reading in readings)
+    if strong < 3 or any(int(reading["text"]) != value and not str(value).endswith(reading["text"])
+                         for reading in readings):
+        return result
+    return {**result, "reviewRequired": False, "confidence": max(result["confidence"], outlined["confidence"]),
+            "valueSource": "VERIFIED_OCR_CONSENSUS", "variants": result["variants"] + outlined["variants"]}
+
+
 def read_requirement(reader, row):
     result = merge_quantity_readings(read_numeric(reader, _requirement_crop(row), "reqAmount"),
                                      read_quantity_token(reader, row, "reqAmount"), field="reqAmount")
@@ -236,6 +257,9 @@ def read_requirement(reader, row):
     outlined = read_outlined_requirement(reader, row)
     if outlined is None:
         return result
+    accepted = accept_quantity_consensus(result, outlined)
+    if not accepted["reviewRequired"]:
+        return accepted
     # Saved small-font corrections still contain a missing digit; this remains a review candidate.
     return {**result, **outlined, "variants": result["variants"] + outlined["variants"],
             "reviewRequired": True, "valueSource": "OCR_CANDIDATE"}
@@ -426,7 +450,10 @@ def read_yield(reader, row, allowed_values=None, destination=None):
     crop = _coin_quantity_crop(row) if destination == "coin" else _crop(row, bounds)
     result = read_numeric(reader, crop, "yield", allowed_values)
     if not token["reviewRequired"] or result["corrected"] is not None or allowed_values is None:
-        return merge_quantity_readings(result, token, allowed_values)
+        merged = merge_quantity_readings(result, token, allowed_values)
+        if allowed_values is None and merged["reviewRequired"] and merged["corrected"] is not None:
+            return accept_quantity_consensus(merged, read_outlined_quantity(reader, row, "yield"))
+        return merged
     alternatives = [read_numeric(reader, _crop(row, bounds), "yield", allowed_values)
                     for bounds in ((.700, .55, .712, .93), (.680, .55, .710, .93))]
     certain = [value for value in alternatives if value["corrected"] is not None and not value["reviewRequired"]]

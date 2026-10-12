@@ -5,12 +5,38 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from PIL import Image
-from local_app.tools.trade_live_ocr import _requirement_crop, apply_trade_rules, detect_live_rows, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
+from local_app.tools.trade_live_ocr import _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
 
 class LiveListTests(unittest.TestCase):
+    def test_complete_top_edge_row_is_recovered_without_changing_existing_rows(self):
+        image = Image.new("RGB", (985, 444), (40, 40, 40))
+        for top in (69, 144, 219, 294, 369, 443):
+            for y in range(top, min(top + 5, image.height)):
+                for x in range(image.width): image.putpixel((x, y), (90, 90, 90))
+        rows = detect_live_rows(image)
+        self.assertEqual(rows[0], (0, 69))
+        self.assertEqual(rows[1:], [(74, 144), (149, 219), (224, 294), (299, 369), (374, 443)])
+        self.assertEqual(len(detect_live_rows(image.crop((0, 30, 985, 444)))), 5)
+
+    def test_quantity_consensus_accepts_only_verified_complete_digits(self):
+        result = {"rawOCR": "188", "corrected": 188, "reviewRequired": True, "confidence": .99,
+                  "variants": [{"text": "188", "confidence": .99}] * 3 + [{"text": "88", "confidence": .99}]}
+        outlined = {"corrected": 188, "confidence": .99,
+                    "variants": [{"text": "188", "confidence": .99, "method": "outline-mask"}] * 2}
+        accepted = accept_quantity_consensus(result, outlined)
+        self.assertFalse(accepted["reviewRequired"])
+        self.assertEqual(accepted["corrected"], 188)
+        self.assertEqual(accepted["rawOCR"], result["rawOCR"])
+        for evidence in (None, {**outlined, "corrected": 88}, {**outlined, "confidence": .94}):
+            self.assertTrue(accept_quantity_consensus(result, evidence)["reviewRequired"])
+        for candidate in ({**result, "corrected": None},
+                          {**result, "variants": result["variants"] + [{"text": "183", "confidence": .99}]},
+                          {**result, "variants": [{"text": "188", "confidence": .90}] * 3}):
+            self.assertTrue(accept_quantity_consensus(candidate, outlined)["reviewRequired"])
+
     def rule_fields(self, source, destination, ambiguous=False):
         return {"fromItem": {"corrected": source, "reviewRequired": ambiguous},
                 "toItem": {"corrected": destination, "reviewRequired": False},
