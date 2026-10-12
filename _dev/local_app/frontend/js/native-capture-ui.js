@@ -64,6 +64,22 @@ export function initNativeCaptureUI(adapters) {
     if (!response.ok) throw new CaptureError("native_unavailable", "캡처 연결을 확인하지 못했습니다.");
     return response.json();
   };
+  const showSavedRegion = (mode, data) => {
+    const refs = panels.get(mode), roi = data.savedProfiles?.[mode]?.roi;
+    refs.save.disabled = !data.available || !roi;
+    refs.saved.textContent = roi
+      ? `저장된 영역 · 위치 ${roi.x}, ${roi.y} · 크기 ${roi.width}×${roi.height} · 재시작 후 캡처 시작 시 복원됩니다.`
+      : "저장된 영역이 없습니다. 게임에서 영역을 먼저 지정하세요.";
+  };
+  const saveRegion = mode => {
+    serial = serial.catch(() => {}).then(async () => {
+      const data = await command({ action: "save-region", mode });
+      if (disposed) return;
+      showSavedRegion(mode, data);
+      report(mode, `${mode === "trade" ? "물교" : "창고"} 영역을 저장했습니다. 앱을 다시 실행해도 이 영역을 사용합니다.`);
+    }).catch(error => report(mode, error.message));
+    return serial;
+  };
   const attach = async data => {
     const mode = data.mode?.toLowerCase();
     if (disposed || !adapters[mode] || receiver.mode || !data.context) return;
@@ -75,6 +91,7 @@ export function initNativeCaptureUI(adapters) {
     try {
       const data = await status();
       if (disposed) return null;
+      showSavedRegion(mode, data);
       const selected = refs.target.value;
       refs.target.replaceChildren();
       for (const item of data.targets ?? []) {
@@ -117,16 +134,18 @@ export function initNativeCaptureUI(adapters) {
     const panel = document.createElement("section"); panel.className = "trade-roi-panel";
     panel.dataset.nativeCapture = mode;
     const label = mode === "trade" ? "물교" : "창고";
-    panel.innerHTML = `<h3>게임 영역 캡처</h3><div class="trade-roi-actions"><button type="button" data-native="prepare" disabled>${label} 캡처 시작</button><button type="button" data-native="stop">캡처 중지</button></div><details><summary>게임 창·영역 설정</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>영역 새로 지정</button></div></details><p>게임 목록을 스크롤하고 F10으로 캡처하세요. 테두리 드래그는 이동, 모서리 드래그는 크기 조절입니다. 영역 안쪽은 게임 조작을 그대로 받습니다. 화면 공유나 열린 대화상자는 필요 없습니다. 누적 이미지의 인식·검토·적용은 여기서 실행하세요.</p><p role="status" aria-live="polite"></p>`;
+    panel.innerHTML = `<h3>게임 영역 캡처</h3><div class="trade-roi-actions"><button type="button" data-native="prepare" disabled>${label} 캡처 시작</button><button type="button" data-native="stop">캡처 중지</button><button type="button" data-native="save" disabled>영역 저장</button></div><p data-native="saved"></p><details><summary>게임 창·영역 설정</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>영역 새로 지정</button></div></details><p>게임 목록을 스크롤하고 F10으로 캡처하세요. 테두리 드래그는 이동, 모서리 드래그는 크기 조절입니다. 영역 안쪽은 게임 조작을 그대로 받습니다. 화면 공유나 열린 대화상자는 필요 없습니다. 누적 이미지의 인식·검토·적용은 여기서 실행하세요.</p><p role="status" aria-live="polite"></p>`;
     adapter.dialog.querySelector(".trade-roi-panel").before(panel);
     const legacy = [...adapter.dialog.querySelectorAll('.trade-preview-stage, .trade-roi-panel:not([data-native-capture])')];
     panels.set(mode, { root: panel, target: panel.querySelector("select"), start: panel.querySelector('[data-native="prepare"]'),
       select: panel.querySelector('[data-native="select"]'), status: panel.querySelector('[role="status"]'),
+      save: panel.querySelector('[data-native="save"]'), saved: panel.querySelector('[data-native="saved"]'),
       legacy, legacyHidden: legacy.map(node => node.hidden) });
     listen(panel.querySelector('[data-native="prepare"]'), "click", () => prepare(mode));
     listen(panel.querySelector('[data-native="select"]'), "click", () => prepare(mode, true));
     listen(panel.querySelector('[data-native="refresh"]'), "click", () => void refresh(mode));
     listen(panel.querySelector('[data-native="stop"]'), "click", () => void stop(mode));
+    listen(panel.querySelector('[data-native="save"]'), "click", () => saveRegion(mode));
     const observer = new MutationObserver(() => { if (adapter.dialog.open) void refresh(mode); });
     observer.observe(adapter.dialog, { attributes: true, attributeFilter: ["open"] });
     listeners.push(() => observer.disconnect());
@@ -141,6 +160,7 @@ export function initNativeCaptureUI(adapters) {
       const result = await command({ action: "heartbeat", generation, count: state.count, bytes: state.bytes,
         busy: state.busy, context: nativeContext(adapter.getContext()) });
       if (!current()) return;
+      showSavedRegion(mode, result);
       if (!result.owned) { receiver.deactivate(); report(mode, errorText[result.error] || "다른 수신기로 연결됐습니다."); return; }
       report(mode, result.error ? (errorText[result.error] || "캡처 상태를 확인하세요.") : result.state === "SELECTING" ? "게임에서 영역 드래그 → Enter 확정" : `F10 캡처 ${result.captured ?? 0}장 · 수신 대기 ${result.pending ?? 0}장`);
       for (const packet of result.frames ?? []) {

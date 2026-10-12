@@ -43,6 +43,13 @@ def maintenance(): controller.maintenance(); return jsonify(controller.snapshot(
 def context_change():
     changed={**controller.context,'baseRevision':controller.context['baseRevision']+1}
     return jsonify(controller.heartbeat(controller.receiver,controller.generation,0,0,False,changed))
+@app.post('/__test__/restart')
+def restart():
+    global controller
+    controller.close()
+    controller=NativeCaptureController(platform,Path(r'${profile}')/'profiles.json')
+    app.extensions['native_capture']=controller
+    return jsonify(controller.snapshot())
 app.run(host='127.0.0.1',port=${Number(port)},use_reloader=False,threaded=True)
 `;
 let server;
@@ -110,6 +117,9 @@ try {
   await waitFor(async () => evaluate("!document.querySelector('[data-native-capture=trade] [data-native=select]').disabled"), "native target list");
   await evaluate("document.querySelector('[data-native-capture=trade] [data-native=select]').click()");
   await waitFor(async () => (await nativeStatus()).state === "READY", "native trade ROI prepared");
+  await waitFor(async () => evaluate("!document.querySelector('[data-native-capture=trade] [data-native=save]').disabled"), "trade saved-region button");
+  await evaluate("document.querySelector('[data-native-capture=trade] [data-native=save]').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-native-capture=trade] [data-native=saved]').textContent.includes('80×50')"), "trade saved-region display");
   assert.equal((await hotkey()).captured, true);
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='1'"), "native PNG delivered to trade queue");
   await waitFor(async () => (await nativeStatus()).pending === 0, "retried packet acknowledged");
@@ -210,6 +220,19 @@ try {
   await waitFor(async () => (await nativeStatus()).mode === "NONE", "explicit UI stop");
   const after = await (await fetch(`${baseUrl}api/bootstrap`)).json();
   assert.deepEqual(after, initial, "native capture-only flow leaves all durable state unchanged");
+  const savedProfiles = JSON.parse(await readFile(join(profile, 'profiles.json'), 'utf8')).profiles;
+  await evaluate("document.querySelector('#open-warehouse-scan').click(); document.querySelector('[data-native-capture=warehouse] [data-native=refresh]').click()");
+  await waitFor(async () => evaluate("!document.querySelector('[data-native-capture=warehouse] [data-native=save]').disabled"), "warehouse saved-region button");
+  await evaluate("document.querySelector('[data-native-capture=warehouse] [data-native=save]').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-native-capture=warehouse] [data-native=saved]').textContent.includes('80×50')"), "warehouse saved-region display");
+  assert.deepEqual(JSON.parse(await readFile(join(profile, 'profiles.json'), 'utf8')).profiles, savedProfiles, 'explicit save retains both profile identities and coordinates');
+  await evaluate("document.querySelector('[data-native-capture=warehouse] [data-native=prepare]').click()");
+  await waitFor(async () => (await nativeStatus()).state === 'READY' && (await nativeStatus()).mode === 'WAREHOUSE', 'warehouse ready before restart');
+  await evaluate("fetch('/__test__/restart',{method:'POST'}).then(r=>r.json())");
+  await waitFor(async () => evaluate("document.querySelector('[data-native-capture=warehouse] [role=status]').textContent.includes('다른 수신기')"), "old receiver deactivated after controller restart");
+  await evaluate("document.querySelector('[data-native-capture=warehouse] [data-native=prepare]').click()");
+  await waitFor(async () => (await nativeStatus()).state === 'READY' && (await nativeStatus()).mode === 'WAREHOUSE', 'saved warehouse restored after restart');
+  assert.deepEqual((await nativeStatus()).savedProfiles, Object.fromEntries(Object.entries(savedProfiles).map(([mode,p])=>[mode,{roi:p.roi,version:p.version}])));
   const cleanupCheck = await evaluate(`(async () => {
     const { initNativeCaptureUI } = await import('/assets/js/native-capture-ui.js');
     const originalFetch = window.fetch;

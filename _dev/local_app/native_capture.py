@@ -151,6 +151,8 @@ class NativeCaptureController:
                     "pending": len(self.frames), "captured": self.captured_count,
                     "busy": self.busy, "receiverBusy": self.receiver_busy,
                     "context": copy.deepcopy(self.context), "inputSinkReady": bool(getattr(self.platform, "sink", None)),
+                    "savedProfiles": {mode: {"roi": copy.deepcopy(profile.get("roi")), "version": profile.get("version")}
+                                      for mode, profile in self.profiles.items()},
                     "diagnostics": {"path": str(self.diagnostics.path), "loggingError": self.diagnostics.error}}
 
     def prepare(self, receiver, mode, target, context, *, select=False, count=0, size=0):
@@ -226,11 +228,32 @@ class NativeCaptureController:
         profile = {"id": str(uuid.uuid4()), "version": 1, "signature": signature(geometry), "roi": roi}
         if type(old.get("version")) is int: profile["version"] = max(1, old["version"]+1)
         profiles = {**self.profiles, key: profile}
+        self._write_profiles(profiles)
+        self.profiles, self.profile = profiles, profile
+
+    def _write_profiles(self, profiles):
         self.profile_path.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.profile_path.with_suffix(".tmp")
         temporary.write_text(json.dumps({"version": 1, "profiles": profiles}, ensure_ascii=False), encoding="utf-8")
         temporary.replace(self.profile_path)
-        self.profiles, self.profile = profiles, profile
+
+    def save_region(self, mode):
+        if not isinstance(mode, str) or mode not in {"trade", "warehouse"}:
+            raise NativeCaptureError("invalid_mode", "물교 또는 창고 모드를 선택하세요.", 422)
+        with self.lock:
+            if self.closed:
+                raise NativeCaptureError("capture_closed", "앱이 종료 중입니다.")
+            if self.roi_adjusting:
+                raise NativeCaptureError("roi_adjusting", "영역 조정을 마친 뒤 저장하세요.")
+            if not self.profiles.get(mode):
+                raise NativeCaptureError("roi_missing", "게임에서 영역을 먼저 지정하세요.")
+            try:
+                self._write_profiles(self.profiles)
+            except OSError as exc:
+                self.diagnostics.exception("roi_save_failed")
+                raise NativeCaptureError("roi_save_failed", "영역을 저장하지 못했습니다. 다시 시도하세요.", 503) from exc
+            self.record("roi_saved_explicitly", mode=mode, roi=self.profiles[mode]["roi"])
+            return self.snapshot()
 
     def begin_roi_adjustment(self):
         with self.lock:

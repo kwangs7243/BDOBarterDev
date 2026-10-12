@@ -38,11 +38,12 @@ def command():
               "heartbeat": {"action", "receiver", "generation", "count", "bytes", "busy", "context"},
               "ack": {"action", "receiver", "generation", "captureId"},
               "disarm": {"action", "receiver", "generation"},
-              "stop": {"action", "receiver", "generation"}, "attach": {"action", "receiver"}}
+              "stop": {"action", "receiver", "generation"}, "attach": {"action", "receiver"},
+              "save-region": {"action", "receiver", "mode"}}
     if not isinstance(action, str) or action not in fields or (set(data) != fields[action] and
             not (action == "disarm" and set(data) == fields[action] | {"reason"})):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 요청입니다.", 422)
-    if action not in {"prepare", "attach"} and (type(data["generation"]) is not int or data["generation"] < 0):
+    if action not in {"prepare", "attach", "save-region"} and (type(data["generation"]) is not int or data["generation"] < 0):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 세대입니다.", 422)
     if action == "ack" and not isinstance(data["captureId"], str):
         raise NativeCaptureError("invalid_command", "잘못된 캡처 ID입니다.", 422)
@@ -57,6 +58,8 @@ def command():
         result = value.prepare(data["receiver"], data["mode"], data["target"], data["context"], select=data["select"], count=data["count"], size=data["bytes"])
     elif action == "attach":
         result = value.attach(data["receiver"])
+    elif action == "save-region":
+        result = value.save_region(data["mode"])
     elif action == "stop":
         value.finish(data["receiver"], data["generation"]); result = value.snapshot()
     elif action == "heartbeat":

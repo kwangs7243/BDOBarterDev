@@ -141,6 +141,39 @@ class NativeCaptureTests(NativeFixture):
         self.prepare(select=False)
         self.assertTrue(self.controller.wants_hotkey())
 
+    def test_explicit_save_is_idempotent_and_restores_both_regions_after_restart(self):
+        self.prepare()
+        self.roi = {"x": 500, "y": 300, "width": 400, "height": 200}
+        self.prepare("warehouse")
+        before = copy.deepcopy(self.controller.profiles)
+        for mode in ("trade", "warehouse", "trade"):
+            result = self.controller.save_region(mode)
+            self.assertEqual(result["savedProfiles"][mode]["roi"], before[mode]["roi"])
+        self.assertEqual(self.controller.profiles, before)
+        self.controller.close()
+        self.platform.geo["pid"] = 99
+        self.platform.geo["left"] += 40
+        self.controller = NativeCaptureController(self.platform, Path(self.temp.name)/"profiles.json")
+        for mode in ("trade", "warehouse"):
+            self.prepare(mode, select=False)
+            self.assertEqual(self.controller.state, "READY")
+            self.assertEqual(self.controller.profile, before[mode])
+
+    def test_failed_explicit_save_keeps_regions_and_capture_state(self):
+        self.prepare()
+        before = copy.deepcopy(self.controller.profiles)
+        with patch.object(self.controller, "_write_profiles", side_effect=OSError("disk full")):
+            with self.assertRaises(NativeCaptureError) as failure:
+                self.controller.save_region("trade")
+        self.assertEqual(failure.exception.code, "roi_save_failed")
+        self.assertEqual(self.controller.profiles, before)
+        self.assertEqual(self.controller.state, "READY")
+        with self.assertRaises(NativeCaptureError): self.controller.save_region("warehouse")
+        with self.assertRaises(NativeCaptureError): self.controller.save_region([])
+        self.controller.roi_adjusting = True
+        with self.assertRaises(NativeCaptureError): self.controller.save_region("trade")
+        self.assertEqual(self.controller.profiles, before)
+
     def test_target_validation_failure_records_exact_reason_before_stopping(self):
         self.prepare()
         with patch.object(self.platform,"geometry",side_effect=NativeCaptureError("target_unavailable","window is minimized")):
@@ -395,6 +428,16 @@ class NativeApiTests(NativeFixture):
 
     def post(self, data, headers=None):
         return self.client.post("/api/native-capture", json=data, base_url="http://localhost:18765", headers=self.headers if headers is None else headers)
+
+    def test_explicit_region_save_keeps_inventory_and_session_unchanged(self):
+        self.prepare()
+        before = self.client.get("/api/bootstrap").get_json()
+        command = {"action": "save-region", "receiver": self.receiver, "mode": "trade"}
+        self.assertEqual(self.post(command).status_code, 200)
+        self.assertEqual(self.post(command).get_json()["savedProfiles"]["trade"]["roi"], self.roi)
+        self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
+        self.assertEqual(self.post({**command, "roi": self.roi}).status_code, 422)
+        self.assertEqual(self.post({**command, "mode": []}).status_code, 422)
 
     def test_commands_require_exact_origin_and_strict_shape(self):
         command = {"action": "prepare", "receiver": self.receiver, "mode": "trade", "target": "42", "context": self.context, "select": True, "count":0, "bytes":0}
