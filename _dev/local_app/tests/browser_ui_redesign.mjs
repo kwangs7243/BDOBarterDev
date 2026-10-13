@@ -8,7 +8,8 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {chromium}=require(require.resolve('playwright',{paths:[process.env.BDO_NODE_MODULES ?? 'C:/Users/kwang/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules']}));
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
-const out=resolve(root,'recognition-local/ui-redesign-20261013'); await mkdir(out,{recursive:true});
+const out=resolve(process.env.UI_AUDIT_DIR ?? resolve(root,'recognition-local/ui-redesign-20261013')); await mkdir(out,{recursive:true});
+const baselineDir=process.env.UI_AUDIT_BASELINE;
 const phase=process.env.UI_AUDIT_PHASE ?? 'after';
 const temp=await mkdtemp(join(tmpdir(),'bdo-ui-design-'));
 const port=18692, url=`http://127.0.0.1:${port}`;
@@ -31,7 +32,20 @@ try {
  const trades=islands.map((island,i)=>({island,fromItem:catalog.masterData[(i%4)+1][i],toItem:catalog.masterData[(i%4)+2][i],reqAmount:1,count:6,yield:(i%4)===3?1:3}));
  await page.locator('#open-json-import').click(); await page.locator('#trade-json-input').fill(JSON.stringify(trades)); await page.locator('#apply-new-session').click();
  await page.waitForFunction(()=>!document.querySelector('#json-import-dialog').open);
- const shot=async(name)=>page.screenshot({path:join(out,`${phase}-${name}.png`)});
+ const shot=async(name)=>{
+   await page.mouse.move(0,0);
+   await page.screenshot({path:join(out,`${phase}-${name}.png`),animations:'disabled'});
+   if(process.env.UI_AUDIT_ALL_VIEWS==='1'&&name.endsWith('-1920')){
+     for(const size of [{width:1440,height:900},{width:2560,height:1440}]){
+       await page.setViewportSize(size);
+       await page.waitForFunction(()=>Math.abs(document.body.getBoundingClientRect().width-innerWidth)<2);
+       const clipping=await page.locator('dialog[open]').evaluateAll(nodes=>nodes.map(n=>({id:n.id||n.className,rect:n.getBoundingClientRect().toJSON()})).filter(({rect:r})=>r.left<0||r.top<0||r.right>innerWidth+2||r.bottom>innerHeight+2));
+       assert.deepEqual(clipping,[],`${name}: dialogs stay inside ${size.width} viewport`);
+       await page.screenshot({path:join(out,`${phase}-${name.replace('1920',size.width)}.png`),animations:'disabled'});
+     }
+     await page.setViewportSize({width:1920,height:1080});
+   }
+ };
  await shot('main-1920');
  const idsBefore=await page.locator('[id]').evaluateAll(ns=>ns.map(n=>n.id).sort());
  await page.locator('#open-schedule').click(); await page.locator('#generate-schedule').click();
@@ -39,6 +53,10 @@ try {
  const schedule=await page.evaluate(async()=>JSON.stringify((await import('/assets/js/state.js')).state.session.schedule,(k,v)=>k==='timerEnd'?undefined:v));
  await writeFile(join(out,`${phase}-schedule.json`),schedule);
  await shot('schedule-1920');
+ if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
+   await page.locator('[data-brief-mode="both"]').click(); await shot('schedule-both-1920');
+   await page.locator('[data-brief-mode="speed"]').click();
+ }
  await page.locator('#schedule-dialog [data-close-dialog]').click();
  if(phase==='after')await page.locator('[data-workspace-view="inventory"]').click();
  await shot('inventory-1920');
@@ -54,10 +72,10 @@ try {
  await writeFile(join(out,`${phase}-actions.json`),JSON.stringify({ids:idsBefore,actions},null,2));
  if(phase==='after'){
    assert.deepEqual(errors,[]);
-   const baseline=await readFile(join(out,'before-actions.json'),'utf8').then(JSON.parse).catch(()=>null);
+   const baseline=await readFile(join(baselineDir??out,baselineDir?'after-actions.json':'before-actions.json'),'utf8').then(JSON.parse).catch(error=>{if(baselineDir)throw error;return null;});
    if(baseline){
      const missing=baseline.ids.filter(id=>!idsBefore.includes(id)); assert.deepEqual(missing,[],'existing action and field IDs preserved');
-     assert.equal(schedule,await readFile(join(out,'before-schedule.json'),'utf8'),'same synthetic inputs produce identical schedules');
+     assert.equal(schedule,await readFile(join(baselineDir??out,baselineDir?'after-schedule.json':'before-schedule.json'),'utf8'),'same synthetic inputs produce identical schedules');
    }
    await page.locator('#open-settings').click(); await shot('ship-settings-1920');
    await page.keyboard.press('Escape'); assert.equal(await page.locator('#open-settings').evaluate(n=>document.activeElement===n),true,'Escape returns focus');
@@ -82,6 +100,35 @@ try {
    await page.locator('#trade-search').fill('없는섬'); assert.equal(await page.locator('#trade-filter-empty').isVisible(),true);
    await page.locator('#trade-search').fill('');
    await page.locator('#open-map-speed').click(); await page.locator('.mv-window').waitFor({state:'visible'}); await shot('map-viewer-1920');
+   if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
+     const mapBefore=await page.evaluate(async()=>JSON.stringify({coords:window.islandCoordinates,routes:(await import('/assets/js/state.js')).state.mapRouteDraft}));
+     const labelChecks=[];
+     for(let step=0;step<4;step++){
+       const layout=await page.evaluate(()=>{
+         const viewport=document.querySelector('.mv-viewport').getBoundingClientRect();
+         const labels=[...document.querySelectorAll('.mv-node-caption')].filter(n=>getComputedStyle(n).visibility==='visible').map(n=>({name:n.textContent,r:n.getBoundingClientRect().toJSON()})).filter(({r})=>r.right>viewport.left&&r.left<viewport.right&&r.bottom>viewport.top&&r.top<viewport.bottom);
+         const collisions=[];
+         for(let i=0;i<labels.length;i++)for(let j=i+1;j<labels.length;j++){const a=labels[i].r,b=labels[j].r;if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)collisions.push([labels[i].name,labels[j].name]);}
+         return {zoom:document.querySelector('.mv-zoom').textContent,count:labels.length,collisions};
+       });
+       assert.ok(layout.count>0,'zoomed-out map retains useful labels'); assert.deepEqual(layout.collisions,[],'visible map names never overlap'); labelChecks.push(layout);
+       if(step<3)await page.locator('.mv-toolbar').getByRole('button',{name:'−',exact:true}).click();
+     }
+     await page.screenshot({path:join(out,`${phase}-map-zoom-out-1920.png`),animations:'disabled'});
+     const hiddenName=await page.evaluate(()=>{
+       const viewport=document.querySelector('.mv-viewport').getBoundingClientRect();
+       return [...document.querySelectorAll('.mv-node.label-suppressed')].find(n=>{const r=n.querySelector('circle').getBoundingClientRect();return r.x>viewport.x+10&&r.right<viewport.right-10&&r.y>viewport.y+10&&r.bottom<viewport.bottom-10&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('.mv-node')===n;})?.getAttribute('aria-label');
+     });
+     assert.ok(hiddenName,'dense map suppresses colliding labels');
+     const node=page.locator('.mv-node').filter({has:page.locator('title',{hasText:hiddenName})}).filter({has:page.locator(`.mv-node-label:text-is("${hiddenName}")`)}).first();
+     await node.locator('circle').hover();
+     assert.equal(await node.locator('.mv-node-caption').evaluate(n=>getComputedStyle(n).visibility),'visible','hover reveals a suppressed name');
+     await page.mouse.move(0,0); await node.focus();
+     assert.equal(await node.locator('.mv-node-caption').evaluate(n=>getComputedStyle(n).visibility),'visible','keyboard focus reveals a suppressed name');
+     await page.screenshot({path:join(out,`${phase}-map-label-focus-1920.png`),animations:'disabled'});
+     assert.equal(await page.evaluate(async()=>JSON.stringify({coords:window.islandCoordinates,routes:(await import('/assets/js/state.js')).state.mapRouteDraft})),mapBefore,'label layout never mutates coordinates or routes');
+     await writeFile(join(out,'map-label-checks.json'),JSON.stringify(labelChecks,null,2));
+   }
    await page.locator('.mv-header').getByRole('button',{name:'닫기',exact:true}).click();
    assert.equal(await page.locator('.mv-window').isVisible(),false,'closed map cannot intercept input');
    await page.locator('#map-tools-dialog [data-close-dialog]').click();
@@ -109,6 +156,10 @@ try {
    },[...await readFile(resolve(root,'local_app/tests/fixtures/warehouse_patch/barter_only.png'))]);
    await page.waitForFunction(()=>document.querySelector('.patch-slot-preview')?.getContext('2d').getImageData(30,30,1,1).data[3]>0);
    await shot('warehouse-review-1920');
+   if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
+     const space=await page.locator('.patch-review-dialog').evaluate(n=>{const a=n.getBoundingClientRect(),b=n.querySelector('.patch-review-footer').getBoundingClientRect();return a.bottom-b.bottom;});
+     assert.ok(space<5,'warehouse review has no empty space below its footer');
+   }
    await page.locator('.patch-review-header [data-action="cancel"]').click(); await page.locator('#warehouse-scan-dialog [data-action="close"]').click();
    await page.locator('[data-workspace-view="session"]').click();
    for(const size of [{width:1440,height:900},{width:2560,height:1440}]){
@@ -133,6 +184,14 @@ try {
      const {renderTradeList}=await import('/assets/js/trade-ui.js'); renderTradeList();
    },denseTrades);
    await shot('dense-session-1920');
+   if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
+     await page.locator('#trade-search').focus();
+     await page.screenshot({path:join(out,`${phase}-session-focus-1920.png`),animations:'disabled'});
+     await page.locator('#open-schedule').click(); await page.locator('#generate-schedule').click();
+     await page.waitForFunction(()=>document.querySelectorAll('.route-trade').length>2);
+     await shot('dense-schedule-1920');
+     await page.locator('#schedule-dialog [data-close-dialog]').click();
+   }
    assert.deepEqual(errors,[]);
  }
  await writeFile(join(out,`${phase}-audit.json`),JSON.stringify({status:'PASS',phase,errors,viewports:(phase==='before'?[[1920,1080]]:[[1920,1080],[1440,900],[2560,1440]]).map(([width,height])=>({width,height,zoom:100})),database:temp,ocr:'mocked fixture for visual review',userDataWrites:0},null,2));

@@ -99,10 +99,18 @@ function renderModeColumn(id, sorties, mode) {
     card.addEventListener("dragover", (event) => window.sortieDragOver(event, sortieIndex, mode));
     card.addEventListener("drop", (event) => { window.sortieDrop(event, sortieIndex, mode); renderModeColumn(id, mode === "speed" ? state.session.schedule.speed : state.session.schedule.balance, mode); });
     const top = document.createElement("div"); top.className = "sortie-heading";
-    const heading = document.createElement("strong"); heading.className = "sortie-title"; heading.textContent = `[${sortieIndex + 1}차 출항] · 약 ${minutes(sortie.totalTime)}`;
+    const heading = document.createElement("strong"); heading.className = "sortie-title";
+    const number = document.createElement("span"); number.className = "sortie-index"; number.textContent = String(sortieIndex + 1).padStart(2, "0");
+    const caption = document.createElement("span"); caption.textContent = `${sortieIndex + 1}차 출항`;
+    heading.append(number, caption);
     const addWaypoint = document.createElement("button"); addWaypoint.type = "button"; addWaypoint.textContent = "＋ 경유지"; addWaypoint.addEventListener("click", () => window.openWaypointModal(mode, sortieIndex));
-    const weight = document.createElement("span"); weight.textContent = `${(sortie.startWeight || 0).toLocaleString()} LT · 교섭력 ${(sortie.parleyUsed || 0).toLocaleString()}`;
-    top.append(heading, addWaypoint, weight); card.append(top);
+    const metrics = document.createElement("div"); metrics.className = "sortie-metrics";
+    for (const [label, value] of [["예상 시간", minutes(sortie.totalTime)], ["교섭력", (sortie.parleyUsed || 0).toLocaleString()], ["출항 무게", `${(sortie.startWeight || 0).toLocaleString()} LT`]]) {
+      const metric = document.createElement("span"); const name = document.createElement("small"); const amount = document.createElement("strong");
+      name.textContent = label; amount.textContent = value; metric.append(name, amount); metrics.append(metric);
+    }
+    addWaypoint.classList.add("quiet");
+    top.append(heading, metrics, addWaypoint); card.append(top);
     const cargo = document.createElement("div"); cargo.className = "sortie-cargo";
     const cargoHeading = document.createElement("strong"); cargoHeading.className = "sortie-cargo-heading"; cargoHeading.textContent = "출항 적재";
     const cargoItems = document.createElement("div"); cargoItems.className = "sortie-cargo-items";
@@ -142,7 +150,10 @@ function renderModeColumn(id, sorties, mode) {
         actions.append(timer, complete, remove);
       } else {
         const routeLabels = [trade.isCoin ? '까마귀 주화' : '', trade.isSpec ? '특수 물자' : '', trade.isChained ? '연쇄 승선' : ''].filter(Boolean);
-        heading.textContent = trade.island + (routeLabels.length ? ' · ' + routeLabels.join(' · ') : '');
+        heading.textContent = trade.island;
+        if (routeLabels.length) {
+          const kind = document.createElement('span'); kind.className = 'route-kind'; kind.textContent = routeLabels.join(' · '); heading.append(kind);
+        }
         const tieredItem = (name, tier) => {
           const item = document.createElement('span'); item.className = 'route-labeled-item';
           const label = document.createElement('span'); label.className = 'route-tier-label ' + itemTone(tier); label.textContent = itemTierLabel(tier);
@@ -154,7 +165,9 @@ function renderModeColumn(id, sorties, mode) {
         const arrow = document.createElement('span'); arrow.className = 'route-arrow'; arrow.textContent = '→';
         const to = tieredItem(trade.toClean, trade.toTier);
         const minus = button('route-count-adjust', '▼', (event) => window.adjustTradeCount(event, mode, sortieIndex, tradeIndex, -1), !!trade.completed);
-        const count = document.createElement('span'); count.className = 'route-count-label'; count.textContent = '(' + trade.execC + '회 · 회당 ' + trade.mult + '개 · 획득 ' + numberFormat.format(trade.execC * trade.mult) + '개)';
+        const count = document.createElement('span'); count.className = 'route-count-label';
+        const countValue = document.createElement('strong'); countValue.textContent = trade.execC + '회';
+        count.append(countValue, document.createTextNode(' · 회당 ' + trade.mult + '개 · 획득 ' + numberFormat.format(trade.execC * trade.mult) + '개'));
         const plus = button('route-count-adjust', '▲', (event) => window.adjustTradeCount(event, mode, sortieIndex, tradeIndex, 1), !!trade.completed);
         const yieldAdjust = document.createElement('span'); yieldAdjust.className = 'route-yield-adjust'; yieldAdjust.append(minus, count, plus);
         exchange.append(from, arrow, to, yieldAdjust);

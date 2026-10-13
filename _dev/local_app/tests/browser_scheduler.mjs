@@ -164,8 +164,9 @@ try {
   await evaluate("document.querySelector('#ship-normal').value=22689;document.querySelector('#ship-max').value=40259;document.querySelector('#ship-speed').value=175;document.querySelector('#ship-root button').click()");
   await waitFor(() => evaluate("window.__bdoAppState.session.config.ship.speed===175"), "saved ship applied to active session");
   await evaluate("import('/assets/js/persistence.js').then(m=>m.whenPersistenceIdle())");
+  await evaluate("window.__beforeReloadMarker = true");
   await send("Page.reload", { ignoreCache: true });
-  await waitFor(() => evaluate("document.querySelector('#app-content')?.getAttribute('aria-busy')==='false' && window.__bdoAppState?.session?.config?.ship?.speed===175"), "active settings restored");
+  await waitFor(() => evaluate("!window.__beforeReloadMarker && document.querySelector('#app-content')?.getAttribute('aria-busy')==='false' && window.__bdoAppState?.session?.config?.ship?.speed===175"), "active settings restored");
   const appliedSettings=await evaluate(`(()=>{
     const s=window.__bdoAppState.session;
     if(s.remainingParley!==125000 || s.config.parley.normalCost!==10293 || s.config.parley.crowCost!==15600

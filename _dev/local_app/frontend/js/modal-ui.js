@@ -22,8 +22,9 @@ function applyAppZoomMetrics() {
     dialog.style.maxWidth = `${(window.innerWidth - 24) / scale}px`;
     dialog.style.maxHeight = `${(window.innerHeight - 24) / scale}px`;
     if (dialog.classList.contains("briefing-dialog")) { dialog.style.width = `${width(.94)}px`; dialog.style.height = `${height(.94)}px`; }
-    else if (dialog.classList.contains("tuning-dialog")) { dialog.style.width = `${Math.min(1120, width(.94))}px`; dialog.style.height = `${height(.88)}px`; }
-    else if (dialog.classList.contains("map-tools-dialog")) { dialog.style.width = `${Math.min(1100, width(.92))}px`; dialog.style.height = `${Math.min(740, height(.86))}px`; }
+    else if (dialog.classList.contains("tuning-dialog")) { dialog.style.width = `${Math.min(1120, width(.94))}px`; dialog.style.height = "fit-content"; }
+    else if (dialog.classList.contains("map-tools-dialog")) { dialog.style.width = `${Math.min(1100, width(.92))}px`; dialog.style.height = "fit-content"; }
+    else if (dialog.classList.contains("settings-dialog")) { dialog.style.width = `${Math.min(760, width(.92))}px`; }
     else dialog.style.width = `${Math.min(620, (window.innerWidth - 24) / scale)}px`;
     if (dialog.open && dialog.style.left) {
       const rect = dialog.getBoundingClientRect();

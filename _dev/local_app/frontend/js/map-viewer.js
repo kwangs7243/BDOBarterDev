@@ -75,20 +75,74 @@ export function createMapViewer(root, setStatus) {
     for (let i=0;i<=OFFSET;i+=500) { const st=i===0?"rgba(248,113,113,.42)":"rgba(203,213,225,.12)"; const sw=i===0?2:1;
       grid.append(svgEl("line",{x1:0,y1:OFFSET+i,x2:SIZE,y2:OFFSET+i,stroke:st,"stroke-width":sw}),svgEl("line",{x1:0,y1:OFFSET-i,x2:SIZE,y2:OFFSET-i,stroke:st,"stroke-width":sw}),svgEl("line",{x1:OFFSET+i,y1:0,x2:OFFSET+i,y2:SIZE,stroke:st,"stroke-width":sw}),svgEl("line",{x1:OFFSET-i,y1:0,x2:OFFSET-i,y2:SIZE,stroke:st,"stroke-width":sw})); }
     app.world.append(grid);
+    const routeLabels=[];
     for (const route of allRoutes()) { const a=locate(route.start),b=locate(route.end); if(!a||!b)continue;
       app.world.append(svgEl("path",{d:`M ${OFFSET+a.x} ${OFFSET-a.y} Q ${OFFSET+(a.x+b.x)/2} ${OFFSET-(a.y+b.y)/2} ${OFFSET+b.x} ${OFFSET-b.y}`,class:"mv-route",stroke:route.isOverloaded?"#ef4444":"#38bdf8"}));
-      const seconds=Math.max(0,routeTimeSeconds(route,a.name,b.name)); const label=svgEl("text",{x:OFFSET+(a.x+b.x)/2,y:OFFSET-(a.y+b.y)/2,class:"mv-route-label"}); label.textContent=duration(seconds); app.world.append(label);
+      const seconds=Math.max(0,routeTimeSeconds(route,a.name,b.name));
+      const x=OFFSET+(a.x+b.x)/2,y=OFFSET-(a.y+b.y)/2;
+      const label=svgEl("text",{x:0,y:-5,class:"mv-route-label",transform:`translate(${x},${y}) scale(${1/app.zoom})`});
+      label.textContent=duration(seconds); app.world.append(label); routeLabels.push({label,x,y});
     }
     if (app.first && app.second && app.modeTool === "measure") app.world.append(svgEl("line",{x1:OFFSET+app.first.x,y1:OFFSET-app.first.y,x2:OFFSET+app.second.x,y2:OFFSET-app.second.y,class:"mv-measure"}));
+    const routeNodes = new Set(allRoutes().flatMap(route => [locate(route.start)?.name, locate(route.end)?.name]));
+    const labels = [];
     for (const node of app.nodes) {
-      const g=svgEl("g",{class:`mv-node${node.name===app.selected?" selected":""}`,transform:`translate(${OFFSET+node.x},${OFFSET-node.y})`,tabindex:0});
-      const c=svgEl("circle",{r:node.name.includes("일리야")?18:node.isOcean?9:12,fill:node.name.includes("일리야")?"#ef4444":node.isOcean?"#3b82f6":"#22c55e"}); g.append(c);
-      if(app.showLabels){const t=svgEl("text",{x:13,y:-10,class:"mv-node-label"}); t.textContent=node.name; g.append(t); const xy=svgEl("text",{x:13,y:5,class:"mv-node-coord"}); xy.textContent=`${node.x}, ${node.y}`; g.append(xy);}
+      const home = node.name.includes("일리야"), selected = node.name === app.selected;
+      const g=svgEl("g",{class:`mv-node${selected?" selected":""}${routeNodes.has(node.name)?" on-route":""}`,transform:`translate(${OFFSET+node.x},${OFFSET-node.y})`,tabindex:0,"aria-label":node.name});
+      const c=svgEl("circle",{r:(home?4:2.5)/app.zoom,fill:home?"var(--warning)":routeNodes.has(node.name)?"var(--accent)":"var(--text-quiet)"}); g.append(c);
+      const title=svgEl("title"); title.textContent=`${node.name} · ${node.x}, ${node.y}`; g.append(title);
+      if(app.showLabels){
+        const label=svgEl("g",{class:"mv-node-caption",transform:`scale(${1/app.zoom})`});
+        const background=svgEl("rect",{class:"mv-label-background",rx:3});
+        const text=svgEl("text",{x:0,y:0,class:"mv-node-label"}); text.textContent=node.name;
+        label.append(background,text);
+        if(app.zoom>=.45||selected){const xy=svgEl("text",{x:0,y:14,class:"mv-node-coord"}); xy.textContent=`${node.x}, ${node.y}`; label.append(xy);}
+        g.append(label);
+        labels.push({node,g,label,background,priority:selected?0:home?1:routeNodes.has(node.name)?2:3});
+        // Overlay only the caption. Moving the interactive node would interrupt focus/clicks.
+        let peek;
+        const showPeek=()=>{
+          if(peek)return;
+          peek=svgEl("g",{class:"mv-label-peek",transform:g.getAttribute("transform"),"aria-hidden":"true"});
+          peek.append(label.cloneNode(true)); app.world.append(peek);
+        };
+        const hidePeek=()=>{if(!g.matches(":hover,:focus")){peek?.remove();peek=null;}};
+        for(const event of ["pointerenter","focus"])g.addEventListener(event,showPeek);
+        for(const event of ["pointerleave","blur"])g.addEventListener(event,hidePeek);
+      }
       g.addEventListener("click",ev=>{ev.stopPropagation(); if(app.modeTool==="arc"){ if(app.step===1){app.first=node;app.step=2;} else if(app.step===2&&app.first!==node){app.second=node;app.radius=Math.hypot(node.x-app.first.x,node.y-app.first.y);app.step=3;} refreshMode(); return; } if(app.modeTool==="measure"){ if(app.step===1){app.first=node;app.step=2;} else if(app.first!==node){toggleRoute(app.first,node);app.first=null;app.step=1;} refreshMode(); return; } app.selected=node.name; renderPanels(); redraw(); });
       g.addEventListener("pointerdown",ev=>{ if(app.modeTool!=="drag"&&!(app.modeTool==="arc"&&app.step===3&&node===app.second))return; if(!mapMutationAllowed())return; ev.preventDefault();ev.stopPropagation();g.setPointerCapture?.(ev.pointerId);app.dragging={node,startX:node.x,startY:node.y}; });
       g.addEventListener("pointermove",ev=>{if(!app.dragging||app.dragging.node!==node)return; const p=screenMapPoint(ev); let x=p.x,y=p.y;if(app.modeTool==="arc"&&app.first){const a=Math.atan2(y-app.first.y,x-app.first.x);x=Math.round(app.first.x+app.radius*Math.cos(a));y=Math.round(app.first.y+app.radius*Math.sin(a));} node.x=Math.round(x);node.y=Math.round(y);const key=node.name; if(coordsNow()[key]){coordsNow()[key].x=node.x;coordsNow()[key].y=node.y;}g.setAttribute("transform",`translate(${OFFSET+node.x},${OFFSET-node.y})`);const coord=g.querySelector(".mv-node-coord");if(coord)coord.textContent=`${node.x}, ${node.y}`; });
       g.addEventListener("pointerup",async()=>{if(!app.dragging||app.dragging.node!==node)return;const d=app.dragging;app.dragging=null;if(d.startX!==node.x||d.startY!==node.y){app.undo.push({type:"move",name:node.name,x:d.startX,y:d.startY});renderPanels();redraw();try{await persistNavigation(setStatus);}catch{}}});
       app.world.append(g);
+    }
+    // Resolve label collisions in screen pixels; world coordinates and routes stay untouched.
+    const occupied=[];
+    const intersects=(a,b)=>a.x<b.x+b.w+5&&a.x+a.w+5>b.x&&a.y<b.y+b.h+4&&a.y+a.h+4>b.y;
+    const nodeTargets=app.nodes.map(node=>({x:app.pan.x+(OFFSET+node.x)*app.zoom-4,y:app.pan.y+(OFFSET-node.y)*app.zoom-4,w:8,h:8}));
+    for(const {node,g,label,background,priority} of labels.sort((a,b)=>a.priority-b.priority)){
+      const bounds=label.getBBox(),w=bounds.width+8,h=bounds.height+4;
+      const x=app.pan.x+(OFFSET+node.x)*app.zoom,y=app.pan.y+(OFFSET-node.y)*app.zoom;
+      const offsets=priority<=2?[10,24,42,64]:[10];
+      const choices=offsets.flatMap(offset=>[{x:x+offset,y:y-h-offset},{x:x-w-offset,y:y-h-offset},{x:x+offset,y:y+offset},{x:x-w-offset,y:y+offset}]);
+      const fits=box=>box.x>=0&&box.y>=0&&box.x+w<=app.viewport.clientWidth&&box.y+h<=app.viewport.clientHeight;
+      const box=choices.find(box=>fits(box)&&![...occupied,...nodeTargets].some(other=>intersects({...box,w,h},other)));
+      const placed=box||choices.find(fits)||choices[0];
+      label.setAttribute("transform",`translate(${(placed.x-x)/app.zoom},${(placed.y-y)/app.zoom}) scale(${1/app.zoom})`);
+      for(const text of label.querySelectorAll("text")){text.setAttribute("x",4);text.setAttribute("y",Number(text.getAttribute("y"))-bounds.y+2);}
+      for(const [name,value] of Object.entries({x:0,y:0,width:w,height:h}))background.setAttribute(name,value);
+      g.classList.toggle("label-suppressed",!box&&priority!==0);
+      if(box&&(Math.abs(box.x-x)>w+12||Math.abs(box.y-y)>h+12)){
+        const endX=Math.max(box.x,Math.min(x,box.x+w)),endY=Math.max(box.y,Math.min(y,box.y+h));
+        g.prepend(svgEl("line",{x1:0,y1:0,x2:(endX-x)/app.zoom,y2:(endY-y)/app.zoom,class:"mv-label-leader"}));
+      }
+      if(box||priority===0)occupied.push({...placed,w,h});
+    }
+    for(const {label,x,y} of routeLabels){
+      const bounds=label.getBBox();
+      const box={x:app.pan.x+x*app.zoom+bounds.x,y:app.pan.y+y*app.zoom+bounds.y,w:bounds.width,h:bounds.height};
+      if(occupied.some(other=>intersects(box,other)))label.style.visibility="hidden";
+      else occupied.push(box);
     }
     app.zoomLabel.textContent=`${Math.round(app.zoom*100)}%`;
     if(app.circles&&app.selected){const n=locate(app.selected);if(n)app.world.append(svgEl("circle",{cx:OFFSET+n.x,cy:OFFSET-n.y,r:600,fill:"none",stroke:"rgba(96,165,250,.45)","stroke-dasharray":"8 6"}));}
