@@ -2,7 +2,11 @@ const dialogs = [...document.querySelectorAll("dialog.app-dialog")];
 
 function openDialog(id) {
   const dialog = document.getElementById(id);
-  if (dialog && !dialog.open) dialog.showModal();
+  if (dialog && !dialog.open) {
+    const status = dialog.querySelector('[data-workspace-status]');
+    if (status) status.textContent = '';
+    dialog.showModal();
+  }
 }
 
 function zoomScale() { return Number(getComputedStyle(document.body).zoom) || 1; }
@@ -10,21 +14,22 @@ function applyAppZoomMetrics() {
   const scale = Number(getComputedStyle(document.documentElement).getPropertyValue("--app-zoom")) || 1;
   document.body.style.width = `${window.innerWidth / scale}px`;
   document.body.style.height = `${window.innerHeight / scale}px`;
-  const bodyStyle = getComputedStyle(document.body);
-  const header = document.querySelector(".app-header");
-  const headerStyle = getComputedStyle(header);
-  const bodyInsets = Number.parseFloat(bodyStyle.paddingTop) + Number.parseFloat(bodyStyle.paddingBottom);
-  const headerSpace = header.getBoundingClientRect().height / scale + Number.parseFloat(headerStyle.marginBottom);
-  document.querySelector("main.workspace").style.height = `${Math.max(240, window.innerHeight / scale - bodyInsets - headerSpace)}px`;
+  document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight / scale}px`);
+  document.documentElement.style.setProperty('--viewport-width', `${window.innerWidth / scale}px`);
   const width = (fraction) => Math.min(window.innerWidth - 24, window.innerWidth * fraction) / scale;
   const height = (fraction) => Math.min(window.innerHeight - 24, window.innerHeight * fraction) / scale;
   for (const dialog of dialogs) {
     dialog.style.maxWidth = `${(window.innerWidth - 24) / scale}px`;
     dialog.style.maxHeight = `${(window.innerHeight - 24) / scale}px`;
-    if (dialog.classList.contains("briefing-dialog")) { dialog.style.width = `${width(.9)}px`; dialog.style.height = `${height(.88)}px`; }
-    else if (dialog.classList.contains("tuning-dialog")) { dialog.style.width = `${width(.94)}px`; dialog.style.height = `${height(.88)}px`; }
-    else if (dialog.classList.contains("map-tools-dialog")) { dialog.style.width = `${width(.92)}px`; dialog.style.height = `${height(.86)}px`; }
+    if (dialog.classList.contains("briefing-dialog")) { dialog.style.width = `${width(.94)}px`; dialog.style.height = `${height(.94)}px`; }
+    else if (dialog.classList.contains("tuning-dialog")) { dialog.style.width = `${Math.min(1120, width(.94))}px`; dialog.style.height = `${height(.88)}px`; }
+    else if (dialog.classList.contains("map-tools-dialog")) { dialog.style.width = `${Math.min(1100, width(.92))}px`; dialog.style.height = `${Math.min(740, height(.86))}px`; }
     else dialog.style.width = `${Math.min(620, (window.innerWidth - 24) / scale)}px`;
+    if (dialog.open && dialog.style.left) {
+      const rect = dialog.getBoundingClientRect();
+      dialog.style.left = `${Math.max(0, Math.min(Number.parseFloat(dialog.style.left), (window.innerWidth - rect.width) / scale))}px`;
+      dialog.style.top = `${Math.max(0, Math.min(Number.parseFloat(dialog.style.top), (window.innerHeight - rect.height) / scale))}px`;
+    }
   }
 }
 window.__bdoApplyAppZoom = applyAppZoomMetrics;
@@ -36,6 +41,7 @@ for (const button of document.querySelectorAll("[data-close-dialog]")) {
 
 for (const [buttonId, dialogId] of [
   ["open-json-import", "json-import-dialog"],
+  ["open-settings", "settings-dialog"],
   ["open-schedule", "schedule-dialog"],
   ["open-tuning", "tuning-dialog"],
   ["open-map-tools", "map-tools-dialog"],
@@ -74,14 +80,16 @@ for (const dialog of dialogs) {
     const offsetX = (event.clientX - rect.left) / scale;
     const offsetY = (event.clientY - rect.top) / scale;
     dialog.style.position = "fixed";
+    dialog.style.right = "auto";
+    dialog.style.bottom = "auto";
     dialog.style.margin = "0";
     dialog.style.transform = "none";
     dialog.style.left = `${rect.left / scale}px`;
     dialog.style.top = `${rect.top / scale}px`;
     bar.setPointerCapture(event.pointerId);
     const move = (moveEvent) => {
-      const left = Math.max(0, Math.min(window.innerWidth / scale - 80, moveEvent.clientX / scale - offsetX));
-      const top = Math.max(0, Math.min(window.innerHeight / scale - 48, moveEvent.clientY / scale - offsetY));
+      const left = Math.max(0, Math.min((window.innerWidth - rect.width) / scale, moveEvent.clientX / scale - offsetX));
+      const top = Math.max(0, Math.min((window.innerHeight - rect.height) / scale, moveEvent.clientY / scale - offsetY));
       dialog.style.left = `${left}px`;
       dialog.style.top = `${top}px`;
     };

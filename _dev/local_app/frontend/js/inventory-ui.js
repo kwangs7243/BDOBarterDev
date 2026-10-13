@@ -1,5 +1,6 @@
 import { saveInventory, saveInventoryOrder } from "./persistence.js";
 import { state } from "./state.js";
+import { applyInventoryFilters } from "./workspace-ui.js";
 
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
 const numberInput = (value, label, integer = true) => { const input = document.createElement("input"); input.type = "number"; input.min = "0"; input.step = integer ? "1" : "any"; input.value = value ?? ""; input.setAttribute("aria-label", label); return input; };
@@ -29,7 +30,7 @@ export function renderInventory(root, setStatus) {
 
     const wrap = el("div", "table-wrap"); const table = document.createElement("table");
     const head = document.createElement("thead"); const headRow = document.createElement("tr");
-    for (const label of ["프로그램 아이템명", "현재 재고", "목표 재고"]) headRow.append(el("th", "", label));
+    for (const label of ["품목", "현재 재고", "목표", "상태"]) headRow.append(el("th", "", label));
     head.append(headRow); table.append(head); const body = document.createElement("tbody");
     for (const name of order[String(tier)]) {
       const item = state.inventory.find((candidate) => candidate.programName === name);
@@ -49,7 +50,11 @@ export function renderInventory(root, setStatus) {
       stockMinus.addEventListener("click", () => adjust(-1)); stockPlus.addEventListener("click", () => adjust(1));
       stockControls.append(stockMinus, stockInput, stockPlus); stockCell.append(stockControls);
       const targetCell = document.createElement("td"); const targetInput = numberInput(item.target, `${name} 목표 재고`); targetInput.dataset.value = "target"; targetCell.append(targetInput);
-      row.append(nameCell, stockCell, targetCell); body.append(row);
+      const balance = el("td", "stock-balance");
+      const known = item.stock !== null && item.target !== null;
+      balance.dataset.kind = !known ? "unknown" : item.stock < item.target ? "short" : "ready";
+      balance.textContent = !known ? "미확인" : item.stock < item.target ? `${item.target - item.stock} 부족` : "충족";
+      row.append(nameCell, stockCell, targetCell, balance); body.append(row);
       for (const [field, input] of [["stock", stockInput], ["target", targetInput]]) {
         input.addEventListener("change", async () => {
           if (input.value === "") {
@@ -81,6 +86,9 @@ export function renderInventory(root, setStatus) {
     }
     table.append(body); wrap.append(table); section.append(wrap); root.append(section);
   }
+  const empty = el("p", "empty", "조건에 맞는 품목이 없습니다. 검색어나 재고 상태를 바꿔 보세요.");
+  empty.id = "inventory-filter-empty"; root.append(empty);
+  applyInventoryFilters();
 }
 
 async function saveAndRefresh(items, root, setStatus, label) {

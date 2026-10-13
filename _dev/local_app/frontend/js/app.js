@@ -8,10 +8,14 @@ import { initRecognitionUI } from "./recognition-ui.js";
 import { openPatchReview } from "./patch-review.js";
 import { initTradeSessionUI, renderTradeList } from "./trade-ui.js";
 import { initScheduleUI, syncScheduleState } from "./schedule-ui.js";
+import { initWorkspaceUI } from "./workspace-ui.js";
 
 const status = document.querySelector("#runtime-status");
 const content = document.querySelector("#app-content");
-function setStatus(message, kind = "info") { status.textContent = message; status.dataset.kind = kind; }
+function setStatus(message, kind = "info") {
+  status.textContent = message; status.dataset.kind = kind;
+  for (const local of document.querySelectorAll('[data-workspace-status]')) { local.textContent = message; local.dataset.kind = kind; }
+}
 function renderAll() {
   if (!state.inventory.length) return;
   renderInventory(document.querySelector("#inventory-root"), setStatus);
@@ -28,6 +32,7 @@ function renderAll() {
 const warehouseCaptureUI = initWarehouseScanUI({ setStatus, onPatch: (patch, report, imageFile) => openPatchReview(patch, report, { setStatus, onApplied: renderAll, imageFile }) });
 initRecognitionUI({ warehouseCaptureUI });
 initScheduleUI(setStatus);
+initWorkspaceUI();
 window.__bdoRenderTradeList = renderTradeList;
 window.__bdoRenderAll = renderAll;
 window.addEventListener("bdo:trade-list-changed", renderTradeList);

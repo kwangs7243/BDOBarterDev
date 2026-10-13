@@ -172,7 +172,9 @@ function renderModeColumn(id, sorties, mode) {
         const debug = document.createElement('div'); debug.className = 'route-debug';
         const formatDiagnostic = (value) => Number.isFinite(Number(value)) ? Number(value).toLocaleString() : '기록 없음';
         debug.textContent = `↳ 부족:${formatDiagnostic(trade.debug.lack)} | 신분:${formatDiagnostic(trade.debug.score)} | 🏆적합도:${formatDiagnostic(trade.debug.fitness)}`;
-        content.append(debug);
+        const explanation = document.createElement('details'); explanation.className = 'route-explanation';
+        const summary = document.createElement('summary'); summary.textContent = '선정 근거';
+        explanation.append(summary, debug); content.append(explanation);
       }
       row.append(content, actions);
       route.append(row);

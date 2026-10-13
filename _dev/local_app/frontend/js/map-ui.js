@@ -19,20 +19,21 @@ export function renderMap(root, setStatus, refresh) {
   const navActions = el("div", "actions"); navActions.append(saveNav); nav.append(navActions);
 
   createMapViewer(root, setStatus);
-  root.append(jsonEditor("map-routes", "지도 스냅샷에 포함할 경로 배열 (현재 편집 중에는 임시 상태)", state.mapRouteDraft ?? [], 7));
+  const storage = el("details", "map-storage"); storage.append(el("summary", "", "지도 슬롯 · 경로 데이터")); root.append(storage);
+  storage.append(jsonEditor("map-routes", "지도 스냅샷에 포함할 경로 배열 (현재 편집 중에는 임시 상태)", state.mapRouteDraft ?? [], 7));
   for (let slot = 1; slot <= 3; slot += 1) {
     const key = String(slot); const snapshot = state.settings.mapSlots[key]; const card = el("div", "preset-card");
     card.append(el("strong", "", `지도 슬롯 ${slot}`), el("p", "muted", snapshot ? `${Object.keys(snapshot.coords).length}개 좌표 · ${snapshot.routes.length}개 경로 · ${snapshot.memos.length}개 메모` : "저장된 지도 없음"));
     const save = el("button", "", "현재값을 슬롯에 저장"); save.type = "button"; save.addEventListener("click", () => { try { const value = snapshotFromEditors(); const mapSlots = { ...state.settings.mapSlots, [key]: value }; saveSection({ mapSlots }, setStatus, `지도 슬롯 ${slot}`, refresh); } catch (error) { setStatus(error.message, "error"); } });
     const load = el("button", "", "슬롯 불러오기"); load.type = "button"; load.disabled = !snapshot; load.addEventListener("click", () => { if (!snapshot) return; const navigationValue = { coords: snapshot.coords, routeCalibrations: snapshot.routeCalibrations, memos: snapshot.memos }; saveSection({ navigation: navigationValue }, setStatus, `지도 슬롯 ${slot} 불러오기`, () => { state.mapRouteDraft = snapshot.routes; refresh(); }); });
-    const actions = el("div", "actions"); actions.append(save, load); card.append(actions); root.append(card);
+    const actions = el("div", "actions"); actions.append(save, load); card.append(actions); storage.append(card);
   }
   const base = state.settings.mapBase; const baseCard = el("div", "preset-card");
   baseCard.append(el("strong", "", "기본 지도"), el("p", "muted", base ? `${Object.keys(base.coords).length}개 좌표 · ${base.routes.length}개 경로 · ${base.memos.length}개 메모` : "저장된 기본 지도 없음"));
   const saveBase = el("button", "", "현재값을 기본 지도로 저장"); saveBase.type = "button"; saveBase.addEventListener("click", () => { try { saveSection({ mapBase: snapshotFromEditors() }, setStatus, "기본 지도", refresh); } catch (error) { setStatus(error.message, "error"); } });
   const loadBase = el("button", "", "기본 지도 불러오기"); loadBase.type = "button"; loadBase.disabled = !base; loadBase.addEventListener("click", () => { if (!base) return; const navigationValue = { coords: base.coords, routeCalibrations: base.routeCalibrations, memos: base.memos }; saveSection({ navigation: navigationValue }, setStatus, "기본 지도 불러오기", () => { state.mapRouteDraft = base.routes; refresh(); }); });
   const clearBase = el("button", "", "기본 지도 저장값 지우기"); clearBase.type = "button"; clearBase.addEventListener("click", () => saveSection({ mapBase: null }, setStatus, "기본 지도 저장값", refresh));
-  const baseActions = el("div", "actions"); baseActions.append(saveBase, loadBase, clearBase); baseCard.append(baseActions); root.append(baseCard);
+  const baseActions = el("div", "actions"); baseActions.append(saveBase, loadBase, clearBase); baseCard.append(baseActions); storage.append(baseCard);
 }
 
 export function renderViewer(root, setStatus, refresh) {

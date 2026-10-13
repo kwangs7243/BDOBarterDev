@@ -1,5 +1,6 @@
 import { reviewExcludedTrades } from "./trade-import-review.js";
 import { state } from "./state.js";
+import { applyTradeFilters } from "./workspace-ui.js";
 import { resetWorkingSession, saveWorkingSession } from "./persistence.js";
 import { canonicalizeIslandName, getItemTier, parseTradeJsonText, processParsedTrades, compareTradeOrder } from "./domain/trade-import.js";
 
@@ -146,7 +147,7 @@ function renderTradeList() {
     const actions = el("div", undefined, "empty-session-actions");
     const capture = el("button", "물교 화면 가져오기"); capture.type = "button"; capture.className = "primary"; capture.addEventListener("click", () => document.querySelector("#open-trade-capture").click());
     const open = el("button", "JSON 입력"); open.type = "button"; open.addEventListener("click", () => document.querySelector("#open-json-import").click());
-    actions.append(capture, open); empty.append(actions); root.replaceChildren(empty); return;
+    actions.append(capture, open); empty.append(actions); root.replaceChildren(empty); applyTradeFilters(); return;
   }
   parley.disabled = false; parley.value = state.session.remainingParley ?? ""; resetButton.disabled = false;
   const deletedCount = trades.filter((trade) => trade.deleted).length;
@@ -175,6 +176,8 @@ function renderTradeList() {
     }); actionCell.append(toggleDeleted); row.append(actionCell); body.append(row);
   });
   table.append(body); root.append(table);
+  const empty = el("p", "조건에 맞는 교환이 없습니다. 검색어나 상태 필터를 바꿔 보세요.", "empty");
+  empty.id = "trade-filter-empty"; root.append(empty); applyTradeFilters();
 }
 
 export async function initTradeSessionUI(setStatus) {

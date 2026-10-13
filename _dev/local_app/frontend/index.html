@@ -11,17 +11,28 @@
   <link rel="stylesheet" href="/assets/css/patch-review.css">
   <link rel="stylesheet" href="/assets/css/trade-session.css">
   <link rel="stylesheet" href="/assets/css/schedule.css">
-  <link rel="stylesheet" href="/assets/css/nautical-theme.css">
+  <link rel="stylesheet" href="/assets/css/map-viewer.css" data-map-viewer>
+  <link rel="stylesheet" href="/assets/css/workspace.css">
 </head>
 <body>
+  <a class="skip-link" href="#app-content">작업 영역으로 이동</a>
+  <aside class="app-sidebar" aria-label="주 메뉴">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">B</span><div><h1>BDO 물교</h1><span>항해 작업실</span></div></div>
+    <p class="nav-caption">작업 공간</p>
+    <nav class="workspace-nav" aria-label="작업 화면">
+      <button type="button" data-workspace-view="session" aria-current="page"><span aria-hidden="true">≡</span>현재 회차</button>
+      <button type="button" data-open-tool="open-schedule"><span aria-hidden="true">↗</span>출항 브리핑</button>
+      <button type="button" data-workspace-view="inventory"><span aria-hidden="true">▤</span>창고 재고</button>
+      <button type="button" data-open-tool="open-map-speed"><span aria-hidden="true">⌖</span>지도·항로</button>
+    </nav>
+    <div class="sidebar-capture"><p class="nav-caption">화면 가져오기</p><button type="button" data-open-tool="open-trade-capture">물교 캡처 <kbd>F10</kbd></button><button type="button" data-open-tool="open-warehouse-scan">창고 스캔</button><p>게임에서 캡처한 뒤<br>필요한 값만 확인하세요.</p></div>
+    <div class="sidebar-footer"><button type="button" data-open-tool="open-settings">선박·교섭력 설정</button><span>로컬 저장 · 수동 적용</span></div>
+  </aside>
   <header class="app-header">
-    <div class="brand"><h1>BDO 물교</h1><span id="runtime-status" role="status">저장 상태를 불러오는 중입니다.</span></div>
-    <div class="compact-settings" aria-label="자주 쓰는 설정">
-      <div id="ship-root" class="compact-setting"></div>
-      <div id="parley-root" class="compact-setting"></div>
-      <div id="presets-root" class="compact-presets"></div>
-    </div>
+    <div class="workspace-location"><span>항해 작업실</span><span aria-hidden="true">/</span><strong id="workspace-title">현재 회차</strong></div>
+    <span id="runtime-status" role="status">저장 상태를 불러오는 중입니다.</span>
     <div class="header-utilities">
+      <button id="open-settings" type="button">선박·교섭력</button>
       <details class="header-tools">
         <summary>도구</summary>
         <div class="header-tool-actions" aria-label="보조 도구">
@@ -32,19 +43,27 @@
       </details>
     </div>
   </header>
-  <main id="app-content" aria-busy="true" class="workspace">
+  <main id="app-content" aria-busy="true" class="workspace" data-view="session" tabindex="-1">
     <section class="panel session-panel" id="trade-session-panel">
       <div class="panel-heading session-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="session-input-actions"><button id="open-trade-capture" class="primary" type="button">물교 화면 가져오기</button><button id="open-json-import" type="button">JSON 입력</button><button id="add-manual-trade" type="button">행 추가</button><details class="session-management"><summary>회차 관리</summary><div class="session-management-actions"><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></details></div></div>
       <div class="session-toolbar"><div class="session-budget"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"></div><div class="session-plan-actions"><span class="session-action-label">계획</span><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button></div><div class="session-map-actions"><span class="session-action-label">지도</span><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button></div><span id="trade-import-status" class="status-note" role="status"></span></div>
+      <div class="list-filter-bar"><label for="trade-search">교환 찾기</label><input id="trade-search" type="search" placeholder="섬 또는 품목 검색"><label for="trade-visibility" class="sr-only">교환 상태</label><select id="trade-visibility"><option value="all">모든 교환</option><option value="active">사용 중</option><option value="excluded">제외·삭제됨</option></select><span id="trade-filter-summary" role="status"></span></div>
       <div id="trade-list-root" class="trade-list-scroll"></div>
     </section>
     <section class="panel inventory-panel" id="mainPanel">
       <div class="panel-heading"><div><h2>창고</h2><span class="hint">현재 재고와 목표 재고</span></div><button id="open-warehouse-scan" type="button">창고 스캔</button></div>
-      <p class="inventory-null-hint">빈칸 = 미확인 · 0 = 확인된 0개</p>
+      <div class="inventory-toolbar"><label class="search-field" for="inventory-search">품목 검색<input id="inventory-search" type="search" placeholder="예: 씨앗 주머니"></label><label class="field" for="inventory-stock-filter">재고 상태<select id="inventory-stock-filter"><option value="all">모든 품목</option><option value="short">목표 미달</option><option value="unknown">미확인</option></select></label><span id="inventory-filter-summary" role="status"></span></div>
+      <div class="inventory-tier-tabs" role="group" aria-label="재고 단계"><button type="button" data-inventory-tier="all" aria-pressed="true">전체</button><button type="button" data-inventory-tier="1" aria-pressed="false">1단</button><button type="button" data-inventory-tier="2" aria-pressed="false">2단</button><button type="button" data-inventory-tier="3" aria-pressed="false">3단</button><button type="button" data-inventory-tier="4" aria-pressed="false">4단</button><button type="button" data-inventory-tier="5" aria-pressed="false">5단</button></div>
+      <p class="inventory-null-hint">빈칸 = 미확인 · 0 = 확인된 0개 · 수량을 수정하면 저장됩니다.</p>
       <div id="inventory-root"></div>
       <details class="tier-rule-details"><summary>단계 규칙</summary><div id="tier-rules-root"></div></details>
     </section>
   </main>
+
+  <dialog id="settings-dialog" class="app-dialog settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-titlebar"><div><h2 id="settings-title">선박·교섭력 설정</h2><p class="tool-dialog-context">선박 성능과 교환 비용, 자주 쓰는 설정을 관리합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
+    <div class="dialog-body settings-sections"><section><h3>선박과 교역 모드</h3><p class="hint">현재 회차의 적재 한도와 항해 속도에 사용합니다.</p><div id="ship-root"></div></section><section><h3>교섭력과 교환 비용</h3><p class="hint">시작 교섭력은 새 회차부터, 교환 비용은 현재 회차에도 적용됩니다.</p><div id="parley-root"></div></section><section><h3>빠른 설정</h3><div id="presets-root"></div></section></div>
+  </dialog>
 
   <dialog id="json-import-dialog" class="app-dialog small-dialog" aria-labelledby="json-dialog-title">
     <div class="dialog-titlebar"><h2 id="json-dialog-title">물교 JSON 입력</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
@@ -54,8 +73,9 @@
   <dialog id="trade-capture-dialog" class="app-dialog small-dialog trade-capture-dialog" aria-labelledby="trade-capture-title" data-capture-context="trade">
     <div class="dialog-titlebar"><h2 id="trade-capture-title">물교 화면 가져오기</h2><button type="button" data-close-trade-capture aria-label="닫기">×</button></div>
     <div class="dialog-body">
-      <p class="hint">화면을 연결하거나 파일·이미지를 가져온 뒤 물교 목록이 보이는 영역을 캡처하세요. 준비된 이미지는 인식 후 최종 검수할 수 있으며, 회차에는 직접 적용하기 전까지 반영되지 않습니다.</p>
-      <section class="trade-roi-panel" aria-label="물교 화면 캡처 영역">
+      <ol class="capture-workflow" aria-label="물교 입력 순서"><li><b>1</b> 이미지 준비</li><li><b>2</b> 인식 · 필요한 값 확인</li><li><b>3</b> 회차에 적용</li></ol>
+      <div class="capture-workspace"><section class="capture-inputs" aria-label="인식할 이미지 준비">
+      <details class="trade-roi-panel capture-browser-options" aria-label="물교 화면 캡처 영역"><summary>다른 방법 · 화면 공유로 캡처</summary>
         <section id="screen-capture-session" class="screen-capture-session" aria-label="화면 공유 연결">
           <span id="screen-capture-status" role="status" aria-live="polite">화면 연결 안 됨</span>
           <div class="screen-capture-actions"><button id="connect-screen-capture" type="button">화면 연결</button><button id="disconnect-screen-capture" type="button" disabled>연결 끊기</button></div>
@@ -79,20 +99,23 @@
           <button type="button" data-action="capture-trade-roi" disabled>선택 영역 캡처</button>
           <button type="button" data-action="reset-trade-roi">영역 초기화</button>
         </div>
-      </section>
+      </details>
       <label class="field" for="trade-capture-files">이미지 파일 선택<input id="trade-capture-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple></label>
       <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
       <p class="capture-status" data-role="capture-status" role="status" aria-live="polite"></p>
       <div class="actions"><button type="button" data-action="clear-trade-queue" disabled>스크린샷 전체삭제</button></div>
       <ol class="capture-draft-list" data-role="capture-list"></ol>
+      </section>
       <section class="trade-recognition-panel" data-role="trade-recognition" aria-labelledby="trade-recognition-title" aria-busy="false">
         <div class="trade-recognition-toolbar">
           <div><h3 id="trade-recognition-title">물교 결과 만들기</h3><p data-role="trade-runtime-status" role="status" aria-live="polite">로컬 인식 엔진 확인 전</p><p class="trade-queue-summary" data-role="trade-queue-summary" aria-live="polite">준비된 이미지 0개</p></div>
           <button type="button" data-action="recognize-trade" disabled>인식 결과 만들기</button>
         </div>
         <p data-role="trade-recognition-status" role="status" aria-live="polite"></p>
+        <div class="recognition-empty"><span aria-hidden="true">▤</span><h3>확인할 교환을 한곳에서</h3><p>이미지를 준비한 뒤 인식 결과를 만드세요.<br>확인이 필요한 값은 원본과 함께 표시됩니다.</p></div>
         <div data-role="trade-recognition-result" class="trade-recognition-result" hidden></div>
       </section>
+      </div>
       <div class="actions"><button type="button" data-close-trade-capture>닫기</button></div>
     </div>
   </dialog>
@@ -117,7 +140,7 @@
         </section>
       </div>
       <div id="schedule-columns" class="schedule-columns" data-mode="both"><section><h3 id="header-speed">⚡ 쾌속 모드</h3><div id="summary-speed" class="mode-settlement" aria-live="polite"></div><div id="col-speed" class="schedule-column"></div></section><section><h3 id="header-balance">⚖️ 균형 모드</h3><div id="summary-balance" class="mode-settlement" aria-live="polite"></div><div id="col-balance" class="schedule-column"></div></section></div>
-      <section class="briefing-free-route" aria-label="추가 경유지 편집"><div id="free-route-root"></div></section>
+      <details class="briefing-free-route"><summary>자유 항로 · 추가 경유지</summary><div id="free-route-root"></div></details>
       <details class="schedule-diagnostics"><summary>계산 진단 데이터</summary><pre id="schedule-diagnostics">아직 계산하지 않았습니다.</pre><button id="copy-engine-diagnostics" type="button">진단 복사</button></details>
       <div class="compat-inputs" aria-hidden="true"><input id="maxParley" type="number"><input id="normalWeight" type="number"><input id="maxWeight" type="number"><input id="parleyPerTrade" type="number"><input id="parleyCrow" type="number"></div>
       <div id="waypointModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="waypoint-title">
@@ -133,7 +156,7 @@
 
   <dialog id="map-tools-dialog" class="app-dialog map-tools-dialog" aria-labelledby="map-tools-title">
     <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="map-tools-title">지도·항로</h2><p class="tool-dialog-context">현재 회차 경로 설정과 지도 뷰어를 함께 사용합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body tool-dialog-content"><div class="map-tools-grid"><section class="tool-dialog-workspace"><h3>경로·좌표 설정</h3><div id="navigation-root"></div></section><section class="tool-dialog-workspace"><h3>지도 뷰어</h3><div id="map-root"></div><div id="viewer-root"></div></section></div></div>
+    <div class="dialog-body tool-dialog-content"><div class="map-tools-grid"><section class="tool-dialog-workspace"><h3>항로 지도</h3><p class="hint">지도에서 섬과 경로를 확인하고 경유지·좌표·메모를 편집합니다.</p><div id="map-root"></div></section><section class="tool-dialog-workspace"><h3>지도와 화면 설정</h3><details><summary>좌표 · 항로 보정 · 메모</summary><div id="navigation-root"></div></details><details><summary>화면 배율 · 패널 배치</summary><div id="viewer-root"></div></details></section></div></div>
   </dialog>
 
   <dialog id="engine-diagnostics-dialog" class="app-dialog small-dialog" aria-labelledby="engine-diagnostics-title"><div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="engine-diagnostics-title">항로 결정 과정</h2><p class="tool-dialog-context">ENGINE_DEBUG · 계산 근거와 후보 선택 설명</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div><div class="dialog-body tool-dialog-content"><p class="tool-dialog-intro">계산기에 기록된 서류 점수와 후보별 선택 근거를 보여줍니다. 저장된 근거가 없는 제외 사유는 추정하지 않습니다. 타이머는 새로고침 후 초기화됩니다.</p><div id="engine-debug-content"></div><details class="tool-dialog-raw"><summary>원본 ENGINE_DEBUG JSON</summary><pre id="engine-debug-raw"></pre></details><button id="copy-engine-diagnostics-dialog" type="button">진단 정보 복사</button><p id="diagnostics-copy-status" class="tool-dialog-status" role="status" aria-live="polite"></p></div></dialog>

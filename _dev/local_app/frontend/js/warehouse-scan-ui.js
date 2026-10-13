@@ -37,19 +37,20 @@ export function initWarehouseScanUI({ setStatus, onPatch }) {
   dialog.setAttribute("aria-labelledby", "warehouse-dialog-title");
   dialog.innerHTML = `
     <section class="warehouse-dialog-shell">
-      <header class="warehouse-dialog-header"><div><h2 id="warehouse-dialog-title">마스터 창고 스캔</h2><p>파일, 놓기 또는 붙여넣기로 이미지를 입력합니다. PNG 원본은 다시 저장하지 않습니다.</p></div><button type="button" class="icon-button" data-action="close" aria-label="닫기">닫기</button></header>
+      <header class="warehouse-dialog-header"><div><h2 id="warehouse-dialog-title">창고 스캔</h2><p>창고 이미지를 읽고, 필요한 값을 확인한 뒤 재고에 적용합니다.</p></div><button type="button" class="icon-button" data-action="close" aria-label="닫기">닫기</button></header>
       <main class="warehouse-dialog-content">
-        <section class="trade-roi-panel" aria-label="창고 캡처 범위">
+        <ol class="capture-workflow" aria-label="창고 입력 순서"><li><b>1</b> 이미지 준비</li><li><b>2</b> 판독 · 필요한 값 확인</li><li><b>3</b> 재고에 적용</li></ol>
+        <details class="trade-roi-panel capture-browser-options" aria-label="창고 캡처 범위"><summary>다른 방법 · 화면 공유로 캡처</summary>
           <div class="trade-roi-actions"><button type="button" data-action="connect-screen">화면 연결</button><button type="button" data-action="disconnect-screen">연결 종료</button><button type="button" data-action="reset-roi">범위 초기화</button><button type="button" data-action="capture-roi" disabled>선택 영역 캡처</button></div>
           <p>화면을 연결한 뒤 초록색 영역을 이동하고 가장자리를 끌어 창고 범위를 지정하세요.</p>
           <div class="trade-preview-stage"><video muted autoplay playsinline></video><div class="trade-roi-box" hidden><button type="button" class="trade-roi-move" data-roi-move aria-label="창고 영역 이동"></button>${["n", "s", "e", "w", "ne", "nw", "se", "sw"].map(handle => `<button type="button" class="trade-roi-handle ${handle}" data-roi-handle="${handle}" aria-label="창고 영역 ${handle} 크기 조절"></button>`).join("")}</div></div>
-        </section>
+        </details>
         <label class="warehouse-drop-zone" for="warehouse-image"><strong>이미지를 여기에 놓거나 파일을 선택하세요</strong><span>PNG/JPEG/WebP/GIF · 최대 20 MiB · 32메가픽셀 · 애니메이션 제외</span><input id="warehouse-image" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif"></label>
         <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
         <p class="warehouse-file-name" aria-live="polite">대기 이미지가 없습니다.</p>
         <ol class="capture-queue-list" data-role="capture-list"></ol>
         <img class="warehouse-preview" alt="선택한 창고 이미지 미리보기" hidden>
-        <p>판독은 기존 V1 창고 스캐너를 사용합니다. 재고에는 직접 확인해 적용하기 전까지 변경이 없습니다.</p><a href="/api/warehouse-dataset" download>인식 기록 내보내기 (ZIP)</a>
+        <p class="hint">판독 후 원본과 수량을 확인하세요. 적용 버튼을 누르면 창고 재고에 저장됩니다.</p><a href="/api/warehouse-dataset" download>인식 기록 내보내기 (ZIP)</a>
         <p class="warehouse-scan-message" role="status" aria-live="polite"></p>
       </main>
       <footer class="warehouse-dialog-footer"><button type="button" data-action="cancel">취소</button><button type="button" class="primary" data-action="scan" disabled>선택 이미지 판독</button></footer>

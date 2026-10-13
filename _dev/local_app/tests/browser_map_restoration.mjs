@@ -54,6 +54,7 @@ try {
   await click(".header-tools > summary");
   await click("#open-map-tools");
   await waitFor(async () => await evaluate("document.querySelector('#map-tools-dialog').open && !!document.querySelector('#map-root .mv-open-button')"), "map tools dialog");
+  await click(".tool-dialog-workspace details:has(#viewer-root) > summary");
   await setValue("#viewer-zoom", "130"); await click("#viewer-root .actions button");
   await waitFor(async () => await evaluate("document.documentElement.style.getPropertyValue('--app-zoom')==='1.3'"), "global 130% UI zoom");
   checks.zoom130 = "PASS";
@@ -220,6 +221,7 @@ try {
 
   await click(".mv-header button"); await click("#map-tools-dialog [data-close-dialog]"); await click("#open-schedule");
   await waitFor(async()=>await evaluate("document.querySelector('#schedule-dialog').open&&!!document.querySelector('#free-route-root .mv-free-route')"),"schedule free-route host");
+  await click(".briefing-free-route > summary");
   await setValue("#free-route-root input:nth-of-type(1)",pair[0]);await setValue("#free-route-root input:nth-of-type(2)",pair[1]);
   const freeResult=await evaluate("document.querySelector('#free-route-root .mv-free-result').textContent");
   if(!freeResult.includes('거리'))throw new Error(`free route did not calculate distance and time: ${freeResult}`);
