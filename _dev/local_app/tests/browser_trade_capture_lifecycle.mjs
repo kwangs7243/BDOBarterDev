@@ -22,7 +22,7 @@ const browser=await chromium.launch({executablePath:process.env.BDO_CHROME ?? 'C
 try{
  const page=await browser.newPage({viewport:{width:1920,height:1080}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
- let revision=1,saved=null,failOCR=false,emptyOCR=false,failSave=false,feedback=[],writes=0;
+ let revision=1,saved=null,failOCR=false,emptyOCR=false,failSave=false,unknownOCR=false,feedback=[],feedbackBodies=[],writes=0;
  const settings={ship:{normalWeight:22689,maxWeight:40259,speed:170,mode:'none'},parley:{defaultBudget:1000000,normalCost:10247,crowCost:15529},tuning:{},tierRules:{1:20,2:20,3:20,4:20,5:2}};
  await page.route('**/api/**',async route=>{
   const req=route.request(),path=new URL(req.url()).pathname;
@@ -33,9 +33,18 @@ try{
    if(failOCR)return send({error:{code:'recognition_worker_failed'}},503);
    const batch=JSON.parse(req.postData().match(/name="batch"\r\n\r\n([^\r]+)/)[1]);
    const fields=Object.fromEntries(Object.entries({island:'아지르 섬',fromItem:'자수정 파편',toItem:'102년 묵은 황금초',reqAmount:1,count:6,yield:1}).map(([k,v])=>[k,{corrected:v,rawOCR:String(v),reviewRequired:k==='count'}]));
-   return send({ok:true,result:{version:3,batchId:batch.batchId,captures:batch.captures,rows:emptyOCR?[]:[{captureId:batch.captures[0].captureId,ordinal:0,rowBox:{x:0,y:0,width:320,height:200},fields}],runtime:{engineId:'test',workerVersion:'test',modelBundleSha256:'test'}}});
+   let rows=emptyOCR?[]:[{captureId:batch.captures[0].captureId,ordinal:0,rowBox:{x:0,y:0,width:320,height:200},fields}];
+   if(unknownOCR){
+    const regular=structuredClone(rows[0]);regular.fields.count.reviewRequired=false;
+    const unknown=structuredClone(regular);unknown.ordinal=1;unknown.fields.island.corrected=unknown.fields.island.rawOCR='나르보 섬';
+    Object.assign(unknown.fields.toItem,{corrected:'흑수정 장식 팔찌',rawOCR:'흑수정 장식 팔찌',reviewRequired:true,confidence:.99,
+      variants:[{text:'흑수정 장식 팔찌',confidence:.99},{text:'흑수정 장식팔짜',confidence:.9}]});
+    unknown.fields.yield.corrected=100;unknown.fields.yield.rawOCR='100';
+    const peer=structuredClone(unknown);peer.ordinal=2;rows=[regular,unknown,peer];
+   }
+   return send({ok:true,result:{version:3,batchId:batch.batchId,captures:batch.captures,rows,runtime:{engineId:'test',workerVersion:'test',modelBundleSha256:'test'}}});
   }
-  if(path==='/api/recognition/trade-corrections'){const data=JSON.parse(req.postData().match(/name="feedback"\r\n\r\n([^\r]+)/)[1]);feedback.push(data.captures.length);assert.ok(data.captures.length>0,'review keeps source capture after queue clearing');return send({ok:true});}
+  if(path==='/api/recognition/trade-corrections'){const data=JSON.parse(req.postData().match(/name="feedback"\r\n\r\n([^\r]+)/)[1]);feedback.push(data.captures.length);feedbackBodies.push(data);assert.ok(data.captures.length>0,'review keeps source capture after queue clearing');return send({ok:true});}
   if(path==='/api/working-session'){if(failSave)return send({error:{message:'test save failed'}},503);saved=req.postDataJSON().session;writes++;return send({revision:++revision});}
   if(path==='/api/bootstrap')return send({revision,sessionRevision:revision,settings,inventory:[],order:{},workingSession:saved,scheduleSlots:{}});
   return send({error:{message:'unexpected '+path}},404);
@@ -64,5 +73,26 @@ try{
  failSave=true;await page.locator('[data-action=apply-live-new]').click();await page.waitForFunction(()=>document.querySelector('[data-role=trade-recognition-status]').textContent.includes('test save failed'));assert.equal(await dialog.evaluate(d=>d.open),true,'save failure keeps dialog');assert.equal(await page.locator('[data-role=trade-live-list]').isVisible(),true);
  failSave=false;await page.locator('[data-action=apply-live-new]').click();await page.waitForFunction(()=>!document.querySelector('#trade-capture-dialog').open);assert.equal(saved.scannedTrades.length,1);assert.equal(writes,1);assert.equal(await page.locator('[data-role=trade-live-list]').evaluate(d=>d.childElementCount),0);
  await open();assert.equal(await page.locator('[data-role=trade-live-list]').isVisible(),false,'reopen has no old review');await add();await recognize();await page.locator('[data-role=live-list-review] input[data-field=count]').fill('6');await page.locator('[data-role=live-list-review] form').evaluate(f=>f.requestSubmit());await page.waitForFunction(()=>!document.querySelector('[data-action=apply-live-append]').disabled);await page.locator('[data-action=apply-live-append]').click();await page.waitForFunction(()=>!document.querySelector('#trade-capture-dialog').open);assert.equal(writes,2);assert.equal(saved.scannedTrades.length,1);assert.deepEqual(errors,[]);
- console.log(JSON.stringify({status:'PASS',nativeClearVisible:true,manualClear:true,recognitionQueueCleared:true,reviewSourceAndFeedbackPreserved:true,failedAndEmptyRecognitionPreserved:true,saveFailureKeptDialog:true,newAndAppendCloseAfterSave:true,reopenClean:true,viewport:'1920x1080',zoom:'130%',backend:'mocked',realOCR:'NOT_RUN',userDataWrites:0}));
+ unknownOCR=true;await open();await add();await recognize();
+ assert.equal(await page.locator('.trade-review-row').count(),1,'same unregistered trade grouped');
+ assert.ok(await page.locator('.trade-review-row').textContent().then(s=>s.includes('지원 목록에 없는 후보')));
+ assert.equal(await page.locator('.trade-review-row input[data-action=include-live-row]').isChecked(),true,'no automatic exclusion');
+ assert.equal(await page.locator('.trade-review-row .trade-review-source img').count(),2,'both source previews retained');
+ await page.screenshot({path:resolve(frontend,'../../recognition-local/trade-improvement-20261013/group-review.png')});
+ await page.locator('.trade-review-row input[data-action=include-live-row]').uncheck();
+ await page.waitForFunction(()=>!document.querySelector('[data-action=apply-live-new]').disabled);
+ await page.locator('[data-action=apply-live-new]').click();await page.waitForFunction(()=>!document.querySelector('#trade-capture-dialog').open);
+ const excluded=feedbackBodies.at(-1).snapshot.result.rows;
+ assert.equal(excluded.length,3);assert.equal(excluded.filter(r=>r.excluded).length,2,'group exclusion preserved per source');
+ assert.equal(saved.scannedTrades.length,1,'unregistered trade never added automatically');
+ await open();await add();await recognize();
+ await page.locator('.trade-review-row input[data-field=toItem]').fill('102년 묵은 황금초');
+ await page.locator('[data-role=live-list-review] form').evaluate(f=>f.requestSubmit());
+ await page.waitForFunction(()=>!document.querySelector('[data-action=apply-live-new]').disabled);
+ const corrected=feedbackBodies.at(-1);
+ assert.equal(corrected.corrections.length,2,'each original source gets its own correction');
+ assert.equal(corrected.snapshot.result.rows.filter(r=>r.fields.toItem.corrected==='102년 묵은 황금초').length,3);
+ await page.locator('[data-action=apply-live-new]').click();await page.waitForFunction(()=>!document.querySelector('#trade-capture-dialog').open);
+ assert.equal(saved.scannedTrades.length,2,'both corrected sources become one visible trade');assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({status:'PASS',nativeClearVisible:true,manualClear:true,recognitionQueueCleared:true,reviewSourceAndFeedbackPreserved:true,failedAndEmptyRecognitionPreserved:true,saveFailureKeptDialog:true,newAndAppendCloseAfterSave:true,reopenClean:true,unregisteredGrouping:true,groupSourcePreserved:true,groupExcludeAndEdit:true,noAutomaticExclusion:true,viewport:'1920x1080',zoom:'130%',backend:'mocked',realOCR:'NOT_RUN',userDataWrites:0}));
 }finally{await browser.close();await new Promise(ok=>server.close(ok));}

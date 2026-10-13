@@ -2,14 +2,28 @@
 # python -m PyInstaller --clean --noconfirm local_app/packaging/bdo-barter.spec
 from pathlib import Path
 import os
+import json
+import numpy as np
 
 ROOT = Path(SPECPATH).resolve().parents[1]
 trade_model = Path(os.environ.get("BDO_PACKAGE_TRADE_MODEL_DIR", ROOT / "recognition-local/models/t010b1/official_models/korean_PP-OCRv5_mobile_rec_onnx"))
 if not all((trade_model / name).is_file() for name in ("inference.onnx", "inference.yml")):
     raise RuntimeError("The verified local trade OCR model is required for packaging.")
-warehouse_templates = ROOT / "recognition-local" / "models" / "warehouse" / "quantity_templates.npz"
+warehouse_templates = Path(os.environ.get("BDO_PACKAGE_WAREHOUSE_TEMPLATES",
+    ROOT / "recognition-local" / "models" / "warehouse" / "quantity_templates.npz"))
 if not warehouse_templates.is_file():
-    warehouse_templates = ROOT / "tools" / "warehouse_patch" / "quantity_templates.npz"
+    raise RuntimeError("Verified warehouse feedback templates are required for packaging. "
+                       "Set BDO_PACKAGE_WAREHOUSE_TEMPLATES to the calibrated quantity_templates.npz.")
+with np.load(warehouse_templates, allow_pickle=False) as warehouse_data:
+    feedback_keys = {"feedback_slots", "feedback_values", "feedback_item_names", "feedback_provenance_json"}
+    if not feedback_keys.issubset(warehouse_data.files):
+        raise RuntimeError("Warehouse packaging requires calibrated feedback; base templates are insufficient.")
+    verified_rows = len(warehouse_data["feedback_slots"])
+    provenance = json.loads(str(warehouse_data["feedback_provenance_json"]))
+    if (verified_rows < 1 or provenance.get("verifiedRows") != verified_rows
+            or len(warehouse_data["feedback_values"]) != verified_rows
+            or len(warehouse_data["feedback_item_names"]) != verified_rows):
+        raise RuntimeError("Warehouse feedback templates and their verified-row provenance do not agree.")
 datas = [
     (str(trade_model / "inference.onnx"), "local_app/recognition_data/trade-model"),
     (str(trade_model / "inference.yml"), "local_app/recognition_data/trade-model"),

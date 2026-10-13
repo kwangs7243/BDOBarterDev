@@ -67,7 +67,10 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
       const include = document.createElement("input"); include.type = "checkbox"; include.checked = !row.excluded;
       include.disabled = getPending(); include.dataset.action = "include-live-list-row";
       include.setAttribute("aria-label", `${index + 1}행 목록 포함`);
-      include.addEventListener("change", () => { row.excluded = !include.checked; renderLiveList(result); });
+      include.addEventListener("change", () => {
+        for (const member of row.reviewGroupIndices ?? [index]) result.rows[member].excluded = !include.checked;
+        renderLiveList(result);
+      });
       tableRows.get(index).cells[0].prepend(include);
     });
     const details = document.createElement("details");
@@ -97,16 +100,17 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
       const form = document.createElement("form"); form.noValidate = true;
       const inputs = [];
       const updateSelection = () => {
-        const excluded = result.rows.filter((row) => row.excluded).length;
+        const excluded = visibleRows.filter(({row}) => row.excluded).length;
         const unresolved = visibleRows.filter(({row}) => !row.excluded).reduce((total, {row}) => total + Object.values(row.fields).filter((field) => field.reviewRequired).length, 0);
         counts.textContent = `최종 리스트 포함 ${visibleRows.length - excluded}행 · 제외 ${excluded}행 · 중복 ${result.rows.length - visibleRows.length}행 통합 · 확인할 값 ${unresolved}곳`;
         tradeRecognitionStatus.textContent = counts.textContent;
         updateApplyState();
       };
       reviewRows.forEach(({ row, index }) => {
+        const members = row.reviewGroupIndices ?? [index];
         const card = document.createElement("section"); card.className = "trade-review-row"; card.dataset.row = String(index);
         const header = document.createElement("div"); header.className = "trade-review-row-header";
-        const heading = document.createElement("strong"); heading.textContent = `${index + 1}행 · ${row.fields.island.corrected ?? row.fields.island.rawOCR}`;
+        const heading = document.createElement("strong"); heading.textContent = `${index + 1}행 · ${row.fields.island.corrected ?? row.fields.island.rawOCR}${members.length > 1 ? ` · 같은 교환 ${members.length}행 묶음` : ""}`;
         const rowStatus = document.createElement("span"); rowStatus.className = "trade-review-row-status";
         const choice = document.createElement("label"); choice.className = "trade-review-choice";
         const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = !row.excluded;
@@ -138,6 +142,25 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
           }
         }
         card.append(header, overview, preview, fields); form.append(card);
+        if (members.length > 1) {
+          const sources = document.createElement("details");
+          const summary = document.createElement("summary"); summary.textContent = `추가 원본 ${members.length - 1}장 보기`;
+          sources.append(summary);
+          for (const member of members.slice(1)) {
+            const sourceRow = result.rows[member];
+            const sourceCapture = reviewCaptures.find(item => item.metadata.captureId === sourceRow.captureId);
+            if (!sourceCapture || !sourceRow.rowBox) continue;
+            const box = sourceRow.rowBox;
+            const sourcePreview = document.createElement("div"); sourcePreview.className = "trade-review-source";
+            sourcePreview.style.aspectRatio = `${box.width} / ${box.height}`;
+            const image = document.createElement("img"); image.alt = `${member + 1}행 겹친 원본 화면`;
+            image.src = reviewPreviews.create(sourceCapture.blob);
+            image.style.width = `${sourceCapture.metadata.frame.width / box.width * 100}%`;
+            image.style.left = `${-box.x / box.width * 100}%`; image.style.top = `${-box.y / box.height * 100}%`;
+            sourcePreview.append(image); sources.append(sourcePreview);
+          }
+          card.append(sources);
+        }
         const rowInputs = unresolved.map((name) => {
           const entry = { row, index, name, field: row.fields[name] };
           const label = document.createElement("label"); label.dataset.field = name;
@@ -149,18 +172,26 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
           input.type = numeric ? "number" : "text";
           if (numeric) { input.step = "1"; input.min = entry.name === "count" ? "0" : "1"; }
           input.value = entry.field.reviewDraft ?? entry.field.corrected ?? (numeric ? "" : entry.field.rawOCR);
-          input.addEventListener("input", () => { entry.field.reviewDraft = input.value; entry.field.reviewRequired = true; updateSelection(); });
+          input.addEventListener("input", () => {
+            for (const member of members) {
+              result.rows[member].fields[name].reviewDraft = input.value;
+              result.rows[member].fields[name].reviewRequired = true;
+            }
+            updateSelection();
+          });
           const source = document.createElement("small"); source.textContent = entry.field.reviewReason || (numeric ? entry.field.allowedValues ? "2개 또는 3개인지 원본 숫자를 확인하세요." : "숫자를 확정하지 못했습니다. 강조된 원본과 비교하세요." : "품목·섬 이름을 확정하지 못했습니다. 강조된 원본과 비교하세요.");
           label.append(caption, input, source); fields.append(label);
           return { ...entry, input, numeric };
         });
-        inputs.push(...rowInputs);
+        inputs.push(...rowInputs.flatMap(entry => members.map(member => ({...entry, row:result.rows[member],
+          index:member, field:result.rows[member].fields[entry.name]}))));
         const updateRow = () => {
           card.classList.toggle("trade-review-excluded", Boolean(row.excluded));
           const tableRow = tableRows.get(index);
           tableRow.classList.toggle("trade-review-excluded", Boolean(row.excluded));
           choiceText.textContent = row.excluded ? "리스트에서 제외" : "리스트에 포함";
-          rowStatus.textContent = row.excluded ? "제외 선택" : row.reviewFields.some((name) => row.fields[name].reviewRequired) ? "값 확인 필요" : "확인 완료";
+          rowStatus.textContent = row.excluded ? "제외 선택" : row.fields.toItem.supportStatus === "UNREGISTERED_CANDIDATE"
+            ? "지원 목록에 없는 후보" : row.reviewFields.some((name) => row.fields[name].reviewRequired) ? "값 확인 필요" : "확인 완료";
           const projected = structuredClone(row);
           for (const name of ["fromItem", "toItem"]) if (projected.fields[name].reviewDraft !== undefined) projected.fields[name].corrected = projected.fields[name].reviewDraft;
           applyLiveTradeRules(projected, tradeCatalog);
@@ -171,7 +202,10 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
           });
           updateSelection();
         };
-        checkbox.addEventListener("change", () => { row.excluded = !checkbox.checked; updateRow(); });
+        checkbox.addEventListener("change", () => {
+          for (const member of members) result.rows[member].excluded = !checkbox.checked;
+          updateRow();
+        });
         fields.addEventListener("input", updateRow);
         updateRow();
       });

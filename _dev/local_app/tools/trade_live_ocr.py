@@ -192,11 +192,12 @@ def merge_quantity_readings(primary, token, allowed_values=None, field=None):
                 "reviewRequired": conflict,
                 **({"allowedValues": list(allowed_values), "valueSource": "CONSTRAINED_OCR"} if allowed_values else {})}
     conflicts = [reading for reading in token["variants"] if reading["text"].isdigit()
-                 and reading["confidence"] >= .5 and int(reading["text"]) != primary["corrected"]]
+                 and reading["confidence"] >= .5 and int(reading["text"]) != primary["corrected"]
+                 and (allowed_values is None or int(reading["text"]) in allowed_values)]
     return {**primary, "variants": combined, "reviewRequired": primary["reviewRequired"] or bool(conflicts)}
 
 
-def read_outlined_quantity(reader, row, field):
+def _outlined_quantity_image(row, field):
     """Keep numeral edges next to their dark outline without the bright item artwork."""
     import cv2
 
@@ -222,6 +223,16 @@ def read_outlined_quantity(reader, row, field):
         return None
     filtered = Image.fromarray(np.where(selected[:, :, None], rgb, 0).astype(np.uint8))
     filtered = ImageOps.expand(filtered.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)), 3, fill="black")
+    columns = np.flatnonzero(selected.any(axis=0))
+    groups = np.split(columns, np.where(np.diff(columns) > 1)[0] + 1)
+    return filtered, len(groups)
+
+
+def read_outlined_quantity(reader, row, field):
+    isolated = _outlined_quantity_image(row, field)
+    if isolated is None:
+        return None
+    filtered, _ = isolated
     readings = [reader.read(filtered), reader.read(ImageOps.invert(filtered))]
     if (not all(re.fullmatch(r"\d+", text) and int(text) >= 1 and score >= .8 for text, score in readings)
             or int(readings[0][0]) != int(readings[1][0])):
@@ -260,6 +271,21 @@ def read_requirement(reader, row):
     accepted = accept_quantity_consensus(result, outlined)
     if not accepted["reviewRequired"]:
         return accepted
+    isolated = _outlined_quantity_image(row, "reqAmount")
+    if outlined["confidence"] >= .95 and isolated is not None:
+        image, groups = isolated
+        verified = read_numeric(reader, image, "reqAmount")
+        value = outlined["corrected"]
+        readings = [reading for reading in verified["variants"]
+                    if re.fullmatch(r"\d+", reading["text"]) and reading["confidence"] >= .75]
+        strong = sum(int(reading["text"]) == value and reading["confidence"] >= .98 for reading in readings)
+        if (not verified["reviewRequired"] and verified["corrected"] == value
+                and groups == len(str(value)) and strong >= 3
+                and all(int(reading["text"]) == value for reading in readings)):
+            return {**result, "corrected": value, "reviewRequired": False,
+                    "confidence": max(verified["confidence"], outlined["confidence"]),
+                    "valueSource": "ISOLATED_OCR_CONSENSUS", "variants": result["variants"] + outlined["variants"]
+                    + [{**reading, "method": "isolated-number"} for reading in verified["variants"]]}
     # Saved small-font corrections still contain a missing digit; this remains a review candidate.
     return {**result, **outlined, "variants": result["variants"] + outlined["variants"],
             "reviewRequired": True, "valueSource": "OCR_CANDIDATE"}

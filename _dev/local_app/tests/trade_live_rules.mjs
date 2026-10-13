@@ -74,3 +74,44 @@ namePeer.fields.fromItem.rawOCR=catalog.masterData[4][1];
 prepareLiveTradeRows({rows:[quantityRow,namePeer]},catalog);
 assert.equal(namePeer.fields.fromItem.reviewRequired,true,'different required items retain import holds');
 console.log('PASS: yield/count conflicts review both rows without replacing name-conflict holds');
+
+const unregistered = () => {
+  const row={fields:fields(catalog.masterData[4][0], '흑수정 장식 팔찌', 1, 100)};
+  Object.assign(row.fields.toItem,{reviewRequired:true,confidence:.99,
+    variants:[{text:'흑수정 장식 팔찌',confidence:.99},{text:'흑수정 장식팔짜',confidence:.9}]});
+  return row;
+};
+const originalCatalog=JSON.stringify(catalog);
+const unknown=unregistered(),unknownPeer=unregistered();
+const unknownResult={rows:[unknown,unknownPeer]};
+assert.equal(prepareLiveTradeRows(unknownResult,catalog).length,1);
+assert.equal(unknown.fields.toItem.supportStatus,'UNREGISTERED_CANDIDATE');
+assert.equal(unknown.fields.toItem.reviewRequired,true);
+assert.deepEqual(unknown.reviewGroupIndices,[0,1]);
+assert.equal(unknownResult.rows.length,2,'both original sources retained');
+assert.equal(unknown.excluded,undefined,'no automatic exclusion');
+unknown.excluded=true;
+assert.equal(prepareLiveTradeRows(unknownResult,catalog).length,2,'different existing choices remain independent');
+assert.equal(unknownPeer.excluded,undefined);
+unknownPeer.excluded=true;
+assert.equal(prepareLiveTradeRows(unknownResult,catalog).length,1);
+unknown.excluded=unknownPeer.excluded=false;
+unknownPeer.fields.yield.corrected=101;
+assert.equal(prepareLiveTradeRows(unknownResult,catalog).length,2,'different quantities are never hidden');
+unknownPeer.fields.yield.corrected=100;
+for(const source of unknownResult.rows) Object.assign(source.fields.toItem,
+  {corrected:catalog.masterData[5][0],reviewRequired:false,valueSource:'USER_REVIEW'});
+assert.equal(prepareLiveTradeRows(unknownResult,catalog).length,1);
+assert.equal(unknown.fields.toItem.supportStatus,undefined,'supported correction clears label');
+assert.equal(unknown.fields.toItem.reviewRequired,false);
+const weakUnknown=unregistered();weakUnknown.fields.toItem.variants=[{text:'흑수정 장식 팔찌',confidence:.4}];
+prepareLiveTradeRows({rows:[weakUnknown]},catalog);
+assert.equal(weakUnknown.fields.toItem.supportStatus,undefined,'weak OCR stays a normal recognition hold');
+const oceanUnknown=unregistered();
+Object.assign(oceanUnknown.fields.toItem,{corrected:'[대양] 해달족 낚시 바늘',rawOCR:'[대양] 해달족 낚시 바늘',
+  variants:[{text:'[대양] 해달족 낚시 바늘',confidence:.98},{text:'[대양1 해달족 낚시 비능',confidence:.75},
+    {text:'[대양] 해달족 낚시 바늘',confidence:.83}]});
+prepareLiveTradeRows({rows:[oceanUnknown]},catalog);
+assert.equal(oceanUnknown.fields.toItem.supportStatus,'UNREGISTERED_CANDIDATE','a majority supports the candidate label');
+assert.equal(JSON.stringify(catalog),originalCatalog,'master stays unchanged');
+console.log('PASS: unregistered candidates, grouped sources, existing choices and quantity differences');

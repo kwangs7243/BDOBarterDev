@@ -5,12 +5,47 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from PIL import Image
-from local_app.tools.trade_live_ocr import _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
+from local_app.tools.trade_live_ocr import _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
 
 class LiveListTests(unittest.TestCase):
+    def test_quantity_conflicts_respect_allowed_values_without_promoting_uncertain_primary(self):
+        primary = {"rawOCR":"2", "corrected":2, "confidence":.99, "reviewRequired":False, "variants":[]}
+        token = {"corrected":2, "reviewRequired":True, "variants":[{"text":"32", "confidence":.99}]}
+        self.assertFalse(merge_quantity_readings(primary, token, (2,3))["reviewRequired"])
+        self.assertTrue(merge_quantity_readings(primary, token)["reviewRequired"])
+        self.assertTrue(merge_quantity_readings({**primary, "reviewRequired":True}, token, (2,3))["reviewRequired"])
+        token["variants"].append({"text":"3", "confidence":.99})
+        self.assertTrue(merge_quantity_readings(primary, token, (2,3))["reviewRequired"])
+
+    def test_isolated_requirement_needs_complete_groups_and_cross_checked_digits(self):
+        primary = {"rawOCR":"40", "corrected":40, "confidence":.99, "reviewRequired":True,
+                   "variants":[{"text":"40", "confidence":.99}]}
+        token = {"corrected":None, "reviewRequired":True, "variants":[]}
+        outlined = {"corrected":10, "confidence":.99,
+                    "variants":[{"text":"10", "confidence":.99, "method":"outline-mask"}] * 2}
+        verified = {"rawOCR":"10", "corrected":10, "reviewRequired":False, "confidence":.99,
+                    "variants":[{"text":"10", "confidence":.99}] * 3}
+        for groups, value, accepted in ((2, verified, True), (1, verified, False), (3, verified, False),
+                (2, {**verified, "reviewRequired":True}, False),
+                (2, {**verified, "corrected":11}, False),
+                (2, {**verified, "variants":[{"text":"10", "confidence":.9}] * 3}, False),
+                (2, {**verified, "variants":verified["variants"] + [{"text":"11", "confidence":.99}]}, False)):
+            with self.subTest(groups=groups, value=value):
+                with patch("local_app.tools.trade_live_ocr.read_numeric", side_effect=[primary, value]), \
+                        patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                        patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined), \
+                        patch("local_app.tools.trade_live_ocr._outlined_quantity_image", return_value=(Image.new("RGB", (20,20)), groups)):
+                    result = read_requirement(None, Image.new("RGB", (1000,70)))
+                self.assertEqual(result["reviewRequired"], not accepted)
+                self.assertEqual(result["corrected"], 10)
+                self.assertEqual(result["rawOCR"], "40")
+                if accepted:
+                    self.assertEqual(result["valueSource"], "ISOLATED_OCR_CONSENSUS")
+                self.assertEqual(primary["corrected"], 40)
+
     def test_complete_top_edge_row_is_recovered_without_changing_existing_rows(self):
         image = Image.new("RGB", (985, 444), (40, 40, 40))
         for top in (69, 144, 219, 294, 369, 443):
@@ -191,7 +226,8 @@ class LiveListTests(unittest.TestCase):
                     "variants": [{"text": "200", "confidence": .98, "method": "outline-mask"}]}
         with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
                 patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined):
+                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined), \
+                patch("local_app.tools.trade_live_ocr._outlined_quantity_image", return_value=None):
             result = read_requirement(None, Image.new("RGB", (1000, 70)))
         self.assertEqual(result["corrected"], 200)
         self.assertEqual(result["rawOCR"], "20")
@@ -223,7 +259,8 @@ class LiveListTests(unittest.TestCase):
         token = {"corrected": None, "reviewRequired": True, "variants": []}
         with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
                 patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value={"corrected": 1, "confidence": 1, "variants": []}):
+                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value={"corrected": 1, "confidence": 1, "variants": []}), \
+                patch("local_app.tools.trade_live_ocr._outlined_quantity_image", return_value=None):
             result = read_requirement(None, Image.new("RGB", (658, 47)))
         self.assertEqual(result["corrected"], 1)
         self.assertTrue(result["reviewRequired"])

@@ -161,14 +161,32 @@ export function applyMasterNameRules(row, catalog) {
   return row;
 }
 
+function markUnregisteredCandidate(row, catalog) {
+  const field = row.fields.toItem;
+  delete field.supportStatus;
+  const items = [...Object.values(catalog.masterData).flat(), ...catalog.specialItems];
+  if (!field.corrected || field.reviewDraft !== undefined
+      || getSafeUniqueItemMatch(field.corrected, items).status !== "unmatched") return;
+  const readings = (field.variants?.length ? field.variants : [{text:field.rawOCR, confidence:field.confidence}])
+    .filter(reading => reading.text && reading.confidence >= .75);
+  const agreeing = readings.filter(reading => getSafeUniqueItemMatch(
+      String(reading.text).replace(/\[.*?\]\s*/g, "").trim(),
+      [String(field.corrected).replace(/\[.*?\]\s*/g, "").trim()]).value).length;
+  if (agreeing < 2 || agreeing <= readings.length / 2) return;
+  Object.assign(field, {supportStatus:"UNREGISTERED_CANDIDATE", reviewRequired:true, importReview:true,
+    reviewReason:"지원 목록에 없는 후보입니다. 등록된 품목으로 수정하거나 행을 제외하세요."});
+}
+
 export function prepareLiveTradeRows(result, catalog) {
   for (const row of result.rows) {
     for (const field of Object.values(row.fields)) {
       if (!Object.hasOwn(field, "automaticCorrected")) field.automaticCorrected = field.corrected;
     }
     applyMasterNameRules(row, catalog);
+    markUnregisteredCandidate(row, catalog);
     applyLiveTradeRules(row, catalog);
     delete row.duplicateOf;
+    delete row.reviewGroupIndices;
   }
   const ready = result.rows.filter((row) => !row.excluded && Object.values(row.fields).every((f) => f.corrected !== null && f.corrected !== undefined));
   const parsed = processParsedTrades(ready.map((row) => Object.fromEntries(Object.entries(row.fields).map(([k, f]) => [k, f.corrected]))), [], catalog);
@@ -189,7 +207,8 @@ export function prepareLiveTradeRows(result, catalog) {
       }
       const field = fields[outcome.field ?? "fromItem"];
       Object.assign(field, {reviewRequired: true, importReview: true,
-        reviewReason: outcome.status === "conflict" ? "같은 섬·결과의 요구 품목이 다릅니다. 한 행을 제외하거나 품목을 수정하세요." : outcome.candidates?.length ? `마스터 후보: ${outcome.candidates.join(" / ")}` : "마스터에서 품목을 찾지 못했습니다. 이름을 수정하거나 행을 제외하세요."});
+        reviewReason: field.supportStatus === "UNREGISTERED_CANDIDATE" ? "지원 목록에 없는 후보입니다. 등록된 품목으로 수정하거나 행을 제외하세요."
+          : outcome.status === "conflict" ? "같은 섬·결과의 요구 품목이 다릅니다. 한 행을 제외하거나 품목을 수정하세요." : outcome.candidates?.length ? `마스터 후보: ${outcome.candidates.join(" / ")}` : "마스터에서 품목을 찾지 못했습니다. 이름을 수정하거나 행을 제외하세요."});
     }
   }
   const groups = new Map();
@@ -219,6 +238,22 @@ export function prepareLiveTradeRows(result, catalog) {
     const key = JSON.stringify(["island", "fromItem", "toItem", "reqAmount", "count", "yield"].map((name) => typeof row.fields[name].corrected === "string" ? row.fields[name].corrected.replace(/\s+/g, "") : row.fields[name].corrected));
     if (groups.has(key)) row.duplicateOf = groups.get(key);
     else groups.set(key, index);
+  });
+  const unregisteredGroups = new Map();
+  result.rows.forEach((row, index) => {
+    if (row.fields.toItem.supportStatus !== "UNREGISTERED_CANDIDATE"
+        || ["island", "fromItem", "reqAmount", "count", "yield"].some(name => row.fields[name].reviewRequired
+          || row.fields[name].corrected === null || row.fields[name].corrected === undefined)) return;
+    const key = JSON.stringify([Boolean(row.excluded), ...["island", "fromItem", "toItem", "reqAmount", "count", "yield"]
+      .map(name => typeof row.fields[name].corrected === "string" ? row.fields[name].corrected.replace(/\s+/g, "") : row.fields[name].corrected)]);
+    if (unregisteredGroups.has(key)) {
+      const first = unregisteredGroups.get(key);
+      row.duplicateOf = first;
+      result.rows[first].reviewGroupIndices.push(index);
+    } else {
+      unregisteredGroups.set(key, index);
+      row.reviewGroupIndices = [index];
+    }
   });
   return result.rows.map((row, index) => ({row, index})).filter(({row}) => row.duplicateOf === undefined)
     .sort((left, right) => compareTradeOrder(left.row, right.row, catalog));
