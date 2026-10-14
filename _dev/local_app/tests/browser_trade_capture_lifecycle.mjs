@@ -78,7 +78,6 @@ try{
  assert.ok(await page.locator('.trade-review-row').textContent().then(s=>s.includes('지원 목록에 없는 후보')));
  assert.equal(await page.locator('.trade-review-row input[data-action=include-live-row]').isChecked(),true,'no automatic exclusion');
  assert.equal(await page.locator('.trade-review-row .trade-review-source img').count(),2,'both source previews retained');
- await page.screenshot({path:resolve(frontend,'../../recognition-local/trade-improvement-20261013/group-review.png')});
  await page.locator('.trade-review-row input[data-action=include-live-row]').uncheck();
  await page.waitForFunction(()=>!document.querySelector('[data-action=apply-live-new]').disabled);
  await page.locator('[data-action=apply-live-new]').click();await page.waitForFunction(()=>!document.querySelector('#trade-capture-dialog').open);

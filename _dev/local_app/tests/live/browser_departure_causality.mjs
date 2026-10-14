@@ -5,8 +5,12 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 
-import {audit} from './scheduler_departure_causality.mjs';
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+import {audit} from '../scheduler_departure_causality.mjs';
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const evidence=process.env.BDO_CAUSALITY_EVIDENCE_DIR;
+if(!evidence){console.log('SKIP: set BDO_CAUSALITY_EVIDENCE_DIR to real capture snapshots');process.exit(0);}
+try{await Promise.all(['weights-live-before.json','latest-live-input.json'].map(name=>readFile(resolve(evidence,name))))}
+catch(error){if(error.code==='ENOENT'){console.log('SKIP: live snapshot files are unavailable');process.exit(0);}throw error;}
 const baseUrl = process.env.BDO_TEST_URL ?? "http://127.0.0.1:18768/";
 const python = process.env.PYTHON ?? "python";
 const chromePath = process.env.BDO_CHROME ?? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
@@ -36,7 +40,6 @@ try {
 
 
 
-  const evidence=resolve(root,'recognition-local/scheduler-improved');
   const earlier=JSON.parse((await readFile(resolve(evidence,'weights-live-before.json'),'utf8')).replace(/^\uFEFF/,''));
   const latest=JSON.parse(await readFile(resolve(evidence,'latest-live-input.json'),'utf8'));
   const restored=structuredClone(latest),byName=new Map(restored.inventory.map(x=>[x.programName,x]));let cost=0;

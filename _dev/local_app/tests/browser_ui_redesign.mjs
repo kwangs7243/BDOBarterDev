@@ -8,9 +8,7 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {chromium}=require(require.resolve('playwright',{paths:[process.env.BDO_NODE_MODULES ?? 'C:/Users/kwang/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules']}));
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
-const out=resolve(process.env.UI_AUDIT_DIR ?? resolve(root,'recognition-local/ui-redesign-20261013')); await mkdir(out,{recursive:true});
-const baselineDir=process.env.UI_AUDIT_BASELINE;
-const phase=process.env.UI_AUDIT_PHASE ?? 'after';
+const out=resolve(process.env.UI_AUDIT_DIR ?? await mkdtemp(join(tmpdir(),'bdo-ui-report-'))); await mkdir(out,{recursive:true});
 const temp=await mkdtemp(join(tmpdir(),'bdo-ui-design-'));
 const port=18692, url=`http://127.0.0.1:${port}`;
 const server=spawn(process.env.PYTHON ?? 'python',['-B','-c',`from local_app.backend.app import create_app; create_app(r'${join(temp,'test.sqlite3')}',testing=True).run(host='127.0.0.1',port=${port},use_reloader=False,threaded=True)`],{cwd:root,windowsHide:true,stdio:'ignore',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
@@ -21,6 +19,26 @@ try {
  const page=await browser.newPage({viewport:{width:1920,height:1080}}), errors=[];
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto(url); await page.waitForFunction(()=>document.querySelectorAll('.inventory-row').length===70);
+ const accessibility=await page.evaluate(()=>{
+   const ids=[...document.querySelectorAll('[id]')].map(node=>node.id);
+   return {duplicates:ids.filter((id,index)=>ids.indexOf(id)!==index),
+     missingTitles:[...document.querySelectorAll('dialog[aria-labelledby]')].filter(node=>node.childElementCount>0&&!document.getElementById(node.getAttribute('aria-labelledby'))).map(node=>({id:node.id,class:node.className,label:node.getAttribute('aria-labelledby')})),
+     missingLabels:[...document.querySelectorAll('label[for]')].filter(node=>!document.getElementById(node.htmlFor)).map(node=>node.htmlFor),
+     unnamedButtons:[...document.querySelectorAll('button')].filter(node=>!node.getAttribute('aria-label')&&!node.title&&!node.textContent.trim()).map(node=>node.outerHTML)};
+ });
+ for(const [kind,failures] of Object.entries(accessibility))assert.deepEqual(failures,[],kind);
+ await page.locator('.session-empty-state .primary').click();
+ assert.equal(await page.locator('#trade-capture-dialog').evaluate(node=>node.open),true,'empty capture action opens the existing workflow');
+ await page.keyboard.press('Escape');
+ await page.locator('.session-empty-state button:not(.primary)').click();
+ assert.equal(await page.locator('#json-import-dialog').evaluate(node=>node.open),true,'empty JSON action opens import');
+ await page.keyboard.press('Escape');
+ await page.locator('[data-workspace-view=inventory]').click();
+ assert.equal(await page.locator('#mainPanel').isVisible(),true);
+ assert.equal(await page.locator('#trade-session-panel').isVisible(),false);
+ await page.locator('[data-workspace-view=session]').click();
+ assert.equal(await page.locator('#trade-session-panel').isVisible(),true);
+ assert.equal(await page.locator('#mainPanel').isVisible(),false);
  await page.evaluate(async()=>{
    const {state}=await import('/assets/js/state.js'); const p=await import('/assets/js/persistence.js');
    await p.saveSettings({viewer:{...state.settings.viewer,uiZoom:100}});
@@ -34,14 +52,16 @@ try {
  await page.waitForFunction(()=>!document.querySelector('#json-import-dialog').open);
  const shot=async(name)=>{
    await page.mouse.move(0,0);
-   await page.screenshot({path:join(out,`${phase}-${name}.png`),animations:'disabled'});
+   const unnamed=await page.locator('dialog[open]').evaluateAll(nodes=>nodes.filter(node=>!node.getAttribute('aria-label')&&!document.getElementById(node.getAttribute('aria-labelledby'))).map(node=>node.id||node.className));
+   assert.deepEqual(unnamed,[],'open dialogs have an accessible title');
+   await page.screenshot({path:join(out,`current-${name}.png`),animations:'disabled'});
    if(process.env.UI_AUDIT_ALL_VIEWS==='1'&&name.endsWith('-1920')){
      for(const size of [{width:1440,height:900},{width:2560,height:1440}]){
        await page.setViewportSize(size);
        await page.waitForFunction(()=>Math.abs(document.body.getBoundingClientRect().width-innerWidth)<2);
        const clipping=await page.locator('dialog[open]').evaluateAll(nodes=>nodes.map(n=>({id:n.id||n.className,rect:n.getBoundingClientRect().toJSON()})).filter(({rect:r})=>r.left<0||r.top<0||r.right>innerWidth+2||r.bottom>innerHeight+2));
        assert.deepEqual(clipping,[],`${name}: dialogs stay inside ${size.width} viewport`);
-       await page.screenshot({path:join(out,`${phase}-${name.replace('1920',size.width)}.png`),animations:'disabled'});
+       await page.screenshot({path:join(out,`current-${name.replace('1920',size.width)}.png`),animations:'disabled'});
      }
      await page.setViewportSize({width:1920,height:1080});
    }
@@ -51,32 +71,28 @@ try {
  await page.locator('#open-schedule').click(); await page.locator('#generate-schedule').click();
  await page.waitForFunction(()=>document.querySelectorAll('.sortie-card').length>0);
  const schedule=await page.evaluate(async()=>JSON.stringify((await import('/assets/js/state.js')).state.session.schedule,(k,v)=>k==='timerEnd'?undefined:v));
- await writeFile(join(out,`${phase}-schedule.json`),schedule);
+ await writeFile(join(out,'current-schedule.json'),schedule);
  await shot('schedule-1920');
  if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
    await page.locator('[data-brief-mode="both"]').click(); await shot('schedule-both-1920');
    await page.locator('[data-brief-mode="speed"]').click();
  }
  await page.locator('#schedule-dialog [data-close-dialog]').click();
- if(phase==='after')await page.locator('[data-workspace-view="inventory"]').click();
+ await page.locator('[data-workspace-view="inventory"]').click();
  await shot('inventory-1920');
  await page.locator('#open-warehouse-scan').click(); await shot('warehouse-1920');
- if(phase==='before')await page.keyboard.press('Escape'); // Baseline close button clips at 130%; preserve evidence.
- else await page.locator('#warehouse-scan-dialog [data-action="close"]').click();
- if(phase==='after')await page.locator('[data-workspace-view="session"]').click();
+ await page.locator('#warehouse-scan-dialog [data-action="close"]').click();
+ await page.locator('[data-workspace-view="session"]').click();
  await page.locator('#open-trade-capture').click(); await shot('trade-1920'); await page.locator('#trade-capture-dialog [data-close-trade-capture]').first().click();
  await page.locator('.header-tools>summary').click(); await page.locator('#open-tuning').click(); await shot('settings-1920'); await page.locator('#tuning-dialog [data-close-dialog]').click();
- if(phase==='after')await page.locator('.header-tools>summary').click();
+ await page.locator('.header-tools>summary').click();
  await page.locator('#open-map-tools').click(); await shot('map-1920'); await page.locator('#map-tools-dialog [data-close-dialog]').click();
  const actions=await page.locator('button[id],button[data-action]').evaluateAll(ns=>ns.map(n=>({id:n.id,action:n.dataset.action,text:n.textContent.trim()})));
- await writeFile(join(out,`${phase}-actions.json`),JSON.stringify({ids:idsBefore,actions},null,2));
- if(phase==='after'){
+ await writeFile(join(out,'current-actions.json'),JSON.stringify({ids:idsBefore,actions},null,2));
    assert.deepEqual(errors,[]);
-   const baseline=await readFile(join(baselineDir??out,baselineDir?'after-actions.json':'before-actions.json'),'utf8').then(JSON.parse).catch(error=>{if(baselineDir)throw error;return null;});
-   if(baseline){
-     const missing=baseline.ids.filter(id=>!idsBefore.includes(id)); assert.deepEqual(missing,[],'existing action and field IDs preserved');
-     assert.equal(schedule,await readFile(join(baselineDir??out,baselineDir?'after-schedule.json':'before-schedule.json'),'utf8'),'same synthetic inputs produce identical schedules');
-   }
+   const baseline=JSON.parse(await readFile(resolve(root,'local_app/tests/fixtures/ui-actions.json'),'utf8'));
+   const missing=baseline.ids.filter(id=>!idsBefore.includes(id)); assert.deepEqual(missing,[],'existing action and field IDs preserved');
+   assert.equal(schedule,await readFile(resolve(root,'local_app/tests/fixtures/ui-schedule.json'),'utf8'),'same synthetic inputs produce identical schedules');
    await page.locator('#open-settings').click(); await shot('ship-settings-1920');
    await page.keyboard.press('Escape'); assert.equal(await page.locator('#open-settings').evaluate(n=>document.activeElement===n),true,'Escape returns focus');
    await page.locator('[data-workspace-view="inventory"]').click();
@@ -114,7 +130,7 @@ try {
        assert.ok(layout.count>0,'zoomed-out map retains useful labels'); assert.deepEqual(layout.collisions,[],'visible map names never overlap'); labelChecks.push(layout);
        if(step<3)await page.locator('.mv-toolbar').getByRole('button',{name:'−',exact:true}).click();
      }
-     await page.screenshot({path:join(out,`${phase}-map-zoom-out-1920.png`),animations:'disabled'});
+     await page.screenshot({path:join(out,'current-map-zoom-out-1920.png'),animations:'disabled'});
      const hiddenName=await page.evaluate(()=>{
        const viewport=document.querySelector('.mv-viewport').getBoundingClientRect();
        return [...document.querySelectorAll('.mv-node.label-suppressed')].find(n=>{const r=n.querySelector('circle').getBoundingClientRect();return r.x>viewport.x+10&&r.right<viewport.right-10&&r.y>viewport.y+10&&r.bottom<viewport.bottom-10&&document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('.mv-node')===n;})?.getAttribute('aria-label');
@@ -125,7 +141,7 @@ try {
      assert.equal(await node.locator('.mv-node-caption').evaluate(n=>getComputedStyle(n).visibility),'visible','hover reveals a suppressed name');
      await page.mouse.move(0,0); await node.focus();
      assert.equal(await node.locator('.mv-node-caption').evaluate(n=>getComputedStyle(n).visibility),'visible','keyboard focus reveals a suppressed name');
-     await page.screenshot({path:join(out,`${phase}-map-label-focus-1920.png`),animations:'disabled'});
+     await page.screenshot({path:join(out,'current-map-label-focus-1920.png'),animations:'disabled'});
      assert.equal(await page.evaluate(async()=>JSON.stringify({coords:window.islandCoordinates,routes:(await import('/assets/js/state.js')).state.mapRouteDraft})),mapBefore,'label layout never mutates coordinates or routes');
      await writeFile(join(out,'map-label-checks.json'),JSON.stringify(labelChecks,null,2));
    }
@@ -186,14 +202,13 @@ try {
    await shot('dense-session-1920');
    if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
      await page.locator('#trade-search').focus();
-     await page.screenshot({path:join(out,`${phase}-session-focus-1920.png`),animations:'disabled'});
+     await page.screenshot({path:join(out,'current-session-focus-1920.png'),animations:'disabled'});
      await page.locator('#open-schedule').click(); await page.locator('#generate-schedule').click();
      await page.waitForFunction(()=>document.querySelectorAll('.route-trade').length>2);
      await shot('dense-schedule-1920');
      await page.locator('#schedule-dialog [data-close-dialog]').click();
    }
    assert.deepEqual(errors,[]);
- }
- await writeFile(join(out,`${phase}-audit.json`),JSON.stringify({status:'PASS',phase,errors,viewports:(phase==='before'?[[1920,1080]]:[[1920,1080],[1440,900],[2560,1440]]).map(([width,height])=>({width,height,zoom:100})),database:temp,ocr:'mocked fixture for visual review',userDataWrites:0},null,2));
- console.log(JSON.stringify({status:'PASS',phase,errors,output:out}));
+ await writeFile(join(out,'current-audit.json'),JSON.stringify({status:'PASS',errors,viewports:[[1920,1080],[1440,900],[2560,1440]].map(([width,height])=>({width,height,zoom:100})),database:temp,ocr:'mocked fixture for visual review',actualUserDataWrites:0,temporaryDatabase:true},null,2));
+ console.log(JSON.stringify({status:'PASS',errors,output:out}));
 }finally{await browser?.close();server.kill();}

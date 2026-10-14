@@ -50,14 +50,18 @@ try {
   await evaluate("document.querySelector('#connect-screen-capture').click()");
   await waitFor(async () => evaluate("document.querySelector('#screen-capture-session')?.dataset.state==='CONNECTED'"), "shared stream connection");
   await evaluate("document.querySelector('#open-trade-capture').click()");
+  await evaluate("document.querySelector('#trade-capture-dialog .capture-browser-options').open=true");
   await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog')?.open && document.querySelector('[data-role=trade-preview-video]').videoWidth===640"), "Trade live preview");
+  await evaluate("new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-preview-video]').srcObject===window.__roiMock.streams[0]"), true, "Trade preview uses the shared stream");
   assert.equal(await evaluate("document.querySelector('[data-role=trade-roi]').hidden"), false);
   assert.equal(await evaluate("document.querySelectorAll('[data-role=trade-roi] [data-roi-handle]').length"), 8);
   const initialRoi = await evaluate("JSON.stringify({left:parseFloat(document.querySelector('[data-role=trade-roi]').style.left),top:parseFloat(document.querySelector('[data-role=trade-roi]').style.top),width:parseFloat(document.querySelector('[data-role=trade-roi]').style.width),height:parseFloat(document.querySelector('[data-role=trade-roi]').style.height),content:(()=>{const v=document.querySelector('[data-role=trade-preview-video]'),e=document.querySelector('[data-role=trade-preview-stage]'),s=e.getBoundingClientRect(),w0=e.clientWidth,h0=e.clientHeight,scale=Math.min(w0/v.videoWidth,h0/v.videoHeight),w=v.videoWidth*scale,h=v.videoHeight*scale;return {left:e.clientLeft+(w0-w)/2,top:e.clientTop+(h0-h)/2,width:w,height:h}})()})").then(JSON.parse);
   assert.ok(Math.abs(initialRoi.top - (initialRoi.content.top + initialRoi.content.height*.1)) < 1, `normalized default ROI follows letterboxed content rect ${JSON.stringify(initialRoi)}`);
   const beforeMoveLeft = initialRoi.left;
-  const stageRect = await evaluate("JSON.stringify((()=>{const s=document.querySelector('[data-role=trade-preview-stage]').getBoundingClientRect(),r=document.querySelector('[data-role=trade-roi]').getBoundingClientRect();return {x:r.left+40,y:r.top+35,sx:s.left,sy:s.top}})())").then(JSON.parse);
+  await evaluate("document.querySelector('[data-role=trade-roi] [data-roi-move]').scrollIntoView({block:'center'})");
+  const stageRect = await evaluate("JSON.stringify((()=>{const r=document.querySelector('[data-role=trade-roi] [data-roi-move]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})())").then(JSON.parse);
+  assert.equal(await evaluate(`document.elementFromPoint(${stageRect.x},${stageRect.y})?.hasAttribute('data-roi-move')`), true, "ROI move target receives pointer input");
   await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: stageRect.x, y: stageRect.y });
   await send("Input.dispatchMouseEvent", { type: "mousePressed", x: stageRect.x, y: stageRect.y, button: "left", buttons: 1, clickCount: 1 });
   await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: stageRect.x+30, y: stageRect.y+20, button: "left", buttons: 1 });
@@ -67,9 +71,9 @@ try {
   await evaluate("document.querySelector('[data-role=trade-roi] [data-roi-handle=se]').scrollIntoView({block:'center'})");
   const se = await evaluate("JSON.stringify((()=>{const r=document.querySelector('[data-role=trade-roi] [data-roi-handle=se]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})())").then(JSON.parse);
   assert.equal(await evaluate(`document.elementFromPoint(${se.x},${se.y})?.closest('[data-roi-handle]')?.dataset.roiHandle`), "se", "resize handle is inside the viewport and receives the pointer");
-  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: se.x, y: se.y }); await send("Input.dispatchMouseEvent", { type: "mousePressed", x: se.x, y: se.y, button: "left", buttons: 1, clickCount: 1 }); await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: se.x+24, y: se.y+18, button: "left", buttons: 1 }); await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: se.x+24, y: se.y+18, button: "left", buttons: 0, clickCount: 1 });
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: se.x, y: se.y }); await send("Input.dispatchMouseEvent", { type: "mousePressed", x: se.x, y: se.y, button: "left", buttons: 1, clickCount: 1 }); await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: se.x-24, y: se.y-18, button: "left", buttons: 1 }); await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: se.x-24, y: se.y-18, button: "left", buttons: 0, clickCount: 1 });
   const resized = await evaluate("JSON.stringify((()=>{const r=document.querySelector('[data-role=trade-roi]').getBoundingClientRect();return {width:r.width,height:r.height}})())").then(JSON.parse);
-  assert.ok(resized.width > initialRoi.width && resized.height > initialRoi.height, `SE handle resizes the ROI: ${JSON.stringify({initialRoi, resized, se})}`);
+  assert.ok(resized.width < initialRoi.width && resized.height < initialRoi.height, `SE handle shrinks the ROI within the source boundary: ${JSON.stringify({initialRoi, resized, se})}`);
   const normalizedBeforePreviewResize = await evaluate("document.querySelector('[data-role=trade-roi]').dataset.normalized");
   await evaluate("document.querySelector('[data-role=trade-preview-stage]').style.width='80%'");
   await new Promise((resolveWait) => setTimeout(resolveWait, 100));
@@ -141,6 +145,8 @@ try {
   const warehouseRegion = () => evaluate("JSON.parse(document.querySelector('#warehouse-scan-dialog .trade-roi-box').dataset.normalized)");
   const warehouseBefore = await warehouseRegion();
   const warehouseDrag = async (selector, dx, dy) => {
+    await evaluate("document.querySelector('#warehouse-scan-dialog .capture-browser-options').open=true");
+    await evaluate("new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))");
     await evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center'})`);
     const point = await evaluate(`(() => { const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; })()`);
     await send("Input.dispatchMouseEvent", {type:"mouseMoved",x:point.x,y:point.y});

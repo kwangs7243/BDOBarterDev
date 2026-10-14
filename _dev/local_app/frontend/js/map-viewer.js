@@ -190,7 +190,7 @@ export function createMapViewer(root, setStatus) {
   }
   function mount(){
     app.open=true;app.nodes=nodesList();app.routes=clone(state.mapRouteDraft||[]);
-    const overlay=el("dialog","mv-window");app.overlay=overlay;app.window=overlay;
+    const overlay=el("dialog","mv-window");overlay.setAttribute("aria-label","대양 지도 · 좌표 · 항로");app.overlay=overlay;app.window=overlay;
     const parentDialog=root.closest("dialog")||document.querySelector("#map-tools-dialog");
     if(parentDialog) parentDialog.append(overlay); else document.body.append(overlay);
     const head=el("header","mv-header");app.modeLabel=el("span","mv-mode-label",app.mode==="briefing"?"스케줄 항로":"지도 튜닝");head.append(el("strong","","대양 지도 · 좌표 · 항로"),app.modeLabel,btn("닫기",()=>overlay.close()));

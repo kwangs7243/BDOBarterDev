@@ -5,7 +5,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from local_app.tools.trade_live_ocr import FIELDS, recognize_live
 
@@ -41,7 +41,7 @@ def main():
     parser.add_argument("--model-dir", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
-    fixtures = Path(__file__).parent / "fixtures/trade-recognition"
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
     mapping = json.loads((fixtures / "live-list-mapping.json").read_text(encoding="utf-8"))
     oracle = json.loads((fixtures / "정답.json").read_text(encoding="utf-8"))
     import hashlib

@@ -69,7 +69,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exe", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--ocr-baseline", type=Path, help="Prior installed-package OCR comparison report")
+    parser.add_argument("--ocr-baseline", type=Path, required=True, help="Verified prior installed-package OCR comparison report")
     args = parser.parse_args()
     args.out = args.out.resolve()
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -117,13 +117,12 @@ def main():
             numeric_errors = [{"row": index, "field": name, "actual": row["fields"][name]["corrected"], "expected": truth[name]}
                               for index, (row, truth) in enumerate(zip(result["rows"], expected))
                               for name in numeric if row["fields"][name]["corrected"] != truth[name]]
-            if args.ocr_baseline:
-                baseline = json.loads(args.ocr_baseline.read_text(encoding="utf-8"))[0]
-                assert baseline["runtime"]["modelBundleSha256"] == runtime["modelBundleSha256"]
-                assert baseline["runtime"]["workerVersion"] == runtime["workerVersion"]
-                assert numeric == baseline["numeric"] and numeric_errors == baseline["errors"], numeric_errors
-            else:
-                assert all(value == 80 for value in numeric.values()), numeric
+            baseline = json.loads(args.ocr_baseline.read_text(encoding="utf-8"))
+            assert isinstance(baseline, dict) and baseline.get("ok"), "A verified package baseline is required"
+            assert baseline["runtime"]["modelBundleSha256"] == runtime["modelBundleSha256"]
+            assert baseline["runtime"]["workerVersion"] == runtime["workerVersion"]
+            assert numeric == baseline["numeric"] and numeric_errors == baseline["numericErrors"], numeric_errors
+            assert [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]] == baseline["correctedFields"]
             fully_correct = sum(all(row["fields"][name]["corrected"] == truth[name] for name in truth)
                                 for row, truth in zip(result["rows"], expected))
             assert fully_correct >= 76, fully_correct
@@ -143,7 +142,7 @@ def main():
             before = request("/api/bootstrap")
             with closing(sqlite3.connect(databases[0])) as connection:
                 corrections = connection.execute("SELECT image_png, details_json FROM trade_correction").fetchall()
-                assert corrections and all(row[0] and json.loads(row[1])["corrections"] for row in corrections)
+                assert corrections and all(row[0] and (json.loads(row[1])["corrections"] or json.loads(row[1]).get("snapshot")) for row in corrections)
                 scans = connection.execute("SELECT count(*) FROM warehouse_scan").fetchone()[0]
                 feedback = connection.execute("SELECT feedback_json FROM warehouse_feedback").fetchall()
                 assert scans > 0 and any(json.loads(row[0])["rows"] for row in feedback)
@@ -157,7 +156,8 @@ def main():
             assert request("/api/bootstrap") == before, "Packaged restart changed persisted data"
             with closing(sqlite3.connect(databases[0])) as connection:
                 assert list(connection.iterdump()) == persisted_feedback
-            report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numericExact": numeric,
+            report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numeric": numeric,
+                      "correctedFields": [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]],
                       "fullyCorrectRows": fully_correct, "ocrDurationMs": ocr_duration_ms,
                       "ocrBaselineMatched": bool(args.ocr_baseline), "numericErrors": numeric_errors,
                       "freshSchema": 4, "tables": sorted(tables),

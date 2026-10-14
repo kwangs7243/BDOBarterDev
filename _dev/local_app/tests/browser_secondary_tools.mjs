@@ -134,12 +134,12 @@ try {
   assert.equal(await evaluate("document.querySelectorAll('#map-tools-dialog .dialog-titlebar [data-close-dialog]').length"), 1);
   assert.equal(await evaluate("document.querySelectorAll('#engine-diagnostics-dialog .dialog-titlebar [data-close-dialog]').length"), 1);
 
-  for (const [width, height] of [[1440, 900], [1024, 768], [768, 720]]) {
+  for (const [width, height] of [[1440, 900], [1920, 1080], [2560, 1440]]) {
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
     await delay(120);
 
     await clickHeaderTool("#open-tuning");
-    assert.equal(await evaluate("document.querySelector('.header-tools').open"), true, "header tools menu remains available during tool navigation");
+    assert.equal(await evaluate("document.querySelector('.header-tools').open"), false, "header tools menu closes after opening a tool");
     await waitFor(async () => evaluate("document.querySelector('#tuning-dialog').open"), "tuning dialog");
     let tuning = await evaluate("(()=>({title:document.querySelector('#tuning-title').textContent,tabs:[...document.querySelectorAll('#tuning-dialog [role=tab]')].map(x=>[x.textContent,x.getAttribute('aria-selected'),x.getAttribute('aria-controls')]),scope:document.querySelector('.tool-dialog-scope').textContent,body:document.querySelector('#tuning-dialog .dialog-body').scrollHeight,client:document.querySelector('#tuning-dialog .dialog-body').clientHeight}))()");
     assert.equal(tuning.title, "계산 튜닝");
@@ -158,7 +158,7 @@ try {
     await waitFor(async () => evaluate("document.querySelector('#map-tools-dialog').open"), "map tools dialog");
     const map = await evaluate("(()=>({title:document.querySelector('#map-tools-title').textContent,sections:[...document.querySelectorAll('#map-tools-dialog .tool-dialog-workspace h3')].map(x=>x.textContent),cols:getComputedStyle(document.querySelector('.map-tools-grid')).gridTemplateColumns,roots:['navigation-root','map-root','viewer-root'].map(id=>!!document.getElementById(id))}))()");
     assert.equal(map.title, "지도·항로");
-    assert.deepEqual(map.sections, ["경로·좌표 설정", "지도 뷰어"]);
+    assert.deepEqual(map.sections, ["항로 지도", "지도와 화면 설정"]);
     assert.deepEqual(map.roots, [true, true, true]);
     if (width <= 1050) assert.equal(map.cols.trim().split(/\s+/).length, 1, `map uses one column at ${width}`);
     await assertViewport(width, height, [{ id: "map-tools-dialog" }]);

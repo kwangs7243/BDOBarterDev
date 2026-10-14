@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
-const out=resolve(root,'_dev/recognition-local/scheduler-improved');
 const catalog=JSON.parse(readFileSync(resolve(root,'_dev/local_app/frontend/data/trade-catalog.json'),'utf8'));
 const weights={1:100,2:400,3:900,4:1000,5:1000,6:2000,7:2000,coin:0};
 const weight=(tier,name)=>tier===0||tier==='mat'?catalog.itemWeights[name]:weights[tier];
@@ -125,8 +124,7 @@ for(const initial5 of [5,8,20]){
  assert.equal(ctx.zeroCountAllowed,true);assert.equal(ctx.activeCountBlocked,false);assert.equal(ctx.waypointBlocked,false);
  results.push({test:'zero-count trades do not block later departures while real trades and waypoints still do'});
 }
-mkdirSync(out,{recursive:true});
-writeFileSync(resolve(out,'causality-regression.json'),JSON.stringify({ok:true,results},null,2));console.log(JSON.stringify({ok:true,tests:results.length,results},null,2));
+console.log(JSON.stringify({ok:true,tests:results.length,results},null,2));
 
 }
 if(resolve(process.argv[1] || "") === fileURLToPath(import.meta.url)) runRegression();

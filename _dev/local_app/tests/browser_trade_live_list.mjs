@@ -6,10 +6,10 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const output = resolve(process.env.BDO_LIVE_REPORT_DIR ?? join(root, "recognition-local/hotfix-live-list"));
 const baseUrl = process.env.BDO_TEST_URL ?? "http://127.0.0.1:18783/";
 const external = process.env.BDO_EXTERNAL_APP === "1";
 const profile = await mkdtemp(join(tmpdir(), "bdo-live-list-"));
+const output = resolve(process.env.BDO_LIVE_REPORT_DIR ?? join(profile, "report"));
 const mapping = JSON.parse(await readFile(join(root, "local_app/tests/fixtures/trade-recognition/live-list-mapping.json"), "utf8"));
 const pythonCode = `
 from pathlib import Path
@@ -116,27 +116,28 @@ try {
   const first = await recognize(0, 6);
   assert.deepEqual(first.rows[0].map((text) => text.split("\n")[0]), ["파라타마 섬", "대추야자", "500", "고대 항아리 파편", "10", "1"]);
   assert.doesNotMatch(first.rows[0][1], /확인 필요/, "verified land name is automatically confirmed");
-  assert.equal(await evaluate(`(() => {
-    const review=document.querySelector('[data-role=live-list-review]');
-    const region=review.parentElement.parentElement.getBoundingClientRect();
-    const card=review.querySelector('.trade-review-row').getBoundingClientRect();
-    return Boolean(review.compareDocumentPosition(review.parentElement.querySelector('.trade-recognition-table-wrap')) & Node.DOCUMENT_POSITION_FOLLOWING) && card.top>=region.top && card.bottom<=region.bottom;
-  })()`),true,'first review card is visible before the full list at 130% zoom');
+  assert.equal(await evaluate("document.querySelector('[data-role=live-list-review]')"), null, 'fully confirmed rows do not create an uncertain review section');
 
   assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').parentElement.scrollTop"), 0);
   const screenshot = await send("Page.captureScreenshot", { format: "png" });
   await writeFile(join(output, "visible-table.png"), Buffer.from(screenshot.data, "base64"));
   assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]')===null"),true,'automatic requirement needs no initial review');
   await evaluate("document.querySelector('[data-action=review-live-requirement][data-row=\"0\"]').click()");
+  assert.equal(await evaluate(`(() => {
+    const review=document.querySelector('[data-role=live-list-review]');
+    const region=review.parentElement.parentElement.getBoundingClientRect();
+    const card=review.querySelector('.trade-review-row').getBoundingClientRect();
+    const list=review.parentElement.querySelector('.trade-ready-list');
+    return Boolean(review.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING) && card.top>=region.top && card.bottom<=region.bottom;
+  })()`),true,'explicit quantity review appears before the full list');
   assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]').value"),'500','automatic requirement can be reopened');
   await evaluate("const input=document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]');input.value='600';input.dispatchEvent(new Event('input',{bubbles:true}))");
   assert.equal(await evaluate("document.querySelector('[data-role=live-list-review] input[data-row=\"0\"][data-field=\"reqAmount\"]').value"),'600');
   await evaluate(`window.__masterCalls=0; window.__originalFetch=window.fetch.bind(window); window.fetch=(url,options)=>{if(String(url).includes('/api/master/active')){window.__masterCalls++; return Promise.reject(new Error('Master unavailable'));} return window.__originalFetch(url,options);}; document.querySelector('[data-action=clear-trade-queue]').click();`);
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').checkVisibility()"), false, "cleared inputs invalidate their visible result");
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').checkVisibility()"), true, "completed recognition keeps review after its image queue is cleared");
   const second = await recognize(1, 4);
   assert.equal(await evaluate("window.__masterCalls"), 0, "display does not depend on Master API");
-  await evaluate("document.querySelector('[data-role=trade-live-list] details').open=true");
-  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list] details section').checkVisibility()"), true);
+  assert.equal(await evaluate("document.querySelector('[data-role=trade-live-list]').checkVisibility()"), true, "the next image replaces the previous visible result");
   await evaluate("document.querySelector('[data-action=clear-trade-queue]').click()");
   const fixed = await recognize(7, 5);
   for (const row of fixed.rows) {

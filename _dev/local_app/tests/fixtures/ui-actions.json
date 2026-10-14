@@ -1,0 +1,346 @@
+{
+  "ids": [
+    "add-manual-trade",
+    "app-content",
+    "append-current-trades",
+    "apply-new-session",
+    "brief-map-balance",
+    "brief-map-speed",
+    "brief-open-tuning",
+    "brief-session-mode",
+    "briefing-title",
+    "close-waypoint",
+    "col-balance",
+    "col-speed",
+    "confirm-waypoint",
+    "connect-screen-capture",
+    "copy-engine-diagnostics",
+    "copy-engine-diagnostics-dialog",
+    "diagnostics-copy-status",
+    "disconnect-screen-capture",
+    "durable-tune-chainBonusScore",
+    "durable-tune-chainMaxDistance",
+    "durable-tune-crowCoinPriority",
+    "durable-tune-deficitRatioBonus",
+    "durable-tune-distancePenaltyWeight",
+    "durable-tune-efficiencyThreshold",
+    "durable-tune-emergencyBonus",
+    "durable-tune-exclude-1",
+    "durable-tune-exclude-2",
+    "durable-tune-exclude-3",
+    "durable-tune-exclude-4",
+    "durable-tune-exclude-5",
+    "durable-tune-iliyaPitstopRadius",
+    "durable-tune-overloadPenalty",
+    "durable-tune-overloadTimeWeight",
+    "durable-tune-pathEfficiencyBonus",
+    "durable-tune-preservationBonus",
+    "durable-tune-priority-1",
+    "durable-tune-priority-2",
+    "durable-tune-priority-3",
+    "durable-tune-priority-4",
+    "durable-tune-priority-5",
+    "durable-tune-smallTradePenalty",
+    "durable-tune-specialMatPriority",
+    "durable-tune-useClustering",
+    "durable-tune-westBias",
+    "engine-debug-content",
+    "engine-debug-raw",
+    "engine-diagnostics-dialog",
+    "engine-diagnostics-title",
+    "free-route-islands",
+    "free-route-root",
+    "generate-schedule",
+    "header-balance",
+    "header-speed",
+    "inventory-filter-empty",
+    "inventory-filter-summary",
+    "inventory-root",
+    "inventory-search",
+    "inventory-stock-filter",
+    "json-dialog-title",
+    "json-import-dialog",
+    "mainPanel",
+    "map-root",
+    "map-routes",
+    "map-tools-dialog",
+    "map-tools-title",
+    "maxParley",
+    "maxWeight",
+    "nav-calibrations",
+    "nav-coords",
+    "nav-memos",
+    "navigation-root",
+    "normalWeight",
+    "open-engine-diagnostics",
+    "open-json-import",
+    "open-map-balance",
+    "open-map-speed",
+    "open-map-tools",
+    "open-schedule",
+    "open-settings",
+    "open-trade-capture",
+    "open-tuning",
+    "open-warehouse-scan",
+    "parley-budget",
+    "parley-crow",
+    "parley-normal",
+    "parley-root",
+    "parleyCrow",
+    "parleyPerTrade",
+    "presets-root",
+    "reload-state",
+    "remaining-parley",
+    "reset-session",
+    "retry-completion-save",
+    "runtime-status",
+    "schedule-columns",
+    "schedule-diagnostics",
+    "schedule-dialog",
+    "schedule-slot-controls",
+    "schedule-status",
+    "screen-capture-session",
+    "screen-capture-status",
+    "selected-schedule-slot",
+    "session-trade-count",
+    "settings-dialog",
+    "settings-title",
+    "ship-max",
+    "ship-mode",
+    "ship-normal",
+    "ship-root",
+    "ship-speed",
+    "summary-balance",
+    "summary-speed",
+    "temp-ship-speed",
+    "temp-tune-chainBonusScore",
+    "temp-tune-chainMaxDistance",
+    "temp-tune-crowCoinPriority",
+    "temp-tune-deficitRatioBonus",
+    "temp-tune-distancePenaltyWeight",
+    "temp-tune-efficiencyThreshold",
+    "temp-tune-emergencyBonus",
+    "temp-tune-exclude-1",
+    "temp-tune-exclude-2",
+    "temp-tune-exclude-3",
+    "temp-tune-exclude-4",
+    "temp-tune-exclude-5",
+    "temp-tune-iliyaPitstopRadius",
+    "temp-tune-overloadPenalty",
+    "temp-tune-overloadTimeWeight",
+    "temp-tune-pathEfficiencyBonus",
+    "temp-tune-preservationBonus",
+    "temp-tune-priority-1",
+    "temp-tune-priority-2",
+    "temp-tune-priority-3",
+    "temp-tune-priority-4",
+    "temp-tune-priority-5",
+    "temp-tune-smallTradePenalty",
+    "temp-tune-specialMatPriority",
+    "temp-tune-useClustering",
+    "temp-tune-westBias",
+    "tier-rule-1",
+    "tier-rule-2",
+    "tier-rule-3",
+    "tier-rule-4",
+    "tier-rule-5",
+    "tier-rules-root",
+    "toggle-all-trades",
+    "trade-capture-dialog",
+    "trade-capture-files",
+    "trade-capture-title",
+    "trade-filter-empty",
+    "trade-filter-summary",
+    "trade-import-status",
+    "trade-json-input",
+    "trade-list-root",
+    "trade-recognition-title",
+    "trade-search",
+    "trade-session-panel",
+    "trade-visibility",
+    "tuning-dialog",
+    "tuning-root",
+    "tuning-title",
+    "viewer-root",
+    "viewer-zoom",
+    "warehouse-dialog-title",
+    "warehouse-image",
+    "warehouse-scan-dialog",
+    "waypoint-title",
+    "waypointModal",
+    "workspace-title",
+    "wpAnchorSelect",
+    "wpIsland",
+    "wpMatBox",
+    "wpMatCount",
+    "wpMatName",
+    "wpMode",
+    "wpSortieIdx",
+    "wpUseMat"
+  ],
+  "actions": [
+    {
+      "id": "open-settings",
+      "text": "선박·교섭력"
+    },
+    {
+      "id": "open-tuning",
+      "text": "계산 튜닝"
+    },
+    {
+      "id": "open-map-tools",
+      "text": "지도·항로"
+    },
+    {
+      "id": "reload-state",
+      "text": "설정 다시 읽기"
+    },
+    {
+      "id": "open-trade-capture",
+      "text": "물교 화면 가져오기"
+    },
+    {
+      "id": "open-json-import",
+      "text": "JSON 입력"
+    },
+    {
+      "id": "add-manual-trade",
+      "text": "행 추가"
+    },
+    {
+      "id": "toggle-all-trades",
+      "text": "전체 비활성"
+    },
+    {
+      "id": "reset-session",
+      "text": "회차 초기화"
+    },
+    {
+      "id": "open-schedule",
+      "text": "스케줄 브리핑"
+    },
+    {
+      "id": "open-map-speed",
+      "text": "쾌속 지도"
+    },
+    {
+      "id": "open-map-balance",
+      "text": "균형 지도"
+    },
+    {
+      "id": "open-warehouse-scan",
+      "text": "창고 스캔"
+    },
+    {
+      "id": "apply-new-session",
+      "text": "새 회차로 적용"
+    },
+    {
+      "id": "append-current-trades",
+      "text": "현재 회차에 추가"
+    },
+    {
+      "id": "connect-screen-capture",
+      "text": "화면 연결"
+    },
+    {
+      "id": "disconnect-screen-capture",
+      "text": "연결 끊기"
+    },
+    {
+      "id": "",
+      "action": "capture-trade-roi",
+      "text": "선택 영역 캡처"
+    },
+    {
+      "id": "",
+      "action": "reset-trade-roi",
+      "text": "영역 초기화"
+    },
+    {
+      "id": "",
+      "action": "clear-trade-queue",
+      "text": "스크린샷 전체삭제"
+    },
+    {
+      "id": "",
+      "action": "recognize-trade",
+      "text": "인식 결과 만들기"
+    },
+    {
+      "id": "generate-schedule",
+      "text": "스케줄 생성 / 다시 계산"
+    },
+    {
+      "id": "retry-completion-save",
+      "text": "완료 저장 재시도"
+    },
+    {
+      "id": "brief-open-tuning",
+      "text": "계산 튜닝"
+    },
+    {
+      "id": "brief-map-speed",
+      "text": "쾌속 지도"
+    },
+    {
+      "id": "brief-map-balance",
+      "text": "균형 지도"
+    },
+    {
+      "id": "open-engine-diagnostics",
+      "text": "결정 과정 보기"
+    },
+    {
+      "id": "copy-engine-diagnostics",
+      "text": "진단 복사"
+    },
+    {
+      "id": "confirm-waypoint",
+      "text": "추가"
+    },
+    {
+      "id": "close-waypoint",
+      "text": "취소"
+    },
+    {
+      "id": "copy-engine-diagnostics-dialog",
+      "text": "진단 정보 복사"
+    },
+    {
+      "id": "",
+      "action": "close",
+      "text": "닫기"
+    },
+    {
+      "id": "",
+      "action": "connect-screen",
+      "text": "화면 연결"
+    },
+    {
+      "id": "",
+      "action": "disconnect-screen",
+      "text": "연결 종료"
+    },
+    {
+      "id": "",
+      "action": "reset-roi",
+      "text": "범위 초기화"
+    },
+    {
+      "id": "",
+      "action": "capture-roi",
+      "text": "선택 영역 캡처"
+    },
+    {
+      "id": "",
+      "action": "cancel",
+      "text": "취소"
+    },
+    {
+      "id": "",
+      "action": "scan",
+      "text": "선택 이미지 판독"
+    }
+  ]
+}

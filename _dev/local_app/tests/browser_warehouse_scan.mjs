@@ -82,7 +82,9 @@ try {
   const edited=await bootstrap();
   for(const seed of seeds)if(edited.inventory.find(i=>i.programName===seed.bestCandidate).stock!==seed.quantity.value+1)throw Error('selective edit missing');
   await evaluate('window.fetch=window.__warehouseOriginalFetch');
-  await evaluate(`navigator.mediaDevices.getDisplayMedia=async()=>{const c=document.createElement('canvas');c.width=1000;c.height=700;const x=c.getContext('2d');x.fillStyle='red';x.fillRect(0,0,1000,700);window.__warehouseStream=c.captureStream(30);window.__warehouseFrame=setInterval(()=>x.fillRect(0,0,1000,700),30);return window.__warehouseStream};document.querySelector('#open-warehouse-scan').click();document.querySelector('#warehouse-scan-dialog [data-action=connect-screen]').click()`);
+  await evaluate(`window.__warehouseNativeFetch=window.fetch.bind(window);window.fetch=async(url,options)=>{const response=await window.__warehouseNativeFetch(url,options);if(String(url)==='/api/native-capture'&&(!options?.method||options.method==='GET'))return new Response(JSON.stringify({...await response.json(),available:false}),{status:response.status,headers:{'Content-Type':'application/json'}});return response;};navigator.mediaDevices.getDisplayMedia=async()=>{const c=document.createElement('canvas');c.width=1000;c.height=700;const x=c.getContext('2d');x.fillStyle='red';x.fillRect(0,0,1000,700);window.__warehouseStream=c.captureStream(30);window.__warehouseFrame=setInterval(()=>x.fillRect(0,0,1000,700),30);return window.__warehouseStream};document.querySelector('#open-warehouse-scan').click()`);
+  await waitFor(async()=>await evaluate("!document.querySelector('#warehouse-scan-dialog .capture-browser-options').hidden"),'browser fallback available without native capture');
+  await evaluate("document.querySelector('#warehouse-scan-dialog .capture-browser-options').open=true;document.querySelector('#warehouse-scan-dialog [data-action=connect-screen]').click()");
   await waitFor(async()=>await evaluate("!document.querySelector('#warehouse-scan-dialog .trade-roi-box').hidden"),'warehouse ROI connected');
   const roiBefore=await evaluate("document.querySelector('#warehouse-scan-dialog .trade-roi-box').dataset.normalized");
   await evaluate(`(()=>{const b=document.querySelector('#warehouse-scan-dialog .trade-roi-box'),h=b.querySelector('[data-roi-handle=se]');h.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,clientX:500,clientY:400}));b.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:460,clientY:360}));b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1}));})()`);
@@ -92,7 +94,8 @@ try {
   await waitFor(async()=>await evaluate("Number(document.querySelector('#warehouse-scan-dialog').dataset.queueLength)>0"),'ROI capture queued');
   await evaluate("document.querySelector('#warehouse-scan-dialog [data-action=cancel]').click();clearInterval(window.__warehouseFrame)");
   await waitFor(async()=>await evaluate("window.__warehouseStream.getTracks().every(t=>t.readyState==='ended')"),'warehouse stream disconnected after dialog close');
-  console.log(JSON.stringify({ok:true,selectiveReview:uncertain.length,automaticMatches:Object.keys(scan.patch.items).length,seedDiagnostics:seeds.map(s=>({name:s.bestCandidate,decision:s.decision,gap:s.scoreGap})),inventorySavedOnce:true,roiResizeAndCapture:true,streamClosed:true},null,2));
+  await evaluate('window.fetch=window.__warehouseNativeFetch');
+  console.log(JSON.stringify({ok:true,selectiveReview:uncertain.length,automaticMatches:Object.keys(scan.patch.items).length,seedDiagnostics:seeds.map(s=>({name:s.bestCandidate,decision:s.decision,gap:s.scoreGap})),inventorySavedOnce:true,roiResizeAndCapture:true,streamClosed:true,browserFallbackWhenNativeUnavailable:true},null,2));
 
   async function uploadAndScan(viaDrop = false, imagePath = scaledFixture) {
     const queuedBefore = Number(await evaluate("document.querySelector('#warehouse-scan-dialog')?.dataset.queueLength ?? 0"));
