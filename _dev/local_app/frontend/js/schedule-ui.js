@@ -114,7 +114,9 @@ function renderModeColumn(id, sorties, mode) {
     const cargo = document.createElement("div"); cargo.className = "sortie-cargo";
     const cargoHeading = document.createElement("strong"); cargoHeading.className = "sortie-cargo-heading"; cargoHeading.textContent = "출항 적재";
     const cargoItems = document.createElement("div"); cargoItems.className = "sortie-cargo-items";
-    for (const [name, req] of Object.entries(sortie.reqItems || {})) {
+    const cargoEntries = Object.entries(sortie.reqItems || {}).sort(([, left], [, right]) =>
+      Number(right.isBase ? 0 : right.tier) - Number(left.isBase ? 0 : left.tier));
+    for (const [name, req] of cargoEntries) {
       const tier = req.isBase ? 0 : req.tier; const tone = itemTone(tier);
       const chip = document.createElement("span"); chip.className = "cargo-item " + tone;
       const tierLabel = document.createElement("span"); tierLabel.className = "cargo-tier-label " + tone; tierLabel.textContent = itemTierLabel(tier);

@@ -73,6 +73,28 @@ try {
  const schedule=await page.evaluate(async()=>JSON.stringify((await import('/assets/js/state.js')).state.session.schedule,(k,v)=>k==='timerEnd'?undefined:v));
  await writeFile(join(out,'current-schedule.json'),schedule);
  await shot('schedule-1920');
+ await page.evaluate(()=>{
+   const reqItems={};
+   for(const tier of [1,5,0,3,4,2])reqItems[`적재 ${tier}`]={tier,isBase:tier===0,count:tier+1};
+   const trades=Array.from({length:60},(_,i)=>({island:'테스트 섬',fromClean:'육지품',fromTier:0,toClean:`단계 품목 ${i}`,toTier:i<56?5:i-55,execC:1,reqA:1,mult:2}));
+   window.renderModeColumn('col-speed',[{reqItems,trades,totalTime:1,parleyUsed:0,startWeight:0,returnTime:1}],'speed');
+ });
+ for(const width of [1920,1440]){
+   await page.setViewportSize({width,height:1080});
+   const briefing=await page.evaluate(()=>({
+     cargo:[...document.querySelectorAll('#col-speed .sortie-cargo-items .cargo-tier-label')].map(node=>node.textContent),
+     rows:[...document.querySelectorAll('#summary-speed .settlement-tier-line')].map(node=>({height:node.getBoundingClientRect().height,scrollWidth:node.scrollWidth,clientWidth:node.clientWidth,text:node.textContent})),
+   }));
+   assert.deepEqual(briefing.cargo,['5단','4단','3단','2단','1단','육지'],`cargo order at ${width}px`);
+   assert.equal(briefing.rows.length,5,`one settlement row per tier at ${width}px`);
+   assert.ok(briefing.rows.every(row=>row.height<35),`settlement rows stay on one line at ${width}px`);
+   assert.ok(briefing.rows.at(-1).scrollWidth>briefing.rows.at(-1).clientWidth,`long settlement stays readable by horizontal scroll at ${width}px`);
+ }
+ await page.setViewportSize({width:1920,height:1080});
+ await page.evaluate(async()=>{
+   const {state}=await import('/assets/js/state.js');
+   window.renderModeColumn('col-speed',state.session.schedule.speed,'speed');
+ });
  if(process.env.UI_AUDIT_ALL_VIEWS==='1'){
    await page.locator('[data-brief-mode="both"]').click(); await shot('schedule-both-1920');
    await page.locator('[data-brief-mode="speed"]').click();

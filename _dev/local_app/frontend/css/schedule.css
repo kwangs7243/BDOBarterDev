@@ -65,8 +65,8 @@
 .mode-settlement summary h4 { display:inline; }
 .route-explanation summary { font-size:.75rem; padding:.15rem 0; }
 .settlement-note { font-size:.8rem; color:var(--muted); margin-bottom:.35rem; }
-.settlement-net-list { padding:0; margin:0; list-style:none; display:flex; flex-wrap:wrap; gap:.3rem 1rem; }
-.settlement-tier-line { font-size:.85rem; }
+.settlement-net-list { padding:0; margin:0; list-style:none; display:grid; grid-template-columns:minmax(0,1fr); gap:.3rem; }
+.settlement-tier-line { min-width:0; overflow-x:auto; white-space:nowrap; font-size:.85rem; }
 .settlement-delta-positive { color:var(--success); } .settlement-delta-negative { color:var(--danger); }
 .settlement-empty { color:var(--muted); font-size:.85rem; }
 .brief-mode-tabs { padding:3px; border:1px solid var(--line); background:var(--surface-input); border-radius:var(--radius); }
