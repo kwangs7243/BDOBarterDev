@@ -90,6 +90,35 @@ try {
    assert.ok(briefing.rows.every(row=>row.height<35),`settlement rows stay on one line at ${width}px`);
    assert.ok(briefing.rows.at(-1).scrollWidth>briefing.rows.at(-1).clientWidth,`long settlement stays readable by horizontal scroll at ${width}px`);
  }
+ const cargoOrderCase=await page.evaluate(async()=>{
+   const {state}=await import('/assets/js/state.js');
+   const {saveInventoryOrder}=await import('/assets/js/persistence.js');
+   const originalOrder=structuredClone(state.order), customOrder={}, reqItems={}, expected=[];
+   for(const tier of [5,4,3,2,1]){
+     const names=state.inventory.filter(item=>item.tier===tier).map(item=>item.programName).sort((a,b)=>a.localeCompare(b,'ko'));
+     customOrder[String(tier)]=[names[2],names[0],names[1],...names.slice(3)];
+     for(const name of names.slice(0,3))reqItems[name]={tier,count:2};
+     expected.push(...customOrder[String(tier)].slice(0,3));
+   }
+   reqItems['육지 적재 테스트']={tier:0,isBase:true,count:10};
+   expected.push('육지 적재 테스트');
+   await saveInventoryOrder(customOrder);
+   const sortie={reqItems,trades:[],totalTime:1,parleyUsed:0,startWeight:0,returnTime:1};
+   const before=JSON.stringify(sortie);
+   const actual={};
+   for(const mode of ['speed','balance']){
+     window.renderModeColumn('col-'+mode,[sortie],mode);
+     actual[mode]=[...document.querySelectorAll('#col-'+mode+' .cargo-item-name')].map(node=>node.textContent);
+   }
+   const saved=(await(await fetch('/api/bootstrap')).json()).order;
+   const unchanged=before===JSON.stringify(sortie);
+   await saveInventoryOrder(originalOrder);
+   return {expected,actual,customOrder,saved,unchanged};
+ });
+ assert.deepEqual(cargoOrderCase.actual.speed,cargoOrderCase.expected,'speed cargo follows saved warehouse order within descending tiers');
+ assert.deepEqual(cargoOrderCase.actual.balance,cargoOrderCase.expected,'balance cargo follows saved warehouse order within descending tiers');
+ assert.deepEqual(cargoOrderCase.saved,cargoOrderCase.customOrder,'custom warehouse order is persisted');
+ assert.equal(cargoOrderCase.unchanged,true,'cargo rendering must not change quantities or schedule input');
  await page.setViewportSize({width:1920,height:1080});
  await page.evaluate(async()=>{
    const {state}=await import('/assets/js/state.js');

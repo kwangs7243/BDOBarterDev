@@ -1,5 +1,6 @@
 import { totalDepartureDuration } from "./duration.js";
 import { state } from "./state.js";
+import { inventoryDisplayOrder } from "./inventory-ui.js";
 import { deleteScheduleSlot, loadScheduleSlot, saveCompletionInventory, saveScheduleSlot, whenPersistenceIdle } from "./persistence.js";
 import { renderScheduleDiagnostics } from "./diagnostics-ui.js";
 
@@ -90,6 +91,7 @@ function renderModeColumn(id, sorties, mode) {
   setModeHeading(header, mode, sorties, totalParley);
   renderModeSettlement(mode, sorties);
   root.replaceChildren();
+  const inventoryOrder = inventoryDisplayOrder();
   sorties.forEach((sortie, sortieIndex) => {
     const card = document.createElement("article");
     card.className = "sortie-card";
@@ -114,8 +116,14 @@ function renderModeColumn(id, sorties, mode) {
     const cargo = document.createElement("div"); cargo.className = "sortie-cargo";
     const cargoHeading = document.createElement("strong"); cargoHeading.className = "sortie-cargo-heading"; cargoHeading.textContent = "출항 적재";
     const cargoItems = document.createElement("div"); cargoItems.className = "sortie-cargo-items";
-    const cargoEntries = Object.entries(sortie.reqItems || {}).sort(([, left], [, right]) =>
-      Number(right.isBase ? 0 : right.tier) - Number(left.isBase ? 0 : left.tier));
+    const cargoEntries = Object.entries(sortie.reqItems || {}).sort(([leftName, left], [rightName, right]) => {
+      const leftTier = Number(left.isBase ? 0 : left.tier), rightTier = Number(right.isBase ? 0 : right.tier);
+      if (leftTier !== rightTier) return rightTier - leftTier;
+      const order = inventoryOrder[String(leftTier)];
+      if (!order) return 0;
+      const leftIndex = order.indexOf(leftName), rightIndex = order.indexOf(rightName);
+      return (leftIndex < 0 ? order.length : leftIndex) - (rightIndex < 0 ? order.length : rightIndex);
+    });
     for (const [name, req] of cargoEntries) {
       const tier = req.isBase ? 0 : req.tier; const tone = itemTone(tier);
       const chip = document.createElement("span"); chip.className = "cargo-item " + tone;
