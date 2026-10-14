@@ -34,7 +34,15 @@ def main() -> int:
         if not path.is_file():
             raise ValueError('worker image is missing')
         checked.append({**capture, 'imagePath': path})
-    result = recognize_live(checked, args.model_dir, manifest['batchId'])
+    def report_progress(value):
+        if manifest.get('progressPath') != 'progress.json':
+            return
+        path = args.request.resolve().parent / 'progress.json'
+        pending = path.with_suffix('.tmp')
+        pending.write_text(json.dumps(value), encoding='utf-8')
+        pending.replace(path)
+
+    result = recognize_live(checked, args.model_dir, manifest['batchId'], on_progress=report_progress)
     args.out.write_text(json.dumps(result, ensure_ascii=False, allow_nan=False), encoding='utf-8')
     return 0
 

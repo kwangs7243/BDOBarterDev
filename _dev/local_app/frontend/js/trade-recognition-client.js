@@ -40,7 +40,29 @@ export async function getTradeRecognitionRuntime() {
   return body.runtime;
 }
 
-export async function recognizeTradeLiveList(captures) {
+function pollProgress(batchId, onProgress) {
+  let stopped = false, timer, controller;
+  const poll = async () => {
+    controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    try {
+      const response = await fetch(`/api/recognition/trade-progress/${batchId}`, {
+        credentials: "same-origin", cache: "no-store", signal: controller.signal,
+      });
+      const body = await responseJson(response);
+      if (!stopped && response.ok && body?.ok === true && body.progress) onProgress(body.progress);
+    } catch {
+      // Progress is optional; the recognition response remains authoritative.
+    } finally {
+      clearTimeout(timeout);
+      if (!stopped) timer = setTimeout(poll, 500);
+    }
+  };
+  timer = setTimeout(poll, 500);
+  return () => { stopped = true; clearTimeout(timer); controller?.abort(); };
+}
+
+export async function recognizeTradeLiveList(captures, { onProgress } = {}) {
   if (!Array.isArray(captures) || captures.length === 0) throw new TradeRecognitionError("invalid_batch");
   for (const capture of captures) {
     if (!(capture?.blob instanceof Blob) || capture.blob.type !== "image/png"
@@ -59,16 +81,18 @@ export async function recognizeTradeLiveList(captures) {
   form.append("batch", JSON.stringify(batch));
   captures.forEach((capture, index) => form.append("image", capture.blob, `capture-${String(index + 1).padStart(4, "0")}.png`));
   let response;
+  const stopProgress = typeof onProgress === "function" ? pollProgress(batchId, onProgress) : () => {};
   try {
-    response = await fetch("/api/recognition/trade-live-list", { method: "POST", credentials: "same-origin", body: form });
-  } catch {
-    throw new TradeRecognitionError("network_error");
-  }
-  const body = await responseJson(response);
-  if (!response.ok) {
-    const code = typeof body?.error?.code === "string" ? body.error.code : "recognition_failed";
-    throw new TradeRecognitionError(code, undefined, { ...body?.diagnostics, httpStatus: response.status, backendCode: code, backendMessage: body?.error?.message });
-  }
+    try {
+      response = await fetch("/api/recognition/trade-live-list", { method: "POST", credentials: "same-origin", body: form });
+    } catch {
+      throw new TradeRecognitionError("network_error");
+    }
+    const body = await responseJson(response);
+    if (!response.ok) {
+      const code = typeof body?.error?.code === "string" ? body.error.code : "recognition_failed";
+      throw new TradeRecognitionError(code, undefined, { ...body?.diagnostics, httpStatus: response.status, backendCode: code, backendMessage: body?.error?.message });
+    }
     const result = body?.result;
     const ids = captures.map((capture) => capture.metadata.captureId);
     if (body?.ok !== true || result?.version !== 3 || result.batchId !== batchId
@@ -80,6 +104,9 @@ export async function recognizeTradeLiveList(captures) {
       throw new TradeRecognitionError("contract_violation");
     }
     return result;
+  } finally {
+    stopProgress();
+  }
 
 }
 

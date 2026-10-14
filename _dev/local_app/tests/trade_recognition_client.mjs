@@ -28,4 +28,37 @@ await saveTradeCorrections([first,second],{runtime:{engineId:"engine",workerVers
 assert.equal(seen.url,"/api/recognition/trade-corrections");
 assert.equal(seen.options.body.getAll("image").length,1);
 assert.equal(JSON.parse(seen.options.body.get("feedback")).captures[0].captureId,second.metadata.captureId);
+
+let finishRecognition, requestBatch, pollCalls = 0;
+let progressReceived;
+const progressReady = new Promise((resolve) => { progressReceived = resolve; });
+globalThis.fetch = async (url, options) => {
+  if (url.startsWith('/api/recognition/trade-progress/')) {
+    pollCalls++;
+    assert.equal(options.cache, 'no-store');
+    return Response.json({ok:true,progress:{stage:'recognizing',totalCaptures:1,
+      completedCaptures:0,currentRowsCompleted:2,currentRowsTotal:6}});
+  }
+  requestBatch = JSON.parse(options.body.get('batch'));
+  return new Promise((resolve) => { finishRecognition = resolve; });
+};
+const pendingResult = recognizeTradeLiveList([first], { onProgress: progressReceived });
+const deadline = setTimeout(() => progressReceived(null), 3000);
+const progress = await progressReady;
+clearTimeout(deadline);
+assert.equal(progress?.currentRowsCompleted, 2);
+finishRecognition(Response.json({ok:true,result:{version:3,batchId:requestBatch.batchId,
+  captures:requestBatch.captures,rows:[]}}));
+await pendingResult;
+const callsAtCompletion = pollCalls;
+await new Promise((resolve) => setTimeout(resolve, 650));
+assert.equal(pollCalls, callsAtCompletion);
+
+globalThis.fetch = async (url, options) => {
+  if (url.startsWith('/api/recognition/trade-progress/')) throw new Error('progress offline');
+  const batch = JSON.parse(options.body.get('batch'));
+  await new Promise((resolve) => setTimeout(resolve, 650));
+  return Response.json({ok:true,result:{version:3,batchId:batch.batchId,captures:batch.captures,rows:[]}});
+};
+assert.equal((await recognizeTradeLiveList([first], {onProgress:()=>{throw new Error('display failure');}})).version, 3);
 console.log(JSON.stringify({ok:true,liveOnly:true,affectedCaptureOnly:true,errorPropagation:true}));

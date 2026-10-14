@@ -418,6 +418,28 @@ class LiveListTests(unittest.TestCase):
         self.assertEqual(field["corrected"], "알 수 없는 새 물품")
         self.assertTrue(field["reviewRequired"])
 
+    def test_progress_preserves_output_and_cannot_interrupt_recognition(self):
+        import tempfile
+        events = []
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'capture.png'
+            Image.new('RGB', (1000, 100)).save(path)
+            captures = [{'captureId': 'one', 'imagePath': path}]
+            with patch('local_app.tools.trade_live_ocr.LocalReader'), \
+                    patch('local_app.tools.trade_live_ocr.detect_live_rows', return_value=[(0, 100)]), \
+                    patch('local_app.tools.trade_live_ocr.read_numeric', side_effect=RuntimeError('numeric failure')), \
+                    patch('local_app.tools.trade_live_ocr.read_name', return_value=('새 품목', .95)):
+                original = recognize_live(captures, Path('unused'), 'batch')
+                monitored = recognize_live(captures, Path('unused'), 'batch', on_progress=events.append)
+                broken = recognize_live(captures, Path('unused'), 'batch',
+                                        on_progress=lambda value: (_ for _ in ()).throw(OSError('progress unavailable')))
+        self.assertEqual(original, monitored)
+        self.assertEqual(original, broken)
+        self.assertEqual([event['stage'] for event in events],
+                         ['recognizing', 'recognizing', 'recognizing', 'finalizing'])
+        self.assertEqual(events[1]['currentRowsCompleted'], 1)
+        self.assertEqual(events[-1]['completedCaptures'], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

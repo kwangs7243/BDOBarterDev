@@ -42,6 +42,32 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const tradeRuntimeStatus = tradeDialog.querySelector("[data-role='trade-runtime-status']");
   const tradeQueueSummary = tradeDialog.querySelector("[data-role='trade-queue-summary']");
   const tradeRecognitionStatus = tradeDialog.querySelector("[data-role='trade-recognition-status']");
+  const progressRegion = tradeDialog.querySelector("[data-role='trade-recognition-progress']");
+  const progressBar = progressRegion.querySelector("progress");
+  const progressLabel = progressRegion.querySelector("[data-role='trade-progress-label']");
+  const showProgress = (progress) => {
+    const total = progress.totalCaptures;
+    if (!Number.isInteger(total) || total < 1) return;
+    progressRegion.hidden = false;
+    progressBar.max = total;
+    if (progress.stage === "complete") {
+      progressBar.value = total;
+      progressLabel.textContent = `이미지 ${total}개 인식 완료`;
+    } else if (progress.stage === "recognizing") {
+      const completed = progress.completedCaptures, rows = progress.currentRowsTotal, done = progress.currentRowsCompleted;
+      if (![completed, rows, done].every(Number.isInteger) || completed < 0 || completed > total || rows < 0 || done < 0 || done > rows) return;
+      if (completed + (rows > 0 ? done / rows : 0) >= total) {
+        progressBar.removeAttribute("value");
+        progressLabel.textContent = "인식 결과 확인 중…";
+      } else {
+        progressBar.value = completed + (rows > 0 ? done / rows : 0);
+        progressLabel.textContent = `이미지 ${completed + 1} / ${total} 인식 중${rows > 0 ? ` · ${done} / ${rows}행 완료` : " · 행 찾는 중"}`;
+      }
+    } else {
+      progressBar.removeAttribute("value");
+      progressLabel.textContent = progress.stage === "finalizing" ? "인식 결과 확인 중…" : `이미지 ${total}개 · 인식 엔진 준비 중…`;
+    }
+  };
   const tradeRecognitionRegion = tradeDialog.querySelector("[data-role='trade-recognition']");
   const tradeRecognitionResultRegion = tradeDialog.querySelector("[data-role='trade-recognition-result']");
   const liveListSection = document.createElement("section");
@@ -141,6 +167,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     updateRecognitionControls();
   };
   const invalidateRecognitionResult = (message = "대기 이미지가 변경되었습니다. 다시 인식하세요.") => {
+    progressRegion.hidden = true;
     liveListResult = null;
     liveListUI.clear();
     recognitionDiagnostics.hidden = true;
@@ -297,11 +324,15 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
     tradeRecognitionPending = true;
     updateRecognitionControls();
     tradeRecognitionStatus.textContent = "로컬 인식으로 물교 목록을 만드는 중…";
+    showProgress({ stage: "preparing", totalCaptures: captures.length });
     try {
       await tradeCatalogReady;
-      const result = await recognizeTradeLiveList(captures);
+      const result = await recognizeTradeLiveList(captures, {
+        onProgress: (progress) => showProgress({ ...progress, stage: progress.stage === "complete" ? "finalizing" : progress.stage }),
+      });
       if (requestRevision !== tradeQueueRevision) return;
       renderLiveList(result, captures);
+      showProgress({ stage: "complete", totalCaptures: captures.length });
       if (result.rows.length) {
         tradeQueue.clear();
         tradeQueueRevision += 1;
@@ -313,6 +344,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         ? `물교 ${result.rows.length}행 · 확인 필요 ${reviewCount}곳. 고정 수량은 교환 규칙으로 반영했습니다.`
         : "물교 행을 찾지 못했습니다. 물교 표 전체가 포함되도록 입력해 주세요.";
     } catch (error) {
+      progressRegion.hidden = true;
       tradeRecognitionStatus.textContent = error.message;
       showDiagnostics({ ...error.diagnostics, stage: error.stage ?? "OCR_RUNTIME", code: error.code ?? "recognition_failed" });
     } finally {

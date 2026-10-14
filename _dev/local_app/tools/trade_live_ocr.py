@@ -550,7 +550,16 @@ def read_catalog_name(reader, crop, candidates, literal_candidates=()):
             **({"recognizedStage": recognized_stage} if recognized_stage is not None else {})}
 
 
-def recognize_live(captures, model_dir, batch_id):
+def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
+    def report(stage, completed, row_completed=0, row_total=0):
+        if on_progress is not None:
+            try:
+                on_progress({"stage": stage, "completedCaptures": completed, "totalCaptures": len(captures),
+                             "currentRowsCompleted": row_completed, "currentRowsTotal": row_total})
+            except Exception:
+                # A progress display must not interrupt recognition or change its result.
+                pass
+
     reader = LocalReader(model_dir)
     try:
         catalog = json.loads((Path(__file__).resolve().parents[1] / "frontend/data/trade-catalog.json").read_text(encoding="utf-8"))
@@ -566,9 +575,10 @@ def recognize_live(captures, model_dir, batch_id):
               "toItem": (.714, .10, .931, .87), "count": (.064, .47, .233, .83),
               "reqAmount": (.287, .55, .340, .93), "yield": (.663, .55, .724, .95)}
     rows, capture_results = [], []
-    for capture in captures:
+    for capture_index, capture in enumerate(captures):
         image = Image.open(capture["imagePath"]).convert("RGB")
         boxes = detect_live_rows(image)
+        report("recognizing", capture_index, 0, len(boxes))
         capture_results.append({"captureId": capture["captureId"], "rows": len(boxes),
                                 "width": image.width, "height": image.height})
         for ordinal, (top, bottom) in enumerate(boxes):
@@ -606,5 +616,8 @@ def recognize_live(captures, model_dir, batch_id):
             rows.append({"captureId": capture["captureId"], "ordinal": ordinal,
                          "rowBox": {"x": 0, "y": top, "width": image.width, "height": bottom - top},
                          "fields": fields})
+            report("recognizing", capture_index, ordinal + 1, len(boxes))
+        report("recognizing", capture_index + 1)
+    report("finalizing", len(captures))
     return {"version": 3, "batchId": batch_id, "rows": rows, "captures": capture_results,
             "engine": "korean_PP-OCRv5_mobile_rec/ONNX-CPU", "rowDetector": "measured-separator-spacing-v1"}

@@ -98,6 +98,7 @@ try {
     const input = await send("DOM.querySelector", { nodeId: document.root.nodeId, selector: "#trade-capture-files" });
     await send("DOM.setFileInputFiles", { nodeId: input.nodeId, files: [join(root, "local_app/tests/fixtures/trade-recognition", mapping[imageIndex].image)] });
     await waitFor(async () => evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength==='1'"), "real PNG input");
+    await waitFor(async () => evaluate("!document.querySelector('[data-action=recognize-trade]').disabled"), "recognition engine ready after dialog reopen");
     await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
     try {
       await waitFor(async () => evaluate(`document.querySelector('[data-role=trade-live-list] > .trade-recognition-table-wrap tbody, [data-role=trade-live-list] > .trade-ready-list > .trade-recognition-table-wrap tbody')?.rows.length===${expectedRows} && document.querySelector('[data-role=trade-recognition]').getAttribute('aria-busy')==='false' && document.querySelector('#trade-capture-dialog').dataset.queueLength==='0'`), "visible six-field table");

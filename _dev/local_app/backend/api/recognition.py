@@ -66,6 +66,17 @@ def post_trade_live_list():
     return jsonify({"ok": True, "result": result})
 
 
+@recognition_api.get("/trade-progress/<uuid:batch_id>")
+def get_trade_progress(batch_id):
+    runtime = current_app.extensions.get("trade_batch_runtime")
+    progress = runtime.progress(str(batch_id)) if runtime is not None else None
+    if progress is None:
+        return _error("progress_not_found", "Recognition progress is not available.", 404)
+    response = jsonify({"ok": True, "progress": progress})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def _read_captures(descriptors, uploads):
     if not isinstance(descriptors, list) or not 1 <= len(descriptors) <= MAX_CAPTURES or len(descriptors) != len(uploads):
         raise RecognitionContractError("invalid_capture_parts", "Capture metadata count must match the image part count.", 422)

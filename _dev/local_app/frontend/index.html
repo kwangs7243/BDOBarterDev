@@ -112,6 +112,10 @@
           <button type="button" data-action="recognize-trade" disabled>인식 결과 만들기</button>
         </div>
         <p data-role="trade-recognition-status" role="status" aria-live="polite"></p>
+        <div class="trade-recognition-progress" data-role="trade-recognition-progress" hidden>
+          <progress aria-label="물교 인식 진행" max="1"></progress>
+          <span data-role="trade-progress-label" role="status" aria-live="polite"></span>
+        </div>
         <div class="recognition-empty">
           <svg class="capture-empty-mark" viewBox="0 0 120 76" fill="none" aria-hidden="true"><rect x="13" y="11" width="94" height="54" rx="4"/><path d="M25 26h12m9 0h48M25 38h12m9 0h34M25 50h12m9 0h41"/><path class="capture-corners" d="M5 23V4h22m66 0h22v19M5 53v19h22m66 0h22V53"/></svg>
           <p class="empty-eyebrow">이미지에서 교환 목록으로</p><h3>캡처한 교환을 여기서 확인하세요</h3>

@@ -67,6 +67,41 @@ class TradeBatchRuntime:
         self.timeout = timeout
         self.runner = runner or subprocess.run
         self._worker_lock = threading.BoundedSemaphore(1)
+        self._progress_lock = threading.Lock()
+        self._progress = {}
+
+    def _set_progress(self, batch_id, stage, total, *, path=None):
+        with self._progress_lock:
+            if batch_id not in self._progress and len(self._progress) >= 32:
+                self._progress.pop(next(iter(self._progress)))
+            self._progress[batch_id] = {
+                "path": path,
+                "snapshot": {"stage": stage, "totalCaptures": total,
+                             "completedCaptures": total if stage == "complete" else 0,
+                             "currentRowsCompleted": 0, "currentRowsTotal": 0},
+            }
+
+    def progress(self, batch_id):
+        with self._progress_lock:
+            record = self._progress.get(batch_id)
+            if record is None:
+                return None
+            if record["path"] is not None:
+                try:
+                    path = record["path"]
+                    if path.stat().st_size <= 4096:
+                        value = json.loads(path.read_text(encoding="utf-8"))
+                        total = record["snapshot"]["totalCaptures"]
+                        if (isinstance(value, dict) and value.get("stage") in {"recognizing", "finalizing"}
+                                and value.get("totalCaptures") == total
+                                and all(type(value.get(key)) is int and value[key] >= 0
+                                        for key in ("completedCaptures", "currentRowsCompleted", "currentRowsTotal"))
+                                and value["completedCaptures"] <= total
+                                and value["currentRowsCompleted"] <= value["currentRowsTotal"]):
+                            record["snapshot"] = value
+                except (OSError, ValueError, UnicodeError):
+                    pass
+            return dict(record["snapshot"])
 
 
 
@@ -106,6 +141,7 @@ class TradeBatchRuntime:
         if not self._worker_lock.acquire(blocking=False):
             raise TradeBatchRuntimeError("engine_busy", "The local recognition engine is busy.", 409, retryable=True)
         started = time.monotonic()
+        self._set_progress(batch_id, "preparing", len(captures))
         try:
             with tempfile.TemporaryDirectory(prefix="bdo-trade-batch-", dir=self.temp_root) as temporary:
                 work_dir = Path(temporary)
@@ -116,7 +152,9 @@ class TradeBatchRuntime:
                     manifest_captures.append({"captureId": capture["captureId"], "batchId": capture["metadata"]["batchId"],
                                               "imagePath": name})
                 manifest_path, output_path = work_dir / "request.json", work_dir / "result.json"
-                manifest_path.write_text(json.dumps({"version": 1, "batchId": batch_id, "captures": manifest_captures},
+                self._set_progress(batch_id, "preparing", len(captures), path=work_dir / "progress.json")
+                manifest_path.write_text(json.dumps({"version": 1, "batchId": batch_id, "captures": manifest_captures,
+                                                    "progressPath": "progress.json"},
                                                     ensure_ascii=False), encoding="utf-8")
                 prefix = [str(self.python_path), "--trade-ocr-worker"] if self.packaged_worker else [str(self.python_path), "-B", str(self.worker_path)]
                 command = [*prefix, "--request", str(manifest_path),
@@ -143,12 +181,17 @@ class TradeBatchRuntime:
                     payload = json.loads(output_path.read_text(encoding="utf-8"))
                 except (OSError, UnicodeError, json.JSONDecodeError):
                     raise TradeBatchRuntimeError("recognition_worker_failed", "Local recognition returned an invalid result.", 502) from None
+                self._set_progress(batch_id, "finalizing", len(captures))
                 self._validate_live_result(payload, batch_id, captures)
                 payload["runtime"] = {"available": True, "engineId": ENGINE_ID,
                                       "modelBundleSha256": info["hashes"]["bundle"], "workerVersion": WORKER_VERSION,
                                       "durationMs": round((time.monotonic() - started) * 1000),
                                       "captureCount": len(captures), "rowCount": len(payload["rows"])}
+                self._set_progress(batch_id, "complete", len(captures))
                 return payload
+        except Exception:
+            self._set_progress(batch_id, "failed", len(captures))
+            raise
         finally:
             self._worker_lock.release()
 

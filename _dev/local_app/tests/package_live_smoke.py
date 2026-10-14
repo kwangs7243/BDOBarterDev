@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import closing
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -40,8 +41,8 @@ def wait_for(predicate, timeout=20):
     raise RuntimeError("Packaged application readiness timed out")
 
 
-def batch_body(mapping):
-    batch_id, boundary = str(uuid4()), "bdo-package-" + uuid4().hex
+def batch_body(mapping, batch_id=None):
+    batch_id, boundary = batch_id or str(uuid4()), "bdo-package-" + uuid4().hex
     captures, images = [], []
     for entry in mapping:
         path = FIXTURES / entry["image"]
@@ -106,8 +107,22 @@ def main():
             duplicate = subprocess.Popen([str(args.exe.resolve())], cwd=temporary, env=environment,
                                          creationflags=subprocess.CREATE_NO_WINDOW)
             assert duplicate.wait(timeout=20) == 0
-            body, content_type = batch_body(mapping)
-            result = request("/api/recognition/trade-live-list", body, content_type)["result"]
+            batch_id = str(uuid4())
+            body, content_type = batch_body(mapping, batch_id)
+            observed_progress = []
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                pending = executor.submit(request, "/api/recognition/trade-live-list", body, content_type)
+                while not pending.done():
+                    try:
+                        observed_progress.append(request(f"/api/recognition/trade-progress/{batch_id}")["progress"])
+                    except (OSError, URLError):
+                        pass
+                    time.sleep(.25)
+                result = pending.result()["result"]
+            assert any(value["stage"] == "recognizing" and value["currentRowsCompleted"] > 0
+                       for value in observed_progress), "No actual intermediate OCR progress was observed"
+            assert all(value["totalCaptures"] == len(mapping) for value in observed_progress)
+            assert request(f"/api/recognition/trade-progress/{batch_id}")["progress"]["stage"] == "complete"
             expected = [oracle[index] for entry in mapping for index in entry["oracleRows"]]
             assert len(result["rows"]) == len(expected) == 80
             ocr_duration_ms = result["runtime"]["durationMs"]
@@ -157,6 +172,7 @@ def main():
             with closing(sqlite3.connect(databases[0])) as connection:
                 assert list(connection.iterdump()) == persisted_feedback
             report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numeric": numeric,
+                      "intermediateProgressObserved": True, "progressSamples": len(observed_progress),
                       "correctedFields": [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]],
                       "fullyCorrectRows": fully_correct, "ocrDurationMs": ocr_duration_ms,
                       "ocrBaselineMatched": bool(args.ocr_baseline), "numericErrors": numeric_errors,

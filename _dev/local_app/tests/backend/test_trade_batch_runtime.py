@@ -97,6 +97,45 @@ class LiveRuntimeTests(unittest.TestCase):
             (root/"inference.yml").unlink()
             self.assertEqual(runtime.status()["reason"], "model_missing")
 
+    def test_live_progress_is_visible_before_result_and_released_after_failure(self):
+        entered, release = threading.Event(), threading.Event()
+        observed = []
+        def reporting(command, **kwargs):
+            manifest_path = Path(command[command.index('--request') + 1])
+            manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+            path = manifest_path.parent / manifest['progressPath']
+            path.write_text(json.dumps({'stage': 'recognizing', 'totalCaptures': 1,
+                                       'completedCaptures': 0, 'currentRowsCompleted': 2,
+                                       'currentRowsTotal': 6}), encoding='utf-8')
+            entered.set()
+            release.wait(5)
+            raise subprocess.TimeoutExpired('worker', 1)
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = ReadyRuntime(temp_root=folder, runner=reporting)
+            def recognize():
+                try:
+                    runtime.recognize_live('batch', [self.capture])
+                except TradeBatchRuntimeError as error:
+                    observed.append(error.code)
+            thread = threading.Thread(target=recognize)
+            thread.start()
+            try:
+                self.assertTrue(entered.wait(2))
+                snapshot = runtime.progress('batch')
+                self.assertEqual(snapshot['stage'], 'recognizing')
+                self.assertEqual(snapshot['currentRowsCompleted'], 2)
+                self.assertEqual(snapshot['currentRowsTotal'], 6)
+                self.assertIsNone(runtime.progress('other-batch'))
+            finally:
+                release.set()
+                thread.join(5)
+            self.assertEqual(observed, ['recognition_timeout'])
+            self.assertEqual(runtime.progress('batch')['stage'], 'failed')
+            self.assertEqual(list(Path(folder).iterdir()), [])
+            runtime.runner = fake_worker
+            runtime.recognize_live('retry', [self.capture])
+            self.assertEqual(runtime.progress('retry')['stage'], 'complete')
+
     def test_frozen_worker_uses_current_executable(self):
         with patch("local_app.backend.services.trade_batch_runtime.sys.frozen", True, create=True), patch.dict("os.environ", {}, clear=True):
             runtime = ReadyRuntime(runner=fake_worker)

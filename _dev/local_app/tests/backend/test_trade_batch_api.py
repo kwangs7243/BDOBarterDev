@@ -103,8 +103,23 @@ class LiveApiTests(unittest.TestCase):
     def test_removed_routes_have_no_registration(self):
         rules={rule.rule for rule in self.app.url_map.iter_rules()}
         self.assertEqual({r for r in rules if r.startswith('/api/recognition/')},
-                         {'/api/recognition/trade-runtime','/api/recognition/trade-live-list','/api/recognition/trade-corrections'})
+                         {'/api/recognition/trade-runtime','/api/recognition/trade-live-list','/api/recognition/trade-corrections',
+                          '/api/recognition/trade-progress/<uuid:batch_id>'})
         self.assertFalse(any(r.startswith('/api/master') for r in rules))
+
+    def test_progress_lookup_does_not_mutate_state(self):
+        batch = self.batch()
+        url = f'/api/recognition/trade-progress/{batch["batchId"]}'
+        before = self.client.get('/api/bootstrap').get_json()
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.post(batch).status_code, 200)
+        history = self.records(include_automatic=True)
+        response = self.client.get(url)
+        self.assertEqual(response.headers['Cache-Control'], 'no-store')
+        self.assertEqual(response.get_json()['progress']['stage'], 'complete')
+        self.assertEqual(response.get_json()['progress']['completedCaptures'], 1)
+        self.assertEqual(self.client.get('/api/bootstrap').get_json(), before)
+        self.assertEqual(self.records(include_automatic=True), history)
 
     def test_feedback_database_failure_records_no_success(self):
         feedback = self.feedback()
