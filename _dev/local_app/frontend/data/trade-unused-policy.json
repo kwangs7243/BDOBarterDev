@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "autoExcludeOcean": true,
+  "excludedOutputs": ["화려한 암염 주괴", "화려한 진주 결정"]
+}

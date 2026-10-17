@@ -4,8 +4,9 @@ import { saveTradeCorrections } from "./trade-recognition-client.js";
 import { applyLiveTradeRules, prepareLiveTradeRows } from "./domain/trade-import.js";
 import { whenPersistenceIdle } from "./persistence.js";
 import { applyLiveTradeRows } from "./trade-ui.js";
+import { setTradeRowIncluded } from "./domain/trade-unused-policy.js";
 
-export function createTradeLiveListUI({ elements, getCatalog, getPending, setPending, onResult, onApplied }) {
+export function createTradeLiveListUI({ elements, getCatalog, getUnusedPolicy = () => null, getPending, setPending, onResult, onApplied }) {
   const { liveListSection, tradeRecognitionStatus, tradeRecognitionRegion, tradeRecognitionResultRegion, recognitionDiagnostics } = elements;
   const reviewPreviews = new PreviewRegistry();
   let reviewCaptures = [];
@@ -29,7 +30,12 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
     reviewCaptures = captures;
     const tradeCatalog = getCatalog();
     reviewPreviews.clear();
-    const visibleRows = prepareLiveTradeRows(result, tradeCatalog);
+    const prepareRows = (value) => prepareLiveTradeRows(value, tradeCatalog,
+      {policy:getUnusedPolicy(), coordinates:window.islandCoordinates});
+    const allRows = prepareRows(result);
+    const autoUnusedRows = allRows.filter(({row}) => row.excluded && row.autoUnusedReason);
+    const visibleRows = allRows.filter(({row}) => !row.excluded || !row.autoUnusedReason);
+    const duplicateCount = result.rows.length - allRows.length;
     for (const row of result.rows) {
       row.reviewFields ??= [];
       for (const [name, field] of Object.entries(row.fields)) {
@@ -39,7 +45,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
     }
     onResult(result);
     liveListSection.hidden = false;
-    resultTable(liveListSection, `물교 목록 · ${visibleRows.length}행 · 중복 ${result.rows.length - visibleRows.length}행 통합`, ["섬", "요구 아이템", "요구 수량", "결과 아이템", "남은 교환 횟수", "결과 수량"], visibleRows.map(({row}) =>
+    resultTable(liveListSection, `물교 목록 · ${visibleRows.length}행 · 자동 미사용 ${autoUnusedRows.length}행 · 중복 ${duplicateCount}행 통합`, ["섬", "요구 아이템", "요구 수량", "결과 아이템", "남은 교환 횟수", "결과 수량"], visibleRows.map(({row}) =>
       ["island", "fromItem", "reqAmount", "toItem", "count", "yield"].map((name) => {
         const field = row.fields[name];
         const numeric = ["reqAmount", "count", "yield"].includes(name);
@@ -68,7 +74,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
       include.disabled = getPending(); include.dataset.action = "include-live-list-row";
       include.setAttribute("aria-label", `${index + 1}행 목록 포함`);
       include.addEventListener("change", () => {
-        for (const member of row.reviewGroupIndices ?? [index]) result.rows[member].excluded = !include.checked;
+        for (const member of row.reviewGroupIndices ?? [index]) setTradeRowIncluded(result.rows[member], include.checked);
         renderLiveList(result);
       });
       tableRows.get(index).cells[0].prepend(include);
@@ -88,7 +94,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
       const included = visibleRows.map(({row}) => row).filter((row) => !row.excluded);
       applyNew.disabled = applyAppend.disabled = getPending() || !included.length || included.some((row) => Object.values(row.fields).some((field) => field.reviewRequired));
       const blocked = visibleRows.flatMap(({row, index}) => row.excluded ? [] : Object.entries(row.fields).filter(([,field]) => field.reviewRequired).map(([name]) => `${index + 1}행 ${fieldLabels[["island","fromItem","reqAmount","toItem","count","yield"].indexOf(name)]}`));
-      blocker.textContent = blocked.length ? `확인할 값 ${blocked.length}곳 · 아래 강조한 부분만 확인하세요. 고정 수량은 자동 적용했습니다.` : included.length ? `최종 리스트 ${included.length}행 준비 완료 · 중복 ${result.rows.length - visibleRows.length}행 통합` : "포함할 행을 선택하세요.";
+      blocker.textContent = blocked.length ? `확인할 값 ${blocked.length}곳 · 아래 강조한 부분만 확인하세요. 고정 수량은 자동 적용했습니다.` : included.length ? `최종 리스트 ${included.length}행 준비 완료 · 자동 미사용 ${autoUnusedRows.length}행 · 중복 ${duplicateCount}행 통합` : "포함할 행을 선택하세요.";
     };
     const blocker = document.createElement("p"); blocker.setAttribute("role", "status"); blocker.dataset.role = "live-list-blockers";
     updateApplyState();
@@ -102,7 +108,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
       const updateSelection = () => {
         const excluded = visibleRows.filter(({row}) => row.excluded).length;
         const unresolved = visibleRows.filter(({row}) => !row.excluded).reduce((total, {row}) => total + Object.values(row.fields).filter((field) => field.reviewRequired).length, 0);
-        counts.textContent = `최종 리스트 포함 ${visibleRows.length - excluded}행 · 제외 ${excluded}행 · 중복 ${result.rows.length - visibleRows.length}행 통합 · 확인할 값 ${unresolved}곳`;
+        counts.textContent = `최종 리스트 포함 ${visibleRows.length - excluded}행 · 제외 ${excluded}행 · 자동 미사용 ${autoUnusedRows.length}행 · 중복 ${duplicateCount}행 통합 · 확인할 값 ${unresolved}곳`;
         tradeRecognitionStatus.textContent = counts.textContent;
         updateApplyState();
       };
@@ -203,7 +209,8 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
           updateSelection();
         };
         checkbox.addEventListener("change", () => {
-          for (const member of members) result.rows[member].excluded = !checkbox.checked;
+          for (const member of members) setTradeRowIncluded(result.rows[member], checkbox.checked);
+          if (row.autoUnusedReason && !checkbox.checked) { renderLiveList(result); return; }
           updateRow();
         });
         fields.addEventListener("input", updateRow);
@@ -239,7 +246,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
           finalValue: values[i],
         }]);
         {
-          prepareLiveTradeRows(candidate, tradeCatalog);
+          prepareRows(candidate);
           const key = JSON.stringify(candidate);
           if (key !== feedbackValues) { feedbackId = crypto.randomUUID(); feedbackValues = key; }
           confirm.disabled = true;
@@ -260,7 +267,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
     }
     const apply = async (mode, button) => {
       if (getPending() || button.disabled) return;
-      const includedRows = prepareLiveTradeRows(result, tradeCatalog).map(({row}) => row).filter((row) => !row.excluded);
+      const includedRows = prepareRows(result).map(({row}) => row).filter((row) => !row.excluded);
       if (mode === "new" && state.session.scannedTrades !== null && !window.confirm("현재 회차를 이 최종 물교 목록으로 바꿀까요?")) return;
       button.disabled = true;
       setPending(true);
@@ -291,6 +298,24 @@ export function createTradeLiveListUI({ elements, getCatalog, getPending, setPen
     const actions = document.createElement("div"); actions.className = "trade-live-actions";
     actions.append(applyNew, applyAppend, blocker);
     liveListSection.prepend(actions);
+    if (autoUnusedRows.length) {
+      const unused = document.createElement("details"); unused.dataset.role = "live-list-auto-unused";
+      const caption = document.createElement("summary"); caption.textContent = `자동 미사용 · ${autoUnusedRows.length}행 · 검수 없이 제외`;
+      unused.append(caption);
+      for (const {row, index} of autoUnusedRows) {
+        const entry = document.createElement("div"); entry.className = "trade-review-overview";
+        const label = document.createElement("p"); label.textContent = `${row.fields.island.corrected ?? row.fields.island.rawOCR} · ${row.fields.fromItem.corrected ?? row.fields.fromItem.rawOCR} → ${row.fields.toItem.corrected ?? row.fields.toItem.rawOCR} · ${row.autoUnusedReason}`;
+        const include = document.createElement("button"); include.type = "button";
+        include.textContent = "이번 인식에 포함"; include.dataset.action = "include-auto-unused"; include.dataset.row = String(index);
+        include.disabled = getPending();
+        include.addEventListener("click", () => {
+          for (const member of row.reviewGroupIndices ?? [index]) setTradeRowIncluded(result.rows[member], true);
+          renderLiveList(result);
+        });
+        entry.append(label, include); unused.append(entry);
+      }
+      liveListSection.append(unused);
+    }
     if (reviewRows.length) {
       const ready = document.createElement("details"); ready.className = "trade-ready-list";
       const caption = document.createElement("summary"); caption.textContent = `전체 목록 ${visibleRows.length}행 보기 · 고정 수량 자동 적용`;

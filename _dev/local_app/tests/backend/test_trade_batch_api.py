@@ -156,3 +156,19 @@ class LiveApiTests(unittest.TestCase):
         self.assertEqual(self.post(feedback, field="feedback").status_code, 200)
         self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)
         self.assertEqual(json.loads(self.records()[0][5])["workerVersion"], "trade-live-worker-v9")
+
+    def test_automatic_unused_exclusion_preserves_unknowns_sources_and_operational_state(self):
+        result = self.post(self.batch()).get_json()["result"]
+        row = result["rows"][0]
+        row.update(excluded=True, exclusionSource="AUTO_UNUSED", autoUnusedReason="미사용 획득품 · 화려한 암염 주괴")
+        row["fields"]["count"].update(corrected=None, rawOCR="uncertain", reviewRequired=True)
+        feedback = {"version": 2, "feedbackId": str(uuid4()), "captures": [self.capture], "engineId": ENGINE_ID,
+                    "modelVersion": MODEL_BUNDLE_SHA256, "workerVersion": WORKER_VERSION, "corrections": [],
+                    "snapshot": {"phase": "reviewed", "result": result}}
+        before = self.client.get("/api/bootstrap").get_json()
+        self.assertEqual(self.post(feedback, field="feedback").status_code, 200)
+        self.assertFalse(self.post(feedback, field="feedback").get_json()["created"])
+        record = self.records()[0]
+        self.assertEqual(record[4], self.image)
+        self.assertEqual(json.loads(record[5])["snapshot"]["rows"], [row])
+        self.assertEqual(self.client.get("/api/bootstrap").get_json(), before)

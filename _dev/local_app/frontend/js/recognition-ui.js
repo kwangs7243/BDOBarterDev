@@ -2,6 +2,7 @@ import { createTradeLiveListUI } from "./trade-live-list-ui.js";
 import { initCaptureRoiUI } from "./capture-roi-ui.js";
 import { initNativeCaptureUI } from "./native-capture-ui.js";
 import { state } from "./state.js";
+import { validateUnusedTradePolicy } from "./domain/trade-unused-policy.js";
 import { CaptureError, CaptureQueue, DEFAULT_TRADE_ROI, PreviewRegistry, ScreenCaptureSession, captureFromFile, captureFromPaste, captureLimits, isEditableTarget } from "./capture.js";
 import { getTradeRecognitionRuntime, recognizeTradeLiveList } from "./trade-recognition-client.js";
 
@@ -100,10 +101,15 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeRecognitionPending = false;
   let liveListResult = null;
   let tradeCatalog;
-  const tradeCatalogReady = fetch("/assets/data/trade-catalog.json").then((response) => {
-    if (!response.ok) throw new Error("품목 기준 자료를 불러오지 못했습니다.");
-    return response.json();
-  }).then((value) => { tradeCatalog = value; });
+  let tradeUnusedPolicy;
+  const tradeCatalogReady = Promise.all(["trade-catalog.json", "trade-unused-policy.json"].map((name) =>
+    fetch(`/assets/data/${name}`).then((response) => {
+      if (!response.ok) throw new Error("물교 기준 자료를 불러오지 못했습니다.");
+      return response.json();
+    }))).then(([catalog, policy]) => {
+      tradeCatalog = catalog;
+      tradeUnusedPolicy = validateUnusedTradePolicy(policy, catalog);
+    });
   const roiUI = initCaptureRoiUI({
     video: tradePreview, stage: tradePreviewStage, box: tradeRoiBox,
     getRegion: () => tradeRoi, setRegion: (region) => { tradeRoi = region; },
@@ -121,6 +127,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const liveListUI = createTradeLiveListUI({
     elements: { liveListSection, tradeRecognitionStatus, tradeRecognitionRegion, tradeRecognitionResultRegion, recognitionDiagnostics },
     getCatalog: () => tradeCatalog,
+    getUnusedPolicy: () => tradeUnusedPolicy,
     getPending: () => tradeRecognitionPending,
     setPending: (pending) => { tradeRecognitionPending = pending; updateRecognitionControls(); renderTradeQueue(); },
     onResult: (result) => { liveListResult = result; },
@@ -339,9 +346,10 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
         tradeBatchId = null;
         tradeStatus.textContent = "인식한 스크린샷을 모두 비웠습니다.";
       }
-      const reviewCount = result.rows.reduce((n, row) => n + Object.values(row.fields).filter(f => f.reviewRequired).length, 0);
+      const reviewCount = result.rows.filter(row => !row.excluded).reduce((n, row) => n + Object.values(row.fields).filter(f => f.reviewRequired).length, 0);
+      const autoUnusedCount = result.rows.filter(row => row.excluded && row.autoUnusedReason).length;
       tradeRecognitionStatus.textContent = result.rows.length
-        ? `물교 ${result.rows.length}행 · 확인 필요 ${reviewCount}곳. 고정 수량은 교환 규칙으로 반영했습니다.`
+        ? `물교 ${result.rows.length}행 · 자동 미사용 ${autoUnusedCount}행 · 확인 필요 ${reviewCount}곳. 고정 수량은 교환 규칙으로 반영했습니다.`
         : "물교 행을 찾지 못했습니다. 물교 표 전체가 포함되도록 입력해 주세요.";
     } catch (error) {
       progressRegion.hidden = true;

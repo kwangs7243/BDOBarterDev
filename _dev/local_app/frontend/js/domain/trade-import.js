@@ -1,3 +1,5 @@
+import { applyUnusedTradePolicy } from "./trade-unused-policy.js";
+
 export function parseTradeJsonText(text) {
   const cleanText = String(text ?? "").replace(/```json/gi, "").replace(/```/g, "").trim();
   let value;
@@ -177,7 +179,7 @@ function markUnregisteredCandidate(row, catalog) {
     reviewReason:"지원 목록에 없는 후보입니다. 등록된 품목으로 수정하거나 행을 제외하세요."});
 }
 
-export function prepareLiveTradeRows(result, catalog) {
+export function prepareLiveTradeRows(result, catalog, unused = {}) {
   for (const row of result.rows) {
     for (const field of Object.values(row.fields)) {
       if (!Object.hasOwn(field, "automaticCorrected")) field.automaticCorrected = field.corrected;
@@ -188,6 +190,7 @@ export function prepareLiveTradeRows(result, catalog) {
     delete row.duplicateOf;
     delete row.reviewGroupIndices;
   }
+  if (unused.policy) applyUnusedTradePolicy(result.rows, unused.policy, unused.coordinates);
   const ready = result.rows.filter((row) => !row.excluded && Object.values(row.fields).every((f) => f.corrected !== null && f.corrected !== undefined));
   const parsed = processParsedTrades(ready.map((row) => Object.fromEntries(Object.entries(row.fields).map(([k, f]) => [k, f.corrected]))), [], catalog);
   for (const outcome of parsed.outcomes) {
