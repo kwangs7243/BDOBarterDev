@@ -108,6 +108,9 @@ dialog::backdrop { background:#090c13b8; }
 .modal { position:fixed; inset:0; display:grid; place-items:center; z-index:20; padding:1rem; background:#0009; }
 .modal-card { display:grid; gap:.75rem; padding:1.5rem; width:min(36rem,95%); max-height:95%; overflow:auto; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface-raised); }
 .modal-card fieldset,.modal-card #wpMatBox { display:flex; gap:.8rem; }
+.modal-card #wpMatBox>.field:first-child { flex:1; min-width:0; }
+.modal-card #wpMatBox>.field:last-child { flex:0 0 6.5rem; }
+.modal-card #wpMatBox .autocomplete-options { top:auto; bottom:calc(100% + 2px); }
 .completion-actions { position:fixed; left:-10000px; }
 .engine-debug-mode,.engine-debug-sortie { border:1px solid var(--line); padding:.75rem; margin:.5rem 0; border-radius:var(--radius); }
 .engine-debug-scroll { max-height:20rem; overflow:auto; } .engine-debug-scroll table { min-width:620px; }

@@ -98,9 +98,34 @@ try {
   if (JSON.parse(timerState).trade || JSON.parse(timerState).returnTimer) throw new Error(`timer toggle did not return to inactive state: ${timerState}`);
 
   await evaluate("document.querySelector('.sortie-card .sortie-heading button').click()");
-  await evaluate("document.querySelector('#wpIsland').value='인버넨 섬'; document.querySelector('#wpAnchorSelect').value='0'; document.querySelector('input[name=wpPos][value=after]').checked=true; document.querySelector('#wpUseMat').checked=true; document.querySelector('#wpMatName').value='갈퀴 꽃 씨앗 주머니'; document.querySelector('#wpMatCount').value='1'; document.querySelector('#confirm-waypoint').click()");
+  const waypointAutocomplete = await evaluate(`(()=>{
+    const choose=(id,query,value)=>{
+      const input=document.getElementById(id),root=input.closest('.autocomplete-control');
+      if(!root)throw Error(id+' autocomplete missing');
+      input.value=query;input.dispatchEvent(new Event('input',{bubbles:true}));
+      const list=root.querySelector('.autocomplete-options');
+      if(list.hidden)throw Error(id+' suggestions hidden');
+      const option=[...list.querySelectorAll('[role=option]')].find(button=>button.textContent===value);
+      if(!option)throw Error(id+' expected suggestion missing: '+value);
+      option.click();
+      if(input.value!==value||!list.hidden)throw Error(id+' selection failed');
+      return input.value;
+    };
+    const island=choose('wpIsland','인버','인버넨 섬');
+    document.querySelector('#wpUseMat').checked=true;
+    document.querySelector('#wpUseMat').dispatchEvent(new Event('change'));
+    const material=choose('wpMatName','갈퀴','갈퀴 꽃 씨앗 주머니');
+    const input=document.querySelector('#wpMatName'),list=input.closest('.autocomplete-control').querySelector('.autocomplete-options');
+    input.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+    if(list.hidden||list.querySelectorAll('[role=option]').length<70)throw Error('full material list missing');
+    input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+    if(!list.hidden||input.value!==material)throw Error('Escape changed selection');
+    return {island,material,keyboardList:true};
+  })()`);
+  await evaluate("document.querySelector('#wpAnchorSelect').value='0'; document.querySelector('input[name=wpPos][value=after]').checked=true; document.querySelector('#wpMatCount').value='1'; document.querySelector('#confirm-waypoint').click()");
   const waypointCount = await evaluate("import('/assets/js/state.js').then(({state})=>state.session.schedule.speed[0].trades.filter(t=>t.isWaypoint).length)");
   if (waypointCount !== 1) throw new Error(`waypoint was not added: ${waypointCount}`);
+  console.log(JSON.stringify({waypointAutocomplete}));
   await evaluate("window.adjustTradeCount({stopPropagation(){}},'speed',0,0,-1); draggedRoute={sortieIdx:0,tradeIdx:1,mode:'speed'}; window.routeDrop({preventDefault(){},currentTarget:{classList:{remove(){}}}},0,0,'speed')");
   const routeOrder = await evaluate("sortiesSpeed[0].trades.map(t=>t.isWaypoint?'waypoint':'trade').join(',')");
   if (routeOrder !== "waypoint,trade") throw new Error(`manual route reorder was not preserved: ${routeOrder}`);

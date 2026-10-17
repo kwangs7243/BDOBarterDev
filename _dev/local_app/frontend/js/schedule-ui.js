@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { inventoryDisplayOrder } from "./inventory-ui.js";
 import { deleteScheduleSlot, loadScheduleSlot, saveCompletionInventory, saveScheduleSlot, whenPersistenceIdle } from "./persistence.js";
 import { renderScheduleDiagnostics } from "./diagnostics-ui.js";
+import { createAutocomplete } from "./autocomplete.js";
 
 const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 const scheduleStatus = document.querySelector("#schedule-status");
@@ -265,6 +266,19 @@ export function initScheduleUI(setStatus) {
     } catch (error) { setScheduleStatus(`스케줄 생성 실패: ${error.message}`, "error"); }
   });
   document.getElementById("wpUseMat").addEventListener("change", window.toggleWaypointMaterial);
+  for (const [id, ariaLabel, options] of [
+    ["wpIsland", "경유지 섬 이름", () => Object.keys(window.islandCoordinates)],
+    ["wpMatName", "경유지 사용 재료", () => Object.values(window.masterData).flat().map((item) => item.name)],
+  ]) {
+    const previous = document.getElementById(id);
+    const control = createAutocomplete({ options: options(), value: previous.value, ariaLabel,
+      placeholder: "이름을 입력하거나 목록에서 선택" });
+    control.input.id = id;
+    previous.replaceWith(control.element);
+    control.element.addEventListener("focusin", (event) => {
+      if (event.target === control.input || event.target.classList.contains("autocomplete-toggle")) control.setOptions(options());
+    });
+  }
   document.getElementById("confirm-waypoint").addEventListener("click", window.confirmWaypoint);
   document.getElementById("close-waypoint").addEventListener("click", window.closeWaypointModal);
   document.getElementById("retry-completion-save").addEventListener("click", () => window.__bdoScheduleRuntime.retryCompletion());
