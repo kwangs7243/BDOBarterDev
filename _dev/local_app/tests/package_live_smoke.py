@@ -71,6 +71,7 @@ def main():
     parser.add_argument("--exe", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--ocr-baseline", type=Path, required=True, help="Verified prior installed-package OCR comparison report")
+    parser.add_argument("--expected-worker-version", help="Explicit worker version for an intentional engine update; OCR comparisons remain unchanged")
     args = parser.parse_args()
     args.out = args.out.resolve()
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -135,7 +136,7 @@ def main():
             baseline = json.loads(args.ocr_baseline.read_text(encoding="utf-8"))
             assert isinstance(baseline, dict) and baseline.get("ok"), "A verified package baseline is required"
             assert baseline["runtime"]["modelBundleSha256"] == runtime["modelBundleSha256"]
-            assert baseline["runtime"]["workerVersion"] == runtime["workerVersion"]
+            assert runtime["workerVersion"] == (args.expected_worker_version or baseline["runtime"]["workerVersion"])
             assert numeric == baseline["numeric"] and numeric_errors == baseline["numericErrors"], numeric_errors
             assert [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]] == baseline["correctedFields"]
             fully_correct = sum(all(row["fields"][name]["corrected"] == truth[name] for name in truth)
@@ -176,6 +177,7 @@ def main():
                       "correctedFields": [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]],
                       "fullyCorrectRows": fully_correct, "ocrDurationMs": ocr_duration_ms,
                       "ocrBaselineMatched": bool(args.ocr_baseline), "numericErrors": numeric_errors,
+                      "baselineWorkerVersion": baseline["runtime"]["workerVersion"],
                       "freshSchema": 4, "tables": sorted(tables),
                       "browserProductFlows": browser_checks, "tradeCorrectionCaptures": len(corrections),
                       "warehouseScans": scans, "warehouseFeedbackApplications": len(feedback),

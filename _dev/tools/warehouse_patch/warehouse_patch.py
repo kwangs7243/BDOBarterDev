@@ -7,7 +7,7 @@ import argparse
 import hashlib
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -217,14 +217,59 @@ def _scaled_grid(rgb: np.ndarray) -> tuple[AxisGrid, AxisGrid, dict[str, float]]
     raise GridDetectionError("SLOT_GRID_DETECTION_FAILED")
 
 
+def _complete_grid(rgb: np.ndarray, xgrid: AxisGrid, ygrid: AxisGrid):
+    grids = [xgrid, ygrid]
+    for axis, length in ((0, rgb.shape[1]), (1, rgb.shape[0])):
+        grid = grids[axis]
+        for direction in (-1, 1):
+            while True:
+                origin = round(grid.origin - grid.period if direction < 0 else grid.origin + grid.count * grid.period)
+                if origin < 0 or origin + grid.width > length:
+                    break
+                strip = list(grids)
+                strip[axis] = replace(grid, origin=origin, count=1)
+                try:
+                    _validate_grid(rgb, *strip)
+                except GridDetectionError:
+                    break
+                grid = replace(grid, origin=origin if direction < 0 else grid.origin, count=grid.count + 1)
+                grids[axis] = grid
+    return *grids, _validate_grid(rgb, *grids)
+
+
+def _fixed_grid(rgb: np.ndarray):
+    if rgb.shape[:2] != (362, 464):
+        raise GridDetectionError("FIXED_LAYOUT_MISMATCH")
+    grids = []
+    for axis, count, length in ((0, 9, 464), (1, 7, 362)):
+        profile = _brightness_peak_profile(rgb, axis)
+        candidates = range(min(16, length - (count - 1) * 51 - 45) + 1)
+        def score(origin):
+            return float(np.mean([(profile[origin + index * 51] + profile[origin + index * 51 + 44]) / 2
+                                  for index in range(count)]))
+        origin = max(candidates, key=score)
+        grids.append(AxisGrid(origin, 51, 45, count, score(origin)))
+    validation = _validate_grid(rgb, *grids)
+    for axis, grid in enumerate(grids):
+        for index in range(grid.count):
+            strip = list(grids)
+            strip[axis] = replace(grid, origin=grid.origin + index * 51, count=1)
+            _validate_grid(rgb, *strip)
+    return *grids, validation
+
+
 def detect_grid(image: Image.Image) -> tuple[AxisGrid, AxisGrid, dict[str, float]]:
     rgb = np.asarray(image.convert("RGB"), dtype=np.float32) / 255.0
+    try:
+        return _fixed_grid(rgb)
+    except GridDetectionError:
+        pass
     try:
         xgrid = _best_axis_grid(rgb, axis=0)
         ygrid = _best_axis_grid(rgb, axis=1)
         validation = _validate_grid(rgb, xgrid, ygrid)
         if xgrid.width == 45:
-            return xgrid, ygrid, validation
+            return _complete_grid(rgb, xgrid, ygrid)
     except GridDetectionError:
         pass
     return _scaled_grid(rgb)

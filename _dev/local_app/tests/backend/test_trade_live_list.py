@@ -4,13 +4,27 @@ from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from PIL import Image
-from local_app.tools.trade_live_ocr import _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
+from PIL import Image, ImageDraw
+from local_app.tools.trade_live_ocr import fixed_layout_offset, _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
 
 class LiveListTests(unittest.TestCase):
+    def test_fixed_region_translation_requires_two_agreeing_edges_and_native_size(self):
+        image=Image.new("RGB",(987,456),(30,30,30))
+        ImageDraw.Draw(image).rectangle((7,0,271,455),fill=(100,100,100))
+        metadata={"sourceType":"native-screen"}
+        for dx in (-4,-2,0,3,8):
+            shifted=Image.new("RGB",image.size,(30,30,30));shifted.paste(image,(dx,0))
+            self.assertEqual(fixed_layout_offset(shifted,metadata),dx)
+        self.assertEqual(fixed_layout_offset(shifted,{"sourceType":"file"}),0)
+        self.assertEqual(fixed_layout_offset(shifted.resize((980,456)),metadata),0)
+        ImageDraw.Draw(image).rectangle((272,0,274,455),fill=(100,100,100))
+        self.assertEqual(fixed_layout_offset(image,metadata),0)
+        self.assertEqual(fixed_layout_offset(Image.new("RGB",image.size),metadata),0)
+
+
     def test_quantity_conflicts_respect_allowed_values_without_promoting_uncertain_primary(self):
         primary = {"rawOCR":"2", "corrected":2, "confidence":.99, "reviewRequired":False, "variants":[]}
         token = {"corrected":2, "reviewRequired":True, "variants":[{"text":"32", "confidence":.99}]}
@@ -417,6 +431,40 @@ class LiveListTests(unittest.TestCase):
         field = result["rows"][0]["fields"]["fromItem"]
         self.assertEqual(field["corrected"], "알 수 없는 새 물품")
         self.assertTrue(field["reviewRequired"])
+
+    def test_translated_layout_keeps_preview_boxes_in_original_image_coordinates(self):
+        mapping=json.loads((FIXTURES / "live-list-mapping.json").read_text(encoding="utf-8"))
+        captures=[{"captureId":"one","imagePath":FIXTURES / mapping[0]["image"]}]
+        uncertain={"rawOCR":"uncertain","corrected":None,"reviewRequired":True,"confidence":0}
+        confirmed={"rawOCR":"3회","corrected":3,"reviewRequired":False,"confidence":.99}
+        with patch("local_app.tools.trade_live_ocr.LocalReader"), \
+                patch("local_app.tools.trade_live_ocr.read_numeric",side_effect=RuntimeError("numeric failure")), \
+                patch("local_app.tools.trade_live_ocr.read_count",side_effect=lambda *args:uncertain.copy()), \
+                patch("local_app.tools.trade_live_ocr.read_name",return_value=("파라타마 섬",.95)):
+            original=recognize_live(captures,Path("unused"),"batch")
+            with patch("local_app.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
+                    patch("local_app.tools.trade_live_ocr.read_count",side_effect=[entry.copy() for _ in range(6) for entry in (uncertain,confirmed)]):
+                translated=recognize_live(captures,Path("unused"),"batch")
+            with patch("local_app.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
+                    patch("local_app.tools.trade_live_ocr.read_count",side_effect=lambda *args:confirmed.copy()) as read:
+                stable=recognize_live(captures,Path("unused"),"batch")
+                self.assertEqual(read.call_count,6)
+            conflicting={**uncertain,"variants":[{"text":"2","confidence":.99}]}
+            with patch("local_app.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
+                    patch("local_app.tools.trade_live_ocr.read_count",side_effect=[entry.copy() for _ in range(6) for entry in (conflicting,confirmed)]):
+                held=recognize_live(captures,Path("unused"),"batch")
+        for before,after in zip(original["rows"],translated["rows"]):
+            self.assertEqual(before["rowBox"],after["rowBox"])
+            self.assertEqual(before["captureId"],after["captureId"])
+            for name,field in before["fields"].items():
+                self.assertEqual(after["fields"][name]["box"],{**field["box"],"x":field["box"]["x"]+(3 if name=="count" else 0)})
+            self.assertEqual(after["fields"]["count"]["corrected"],3)
+            self.assertEqual(after["fields"]["count"]["rawOCR"],"uncertain")
+        for index,row in enumerate(stable["rows"]):
+            self.assertEqual(row["fields"]["count"]["box"],original["rows"][index]["fields"]["count"]["box"])
+            self.assertNotIn("alignmentOffsetX",row["fields"]["count"])
+            self.assertTrue(held["rows"][index]["fields"]["count"]["reviewRequired"])
+            self.assertIsNone(held["rows"][index]["fields"]["count"]["corrected"])
 
     def test_progress_preserves_output_and_cannot_interrupt_recognition(self):
         import tempfile

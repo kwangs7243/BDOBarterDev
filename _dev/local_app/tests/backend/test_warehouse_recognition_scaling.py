@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from local_app.tools.warehouse_feedback_calibration import calibrate
 from tools.warehouse_patch.warehouse_patch import GridDetectionError, QuantityReader, crop_inner_slots, detect_grid, load_reference
@@ -18,6 +18,23 @@ BASE = ROOT / "tools/warehouse_patch/quantity_templates.npz"
 
 
 class WarehouseScaleTests(unittest.TestCase):
+    def test_sparse_last_row_is_verified_per_cell_and_partial_or_unframed_rows_are_not_added(self):
+        image = Image.new("RGB", (464,362), (25,25,25))
+        draw = ImageDraw.Draw(image)
+        for row in range(7):
+            for column in range(9):
+                x,y=6+51*column,7+51*row
+                brightness = 220 if row < 6 else 75 if column < 3 else 40
+                draw.rectangle((x,y,x+44,y+44),fill=(30,30,30),outline=(brightness,)*3)
+        for dx,dy in ((0,0),(2,2),(-2,-2)):
+            shifted=Image.new("RGB",image.size,(25,25,25));shifted.paste(image,(dx,dy))
+            xgrid,ygrid,_=detect_grid(shifted)
+            self.assertEqual((xgrid.count,ygrid.count),(9,7))
+            self.assertEqual((xgrid.origin,ygrid.origin),(6+dx,7+dy))
+        self.assertEqual(detect_grid(image.crop((0,0,464,353)))[1].count,6)
+        draw.rectangle((0,313,463,361),fill=(25,25,25))
+        self.assertEqual(detect_grid(image)[1].count,6)
+
     def test_full_grid_survives_fractional_and_large_scales(self):
         with Image.open(FIXTURES / "barter_only.png") as original:
             for scale in (0.5, 0.65, 0.8, 1.2, 1.5, 2.0, 2.5):

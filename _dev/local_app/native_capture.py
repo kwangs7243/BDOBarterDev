@@ -270,6 +270,8 @@ class NativeCaptureController:
                 if current != geometry or signature(current) != self.profile["signature"]:
                     raise NativeCaptureError("profile_changed", "ゲーム 창 환경이 바뀌었습니다.")
                 roi = validate_roi(roi, current)
+                if any(roi[key] != self.profile["roi"][key] for key in ("width", "height")):
+                    raise NativeCaptureError("roi_size_locked", "영역 크기는 고정되어 있습니다. 테두리를 끌어 위치만 이동하세요.")
                 if roi != self.profile["roi"]: self._store_profile(roi, current)
                 self.error = None
                 self.record("roi_updated", roi=roi)

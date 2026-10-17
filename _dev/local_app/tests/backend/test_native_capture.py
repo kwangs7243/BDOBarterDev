@@ -409,14 +409,19 @@ class NativeCaptureTests(NativeFixture):
         self.assertEqual(self.controller.generation,generation)
         self.assertTrue(self.controller.image(replacement,generation,packet["metadata"]["captureId"]))
 
-    def test_resize_preserves_old_capture_and_next_capture_has_new_size(self):
+    def test_size_lock_rejects_resize_and_preserves_captures_and_saved_size(self):
         generation=self.prepare();first=self.capture()
         self.assertTrue(self.controller.begin_roi_adjustment())
         resized=adjust_roi(self.roi,"se",20,30,self.platform.geo)
-        self.assertTrue(self.controller.update_roi(generation,resized,self.platform.geo))
+        self.assertFalse(self.controller.update_roi(generation,resized,self.platform.geo))
+        self.assertEqual(self.controller.error,"roi_size_locked")
+        self.assertEqual(self.controller.profile["roi"],self.roi)
+        self.assertFalse(self.controller.roi_adjusting)
         self.assertTrue(self.controller.on_hotkey());self.wait_capture();frames=self.heartbeat()["frames"]
         self.assertEqual(len(frames),2);self.assertEqual(frames[0],first)
-        self.assertEqual(frames[1]["metadata"]["frame"],{"width":100,"height":80})
+        self.assertEqual(frames[1]["metadata"]["frame"],{"width":80,"height":50})
+        with closing(NativeCaptureController(FakePlatform(),self.controller.profile_path)) as restored:
+            self.assertEqual(restored.profiles["trade"]["roi"],self.roi)
 
 
 class NativeApiTests(NativeFixture):

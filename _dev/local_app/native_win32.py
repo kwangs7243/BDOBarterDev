@@ -499,11 +499,7 @@ class Win32CapturePlatform:
                 if not self.controller.begin_roi_adjustment(): return 0
                 point = w.POINT(); u.GetCursorPos(ctypes.byref(point))
                 roi = dict(self.controller.profile["roi"])
-                x, y = ctypes.c_short(lp & 0xffff).value, ctypes.c_short(lp >> 16 & 0xffff).value
-                width, height = roi["width"]+16, roi["height"]+16
-                horizontal = "w" if x < 16 else "e" if x >= width-16 else ""
-                vertical = "n" if y < 16 else "s" if y >= height-16 else ""
-                self.frame_drag = {"roi": roi, "handle": vertical+horizontal if horizontal and vertical else "",
+                self.frame_drag = {"roi": roi, "handle": "",
                                    "point": (point.x, point.y), "geometry": geometry,
                                    "generation": self.controller.generation, "current": roi}
                 u.SetCapture(hwnd)
@@ -527,8 +523,6 @@ class Win32CapturePlatform:
                         old_pen, old_brush = g.SelectObject(hdc, pen), g.SelectObject(hdc, g.GetStockObject(5))
                         try:
                             g.Rectangle(hdc, 3, 3, width-3, height-3)
-                            for x, y in ((1,1),(width-13,1),(1,height-13),(width-13,height-13)):
-                                g.Rectangle(hdc, x, y, x+12, y+12)
                         finally:
                             g.SelectObject(hdc, old_brush); g.SelectObject(hdc, old_pen); g.DeleteObject(pen)
                 finally: u.EndPaint(hwnd, ctypes.byref(paint))

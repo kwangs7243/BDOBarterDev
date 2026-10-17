@@ -33,6 +33,7 @@ const errorText = {
   hotkey_conflict: "F10을 다른 프로그램이 사용 중입니다. 해당 단축키를 해제하고 다시 시도하세요.",
   roi_missing: "게임에서 영역을 먼저 지정하세요.",
   roi_cancelled: "영역 지정을 취소했습니다.",
+  roi_size_locked: "영역 크기는 고정되어 있습니다. 테두리를 끌어 위치만 이동하세요.",
   profile_changed: "게임 크기·배율이 바뀌었습니다. 영역을 다시 지정하세요.",
   target_unavailable: "게임 창을 사용할 수 없어 촬영을 중지했습니다.",
   session_changed: "작업 세션이 바뀌어 촬영을 중지하고 미수신 이미지를 폐기했습니다. 캡처를 다시 시작하세요.",
@@ -68,7 +69,7 @@ export function initNativeCaptureUI(adapters) {
     const refs = panels.get(mode), roi = data.savedProfiles?.[mode]?.roi;
     refs.save.disabled = !data.available || !roi;
     refs.saved.textContent = roi
-      ? `저장된 영역 · 위치 ${roi.x}, ${roi.y} · 크기 ${roi.width}×${roi.height} · 재시작 후 캡처 시작 시 복원됩니다.`
+      ? `저장된 영역 · 위치 ${roi.x}, ${roi.y} · 크기 ${roi.width}×${roi.height} 고정 · 재시작 후 캡처 시작 시 복원됩니다.`
       : "저장된 영역이 없습니다. 게임에서 영역을 먼저 지정하세요.";
   };
   const saveRegion = mode => {
@@ -134,7 +135,7 @@ export function initNativeCaptureUI(adapters) {
     const panel = document.createElement("section"); panel.className = "trade-roi-panel";
     panel.dataset.nativeCapture = mode;
     const label = mode === "trade" ? "물교" : "창고";
-    panel.innerHTML = `<h3>게임 영역 캡처</h3><div class="trade-roi-actions"><button type="button" data-native="prepare" disabled>${label} 캡처 시작</button><button type="button" data-native="stop">캡처 중지</button><button type="button" data-native="save" disabled>영역 저장</button></div><p data-native="saved"></p><details><summary>게임 창·영역 설정</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>영역 새로 지정</button></div></details><p>게임에서 목록을 스크롤하고 <kbd>F10</kbd>으로 캡처하세요. 준비된 이미지는 아래에서 인식합니다.</p><details><summary>캡처 영역 조작 안내</summary><p>테두리는 이동, 모서리는 크기 조절입니다. 영역 안쪽에서는 게임을 조작할 수 있습니다. 이 창을 닫아도 캡처를 계속할 수 있습니다.</p></details><p role="status" aria-live="polite"></p>`;
+    panel.innerHTML = `<h3>게임 영역 캡처</h3><div class="trade-roi-actions"><button type="button" data-native="prepare" disabled>${label} 캡처 시작</button><button type="button" data-native="stop">캡처 중지</button><button type="button" data-native="save" disabled>영역 저장</button></div><p data-native="saved"></p><details><summary>게임 창·영역 설정</summary><div class="trade-roi-actions"><select aria-label="검은사막 창"></select><button type="button" data-native="refresh">창 목록 확인</button><button type="button" data-native="select" disabled>영역·크기 다시 지정</button></div></details><p>게임에서 목록을 스크롤하고 <kbd>F10</kbd>으로 캡처하세요. 준비된 이미지는 아래에서 인식합니다.</p><details><summary>캡처 영역 조작 안내</summary><p>영역 크기는 고정됩니다. 테두리와 모서리를 끌어 위치만 이동하세요. 크기는 게임 창·영역 설정에서 다시 지정할 수 있습니다. 영역 안쪽에서는 게임을 조작할 수 있습니다. 이 창을 닫아도 캡처를 계속할 수 있습니다.</p></details><p role="status" aria-live="polite"></p>`;
     adapter.dialog.querySelector(".trade-roi-panel").before(panel);
     const legacy = [...adapter.dialog.querySelectorAll('.trade-preview-stage, .trade-roi-panel:not([data-native-capture])')];
     panels.set(mode, { root: panel, target: panel.querySelector("select"), start: panel.querySelector('[data-native="prepare"]'),

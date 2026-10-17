@@ -271,7 +271,7 @@ class NativeWin32LifecycleTests(unittest.TestCase):
                         platform.u.SendMessageW(platform.roi_frame,0x201,1,(64<<16)|94)
                         cursor[:]=[140,125];platform.u.SendMessageW(platform.roi_frame,0x200,1,0)
                         platform.u.SendMessageW(platform.roi_frame,0x202,0,0)
-                    self.assertEqual(controller.profile["roi"],{"x":120,"y":95,"width":100,"height":80})
+                    self.assertEqual(controller.profile["roi"],{"x":140,"y":125,"width":80,"height":50})
                     self.assertEqual(controller.generation,generation)
                     self.assertFalse(controller.roi_adjusting);self.assertEqual(controller.captured_count,0)
                     select.assert_not_called()

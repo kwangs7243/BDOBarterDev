@@ -45,6 +45,7 @@ class LiveRuntimeTests(unittest.TestCase):
                 manifest = json.loads(Path(command[command.index("--request")+1]).read_text())
                 self.assertEqual(manifest["version"], 1)
                 self.assertEqual(manifest["captures"][0]["imagePath"], "capture-0001.png")
+                self.assertEqual(manifest["captures"][0]["metadata"],self.capture["metadata"])
                 return fake_worker(command, **kwargs)
             result = ReadyRuntime(temp_root=folder, runner=inspect).recognize_live("batch", [self.capture])
             self.assertEqual(result["runtime"]["rowCount"], 1)

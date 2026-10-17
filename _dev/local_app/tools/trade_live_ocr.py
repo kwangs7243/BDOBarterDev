@@ -33,6 +33,8 @@ def _separator_peaks(profile: np.ndarray, support_threshold: float) -> list[int]
 
 FIELDS = ("island", "fromItem", "reqAmount", "toItem", "count", "yield")
 NUMERIC = {"reqAmount", "count", "yield"}
+FIXED_TRADE_SIZE = (987, 456)
+FIXED_TRADE_ANCHORS = (6, 271)
 
 
 class LocalReader:
@@ -89,6 +91,22 @@ def detect_live_rows(image: Image.Image):
     if peaks and .90 * spacing <= image.height - peaks[-1] <= 1.10 * spacing:
         rows.append((peaks[-1], image.height))
     return rows
+
+
+def fixed_layout_offset(image: Image.Image, metadata: dict) -> int:
+    if image.size != FIXED_TRADE_SIZE or metadata.get("sourceType") != "native-screen":
+        return 0
+    rgb = np.asarray(image.convert("RGB"), dtype=np.int16)
+    edges = np.mean(np.max(np.abs(np.diff(rgb, axis=1)), axis=2) > 20, axis=0)
+    offsets = []
+    # Both panel edges must describe the same translation of the saved native layout.
+    for anchor in FIXED_TRADE_ANCHORS:
+        left, right = max(0, anchor - 8), min(len(edges), anchor + 9)
+        actual = left + int(np.argmax(edges[left:right]))
+        if edges[actual] < .75:
+            return 0
+        offsets.append(actual - anchor)
+    return offsets[0] if len(set(offsets)) == 1 else 0
 
 
 def _crop(row, bounds):
@@ -578,11 +596,14 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
     for capture_index, capture in enumerate(captures):
         image = Image.open(capture["imagePath"]).convert("RGB")
         boxes = detect_live_rows(image)
+        offset = fixed_layout_offset(image, capture.get("metadata", {}))
+        aligned = image.crop((offset, 0, image.width + offset, image.height)) if offset else image
         report("recognizing", capture_index, 0, len(boxes))
         capture_results.append({"captureId": capture["captureId"], "rows": len(boxes),
                                 "width": image.width, "height": image.height})
         for ordinal, (top, bottom) in enumerate(boxes):
             row = image.crop((0, top, image.width, bottom))
+            field_offsets = {}
             fields = {key: {"rawOCR": "", "corrected": None, "reviewRequired": True, "confidence": None} for key in NUMERIC}
             for field in ("island", "fromItem", "toItem", "count", "reqAmount", "yield"):
                 crop = _crop(row, bounds[field])
@@ -608,10 +629,35 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
                     fields[field] = {"rawOCR": "", "corrected": None, "reviewRequired": True,
                                      "confidence": None, "error": type(error).__name__}
             apply_trade_rules(fields, item_stages)
+            if offset:
+                aligned_row = aligned.crop((0, top, image.width, bottom))
+                source, destination = trade_stages(fields, item_stages)
+                for field in ("count", "reqAmount", "yield"):
+                    original = fields[field]
+                    if not original["reviewRequired"]:
+                        continue
+                    allowed = (2, 3) if field == "yield" and (source, destination) in {(1, 2), (2, 3)} else None
+                    try:
+                        candidate = (read_count(reader, _crop(aligned_row, bounds[field])) if field == "count"
+                                     else read_requirement(reader, aligned_row) if field == "reqAmount"
+                                     else read_yield(reader, aligned_row, allowed, destination))
+                    except Exception:
+                        continue
+                    value = candidate["corrected"]
+                    conflict = any(reading["text"].isdigit() and reading["confidence"] >= .75
+                                   and int(reading["text"]) != value
+                                   and (allowed is None or int(reading["text"]) in allowed)
+                                   for reading in original.get("variants", []))
+                    if (value is not None and not candidate["reviewRequired"] and not conflict
+                            and original["corrected"] in (None, value)):
+                        fields[field] = {**candidate, "rawOCR": original["rawOCR"],
+                                         "variants": original.get("variants", []) + candidate.get("variants", []),
+                                         "alignmentOffsetX": offset}
+                        field_offsets[field] = offset
             for key, (x0, y0, x1, y1) in bounds.items():
                 left, upper = round(x0 * row.width), round(y0 * row.height)
                 right, lower = round(x1 * row.width), round(y1 * row.height)
-                fields[key]["box"] = {"x": left, "y": top + upper,
+                fields[key]["box"] = {"x": left + field_offsets.get(key, 0), "y": top + upper,
                                       "width": right - left, "height": lower - upper}
             rows.append({"captureId": capture["captureId"], "ordinal": ordinal,
                          "rowBox": {"x": 0, "y": top, "width": image.width, "height": bottom - top},

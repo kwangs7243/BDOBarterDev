@@ -15,7 +15,7 @@ from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[3]
-WORKER_VERSION = "trade-live-worker-v12"
+WORKER_VERSION = "trade-live-worker-v13"
 ENGINE_ID = "paddle-korean-ppocrv5-mobile-onnx-cpu-v1"
 MODEL_ONNX_SHA256 = "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08"
 MODEL_CONFIG_SHA256 = "f757fa1c40e99edcf27e9cce879b93eb2a51fa46f5ef39095689b8c37dd75998"
@@ -150,7 +150,7 @@ class TradeBatchRuntime:
                     name = f"capture-{ordinal:04d}.png"
                     (work_dir / name).write_bytes(capture["imageBytes"])
                     manifest_captures.append({"captureId": capture["captureId"], "batchId": capture["metadata"]["batchId"],
-                                              "imagePath": name})
+                                              "imagePath": name, "metadata": capture["metadata"]})
                 manifest_path, output_path = work_dir / "request.json", work_dir / "result.json"
                 self._set_progress(batch_id, "preparing", len(captures), path=work_dir / "progress.json")
                 manifest_path.write_text(json.dumps({"version": 1, "batchId": batch_id, "captures": manifest_captures,
