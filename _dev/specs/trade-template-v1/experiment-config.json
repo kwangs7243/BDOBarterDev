@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "specId": "TRADE-TEMPLATE-V1",
+  "engineMode": "EXPERIMENTAL_OFFLINE_ONLY",
+  "variants": ["B0", "V1", "V2", "V3"],
+  "layout": {
+    "sourceType": "native-screen",
+    "frame": [987, 456],
+    "rescaled": false,
+    "anchorsX": [6, 271],
+    "searchRadiusX": 8,
+    "edgeDeltaExclusive": 20,
+    "minimumAnchorSupport": 0.75,
+    "expectedFullFrameRows": 6,
+    "coverageSuspectDisablesTemplates": true
+  },
+  "numeric": {
+    "allowedStagePairs": [[1, 2], [2, 3]],
+    "allowedValues23": [2, 3],
+    "blackstoneCanonicalName": "파도의 블랙스톤",
+    "guardBounds": [0.645, 0.45, 0.745, 0.99],
+    "glyphCanvas": [128, 32],
+    "maximumGlyphSizeDelta": [1, 1],
+    "comparisonShifts": [-1, 0, 1],
+    "glyphDistanceGrid": [0.0, 0.01, 0.02, 0.03, 0.05],
+    "otherLabelMarginGrid": [0.05, 0.1, 0.15, 0.2],
+    "guardMaeGridInByteUnits": [0, 1, 2, 4],
+    "minimumNearEnrollmentGroupsPerLabel": 2,
+    "minimumNearCalibrationGroupsPerLabel": 2,
+    "blackstoneNearMatching": false
+  },
+  "names": {
+    "mode": "EXACT_RGB_ONLY",
+    "allowLandItems": false,
+    "allowTruncatedNames": false,
+    "allowUnregisteredNames": false
+  },
+  "data": {
+    "splitHashSalt": "TRADE-TEMPLATE-V1-SPLIT-1",
+    "enrollBuckets": [0, 1, 2, 3, 4],
+    "calibrationBuckets": [5, 6],
+    "testBuckets": [7, 8, 9],
+    "latest15Role": "TEST_LOCKED",
+    "legacyOracleRole": "LEGACY_EVALUATION_ONLY",
+    "rowMappingMinimumIoU": 0.9,
+    "globalBankMaxReferences": 4096,
+    "maxReferencesPerContextLabel": 8,
+    "maxCandidatesPerLookup": 64
+  },
+  "quality": {
+    "minimumVerifiedTestHitsPerActiveKind": 20,
+    "minimumTestSourceGroupsPerActiveKind": 2,
+    "minimumVerifiedTestHitsPer23Label": 5,
+    "minimumBlackstoneDistinctTestValues": 2,
+    "maximumNewVerifiedWrongAutoAccept": 0,
+    "maximumUnverifiedChangedFieldsForRecommendation": 0,
+    "maximumUnverifiedReviewRelaxationsForRecommendation": 0
+  },
+  "bench": {
+    "preflightLoadSampleSeconds": 5,
+    "armTimeoutSeconds": 300,
+    "onnxThreads": 1,
+    "opencvThreads": 1,
+    "win32Priority": 64,
+    "screenCaptures": 6,
+    "fullCaptures": 15,
+    "fullPairedBlocks": 3,
+    "blockOrder": [["B0", "C"], ["C", "B0"], ["B0", "C"]],
+    "minimumRecommendedMedianGain": 0.1,
+    "minimumRecommendedModelCallReduction": 0.1,
+    "maximumArmMedianCpuLoadDeltaPercentagePoints": 15,
+    "maximumWithinArmTimeCV": 0.15,
+    "maximumMedianCpuLoadPercent": 85,
+    "retriesForContendedBench": 0
+  }
+}

@@ -1,0 +1,431 @@
+{
+  "schemaVersion": 1,
+  "specId": "TRADE-TEMPLATE-V1",
+  "preparedDate": "2026-10-16",
+  "gitHead": "0ad7c8fec637a4183c810916e62b75816e4eaded",
+  "gitBranch": "codex/trade-recognition-cleanup",
+  "dirtyProductFiles": [
+    {
+      "path": "_dev/local_app/backend/services/trade_batch_runtime.py",
+      "sha256": "af6eaff311a2e653926fe5ac14f029cb9fa25bfec9010121ad931c8b1073f655"
+    },
+    {
+      "path": "_dev/local_app/frontend/js/native-capture-ui.js",
+      "sha256": "4eab4a387e11bb9421c3f706918d94ca9d4fdcb1d5da13ea623616f27f6deea2"
+    },
+    {
+      "path": "_dev/local_app/native_capture.py",
+      "sha256": "f642f8b39e700062cda9f7706cecaceb102454bafeacee1c9af6500cc2bb9263"
+    },
+    {
+      "path": "_dev/local_app/native_win32.py",
+      "sha256": "066abaa330132170ce7ad7c9221e37e2b75f9ae6e4f00f09888860c4f2f087b2"
+    },
+    {
+      "path": "_dev/local_app/tests/backend/test_native_capture.py",
+      "sha256": "d03116cc7e6ecab9a5b09bed654aec873907f69b0088df868211de297a682a0c"
+    },
+    {
+      "path": "_dev/local_app/tests/backend/test_trade_batch_runtime.py",
+      "sha256": "787c5d4b3c485eb3cbc756a192e5ca4bfb8c2ca63c700cbb5113a816f7d49d81"
+    },
+    {
+      "path": "_dev/local_app/tests/backend/test_trade_live_list.py",
+      "sha256": "7bcd1bbce550988f0ebad574279ad9c29b36d318865c84731367388b7a199ccd"
+    },
+    {
+      "path": "_dev/local_app/tests/backend/test_warehouse_recognition_scaling.py",
+      "sha256": "117743bb62d72acbf97901146c3667e0a5a9105946d74938164cb18beb353cab"
+    },
+    {
+      "path": "_dev/local_app/tests/package_live_smoke.py",
+      "sha256": "56cad22dd4c9572092d3ee4620bd8255534bad0b9b2a0c4666fb709258561279"
+    },
+    {
+      "path": "_dev/local_app/tests/test_native_win32.py",
+      "sha256": "e4e274df1c0f35f98b6b5172712dbefdcf30c1bc9e7d68a84d089642d4435f4e"
+    },
+    {
+      "path": "_dev/local_app/tools/trade_live_ocr.py",
+      "sha256": "87cf2d1a9f6f24a8e2823506cb0a4fec25d01a9d085bc5ca18d8d3ad67d0dfab"
+    },
+    {
+      "path": "_dev/tools/warehouse_patch/warehouse_patch.py",
+      "sha256": "1ee8f3ec88b29b2486a65dcbe49b5e152187dcf52c65c6dfb28785cba186e5eb"
+    }
+  ],
+  "baselineWorker": "trade-live-worker-v13",
+  "baselineCodeRoot": "baseline-source/_dev",
+  "modelBundleSha256": "f56168a615fa6439b18f42e55cf48dad52883dd0411590a7a4d73603e5955f90",
+  "roots": {
+    "artifactRoot": {
+      "baseEnvironment": "USERPROFILE",
+      "relative": ".codex/visualizations/2026/10/10/01a123ef-cfd5-7143-8f82-d3e1d06bb44a"
+    },
+    "preparationRoot": {
+      "relativeTo": "artifactRoot",
+      "relative": "trade-template-v1-preparation"
+    },
+    "runRoot": {
+      "relativeTo": "artifactRoot",
+      "relative": "trade-template-v1-runs"
+    },
+    "installedAppReadOnly": {
+      "absoluteDefault": "D:/BDOBarterDev/app",
+      "access": "read-only"
+    }
+  },
+  "snapshotFiles": [
+    {
+      "repoPath": "_dev/AGENTS.md",
+      "path": "baseline-source/_dev/AGENTS.md",
+      "sha256": "6dbaf2a1744095af37f4e3b2aabc2bc00423e0be7f3c61d347fecac30625c5ab",
+      "bytes": 1717
+    },
+    {
+      "repoPath": "_dev/CURRENT-PRODUCT-CONTRACT.md",
+      "path": "baseline-source/_dev/CURRENT-PRODUCT-CONTRACT.md",
+      "sha256": "ce806f43d191048cb5a93bc142d4b9a76f76a80a6ed12b7919215ffa8241d3bd",
+      "bytes": 5947
+    },
+    {
+      "repoPath": "_dev/TESTING.md",
+      "path": "baseline-source/_dev/TESTING.md",
+      "sha256": "6edaab0d19ad8a86ef9b48878dbf819a849f277dfe274d06f7b95c24f4307534",
+      "bytes": 4990
+    },
+    {
+      "repoPath": "_dev/local_app/backend/recognition_contracts.py",
+      "path": "baseline-source/_dev/local_app/backend/recognition_contracts.py",
+      "sha256": "dad07139cad154e0e9debb54b8f7214850fac1510ab58b48361de860d60ff60f",
+      "bytes": 18310
+    },
+    {
+      "repoPath": "_dev/local_app/backend/services/trade_batch_runtime.py",
+      "path": "baseline-source/_dev/local_app/backend/services/trade_batch_runtime.py",
+      "sha256": "af6eaff311a2e653926fe5ac14f029cb9fa25bfec9010121ad931c8b1073f655",
+      "bytes": 13908
+    },
+    {
+      "repoPath": "_dev/local_app/frontend/data/trade-catalog.json",
+      "path": "baseline-source/_dev/local_app/frontend/data/trade-catalog.json",
+      "sha256": "2fa647c1349b7e9579af708a984e61dc33d8ec597978e27d18c3ba21f535c257",
+      "bytes": 11954
+    },
+    {
+      "repoPath": "_dev/local_app/frontend/js/domain/trade-import.js",
+      "path": "baseline-source/_dev/local_app/frontend/js/domain/trade-import.js",
+      "sha256": "ed00dde1b1cf6d19f6ae028359b9054b4b6b9520a91ad60cc6b2520675f5268e",
+      "bytes": 18782
+    },
+    {
+      "repoPath": "_dev/local_app/frontend/js/native-capture-ui.js",
+      "path": "baseline-source/_dev/local_app/frontend/js/native-capture-ui.js",
+      "sha256": "4eab4a387e11bb9421c3f706918d94ca9d4fdcb1d5da13ea623616f27f6deea2",
+      "bytes": 13024
+    },
+    {
+      "repoPath": "_dev/local_app/frontend/js/trade-live-list-ui.js",
+      "path": "baseline-source/_dev/local_app/frontend/js/trade-live-list-ui.js",
+      "sha256": "2d35435d5727216dad1fc65ae4e6a1bcd5cdf94f496dfbe6f769e8a665b9926e",
+      "bytes": 23402
+    },
+    {
+      "repoPath": "_dev/local_app/frontend/js/trade-recognition-client.js",
+      "path": "baseline-source/_dev/local_app/frontend/js/trade-recognition-client.js",
+      "sha256": "2800886ced0bfd46dd08738fca7acef0f33d14dd961b09114f4d3db05001a6b0",
+      "bytes": 7099
+    },
+    {
+      "repoPath": "_dev/local_app/native_capture.py",
+      "path": "baseline-source/_dev/local_app/native_capture.py",
+      "sha256": "f642f8b39e700062cda9f7706cecaceb102454bafeacee1c9af6500cc2bb9263",
+      "bytes": 23388
+    },
+    {
+      "repoPath": "_dev/local_app/native_win32.py",
+      "path": "baseline-source/_dev/local_app/native_win32.py",
+      "sha256": "066abaa330132170ce7ad7c9221e37e2b75f9ae6e4f00f09888860c4f2f087b2",
+      "bytes": 39937
+    },
+    {
+      "repoPath": "_dev/local_app/tests/backend/test_native_capture.py",
+      "path": "baseline-source/_dev/local_app/tests/backend/test_native_capture.py",
+      "sha256": "d03116cc7e6ecab9a5b09bed654aec873907f69b0088df868211de297a682a0c",
+      "bytes": 33789
+    },
+    {
+      "repoPath": "_dev/local_app/tests/backend/test_trade_batch_runtime.py",
+      "path": "baseline-source/_dev/local_app/tests/backend/test_trade_batch_runtime.py",
+      "sha256": "787c5d4b3c485eb3cbc756a192e5ca4bfb8c2ca63c700cbb5113a816f7d49d81",
+      "bytes": 8343
+    },
+    {
+      "repoPath": "_dev/local_app/tests/backend/test_trade_live_list.py",
+      "path": "baseline-source/_dev/local_app/tests/backend/test_trade_live_list.py",
+      "sha256": "7bcd1bbce550988f0ebad574279ad9c29b36d318865c84731367388b7a199ccd",
+      "bytes": 34849
+    },
+    {
+      "repoPath": "_dev/local_app/tests/backend/test_warehouse_recognition_scaling.py",
+      "path": "baseline-source/_dev/local_app/tests/backend/test_warehouse_recognition_scaling.py",
+      "sha256": "117743bb62d72acbf97901146c3667e0a5a9105946d74938164cb18beb353cab",
+      "bytes": 9332
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_43_53.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_43_53.png",
+      "sha256": "e65afdd987b2f1e99e573c53897c6bd39632c1bfec248e5068f9fdde7f745843",
+      "bytes": 234769
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_44.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_44.png",
+      "sha256": "19d99437c4135847cb831e21f02d15ce8a93ff9f498ab3cef922684e36fed5ca",
+      "bytes": 148195
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_48.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_48.png",
+      "sha256": "d1a43d4f006e0a9ae1cdcd93491af678d70be3705032694f0faf3795e22d7c1e",
+      "bytes": 229375
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_52.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_52.png",
+      "sha256": "6384741f6ce7d66cd9ebd379e72e446bbfa25bb89e41ad3afb1c67d7c1350a8e",
+      "bytes": 144320
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_56.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_56.png",
+      "sha256": "567f6807544b06a6216c7df5c05d25889b1524082859a08602495cc34ce21cc0",
+      "bytes": 220529
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_59.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_44_59.png",
+      "sha256": "a365435ce5d012352ee9b863d6ee111f6e09b6075548d921e499171311b026d8",
+      "bytes": 223828
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_03.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_03.png",
+      "sha256": "39580306d258f9c4000a37d814ca4a47074491e051e37224a54c6b9e0721177a",
+      "bytes": 214979
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_09.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_09.png",
+      "sha256": "522bd25905c9d26385eb882ef7c8402429ad605db43c9650221c1be1daac15d6",
+      "bytes": 228243
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_13.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_13.png",
+      "sha256": "d620e2eb44c991920f85cbda9c74356a79c557439647b3e664cc0bd5e9e8104a",
+      "bytes": 223359
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_16.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_16.png",
+      "sha256": "57c8b62ddd421867ae3e6fbbc39b9d7d44cb47b8392dfed1a681fed14d3fe43a",
+      "bytes": 77970
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_20.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_20.png",
+      "sha256": "a9ac30d254bd49d0899ed86ff1d4f4e866e88a447ae5aae4e013e3db71eb41d9",
+      "bytes": 247724
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_25.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_25.png",
+      "sha256": "43061b06e4825f5417c387dab4b1c36a6ed7b195c30d0e770d8fb69d121be4de",
+      "bytes": 284024
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_28.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_28.png",
+      "sha256": "c3da4c25bfe52aa9a6f7ba48bb6293c7ece5dfdc739e8802654bc9326feb30cd",
+      "bytes": 231754
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_33.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_33.png",
+      "sha256": "8390fbf48a76aaedd4aaf390c4ac42b5667e7e9595dbd38884ce5716ca556f17",
+      "bytes": 42025
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_37.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_37.png",
+      "sha256": "9519215e887f2e80c02bd14d650432ff057d27fca1803d9b1a6ab7a44a990ba5",
+      "bytes": 207320
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_41.png",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/Codex 이미지 2026년 9월 25일 오후 08_45_41.png",
+      "sha256": "7c2c5c356d447d41664b2cb14660c789252db7eef21ab4e50bdfc8725c609ba5",
+      "bytes": 188428
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/live-list-mapping.json",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/live-list-mapping.json",
+      "sha256": "21a2978ff5dbecac614ab80cb98b64012d2ab3327a56938118ed5154519a1d83",
+      "bytes": 4473
+    },
+    {
+      "repoPath": "_dev/local_app/tests/fixtures/trade-recognition/정답.json",
+      "path": "baseline-source/_dev/local_app/tests/fixtures/trade-recognition/정답.json",
+      "sha256": "c90bd407d5b8526c89c54d3db30c36bb6b98a5526d1c8839e8b53ac10b5a3033",
+      "bytes": 14626
+    },
+    {
+      "repoPath": "_dev/local_app/tests/live/trade_live_list_accuracy.py",
+      "path": "baseline-source/_dev/local_app/tests/live/trade_live_list_accuracy.py",
+      "sha256": "30482616d1f3891920321ac530ed98c5a36cae084ad1ccdb1c031732babac1c8",
+      "bytes": 3362
+    },
+    {
+      "repoPath": "_dev/local_app/tests/package_live_smoke.py",
+      "path": "baseline-source/_dev/local_app/tests/package_live_smoke.py",
+      "sha256": "56cad22dd4c9572092d3ee4620bd8255534bad0b9b2a0c4666fb709258561279",
+      "bytes": 13018
+    },
+    {
+      "repoPath": "_dev/local_app/tests/test_native_win32.py",
+      "path": "baseline-source/_dev/local_app/tests/test_native_win32.py",
+      "sha256": "e4e274df1c0f35f98b6b5172712dbefdcf30c1bc9e7d68a84d089642d4435f4e",
+      "bytes": 28327
+    },
+    {
+      "repoPath": "_dev/local_app/tools/trade_batch_worker.py",
+      "path": "baseline-source/_dev/local_app/tools/trade_batch_worker.py",
+      "sha256": "c8cdd452da0f152c37e0fa283eb5b6e3a7c916bdbcdfc42c89dd84a05ec24f47",
+      "bytes": 2410
+    },
+    {
+      "repoPath": "_dev/local_app/tools/trade_live_ocr.py",
+      "path": "baseline-source/_dev/local_app/tools/trade_live_ocr.py",
+      "sha256": "87cf2d1a9f6f24a8e2823506cb0a4fec25d01a9d085bc5ca18d8d3ad67d0dfab",
+      "bytes": 38802
+    },
+    {
+      "repoPath": "_dev/tools/warehouse_patch/warehouse_patch.py",
+      "path": "baseline-source/_dev/tools/warehouse_patch/warehouse_patch.py",
+      "sha256": "1ee8f3ec88b29b2486a65dcbe49b5e152187dcf52c65c6dfb28785cba186e5eb",
+      "bytes": 29089
+    }
+  ],
+  "modelFiles": [
+    {
+      "path": "baseline-model/inference.onnx",
+      "sha256": "92f0b7785e64fc9090106a241cf4c1eb97472824558272751b88a2a4476d3a08",
+      "bytes": 13418787
+    },
+    {
+      "path": "baseline-model/inference.yml",
+      "sha256": "f757fa1c40e99edcf27e9cce879b93eb2a51fa46f5ef39095689b8c37dd75998",
+      "bytes": 96039
+    }
+  ],
+  "dataSources": [
+    {
+      "id": "history-before-cleanup",
+      "root": "artifactRoot",
+      "path": "cleanup-work/user-history-before.sqlite3",
+      "sha256": "d13b3c47fad6e6beeb59bc80bc93215893a08146bd1f6beda9f972df6619fbe8",
+      "bytes": 515854336
+    },
+    {
+      "id": "recent-before-fixed-roi",
+      "root": "artifactRoot",
+      "path": "fixed-region-work/user-before.sqlite3",
+      "sha256": "a925fbdf12e1822689e438c4d9ee1e3b62c87bfc3db73e5a6855cab4ddc5c370",
+      "bytes": 76009472
+    },
+    {
+      "id": "native77-capture-index",
+      "root": "artifactRoot",
+      "path": "fixed-region-work/trade-input.json",
+      "sha256": "30a27ed6448b8e52ed746f096356950e0c641859ba49c0f22e32bb9fd3b32458",
+      "bytes": 1105115
+    },
+    {
+      "id": "latest15-capture-index",
+      "root": "artifactRoot",
+      "path": "speed-review/latest-captures.json",
+      "sha256": "49669391dd37389b70082a6c45718cfc1af7e755d044b5adcca15625bac00a18",
+      "bytes": 15570
+    },
+    {
+      "id": "latest15-baseline-result",
+      "root": "artifactRoot",
+      "path": "speed-review/latest-full-after-result.json",
+      "sha256": "8f68967cbf99a6dabd7f3e7432b22f9dcfc0f63237b24c4597391dba47e769f0",
+      "bytes": 192848
+    },
+    {
+      "id": "performance-full-comparison",
+      "root": "artifactRoot",
+      "path": "speed-review/latest-full-comparison.json",
+      "sha256": "826257b536bbc64a5f9507e6d8a1f6dd0918c7b94f79a36700a67a3c2b172061",
+      "bytes": 2686
+    }
+  ],
+  "priorBaselineReplays": [
+    {
+      "path": "fixed-region-work/batch-0-after-final.json",
+      "sha256": "e61ed4d264f2870b24a357aaa34c7649ce27caf1ba6d1e070f45cf16a02dd5d9"
+    },
+    {
+      "path": "fixed-region-work/batch-1-after-final.json",
+      "sha256": "891fc9433ff5ae51401f202e3390233d39fcc76e789133a4f162455cb5e465bd"
+    },
+    {
+      "path": "fixed-region-work/batch-2-after-final.json",
+      "sha256": "94a572f700068f0a07dd4c62e4a7742ef0cbf72c01d74f4a16a2775571e7e761"
+    },
+    {
+      "path": "fixed-region-work/batch-3-after-final.json",
+      "sha256": "c64b4da7c59084d3013b810c08bd272400f20a5b63f05c3b2c0b2ca6a48f5532"
+    },
+    {
+      "path": "fixed-region-work/batch-4-after-final.json",
+      "sha256": "077e36c0c65c83662fefcbce1ce90b146c6659d9591da554bc4749d94445ba00"
+    }
+  ],
+  "installedReadOnlyChecks": [
+    {
+      "root": "installedAppReadOnly",
+      "path": "BDO 물교 실행.exe",
+      "sha256": "d156942560a6cba80ea239c4d7cd53d1de809fde802b354a554101bab5e8759b",
+      "bytes": 8182695
+    },
+    {
+      "root": "installedAppReadOnly",
+      "path": "_internal/local_app/tools/trade_live_ocr.py",
+      "sha256": "87cf2d1a9f6f24a8e2823506cb0a4fec25d01a9d085bc5ca18d8d3ad67d0dfab",
+      "bytes": 38802
+    },
+    {
+      "root": "installedAppReadOnly",
+      "path": "_internal/local_app/frontend/data/trade-catalog.json",
+      "sha256": "2fa647c1349b7e9579af708a984e61dc33d8ec597978e27d18c3ba21f535c257",
+      "bytes": 11954
+    }
+  ],
+  "facts": {
+    "historyRecords": 1393,
+    "historyCaptureIds": 468,
+    "historyWarehouseScans": 15,
+    "recentRecords": 263,
+    "recentDistinctImageHashes": 77,
+    "separateNativeImages": 92,
+    "catalogItems": 213,
+    "catalogUniqueIslands": 103,
+    "warehouseReferenceIcons": 70
+  },
+  "preparedOnly": true,
+  "productionChanged": false
+}

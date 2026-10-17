@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:bdo-barter:trade-template-v1:report",
+  "title": "TRADE-TEMPLATE-V1 offline experiment report",
+  "type": "object",
+  "required": ["schemaVersion", "specId", "overallStatus", "stageStatus", "production", "provenance", "data", "variants", "finalCandidate", "limitations", "artifactFiles"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "specId": {"const": "TRADE-TEMPLATE-V1"},
+    "overallStatus": {"enum": ["EXECUTION_FAILED", "NO_GO_QUALITY", "HOLD_DATA", "HOLD_BASELINE_DRIFT", "BENCH_CONTENDED", "HOLD_PERFORMANCE", "NO_OP", "OFFLINE_REVIEW_READY"]},
+    "stageStatus": {
+      "type": "object",
+      "required": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"],
+      "additionalProperties": {"enum": ["NOT_RUN", "PASS", "FAIL", "HOLD_DATA"]}
+    },
+    "production": {
+      "type": "object",
+      "required": ["appChanged", "liveDbWrites", "liveApiWrites", "serverRestarted", "committed", "pushed"],
+      "properties": {
+        "appChanged": {"const": false},
+        "liveDbWrites": {"const": 0},
+        "liveApiWrites": {"const": 0},
+        "serverRestarted": {"const": false},
+        "committed": {"const": false},
+        "pushed": {"const": false}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["manifestSha256", "configSha256", "baselineSourceSha256", "modelBundleSha256", "catalogSha256", "bankVersion", "baselineDrift"],
+      "properties": {
+        "manifestSha256": {"$ref": "#/$defs/hash"},
+        "configSha256": {"$ref": "#/$defs/hash"},
+        "baselineSourceSha256": {"$ref": "#/$defs/nullableHash"},
+        "modelBundleSha256": {"$ref": "#/$defs/nullableHash"},
+        "catalogSha256": {"$ref": "#/$defs/nullableHash"},
+        "bankVersion": {"$ref": "#/$defs/nullableHash"},
+        "baselineDrift": {"type": ["boolean", "null"]}
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["sourceRecordCount", "uniqueImages", "truthFieldCount", "quarantinedFieldCount", "splitGroupCounts", "coverageByKind"],
+      "properties": {
+        "sourceRecordCount": {"type": "integer", "minimum": 0},
+        "uniqueImages": {"type": "integer", "minimum": 0},
+        "truthFieldCount": {"type": "integer", "minimum": 0},
+        "quarantinedFieldCount": {"type": "integer", "minimum": 0},
+        "splitGroupCounts": {"type": "object"},
+        "coverageByKind": {"type": "object"}
+      }
+    },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "quality", "performance", "artifactPrefix"],
+        "properties": {
+          "id": {"enum": ["B0", "V1", "V2", "V3"]},
+          "status": {"enum": ["NOT_RUN", "BASELINE_ONLY", "EXECUTION_FAILED", "NO_GO_QUALITY", "HOLD_BASELINE_DRIFT", "HOLD_DATA", "BENCH_CONTENDED", "HOLD_PERFORMANCE", "NO_OP", "OFFLINE_REVIEW_READY"]},
+          "artifactPrefix": {"type": "string"},
+          "quality": {
+            "type": "object",
+            "required": ["verifiedTruthFields", "templateHitsWithTruth", "verifiedWrongAutoAccept", "newVerifiedWrongAutoAccept", "wrongAutoAcceptAllFields", "unverifiedChangedFields", "unverifiedReviewRelaxations", "rawSourceMembershipLost"],
+            "properties": {
+              "verifiedTruthFields": {"type": "integer", "minimum": 0},
+              "templateHitsWithTruth": {"type": "integer", "minimum": 0},
+              "verifiedWrongAutoAccept": {"type": "integer", "minimum": 0},
+              "newVerifiedWrongAutoAccept": {"type": "integer", "minimum": 0},
+              "wrongAutoAcceptAllFields": {"type": ["integer", "null"], "minimum": 0},
+              "unverifiedChangedFields": {"type": "integer", "minimum": 0},
+              "unverifiedReviewRelaxations": {"type": "integer", "minimum": 0},
+              "rawSourceMembershipLost": {"type": "integer", "minimum": 0}
+            }
+          },
+          "performance": {
+            "type": "object",
+            "required": ["status", "processWallMedianSeconds", "observedMedianGain", "modelCalls", "modelCallReduction", "priorityClassObserved"],
+            "properties": {
+              "status": {"enum": ["NOT_RUN", "NO_OP", "VALID", "BENCH_ENV_INVALID", "BENCH_CONTENDED", "EXECUTION_FAILED"]},
+              "processWallMedianSeconds": {"type": ["number", "null"], "minimum": 0},
+              "observedMedianGain": {"type": ["number", "null"]},
+              "modelCalls": {"type": ["integer", "null"], "minimum": 0},
+              "modelCallReduction": {"type": ["number", "null"]},
+              "priorityClassObserved": {"type": ["integer", "null"]}
+            }
+          }
+        }
+      }
+    },
+    "finalCandidate": {"enum": [null, "V1", "V2", "V3"]},
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "artifactFiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "path", "sha256"],
+        "properties": {
+          "role": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"$ref": "#/$defs/hash"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableHash": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+  }
+}
