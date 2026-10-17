@@ -33,6 +33,7 @@ class LiveListTests(unittest.TestCase):
         reader.characters=["","1","2"," "]
         reader.input_name="input"
         reader.cache=OrderedDict()
+        reader.model_calls=0
         reader.session=Mock()
         reader.session.run.return_value=[np.array([[[.05,.75,.2,0],[.8,.1,.1,0]]])]
         cv2=SimpleNamespace(resize=lambda rgb,size:np.zeros((size[1],size[0],3),dtype=np.uint8))
@@ -47,6 +48,7 @@ class LiveListTests(unittest.TestCase):
             image.putpixel((0,0),(0,0,0))
             reader.read(image)
             self.assertEqual(reader.session.run.call_count,4)
+            self.assertEqual(reader.model_calls,4)
 
     def test_quantity_conflicts_respect_allowed_values_without_promoting_uncertain_primary(self):
         primary = {"rawOCR":"2", "corrected":2, "confidence":.99, "reviewRequired":False, "variants":[]}

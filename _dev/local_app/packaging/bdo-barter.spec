@@ -24,6 +24,16 @@ with np.load(warehouse_templates, allow_pickle=False) as warehouse_data:
             or len(warehouse_data["feedback_values"]) != verified_rows
             or len(warehouse_data["feedback_item_names"]) != verified_rows):
         raise RuntimeError("Warehouse feedback templates and their verified-row provenance do not agree.")
+trade_templates = os.environ.get("BDO_PACKAGE_TRADE_TEMPLATES")
+if trade_templates:
+    import hashlib
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from local_app.tools.trade_template_reader import BANK_SHA256
+    trade_templates = Path(trade_templates)
+    if hashlib.sha256(trade_templates.read_bytes()).hexdigest() != BANK_SHA256:
+        raise RuntimeError("Trade template bank integrity verification failed.")
+
 datas = [
     (str(trade_model / "inference.onnx"), "local_app/recognition_data/trade-model"),
     (str(trade_model / "inference.yml"), "local_app/recognition_data/trade-model"),
@@ -35,7 +45,11 @@ datas = [
     (str(ROOT / "tools" / "warehouse_patch" / "warehouse_patch.py"), "tools/warehouse_patch"),
     (str(warehouse_templates), "tools/warehouse_patch"),
 ]
+if trade_templates:
+    datas.append((str(trade_templates), "local_app/recognition_data"))
+datas.append((str(ROOT / "local_app/tools/trade_template_reader.py"), "local_app/tools"))
 hiddenimports = [
+    "local_app.tools.trade_template_reader",
     "local_app.tools.trade_batch_worker",
     "local_app.tools.trade_live_ocr",
     "onnxruntime",

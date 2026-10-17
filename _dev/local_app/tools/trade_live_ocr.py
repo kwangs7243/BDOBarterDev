@@ -53,6 +53,7 @@ class LocalReader:
                                             providers=["CPUExecutionProvider"])
         self.input_name = self.session.get_inputs()[0].name
         self.cache = OrderedDict()
+        self.model_calls = 0
 
     def read(self, image: Image.Image, digits: bool = False, allowed_digits: str | None = None):
         import cv2
@@ -67,6 +68,7 @@ class LocalReader:
         resized = cv2.resize(rgb, (resized_width, 48)).astype(np.float32)
         tensor = np.zeros((1, 3, 48, width), dtype=np.float32)
         tensor[0, :, :, :resized_width] = (resized.transpose(2, 0, 1) / 255 - .5) / .5
+        self.model_calls += 1
         probabilities = self.session.run(None, {self.input_name: tensor})[0][0]
         if digits:
             allowed = [0] + [i for i, char in enumerate(self.characters) if char in (allowed_digits or "0123456789") and char]
@@ -578,7 +580,7 @@ def read_catalog_name(reader, crop, candidates, literal_candidates=()):
             **({"recognizedStage": recognized_stage} if recognized_stage is not None else {})}
 
 
-def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
+def recognize_live(captures, model_dir, batch_id, *, on_progress=None, template_bank_path=None):
     def report(stage, completed, row_completed=0, row_total=0):
         if on_progress is not None:
             try:
@@ -588,7 +590,25 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
                 # A progress display must not interrupt recognition or change its result.
                 pass
 
+    from local_app.tools.trade_template_reader import TemplateReader
+    templates = TemplateReader(template_bank_path or Path(__file__).resolve().parents[1] /
+                               "recognition_data/trade-templates.json", ink=_ink, crop=_crop)
     reader = LocalReader(model_dir)
+
+    def name(crop, candidates, literal_candidates=(), *, kind="item"):
+        return (templates.match(kind, crop, allowed=set(candidates) | set(literal_candidates))
+                or read_catalog_name(reader, crop, candidates, literal_candidates))
+
+    def count(crop):
+        return templates.match("count", crop) or read_count(reader, crop)
+
+    def quantity(row, field, allowed=None, destination=None):
+        return (templates.match("quantity", _requirement_crop(row) if field == "reqAmount" else
+                                _crop(row, (.663, .55, .724, .95)), row=row, field=field,
+                                allowed=set(allowed) if allowed else None)
+                or (read_requirement(reader, row) if field == "reqAmount" else
+                    read_yield(reader, row, allowed, destination)))
+
     try:
         catalog = json.loads((Path(__file__).resolve().parents[1] / "frontend/data/trade-catalog.json").read_text(encoding="utf-8"))
         items = list(dict.fromkeys([name for names in catalog["masterData"].values() for name in names] + catalog["specialItems"]))
@@ -605,6 +625,7 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
     rows, capture_results = [], []
     for capture_index, capture in enumerate(captures):
         image = Image.open(capture["imagePath"]).convert("RGB")
+        templates.configure(image, capture.get("metadata", {}))
         boxes = detect_live_rows(image)
         offset = fixed_layout_offset(image, capture.get("metadata", {}))
         aligned = image.crop((offset, 0, image.width + offset, image.height)) if offset else image
@@ -621,20 +642,20 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
                     if field == "reqAmount":
                         crop = _requirement_crop(row)
                     if field == "count":
-                        fields[field] = read_count(reader, crop)
+                        fields[field] = count(crop)
                     elif field in NUMERIC:
                         apply_trade_rules(fields, item_stages)
                         if fields[field].get("valueSource") == "TRADE_RULE":
                             continue
                         source, destination = trade_stages(fields, item_stages)
                         allowed = (2, 3) if field == "yield" and (source, destination) in {(1, 2), (2, 3)} else None
-                        fields[field] = (read_yield(reader, row, allowed, destination) if field == "yield"
-                                         else read_requirement(reader, row))
+                        fields[field] = quantity(row, field, allowed, destination)
                     else:
-                        fields[field] = read_catalog_name(reader, crop, islands if field == "island" else items,
-                                                          land_items if field == "fromItem" else ())
+                        fields[field] = name(crop, islands if field == "island" else items,
+                                             land_items if field == "fromItem" else (),
+                                             kind="island" if field == "island" else "item")
                         if field == "toItem" and (item_stages.get(fields[field].get("corrected")) or fields[field].get("recognizedStage")) == 1:
-                            fields["fromItem"] = read_catalog_name(reader, _crop(row, bounds["fromItem"]), land_items, land_items)
+                            fields["fromItem"] = name(_crop(row, bounds["fromItem"]), land_items, land_items)
                 except Exception as error:
                     fields[field] = {"rawOCR": "", "corrected": None, "reviewRequired": True,
                                      "confidence": None, "error": type(error).__name__}
@@ -648,9 +669,8 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
                         continue
                     allowed = (2, 3) if field == "yield" and (source, destination) in {(1, 2), (2, 3)} else None
                     try:
-                        candidate = (read_count(reader, _crop(aligned_row, bounds[field])) if field == "count"
-                                     else read_requirement(reader, aligned_row) if field == "reqAmount"
-                                     else read_yield(reader, aligned_row, allowed, destination))
+                        candidate = (count(_crop(aligned_row, bounds[field])) if field == "count"
+                                     else quantity(aligned_row, field, allowed, destination))
                     except Exception:
                         continue
                     value = candidate["corrected"]
@@ -676,4 +696,5 @@ def recognize_live(captures, model_dir, batch_id, *, on_progress=None):
         report("recognizing", capture_index + 1)
     report("finalizing", len(captures))
     return {"version": 3, "batchId": batch_id, "rows": rows, "captures": capture_results,
+            "templateMetrics": {**templates.stats, "modelCalls": reader.model_calls},
             "engine": "korean_PP-OCRv5_mobile_rec/ONNX-CPU", "rowDetector": "measured-separator-spacing-v1"}
