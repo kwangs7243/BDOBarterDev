@@ -1,12 +1,13 @@
 """Local image-to-list reader. Display candidates have no persistence authority."""
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
 import statistics
 import unicodedata
-from collections import Counter
+from collections import Counter, OrderedDict
 from pathlib import Path
 
 import numpy as np
@@ -51,11 +52,16 @@ class LocalReader:
         self.session = ort.InferenceSession(str(model_dir / "inference.onnx"), options,
                                             providers=["CPUExecutionProvider"])
         self.input_name = self.session.get_inputs()[0].name
+        self.cache = OrderedDict()
 
     def read(self, image: Image.Image, digits: bool = False, allowed_digits: str | None = None):
         import cv2
 
         rgb = np.asarray(image.convert("RGB"))[:, :, ::-1]
+        key = (image.size, digits, allowed_digits, hashlib.sha256(rgb.tobytes()).digest())
+        if key in self.cache:
+            self.cache.move_to_end(key)
+            return self.cache[key]
         width = min(3200, max(320, math.ceil(48 * image.width / image.height)))
         resized_width = min(width, math.ceil(48 * image.width / image.height))
         resized = cv2.resize(rgb, (resized_width, 48)).astype(np.float32)
@@ -73,7 +79,11 @@ class LocalReader:
                 text.append(self.characters[index])
                 scores.append(float(probabilities[position, index]))
             previous = index
-        return unicodedata.normalize("NFC", "".join(text)).strip(), (statistics.mean(scores) if scores else 0)
+        result = unicodedata.normalize("NFC", "".join(text)).strip(), (statistics.mean(scores) if scores else 0)
+        self.cache[key] = result
+        if len(self.cache) > 2048:
+            self.cache.popitem(last=False)
+        return result
 
 
 def detect_live_rows(image: Image.Image):

@@ -1,11 +1,14 @@
 import json
+import sys
 import unittest
+from collections import OrderedDict
 from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import numpy as np
 from PIL import Image, ImageDraw
-from local_app.tools.trade_live_ocr import fixed_layout_offset, _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
+from local_app.tools.trade_live_ocr import LocalReader, fixed_layout_offset, _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
@@ -24,6 +27,26 @@ class LiveListTests(unittest.TestCase):
         self.assertEqual(fixed_layout_offset(image,metadata),0)
         self.assertEqual(fixed_layout_offset(Image.new("RGB",image.size),metadata),0)
 
+    def test_pixel_cache_preserves_results_and_separates_digit_constraints_and_image_content(self):
+        from unittest.mock import Mock
+        reader=object.__new__(LocalReader)
+        reader.characters=["","1","2"," "]
+        reader.input_name="input"
+        reader.cache=OrderedDict()
+        reader.session=Mock()
+        reader.session.run.return_value=[np.array([[[.05,.75,.2,0],[.8,.1,.1,0]]])]
+        cv2=SimpleNamespace(resize=lambda rgb,size:np.zeros((size[1],size[0],3),dtype=np.uint8))
+        image=Image.new("RGB",(10,10),"white")
+        with patch.dict(sys.modules,{"cv2":cv2}):
+            first=reader.read(image)
+            self.assertEqual(reader.read(image.copy()),first)
+            self.assertEqual(reader.session.run.call_count,1)
+            self.assertEqual(reader.read(image,digits=True,allowed_digits="1")[0],"1")
+            self.assertEqual(reader.read(image,digits=True,allowed_digits="2")[0],"2")
+            self.assertEqual(reader.session.run.call_count,3)
+            image.putpixel((0,0),(0,0,0))
+            reader.read(image)
+            self.assertEqual(reader.session.run.call_count,4)
 
     def test_quantity_conflicts_respect_allowed_values_without_promoting_uncertain_primary(self):
         primary = {"rawOCR":"2", "corrected":2, "confidence":.99, "reviewRequired":False, "variants":[]}
