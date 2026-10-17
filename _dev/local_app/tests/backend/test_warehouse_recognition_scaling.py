@@ -99,16 +99,18 @@ class WarehouseScaleTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "No explicitly verified"):
                 calibrate(archive, BASE, folder / "empty.npz", holdout_scan="checked")
 
-    def test_feedback_does_not_replace_confident_original_matches(self):
+    def test_conflicting_feedback_cannot_silently_relabel_original_matches(self):
         reader = QuantityReader(BASE)
-        reader.feedback_templates = (reader.digit_features, (reader.digit_labels + 1) % 10,
+        reader.feedback_templates = (np.concatenate([reader.digit_features, reader.digit_features]),
+                                     np.concatenate([reader.digit_labels, (reader.digit_labels + 1) % 10]),
                                      reader.blank_features)
         with Image.open(FIXTURES / "calibration.png") as image:
             xgrid, ygrid, _ = detect_grid(image)
             for slot in crop_inner_slots(image, xgrid, ygrid):
                 original = reader._read(slot["rgb"], reader.digit_features, reader.digit_labels, reader.blank_features)
                 if original["status"] == "QUANTITY_MATCH":
-                    self.assertEqual(reader.read(slot["rgb"]), original)
+                    result = reader.read(slot["rgb"])
+                    self.assertTrue(result["status"] == "QUANTITY_UNKNOWN" or result["value"] == original["value"])
         items, references = load_reference(ROOT / "reference/barter_items.json")
         reader.feedback_icons = references[::-1]
         reader.feedback_item_names = [item["programName"] for item in items]

@@ -22,6 +22,9 @@ ICON_GAP_MIN = 0.045
 EMPTY_BRIGHT_PIXELS_MAX = 20
 OCR_PRESENCE_MARGIN = 0.03
 OCR_DIGIT_GAP_MIN = 0.03
+OCR_DIGIT_DISTANCE_MAX = 0.45
+OCR_DIGIT_STRONG_DISTANCE = 0.35
+OCR_DIGIT_STRONG_GAP = 0.075
 ICON_BACKGROUND = np.array([23, 24, 27], dtype=np.float32) / 255.0
 
 
@@ -427,13 +430,13 @@ class QuantityReader:
                 result = alternatives[0]
                 result["method"] = "scale-aligned-templates"
             return result
-        original = self._read(slot, self.digit_features, self.digit_labels, self.blank_features)
-        if original["status"] == "QUANTITY_MATCH" or self.feedback_templates is None:
-            return original
-        corrected = self._read(slot, *self.feedback_templates)
-        if corrected["status"] == "QUANTITY_MATCH":
-            corrected["method"] = "verified-feedback-templates"
-        return corrected
+        if self.feedback_templates is None:
+            return self._read(slot, self.digit_features, self.digit_labels, self.blank_features)
+        # Verified counterexamples must compete even when the base bank accepts.
+        result = self._read(slot, *self.feedback_templates)
+        if result["status"] == "QUANTITY_MATCH":
+            result["method"] = "verified-feedback-templates"
+        return result
 
     def _read(self, slot: np.ndarray, digit_features: np.ndarray, digit_labels: np.ndarray,
               blank_features: list[np.ndarray]) -> dict[str, Any]:
@@ -468,6 +471,10 @@ class QuantityReader:
                 continue
             if stopped or presence_delta < OCR_PRESENCE_MARGIN or digit_gap < OCR_DIGIT_GAP_MIN:
                 return {"status": "QUANTITY_UNKNOWN", "value": None, "digits": details}
+            if (best_digit_distance > OCR_DIGIT_DISTANCE_MAX
+                    or best_digit_distance > OCR_DIGIT_STRONG_DISTANCE and digit_gap < OCR_DIGIT_STRONG_GAP):
+                return {"status": "QUANTITY_UNKNOWN", "value": None, "digits": details,
+                        "reason": "digit_feature_ambiguous"}
             digits_reversed.append(best_label)
         if not digits_reversed:
             return {"status": "QUANTITY_UNKNOWN", "value": None, "digits": details}
@@ -569,6 +576,9 @@ def convert(image_path: Path, reference_json: Path, templates_path: Path) -> tup
             "iconGapMin": ICON_GAP_MIN,
             "quantityPresenceMargin": OCR_PRESENCE_MARGIN,
             "quantityDigitGapMin": OCR_DIGIT_GAP_MIN,
+            "quantityDigitDistanceMax": OCR_DIGIT_DISTANCE_MAX,
+            "quantityDigitStrongDistance": OCR_DIGIT_STRONG_DISTANCE,
+            "quantityDigitStrongGap": OCR_DIGIT_STRONG_GAP,
             "status": "prototype_not_final",
         },
         "quantityMethod": {
