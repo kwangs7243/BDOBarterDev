@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 VERSION = "trade-field-binary-exact-v1"
-BANK_SHA256 = "11bf67803ab99443add2c79ec015c09985da38f45840eb3396974df7e2b8ae06"
+BANK_SHA256 = "0ed2f7a5a6e1a1ee2eb970aec0e4d64a970cc7e6d6cb4cfa8c041122c80ab9c9"
 
 def _canonical(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
