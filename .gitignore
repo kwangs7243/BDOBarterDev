@@ -10,7 +10,8 @@ coverage/
 build/
 dist/
 /app/
-_dev/recognition-local/
+.local/
+recognition-local/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm

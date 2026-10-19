@@ -1,0 +1,13 @@
+{
+  "name": "bdo-barter-local-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "devDependencies": {"playwright": "1.62.1"},
+  "scripts": {
+    "test": "node local_app/tests/run_current.mjs",
+    "test:domain": "node local_app/tests/run_current.mjs --domain",
+    "test:browser": "node local_app/tests/run_current.mjs --browser"
+  }
+}
