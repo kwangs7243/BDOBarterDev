@@ -190,7 +190,7 @@ export function prepareLiveTradeRows(result, catalog, unused = {}) {
     delete row.duplicateOf;
     delete row.reviewGroupIndices;
   }
-  if (unused.policy) applyUnusedTradePolicy(result.rows, unused.policy, unused.coordinates);
+  if (unused.policy) applyUnusedTradePolicy(result.rows, unused.policy);
   const ready = result.rows.filter((row) => !row.excluded && Object.values(row.fields).every((f) => f.corrected !== null && f.corrected !== undefined));
   const parsed = processParsedTrades(ready.map((row) => Object.fromEntries(Object.entries(row.fields).map(([k, f]) => [k, f.corrected]))), [], catalog);
   for (const outcome of parsed.outcomes) {

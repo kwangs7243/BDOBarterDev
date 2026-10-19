@@ -42,10 +42,12 @@ try {
     const fresh=()=>({version:3,batchId:'test',rows:[
       row(0,'나르보 섬',catalog.masterData[2][0],catalog.masterData[1][0],1,3),
       row(1,'인버넨 섬','화려한 암염 주괴'),row(2,'마르카 섬','화려한 진주 결정'),
-      row(3,'난파된 하란의 수송선',null),row(4,'베이루와 섬','파도의 블랙스톤',catalog.masterData[5][0],1,5),
-      row(5,'바레미 섬','화려한 암염 주괴')
+      row(3,'나르보 섬','[대양] 관측 보고서'),row(4,'베이루와 섬','파도의 블랙스톤',catalog.masterData[5][0],1,5),
+      row(5,'바레미 섬','화려한 암염 주괴'),
+      ...Object.entries(window.islandCoordinates).filter(([,point])=>point.isOcean).map(([name],i)=>row(6+i,name,'까마귀 주화',catalog.masterData[4][0],1,100))
     ]});
-    const payload=fresh();payload.rows[5].fields.toItem.rawOCR='화려한암염주거';
+    const freshBatch=()=>{const value=fresh();value.rows[3].fields.toItem.variants=[{text:'[대양] 관측 보고서',confidence:.98},{text:'[대양]관측보고서',confidence:.97}];value.rows[3].fields.toItem.reviewRequired=true;value.rows[5].fields.toItem.rawOCR='화려한암염주거';return value;};
+    const payload=freshBatch();
     const section=elements.liveListSection;
     const check=(ok,message)=>{if(!ok)throw Error(message);};
     ui.render(payload);
@@ -53,6 +55,7 @@ try {
     check(section.querySelector('[data-role=live-list-auto-unused]')?.open===false,'unused group must start folded');
     check(section.querySelectorAll('.trade-review-row').length===1,'only the uncertain identity belongs in review');
     check(section.querySelector('[data-action=apply-live-new]').disabled,'uncertain active row must block apply');
+    check(current.rows.slice(6).every(r=>!r.excluded),'every ocean location must retain crow coin trades');
     const uncertain=section.querySelector('input[aria-label="6행 목록 포함"]');uncertain.checked=false;uncertain.dispatchEvent(new Event('change'));
     check(!section.querySelector('[data-action=apply-live-new]').disabled,'unused unknown numbers must not block apply');
     section.querySelector('[data-action=include-auto-unused][data-row="1"]').click();
@@ -61,13 +64,16 @@ try {
     ui.render(current);check(current.rows[1].excluded===false,'explicit include lost on rerender');
     const included=section.querySelector('input[aria-label="2행 목록 포함"]');included.checked=false;included.dispatchEvent(new Event('change'));
     check(!section.querySelector('[data-action=apply-live-new]').disabled,'re-exclusion must release apply');
-    const nextBatch=fresh();nextBatch.rows[5].fields.toItem.rawOCR='화려한암염주거';ui.render(nextBatch);
+    section.querySelector('[data-action=include-auto-unused][data-row="3"]').click();
+    check(!current.rows[3].excluded&&current.rows[3].fields.toItem.reviewRequired,'restored unsupported output must retain its name review');
+    check(section.querySelector('[data-action=apply-live-new]').disabled,'restored unsupported output must block apply');
+    const nextBatch=freshBatch();ui.render(nextBatch);
     check(current.rows[1].excluded===true,'new batch must apply default again without manual selection');
-    const onlyUnused=fresh();onlyUnused.rows=onlyUnused.rows.slice(1,4);ui.render(onlyUnused);
+    const onlyUnused=freshBatch();onlyUnused.rows=onlyUnused.rows.slice(1,4);ui.render(onlyUnused);
     check(section.querySelector('[data-action=apply-live-new]').disabled,'all-unused input must not replace current session with an empty list');
     check(!section.querySelector('[data-role=live-list-review]'),'unused rows must never request numeric review');
     check(current.rows.every(r=>r.fields.count.corrected===null&&r.fields.count.reviewRequired),'source uncertainty was changed');
-    const result={autoUnusedRows:3,uncertainIdentityReviewed:true,otherSpecialsPreserved:true,restoreRequiresReview:true,overrideSurvivesRerender:true,nextBatchAutomatic:true,allUnusedCannotApplyEmpty:true,originalUnknownsPreserved:true};
+    const result={autoUnusedRows:3,uncertainIdentityReviewed:true,otherSpecialsPreserved:true,allOceanCoinsPreserved:true,unregisteredOutputsAutomatic:true,restoreRequiresReview:true,overrideSurvivesRerender:true,nextBatchAutomatic:true,allUnusedCannotApplyEmpty:true,originalUnknownsPreserved:true};
     ui.dispose();host.remove();dialog.close();return result;
   })()`);
   assert.deepEqual(await (await fetch(base+"api/bootstrap")).json(),before,"UI classification must not mutate inventory or working session");

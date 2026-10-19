@@ -31,7 +31,7 @@ export function createTradeLiveListUI({ elements, getCatalog, getUnusedPolicy = 
     const tradeCatalog = getCatalog();
     reviewPreviews.clear();
     const prepareRows = (value) => prepareLiveTradeRows(value, tradeCatalog,
-      {policy:getUnusedPolicy(), coordinates:window.islandCoordinates});
+      {policy:getUnusedPolicy()});
     const allRows = prepareRows(result);
     const autoUnusedRows = allRows.filter(({row}) => row.excluded && row.autoUnusedReason);
     const visibleRows = allRows.filter(({row}) => !row.excluded || !row.autoUnusedReason);
