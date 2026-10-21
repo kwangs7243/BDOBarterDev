@@ -19,7 +19,7 @@ from local_app.native_capture import NativeCaptureController
 from local_app.tests.backend.test_native_capture import FakePlatform
 from pathlib import Path
 from flask import jsonify
-import threading
+import threading,time
 platform=FakePlatform()
 platform.hotkey_registered=True
 controller=NativeCaptureController(platform,Path(r'${profile}')/'profiles.json')
@@ -37,6 +37,16 @@ controller.acknowledge=ack
 def hotkey(): return jsonify({'captured':controller.on_hotkey()})
 @app.post('/__test__/finish')
 def finish(): controller.finish(); return jsonify(ok=True)
+@app.post('/__test__/slow-hotkey')
+def slow_hotkey():
+    original=platform.capture
+    def capture(box):
+        try:
+            time.sleep(.25)
+            return original(box)
+        finally: platform.capture=original
+    platform.capture=capture
+    return jsonify(captured=controller.on_hotkey())
 @app.post('/__test__/maintenance')
 def maintenance(): controller.maintenance(); return jsonify(controller.snapshot())
 @app.post('/__test__/context-change')
@@ -233,6 +243,54 @@ try {
   await evaluate("document.querySelector('[data-native-capture=warehouse] [data-native=prepare]').click()");
   await waitFor(async () => (await nativeStatus()).state === 'READY' && (await nativeStatus()).mode === 'WAREHOUSE', 'saved warehouse restored after restart');
   assert.deepEqual((await nativeStatus()).savedProfiles, Object.fromEntries(Object.entries(savedProfiles).map(([mode,p])=>[mode,{roi:p.roi,version:p.version}])));
+  await evaluate(`window.__recognitionFetch=window.fetch;window.__stopFails=true;window.__recognitionBatches=[];window.__expectedCaptureMode='NONE';
+    window.fetch=async(input,options={})=>{
+      const path=String(input);
+      if(path==='/api/recognition/trade-runtime')return new Response(JSON.stringify({ok:true,runtime:{available:true}}));
+      if(path==='/api/native-capture'&&options.method==='POST'&&JSON.parse(options.body).action==='stop'&&window.__stopFails)
+        return new Response(JSON.stringify({ok:false,error:{code:'test_stop_failed',message:'test stop failed'}}),{status:503});
+      if(path==='/api/recognition/trade-live-list'){
+        const native=await window.__recognitionFetch('/api/native-capture').then(r=>r.json());
+        if(native.mode!==window.__expectedCaptureMode)throw new Error('OCR began before expected capture shutdown');
+        const batch=JSON.parse(options.body.get('batch'));window.__recognitionBatches.push(batch);
+        return new Response(JSON.stringify({ok:true,result:{version:3,batchId:batch.batchId,
+          captures:batch.captures.map(c=>({captureId:c.captureId})),rows:[],runtime:{engineId:'test',modelBundleSha256:'test',workerVersion:'test'}}}));
+      }
+      return window.__recognitionFetch(input,options);
+    };
+    document.querySelector('#warehouse-scan-dialog').close();document.querySelector('#open-trade-capture').click();
+    document.querySelector('[data-native-capture=trade] [data-native=prepare]').click();`);
+  await waitFor(async () => (await nativeStatus()).state==='READY'&&(await nativeStatus()).mode==='TRADE', 'trade ready before recognize');
+  await waitFor(async () => evaluate("!document.querySelector('[data-action=recognize-trade]').disabled"), 'recognition available for captured images');
+  const beforeRecognize=Number(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength"));
+  await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition-status]').textContent==='test stop failed'"), 'stop failure reported before OCR');
+  assert.equal(await evaluate('window.__recognitionBatches.length'),0,'failed stop must not start OCR');
+  assert.equal(Number(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength")),beforeRecognize,'failed stop retains captures');
+  await waitFor(async () => evaluate("!document.querySelector('[data-action=recognize-trade]').disabled"), 'retry after stop failure');
+  await evaluate(`(async()=>{window.__stopFails=false;
+    const shot=await fetch('/__test__/slow-hotkey',{method:'POST'}).then(r=>r.json());
+    if(!shot.captured)throw new Error('final F10 capture was not accepted');
+    document.querySelector('[data-action=recognize-trade]').click();})()`);
+  await waitFor(async () => evaluate('window.__recognitionBatches.length===1'), 'recognition after stop and final frame drain');
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition]').getAttribute('aria-busy')==='false'"), 'empty OCR finishes');
+  assert.equal(await evaluate('window.__recognitionBatches[0].captures.length'),beforeRecognize+1,'final in-flight F10 is included');
+  assert.equal((await nativeStatus()).mode,'NONE','recognize disarms trade capture');
+  assert.equal((await nativeStatus()).pending,0,'all frames were acknowledged');
+  assert.equal((await hotkey()).captured,false,'F10 cannot capture after recognize');
+  assert.equal(Number(await evaluate("document.querySelector('#trade-capture-dialog').dataset.queueLength")),beforeRecognize+1,'empty OCR retains every retry image');
+  assert.deepEqual((await nativeStatus()).savedProfiles,Object.fromEntries(Object.entries(savedProfiles).map(([mode,p])=>[mode,{roi:p.roi,version:p.version}])),'recognize preserves both saved regions');
+  await evaluate(`document.querySelector('#trade-capture-dialog').close();document.querySelector('#open-warehouse-scan').click();
+    document.querySelector('[data-native-capture=warehouse] [data-native=prepare]').click();`);
+  await waitFor(async () => (await nativeStatus()).state==='READY'&&(await nativeStatus()).mode==='WAREHOUSE','warehouse ready while trade queue remains');
+  await evaluate(`window.__expectedCaptureMode='WAREHOUSE';document.querySelector('#warehouse-scan-dialog').close();document.querySelector('#open-trade-capture').click();`);
+  await waitFor(async () => evaluate("!document.querySelector('[data-action=recognize-trade]').disabled"), 'trade retry with warehouse active');
+  await evaluate("document.querySelector('[data-action=recognize-trade]').click()");
+  await waitFor(async () => evaluate('window.__recognitionBatches.length===2'), 'trade recognize does not stop warehouse');
+  await waitFor(async () => evaluate("document.querySelector('[data-role=trade-recognition]').getAttribute('aria-busy')==='false'"), 'second OCR finishes');
+  assert.equal((await nativeStatus()).mode,'WAREHOUSE');assert.equal((await nativeStatus()).state,'READY');
+  assert.deepEqual(await (await fetch(`${baseUrl}api/bootstrap`)).json(),initial,'recognition stop flow does not apply inventory or session');
+  await evaluate('window.fetch=window.__recognitionFetch');
   const cleanupCheck = await evaluate(`(async () => {
     const { initNativeCaptureUI } = await import('/assets/js/native-capture-ui.js');
     const originalFetch = window.fetch;
@@ -261,7 +319,7 @@ try {
     } finally { window.fetch = originalFetch; dialog.remove(); }
   })()`);
   assert.deepEqual(cleanupCheck, {requests:1,panels:0,hidden:[false,false]}, 'cleanup removes handlers, observers and panels; delayed status cannot reattach');
-  console.log(JSON.stringify({ok:true,actualChrome:true,cleanupLifecycle:"PASS",actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closedDialog:'PASS',screenShareIndependence:'PASS',frozenBrowserBuffer:'PASS',frozenWarehouseBuffer:'PASS',contextResetAndRestart:'PASS',noStaleInjection:'PASS',ackedQueuesPreserved:'PASS',explicitStop:'PASS',noAutomaticOCRApply:'PASS'}));
+  console.log(JSON.stringify({ok:true,actualChrome:true,cleanupLifecycle:"PASS",actualGame:false,nativeProvider:'fake',tradeQueue:'PASS',warehouseQueue:'PASS',duplicatePacket:'PASS',repeatCapture:'PASS',savedRoi:'PASS',closedDialog:'PASS',screenShareIndependence:'PASS',frozenBrowserBuffer:'PASS',frozenWarehouseBuffer:'PASS',contextResetAndRestart:'PASS',noStaleInjection:'PASS',ackedQueuesPreserved:'PASS',explicitStop:'PASS',recognizeStopsTrade:'PASS',finalFrameDrained:'PASS',stopFailureRetainsImages:'PASS',recognizePreservesWarehouse:'PASS',noAutomaticOCRApply:'PASS'}));
 
 } finally {
   try { if (socket?.readyState === WebSocket.OPEN) await send("Browser.close"); } catch {}

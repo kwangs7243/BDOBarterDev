@@ -99,6 +99,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   let tradeQueueRevision = 0;
   let tradeRuntimeAvailable = false;
   let tradeRecognitionPending = false;
+  let tradeCaptureStopping = false;
   let liveListResult = null;
   let tradeCatalog;
   let tradeUnusedPolicy;
@@ -326,13 +327,17 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
 
   listen(tradeRecognitionButton, "click", async () => {
     if (tradeRecognitionButton.disabled) return;
-    const requestRevision = tradeQueueRevision;
-    const captures = [...tradeQueue.items];
     tradeRecognitionPending = true;
+    tradeCaptureStopping = true;
     updateRecognitionControls();
-    tradeRecognitionStatus.textContent = "로컬 인식으로 물교 목록을 만드는 중…";
-    showProgress({ stage: "preparing", totalCaptures: captures.length });
+    tradeRecognitionStatus.textContent = "캡처를 종료하고 남은 이미지를 받는 중…";
     try {
+      await nativeUI.finish("trade");
+      tradeCaptureStopping = false;
+      const requestRevision = tradeQueueRevision;
+      const captures = [...tradeQueue.items];
+      tradeRecognitionStatus.textContent = "로컬 인식으로 물교 목록을 만드는 중…";
+      showProgress({ stage: "preparing", totalCaptures: captures.length });
       await tradeCatalogReady;
       const result = await recognizeTradeLiveList(captures, {
         onProgress: (progress) => showProgress({ ...progress, stage: progress.stage === "complete" ? "finalizing" : progress.stage }),
@@ -356,6 +361,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
       tradeRecognitionStatus.textContent = error.message;
       showDiagnostics({ ...error.diagnostics, stage: error.stage ?? "OCR_RUNTIME", code: error.code ?? "recognition_failed" });
     } finally {
+      tradeCaptureStopping = false;
       tradeRecognitionPending = false;
       if (liveListResult) renderLiveList(liveListResult);
       updateRecognitionControls();
@@ -437,7 +443,7 @@ export function initRecognitionUI({ warehouseCaptureUI }) {
   const nativeUI = initNativeCaptureUI({
     trade: { dialog: tradeDialog,
       getContext: () => captureContext("trade"),
-      getState: () => ({ count: tradeQueue.length, bytes: tradeQueue.bytes, busy: tradeRecognitionPending }),
+      getState: () => ({ count: tradeQueue.length, bytes: tradeQueue.bytes, busy: tradeRecognitionPending && !tradeCaptureStopping }),
       accept: appendTradeCaptures },
     warehouse: { dialog: warehouseCaptureUI.dialog,
       getContext: () => captureContext("warehouse"), getState: warehouseCaptureUI.getNativeQueueState,

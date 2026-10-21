@@ -183,6 +183,22 @@ export function initNativeCaptureUI(adapters) {
     finally { polling = false; }
   };
   const timer = setInterval(() => void poll(), 500);
+  const finish = mode => {
+    serial = serial.catch(() => {}).then(async () => {
+      if (receiver.mode !== mode) return;
+      const generation = receiver.generation;
+      await command({ action: "stop", generation });
+      const deadline = Date.now() + 10000;
+      while (receiver.mode === mode && receiver.generation === generation) {
+        if (disposed || Date.now() >= deadline) {
+          throw new CaptureError("capture_stop_timeout", "남은 캡처를 받지 못했습니다. 이미지는 유지했습니다. 다시 시도하세요.");
+        }
+        await poll();
+        if (receiver.mode === mode) await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    });
+    return serial;
+  };
   void status().then(attach).catch(() => {});
   const cleanup = () => {
     if (disposed) return;
@@ -199,5 +215,5 @@ export function initNativeCaptureUI(adapters) {
     panels.clear();
   };
   listen(window, "pagehide", (event) => { if (!event.persisted) cleanup(); });
-  return { cleanup };
+  return { cleanup, finish };
 }
