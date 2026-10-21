@@ -96,20 +96,30 @@ def quantity_mask(row, field, module):
     return tight, len(groups)
 
 
+def quantity_context_key(row, field, module):
+    # Keep every bright component in the wider band, including a digit joined to artwork.
+    bounds = (.270, .40, .350, .99) if field == "reqAmount" else (.645, .40, .745, .99)
+    return feature_key(module._ink(module._crop(row, bounds), numeric=True))
+
+
 def get_features(kind, crop, module, *, row=None, field=None):
+    context = {}
     if kind == "quantity":
+        key = quantity_context_key(row, field, module)
+        if key is not None:
+            context["context"] = key
         found = quantity_mask(row, field, module)
         if found is None:
-            return {}, None
+            return context, None
         mask, group_count = found
     else:
         mask, group_count = text_mask(crop, module), None
     if mask is None:
         return {}, group_count
-    return {mode: feature_key(mask, mode == "scaled") for mode in ("native", "scaled")}, group_count
+    return {**context, **{mode: feature_key(mask, mode == "scaled") for mode in ("native", "scaled")}}, group_count
 
 
-def lookup(bank, kind, features, group_count, modes=("native", "scaled"), allowed=None):
+def lookup(bank, kind, features, group_count, modes=("native", "scaled", "context"), allowed=None):
     matched = []
     ambiguous = False
     for mode in modes:
@@ -120,7 +130,7 @@ def lookup(bank, kind, features, group_count, modes=("native", "scaled"), allowe
             ambiguous = True
         if len(labels)==1:
             value = next(iter(labels.values()))
-            if kind == "quantity" and len(str(value)) != group_count:
+            if kind == "quantity" and mode != "context" and len(str(value)) != group_count:
                 continue
             if allowed is not None and value not in allowed:
                 continue

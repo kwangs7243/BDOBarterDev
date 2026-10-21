@@ -46,6 +46,43 @@ class TradeTemplateReaderTests(unittest.TestCase):
                            'item|scaled|b': [{'value': 'two', 'referenceId': 'b'}]}}
         self.assertIsNone(templates.lookup(bank, 'item', {'native': 'a', 'scaled': 'b'}, None))
 
+    def test_quantity_context_keeps_leading_digits_outside_the_compact_crop(self):
+        row = np.zeros((70, 987, 3), dtype=np.uint8)
+        row[42:53, 320:325] = 255
+        extractor = type('Extractor', (), {'_ink': staticmethod(_ink), '_crop': staticmethod(_crop)})
+        single = templates.quantity_context_key(Image.fromarray(row), 'reqAmount', extractor)
+        row[42:53, 272:277] = 255
+        complete = templates.quantity_context_key(Image.fromarray(row), 'reqAmount', extractor)
+        self.assertNotEqual(single, complete)
+        bank = {'lookup': {f'quantity|context|{single}': [{'value': 5, 'referenceId': 'five'}]}}
+        self.assertIsNone(templates.lookup(bank, 'quantity', {'context': complete}, None))
+        bank['lookup'][f'quantity|context|{complete}'] = [{'value': 105, 'referenceId': 'complete'}]
+        hit = templates.lookup(bank, 'quantity', {'context': complete}, None)
+        self.assertEqual(hit['value'], 105)
+        self.assertEqual(hit['modes'], ['context'])
+        self.assertIsNone(templates.lookup(bank, 'quantity', {'context': complete}, None, allowed={2, 3}))
+
+    def test_quantity_context_conflicts_and_ambiguous_foreground_still_abstain(self):
+        bank = {'lookup': {'quantity|native|a': [{'value': 5, 'referenceId': 'a'}],
+                           'quantity|context|b': [{'value': 500, 'referenceId': 'b'}]}}
+        self.assertIsNone(templates.lookup(bank, 'quantity', {'native': 'a', 'context': 'b'}, 1))
+        bank['lookup']['quantity|native|a'].append({'value': 3, 'referenceId': 'c'})
+        self.assertIsNone(templates.lookup(bank, 'quantity', {'native': 'a', 'context': 'b'}, 1))
+        bank['lookup'] = {'quantity|context|b': [{'value': 5, 'referenceId': 'a'}, {'value': 500, 'referenceId': 'b'}]}
+        self.assertIsNone(templates.lookup(bank, 'quantity', {'context': 'b'}, None))
+
+    def test_quantity_context_survives_foreground_segmentation_failure_without_guessing(self):
+        row = Image.new('RGB', (987, 70))
+        row.paste('white', (680, 42, 688, 54))
+        extractor = type('Extractor', (), {'_ink': staticmethod(_ink), '_crop': staticmethod(_crop)})
+        with patch.object(templates, 'quantity_mask', return_value=None):
+            features, groups = templates.get_features('quantity', row, extractor, row=row, field='yield')
+        self.assertIsNone(groups)
+        self.assertEqual(set(features), {'context'})
+        self.assertIsNotNone(features['context'])
+        self.assertIsNone(templates.lookup({'lookup': {}}, 'quantity', features, groups))
+        self.assertIsNone(templates.quantity_context_key(Image.new('RGB', (987, 70)), 'yield', extractor))
+
     def test_integrity_capture_fidelity_and_optional_failure_preserve_fallback(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary)/'bank.json'
