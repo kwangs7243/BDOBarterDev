@@ -401,7 +401,7 @@ function buildSorties(trades, mode) {
     // 👇 [여기에 이 한 줄을 추가해 줍니다! (전역 스위치 역할)]
     let isT7Mode = (APP_CONFIG.ALLOW_OCEAN === 't7_2region' || APP_CONFIG.ALLOW_OCEAN === 't7_3region' || APP_CONFIG.ALLOW_OCEAN === 't7_2region_south' || APP_CONFIG.ALLOW_OCEAN === 't7_2region_arehazaX');
 
-    const arrangeOceanAndInbounds = (tradesArr) => {
+    const arrangeOceanAndInbounds = (tradesArr, fixedOcean = false) => {
         let oceans = []; let inbounds = []; let jitSuppliers = [];
         
         // 1. 대양 노드와 내해 노드 분리
@@ -423,6 +423,10 @@ function buildSorties(trades, mode) {
         // 3. 동선 조립: [JIT 공급자 먼저!] ➔ [대양 본대] 순서로 결합
         let outbounds = [];
         if (jitSuppliers.length > 0) outbounds.push(...optimizeRouteTSP(jitSuppliers));
+        if (fixedOcean && oceans.length > 1) oceans = sortFixedOcean(oceans, {
+            prefix:outbounds, suffix:normalInbounds, normalWeight:normW,
+            weightLimit:mode === 'speed' ? normW : maxW
+        });
         if (oceans.length > 0) outbounds.push(...oceans);
 
         // 4. 나머지 잉여 내해 노드들은 귀환길(TSP)로 정렬
@@ -1233,8 +1237,7 @@ function buildSorties(trades, mode) {
                     if (isRealO || t.isCoin) outbounds.push(t); 
                     else inbounds.push(t); 
                 });
-                if (outbounds.length > 1) { outbounds = sortFixedOcean(outbounds); }
-                s.trades = arrangeOceanAndInbounds([...outbounds, ...inbounds]);
+                s.trades = arrangeOceanAndInbounds([...outbounds, ...inbounds], true);
             } else {
                 s.trades = getOptimalRoute(s.trades, normW);
             }
@@ -1527,8 +1530,7 @@ function buildSorties(trades, mode) {
             });
             
             if (outbounds.length > 0) {
-                if (outbounds.length > 1) outbounds = sortFixedOcean(outbounds);
-                s.trades = arrangeOceanAndInbounds([...outbounds, ...inbounds]);
+                s.trades = arrangeOceanAndInbounds([...outbounds, ...inbounds], true);
             } else {
                 s.trades = getOptimalRoute(s.trades, normW);
             }

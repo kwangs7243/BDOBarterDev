@@ -6,9 +6,9 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
     const normW = Number(document.getElementById('normalWeight').value) || 23000;
     const maxW = Number(document.getElementById('maxWeight').value) || 34996;
     const weightLimit = (weightMode === 'speed') ? normW : maxW;
-    const maxP = parseInt(document.getElementById('maxParley').value) || 1009355;
-    const perTradeP = parseInt(document.getElementById('parleyPerTrade').value) || 10644;
-    const perTradeCrowP = parseInt(document.getElementById('parleyCrow').value) || 20000;
+    const maxP = schedulerNumberOrDefault(document.getElementById('maxParley').value, 1009355);
+    const perTradeP = schedulerNumberOrDefault(document.getElementById('parleyPerTrade').value, 10644);
+    const perTradeCrowP = schedulerNumberOrDefault(document.getElementById('parleyCrow').value, 20000);
     
     let usedP = 0;
     const regions = { 
@@ -32,7 +32,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
         s.seedIsland = null;
         s.seedRegion = ({ east: '동부 7단', west: '서부 7단', south: '남부 7단' })[regKey] || regKey;
         s.allowedRegions = [s.seedRegion];
-        let virtualT6Cargo = {}; let leg1Trades = [];
+        let virtualT6Cargo = {}; let leg1Trades = []; let leg1Groups = [];
         let regTrades = remaining.filter(t => regions[regKey].includes(t.island) && t.toTier === 6 && t.currentC > 0);
         
         let maxT6Limit = Math.floor(weightLimit / 2000); 
@@ -215,12 +215,13 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             });
 
             coinArr.sort((a, b) => a.idx - b.idx);
-            leg1Trades = [
-                ...optimizeRouteTSP(t5Arr), 
-                ...coinArr.map(x => x.t),   
-                ...optimizeRouteTSP(t6Arr),
-                ...optimizeRouteTSP(otherArr)
+            leg1Groups = [
+                optimizeRouteTSP(t5Arr),
+                coinArr.map(x => x.t),
+                optimizeRouteTSP(t6Arr),
+                optimizeRouteTSP(otherArr)
             ];
+            leg1Trades = leg1Groups.flat();
         }
 
         const t7Nodes = ["올비아 해안", "에페리아 초소", "소산 주둔지 선착장", "성전 해안 정찰지", "일리야 섬", "레마 섬"];
@@ -241,8 +242,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
 
         if (t7Arr.length > 0) t7Arr = optimizeRouteTSP(t7Arr);
 
-        // ⭐ [특례] 그란디하/깊은밤(남부 심해)에서 진입하는 출항에 한해, 7단 교환처가 올비아·에페리아면 에페리아 → 올비아 순서 강제.
-        //    (optimizeRouteTSP는 일리야(0,0) 기준 최근접이라 올비아부터 잡지만, 실제론 서쪽 심해에서 진입 → 에페리아 먼저가 효율적. 체인은 그대로 유지.)
+        // Preserve the existing southern fallback order before evaluating the complete voyage below.
         let __goesDeepSouth = (leg1Trades || []).some(t => { let n = t.island || ''; return n.includes('그란디하') || n.includes('깊은 밤'); });
         if (__goesDeepSouth && t7Arr.length > 1) {
             let __hasEpe = t7Arr.some(t => (t.island || '').includes('에페리아'));
@@ -253,7 +253,19 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
             }
         }
 
-        s.trades = [...leg1Trades, ...t7Arr];
+        // Keep the legacy order as the fallback; evaluate each movable group with the whole voyage and its original cargo allocation.
+        const routeGroups = [...leg1Groups, t7Arr];
+        for (let index = routeGroups.length - 1; index >= 0; index--) {
+            if (index === 1) continue; // The ocean coin sequence is fixed policy.
+            routeGroups[index] = optimizeRouteSegment(routeGroups[index], {
+                prefix:routeGroups.slice(0, index).flat(), suffix:routeGroups.slice(index + 1).flat(),
+                normalWeight:normW, weightLimit:normW
+            });
+        }
+        routeGroups[routeGroups.length - 1] = optimizeRouteSegment(routeGroups.at(-1), {
+            prefix:routeGroups.slice(0, -1).flat(), normalWeight:normW, weightLimit:normW
+        });
+        s.trades = routeGroups.flat();
 
 	// ⭐ [블랙박스 수집] 6/7단 메인 버스 승객들 "강제 배정" 영수증 일괄 발급!
         // 진공청소기가 돌기 전에, 본대 승객들이 어떻게 탔는지 먼저 기록해 줍니다.
@@ -484,7 +496,7 @@ function buildTier7Sorties(trades, oceanMode, weightMode) {
                     if (existing) existing.execC += addAmt; 
                     else tailTrades.push({ ...cand, execC: addAmt, isChained: false });
                     
-                    let optimizedTail = optimizeRouteTSP(tailTrades); 
+                    let optimizedTail = optimizeRouteSegment(tailTrades, {prefix:originalTrades, normalWeight:normW, weightLimit});
                     let testTrades = [...originalTrades, ...optimizedTail];
                     
                     let vCargo = {};

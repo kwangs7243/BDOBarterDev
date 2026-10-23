@@ -4,6 +4,9 @@ export const state = {
   order: {},
   settings: {},
   sessionRevision: null,
+  // Metadata refreshes must not advance the version of the editable working copy.
+  sessionBaseRevision: null,
+  sessionGeneration: 0,
   workingSession: null,
   scheduleSlots: { 1: null, 2: null, 3: null, 4: null, 5: null },
   persistencePending: 0,

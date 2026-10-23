@@ -103,6 +103,18 @@ function canCompleteScheduleStep(schedule, si, ti) {
     return true;
 }
 
+function canStartCompletion(appState) {
+  if (appState.persistencePending > 0) {
+    showToast("회차 저장이 끝난 뒤 완료 처리하세요.");
+    return false;
+  }
+  if (appState.sessionBaseRevision !== appState.sessionRevision) {
+    showToast("다른 창에서 회차가 변경됐습니다. 새로고침해 저장된 회차를 확인하세요.");
+    return false;
+  }
+  return true;
+}
+
 function wrapCompletion(original) {
   return function(...args) {
     const btn = args[0];
@@ -116,6 +128,7 @@ function wrapCompletion(original) {
       showToast("이전 완료의 재고 저장이 대기 중입니다. 재시도 버튼을 사용하세요.");
       return;
     }
+    if (!canStartCompletion(window.__bdoAppState)) return;
     syncLegacyState(window.__bdoAppState);
     if (!canCompleteScheduleStep(schedule, si, ti)) return;
     const count = trade.execC;
@@ -186,10 +199,13 @@ function installCompletionAdapters(store, appState, setStatus) {
   window.completeWaypoint = function(btn, mode, si, ti) {
     const waypoint = (mode === "speed" ? sortiesSpeed : sortiesBalance)?.[si]?.trades?.[ti];
     if (!waypoint || waypoint.completed || sessionMutationPending()) return;
+    if (!canStartCompletion(appState)) return;
+    syncLegacyState(appState);
     if (!canCompleteScheduleStep(mode === "speed" ? sortiesSpeed : sortiesBalance, si, ti)) return;
     const before = Object.fromEntries(Object.entries(inventory).map(([name, row]) => [name, row.stock]));
     window.__bdoCompletionInvocationObserver?.("completeWaypoint");
     originalWaypoint.call(this, btn, mode, si, ti);
+    if (!waypoint.completed) return;
     const after = Object.fromEntries(Object.entries(inventory).map(([name, row]) => [name, row.stock]));
     const changed = Object.fromEntries(Object.entries(after).filter(([name, value]) => before[name] !== value).map(([name, stock]) => [name, { stock }]));
     {
@@ -203,6 +219,7 @@ function installCompletionAdapters(store, appState, setStatus) {
   };
   window.completeTradeAndTimer = function(...args) {
     if (sessionMutationPending()) { showToast('완료 저장을 먼저 확인하세요.'); return; }
+    if (!canStartCompletion(appState)) return;
     const schedule = args[1] === 'speed' ? sortiesSpeed : sortiesBalance;
     if (!schedule?.[args[2]]?.trades?.[args[3]] || !canCompleteScheduleStep(schedule, args[2], args[3])) return;
     return originalTradeAndTimer.apply(this, args);
@@ -232,8 +249,10 @@ function snapshotWorkingSession(appState) {
   }, (key, value) => ["timerActive", "timerEnd", "alarmPlayed", "__completionPending"].includes(key) ? undefined : value));
 }
 
-function restoreWorkingSession(appState, payload) {
+function restoreWorkingSession(appState, payload, sessionRevision = appState.sessionRevision) {
   if (pendingCompletion) throw new Error("완료 저장이 대기 중입니다. 먼저 저장을 재시도하세요.");
+  appState.sessionBaseRevision = sessionRevision ?? null;
+  appState.sessionGeneration = (appState.sessionGeneration || 0) + 1;
   appState.session = payload ? { ...JSON.parse(JSON.stringify(payload)), timers: {}, drag: null } : {
     scannedTrades: null, schedule: null, completed: null, remainingParley: null,
     timers: {}, selection: null, drag: null, diagnostics: null,

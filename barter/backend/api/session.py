@@ -16,8 +16,8 @@ def response(result):
 def working_session():
     store = current_app.extensions["bdo_storage"]
     body = request.get_json()
-    mutation_id, revision, payload = session_request(body, store.catalog, reset=request.method == "DELETE")
-    return response(store.update_session(payload, mutation_id, revision, canonical_request_hash(body)))
+    mutation_id, revision, session_revision, payload = session_request(body, store.catalog, reset=request.method == "DELETE")
+    return response(store.update_session(payload, session_revision, mutation_id, revision, canonical_request_hash(body)))
 
 
 @session_api.route("/schedule-slots/<int:slot>", methods=["PUT", "DELETE"])

@@ -28,7 +28,11 @@ class WorkingSessionTests(unittest.TestCase):
 
     def send(self, method, path, payload=None, *, revision=None, mutation=None):
         self.sequence += 1
-        body = {"mutationId": mutation or f"test-{self.sequence}", "baseRevision": self.bootstrap()["revision"] if revision is None else revision, **(payload or {})}
+        snapshot = self.bootstrap()
+        body = {"mutationId": mutation or f"test-{self.sequence}", "baseRevision": snapshot["revision"] if revision is None else revision}
+        if path == "/api/working-session":
+            body["sessionRevision"] = snapshot["sessionRevision"]
+        body.update(payload or {})
         headers = {"Origin": self.origin, "Sec-Fetch-Site": "same-origin"}
         return self.client.open(path, method=method, json=body, base_url=self.origin, headers=headers), body
 
@@ -133,6 +137,60 @@ class WorkingSessionTests(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         response, _ = self.send("PUT", "/api/working-session", {"session": self.session()}, revision=0)
         self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.bootstrap(), before)
+
+    def test_refreshing_global_revision_does_not_authorize_stale_session_writes(self):
+        payload = self.completion()
+        stale_revision = payload["sessionRevision"]
+        response, _ = self.send("POST", "/api/working-session/completion", payload)
+        self.assertEqual(response.status_code, 200)
+        # A second tab refreshes settings/inventory metadata but still holds its old session.
+        before = self.bootstrap()
+        for method in ("PUT", "DELETE"):
+            body = {"sessionRevision": stale_revision}
+            if method == "PUT":
+                body["session"] = self.session()
+            response, _ = self.send(method, "/api/working-session", body)
+            self.assertEqual(response.status_code, 409)
+            self.assertEqual(self.bootstrap(), before)
+        response, _ = self.send("POST", "/api/working-session/completion", payload)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.bootstrap(), before)
+
+    def test_null_revision_cannot_replace_a_session_created_in_another_tab(self):
+        self.save(self.session())
+        before = self.bootstrap()
+        response, _ = self.send("PUT", "/api/working-session", {"session": self.session(), "sessionRevision": None})
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.bootstrap(), before)
+        self.send("DELETE", "/api/working-session")
+        self.save(self.session())
+        response, _ = self.send("DELETE", "/api/working-session", {"sessionRevision": before["sessionRevision"]})
+        self.assertEqual(response.status_code, 409)
+        self.assertIsNotNone(self.bootstrap()["workingSession"])
+
+    def test_session_write_receipts_survive_later_changes(self):
+        response, body = self.send("PUT", "/api/working-session", {"session": self.session()})
+        self.assertEqual(response.status_code, 200)
+        changed = self.session()
+        changed["remainingParley"] = 777
+        self.save(changed)
+        before = self.bootstrap()
+        replay = self.client.put("/api/working-session", json=body, base_url=self.origin,
+                                 headers={"Origin": self.origin, "Sec-Fetch-Site": "same-origin"})
+        self.assertEqual(replay.status_code, 200)
+        self.assertTrue(replay.get_json()["idempotent"])
+        self.assertEqual(self.bootstrap(), before)
+
+    def test_session_revision_is_required_and_validated(self):
+        before = self.bootstrap()
+        for value in (True, -1, "0", 1.5):
+            response, _ = self.send("PUT", "/api/working-session", {"session": self.session(), "sessionRevision": value})
+            self.assertEqual(response.status_code, 422)
+        body = {"mutationId": "old-client", "baseRevision": before["revision"], "session": self.session()}
+        response = self.client.put("/api/working-session", json=body, base_url=self.origin,
+                                   headers={"Origin": self.origin, "Sec-Fetch-Site": "same-origin"})
+        self.assertEqual(response.status_code, 422)
         self.assertEqual(self.bootstrap(), before)
 
     def test_invalid_snapshot_slot_and_endpoint_id_reuse_are_atomic(self):

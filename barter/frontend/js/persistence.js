@@ -6,6 +6,10 @@ const createMutationId = () => crypto.randomUUID();
 const runtime = () => window.__bdoScheduleRuntime;
 
 export async function refreshPersistentState({ restoreSession = false } = {}) {
+  if (restoreSession) {
+    await whenPersistenceIdle();
+    assertMutable();
+  }
   const snapshot = applyBootstrap(await api.bootstrap());
   if (restoreSession) runtime().restoreWorkingSession(state, snapshot.workingSession);
   return snapshot;
@@ -24,15 +28,19 @@ function assertMutable() {
   if (runtime()?.pending) throw new Error("완료 저장을 먼저 확인하거나 재시도하세요. 다른 회차 변경은 대기합니다.");
 }
 
-function enqueueMutation(send) {
+function enqueueMutation(send, { sessionGeneration, onCommitted } = {}) {
   assertMutable();
   return enqueue(async () => {
+    if (sessionGeneration !== undefined && sessionGeneration !== state.sessionGeneration) {
+      throw new Error("현재 회차를 다시 불러와 이전 편집은 저장하지 않았습니다. 현재 화면에서 다시 작업하세요.");
+    }
     const baseRevision = state.revision;
     if (!Number.isSafeInteger(baseRevision)) throw new Error("저장 버전을 먼저 불러와야 합니다.");
     const mutationId = createMutationId();
     try {
       const result = await send({ mutationId, baseRevision });
       state.revision = result.revision;
+      onCommitted?.(result);
       try {
         await refreshPersistentState();
       } catch (reloadError) {
@@ -64,12 +72,17 @@ export function saveWorkingSession() {
   assertMutable();
   const session = runtime().snapshotWorkingSession(state);
   if (!session) return Promise.resolve();
-  return enqueueMutation((envelope) => api.saveWorkingSession({ ...envelope, session }));
+  return enqueueMutation((envelope) => api.saveWorkingSession({ ...envelope, session, sessionRevision: state.sessionBaseRevision }), {
+    sessionGeneration: state.sessionGeneration,
+    onCommitted: (result) => { state.sessionBaseRevision = result.revision; },
+  });
 }
 
 export async function resetWorkingSession() {
-  await enqueueMutation((envelope) => api.resetWorkingSession(envelope));
-  runtime().restoreWorkingSession(state, null);
+  await enqueueMutation((envelope) => api.resetWorkingSession({ ...envelope, sessionRevision: state.sessionBaseRevision }), {
+    sessionGeneration: state.sessionGeneration,
+    onCommitted: () => runtime().restoreWorkingSession(state, null, null),
+  });
   window.dispatchEvent(new CustomEvent("bdo:trade-list-changed"));
   window.__bdoRenderAll?.();
 }
@@ -91,8 +104,11 @@ export async function loadScheduleSlot(slot) {
   const session = JSON.parse(JSON.stringify(snapshot.session));
   session.id = createMutationId();
   session.selection = { ...session.selection, selectedScheduleSlot: Number(slot) };
-  await enqueueMutation((envelope) => api.saveWorkingSession({ ...envelope, session }));
-  runtime().restoreWorkingSession(state, session);
+  const sessionRevision = state.sessionRevision;
+  await enqueueMutation((envelope) => api.saveWorkingSession({ ...envelope, session, sessionRevision }), {
+    sessionGeneration: state.sessionGeneration,
+    onCommitted: (result) => runtime().restoreWorkingSession(state, session, result.revision),
+  });
   window.__bdoRenderAll?.();
 }
 
@@ -111,11 +127,12 @@ export function saveCompletionInventory(request) {
     if (!request.session) request.session = runtime().snapshotWorkingSession(state);
     if (request.sessionRevision === undefined) {
       request.baseRevision = state.revision;
-      request.sessionRevision = state.sessionRevision;
+      request.sessionRevision = state.sessionBaseRevision;
     }
     const send = async (body) => {
       const result = await api.completeSession(body);
       state.revision = result.revision;
+      state.sessionBaseRevision = result.revision;
       await refreshPersistentState();
       return result;
     };

@@ -142,7 +142,58 @@ function optimizeRouteTSP(tradesArray) {
     return optimized;
 }
 
-function sortFixedOcean(tradesArr) {
+function optimizeRouteSegment(tradesArray, {prefix = [], suffix = [], normalWeight = Infinity, weightLimit = normalWeight} = {}) {
+    if (tradesArray.length <= 1) return tradesArray;
+    const original = [...prefix, ...tradesArray, ...suffix];
+    const loads = getSortieCargoPlan(original).reqItems;
+    const names = Object.keys(loads);
+    const initial = simulateWeightsTemp(original, normalWeight);
+    if (!Number.isFinite(initial.totalTime) || !Number.isFinite(initial.startW)) return tradesArray;
+    let best = tradesArray, bestTime = initial.totalTime;
+    const consider = order => {
+        const route = [...prefix, ...order, ...suffix];
+        const candidateLoads = getSortieCargoPlan(route).reqItems;
+        if (Object.keys(candidateLoads).length !== names.length || names.some(name =>
+            candidateLoads[name]?.count !== loads[name].count || candidateLoads[name]?.tier !== loads[name].tier)) return;
+        const sim = simulateWeightsTemp(route, normalWeight);
+        if (!Number.isFinite(sim.totalTime) || !Number.isFinite(sim.startW) || !Number.isFinite(sim.peakW)
+            || sim.stepData.some(step => !Number.isFinite(step.afterW) || step.afterW < 0)
+            || sim.startW > normalWeight || sim.peakW > weightLimit) return;
+        if (sim.totalTime < bestTime - 1e-9) { best = order; bestTime = sim.totalTime; }
+    };
+    if (tradesArray.length <= 7) {
+        for (const order of getRoutePermutationOrders(tradesArray.length)) consider(order.map(index => tradesArray[index]));
+    } else {
+        const cargo = Object.fromEntries(names.map(name => [name, loads[name].count]));
+        const apply = t => {
+            if (t.isWaypoint) {
+                if (t.consumed) cargo[t.consumed.name] = (cargo[t.consumed.name] || 0) - t.consumed.count;
+            } else {
+                cargo[t.fromClean] = (cargo[t.fromClean] || 0) - t.execC * t.reqA;
+                cargo[t.toClean] = (cargo[t.toClean] || 0) + t.execC * t.mult;
+            }
+        };
+        prefix.forEach(apply);
+        let current = prefix.at(-1)?.island || '일리야 섬';
+        const pending = [...tradesArray], greedy = [];
+        while (pending.length) {
+            let next = -1, distance = Infinity;
+            pending.forEach((t, index) => {
+                const source = t.isWaypoint ? t.consumed : {name:t.fromClean, count:t.execC*t.reqA};
+                if (source && (cargo[source.name] || 0) < source.count) return;
+                const leg = legDistance(current, t.island);
+                if (leg < distance) { next = index; distance = leg; }
+            });
+            if (next < 0) break;
+            const picked = pending.splice(next, 1)[0];
+            greedy.push(picked); apply(picked); current = picked.island;
+        }
+        if (!pending.length) consider(greedy);
+    }
+    return best;
+}
+
+function sortFixedOcean(tradesArr, context = {}) {
     const mode = APP_CONFIG.ALLOW_OCEAN;
     
     let FIXED_OCEAN_ROUTE = [
@@ -173,7 +224,8 @@ function sortFixedOcean(tradesArr) {
     });
     
     hasFixed.sort((a, b) => a.idx - b.idx);
-    return [...hasFixed.map(x => x.t), ...optimizeRouteTSP(others)];
+    const fixed = hasFixed.map(x => x.t);
+    return [...fixed, ...optimizeRouteSegment(others, {...context, prefix:[...(context.prefix || []), ...fixed]})];
 }
 
 function getIslandRegion(islandName) {

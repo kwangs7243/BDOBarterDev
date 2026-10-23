@@ -56,6 +56,14 @@ window.completeWaypoint = function(btn, mode, sortieIdx, tradeIdx) {
     let wp = arrRef[sortieIdx].trades[tradeIdx];
     if (!wp || wp.completed) return;
 
+    const consumed = wp.consumed;
+    if (consumed && (!Number.isSafeInteger(consumed.count) || consumed.count <= 0
+        || consumed.tier !== 0 && (!Number.isSafeInteger(inventory[consumed.name]?.stock)
+            || inventory[consumed.name].stock < consumed.count))) {
+        showToast('사용 재료 재고가 부족하거나 미확인 상태입니다. 창고 재고를 확인하세요.');
+        return;
+    }
+
     wp.timerActive = false;
     let tKey = wp.island + '_' + wp.toClean;
     if (window.ACTIVE_TIMERS) delete window.ACTIVE_TIMERS[tKey];
@@ -64,7 +72,7 @@ window.completeWaypoint = function(btn, mode, sortieIdx, tradeIdx) {
 
     // 사용 재료 인벤 차감 (0단/육지 재료는 완료 차감 제외 — 일반 교환과 동일 규칙)
     if (wp.consumed && wp.consumed.count > 0 && wp.consumed.tier !== 0 && inventory[wp.consumed.name]) {
-        inventory[wp.consumed.name].stock = Math.max(0, inventory[wp.consumed.name].stock - wp.consumed.count);
+        inventory[wp.consumed.name].stock -= wp.consumed.count;
         let inp = document.getElementById(`stock_${wp.consumed.name}`); if(inp) inp.value = inventory[wp.consumed.name].stock;
         saveInventoryState();
     }
