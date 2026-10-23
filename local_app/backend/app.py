@@ -12,6 +12,7 @@ from alchemy.routes import alchemy_pages
 from alchemy.api import alchemy_api
 from alchemy.storage import AlchemyStorage, default_database_path as alchemy_database_path
 from local_app.lazy import LazyResource
+from local_app.config import HOST, PORT, SERVICE, VERSION
 from barter.routes import barter_pages
 from barter.backend.api.scan import scan_api
 from barter.backend.api.maintenance import maintenance_api
@@ -23,8 +24,6 @@ from barter.backend.contracts import ContractError
 from barter.backend.services.trade_batch_runtime import TradeBatchRuntime
 from barter.backend.storage import MutationConflict, RevisionConflict, Storage, default_database_path, load_catalog
 
-HOST = "127.0.0.1"
-PORT = 18765
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 # Recognition feedback also carries the bounded full review snapshot.
 MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 2 * 1024 * 1024 + 128 * 1024
@@ -124,7 +123,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
 
     @app.get("/suite-health")
     def suite_health():
-        return jsonify({"ok": True, "service": "bdo-barter-local", "suite": True})
+        return jsonify({"ok": True, "service": SERVICE, "version": VERSION, "workspaces": ["barter", "alchemy"]})
 
     @app.errorhandler(ContractError)
     def handle_contract_error(error: ContractError):
