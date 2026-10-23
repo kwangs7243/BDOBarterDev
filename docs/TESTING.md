@@ -39,7 +39,7 @@ git diff --check
 
 ## 고정 입력과 실사
 
-`local_app/tests/fixtures/`의 importer·scheduler·UI·warehouse oracle과 캡처는 고정된 회귀 입력입니다. `tools/warehouse_patch/quantity_templates.npz`는 원본 숫자 표본, 제품의 `recognition_data/warehouse-templates.npz`는 현재 보정 표본입니다.
+`local_app/tests/fixtures/`의 importer·scheduler·UI·warehouse oracle과 캡처는 고정된 회귀 입력입니다. `tools/warehouse_patch/quantity_templates.npz`는 원본 숫자 표본, 제품의 `barter/recognition_data/warehouse-templates.npz`는 현재 보정 표본입니다.
 
 `local_app/tests/live/`는 별도 게임/실사 검증 도구입니다. 일반 Node 실행에서 분리합니다. 저장된 16장·80행 판독 결과는 기존 입력 재생이며 새 게임 화면 정확도로 표현하지 않습니다. 실게임 foreground/F10·새 픽셀·사용자 실제 적용은 별도 실행했을 때만 완료로 기록합니다.
 

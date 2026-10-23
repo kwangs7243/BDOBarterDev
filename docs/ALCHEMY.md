@@ -2,7 +2,7 @@
 
 ## 실행과 저장
 
-저장소 루트에서 기존 Python 환경으로 실행합니다.
+일반 실행은 루트의 `BDO 실행.lnk` 또는 `app/BDO 실행.exe`를 사용합니다. 개발 실행은 저장소 루트에서 기존 Python 환경을 사용합니다.
 
 ```powershell
 $env:PYTHONDONTWRITEBYTECODE='1'
@@ -11,7 +11,7 @@ $env:PYTHONDONTWRITEBYTECODE='1'
 
 새 환경은 README의 설치 절차를 사용합니다. `bdo`와 기존 `bdo-barter` 명령도 같은 공통 실행기를 사용합니다. `http://localhost:18765/`에서 물교 또는 연금을 선택합니다. `/alchemy/inventory`, `/alchemy/history`, `/alchemy/settings`, `/alchemy/recipes/<item_id>` 직접 접근과 새로고침을 지원합니다.
 
-물교 DB는 기존 `%LOCALAPPDATA%/BDOBarter/data/bdo.sqlite3`를 사용합니다. 연금 DB는 `%LOCALAPPDATA%/BDOSuite/alchemy/alchemy.sqlite3`, 스키마 1이며 물교와 테이블·revision·영수증을 공유하지 않습니다. 테스트에서는 두 DB 모두 임시 폴더를 사용합니다. 이 소스 변경만으로 기존 설치 실행 파일이 교체되지는 않습니다.
+물교 DB는 기존 `%LOCALAPPDATA%/BDOBarter/data/bdo.sqlite3`를 사용합니다. 연금 DB는 `%LOCALAPPDATA%/BDOSuite/alchemy/alchemy.sqlite3`, 스키마 1이며 물교와 테이블·revision·영수증을 공유하지 않습니다. 테스트에서는 두 DB 모두 임시 폴더를 사용합니다. 2026-10-24 실제 설치 앱 교체·실행과 데이터 보존을 확인했으며, 범위는 [검증 기록](ALCHEMY-VALIDATION.md)에 있습니다.
 
 ## 재고 확인과 목표
 
