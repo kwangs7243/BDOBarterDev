@@ -82,8 +82,8 @@ window.adjustTradeCount = function(e, mode, sortieIdx, tradeIdx, delta) {
 };
 
 window.rebuildSortieReq = function(sortie) {
-    const perTradeP = parseInt(document.getElementById('parleyPerTrade').value) || 10973;
-    const perTradeCrowP = parseInt(document.getElementById('parleyCrow').value) || 20000;
+    const perTradeP = schedulerNumberOrDefault(document.getElementById('parleyPerTrade').value, 10973);
+    const perTradeCrowP = schedulerNumberOrDefault(document.getElementById('parleyCrow').value, 20000);
     const parley = sortie.trades.reduce((sum, t) => sum + (t.isWaypoint ? 0 : (t.isCoin ? perTradeCrowP : perTradeP) * t.execC), 0);
     const cargoPlan = getSortieCargoPlan(sortie.trades);
     sortie.reqItems = cargoPlan.reqItems;

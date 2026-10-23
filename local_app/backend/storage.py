@@ -291,9 +291,12 @@ class Storage:
                     raise RuntimeError(f"settings section disappeared: {section}")
         return self.mutate(mutation_id, base_revision, request_hash, apply)
 
-    def update_session(self, payload: dict[str, Any] | None, mutation_id: str, base_revision: int, request_hash: str) -> tuple[int, bool]:
+    def update_session(self, payload: dict[str, Any] | None, session_revision: int | None, mutation_id: str, base_revision: int, request_hash: str) -> tuple[int, bool]:
         """Replace the single working snapshot, or reset it without touching durable data/slots."""
         def apply(connection: sqlite3.Connection) -> None:
+            row = connection.execute("SELECT revision FROM working_session WHERE id = 1").fetchone()
+            if (row["revision"] if row else None) != session_revision:
+                raise RevisionConflict("The working session changed; reload before saving or resetting it")
             if payload is None:
                 connection.execute("DELETE FROM working_session WHERE id = 1")
             else:

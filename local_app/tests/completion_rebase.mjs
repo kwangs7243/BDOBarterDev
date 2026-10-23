@@ -9,6 +9,7 @@ const snapshot = (revision,source,target=0,sessionRevision=1) => ({revision,sess
 
 function setup() {
   applyBootstrap(snapshot(1,100));
+  state.sessionBaseRevision = state.sessionRevision;
   const request = {mutationId:crypto.randomUUID(),baseRevision:1,kind:'completion',
     patch:{items:{source:{stock:97},target:{stock:9}}},session};
   Object.defineProperty(request,'beforeInventory',{value:{source:100,target:0}});

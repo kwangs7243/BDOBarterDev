@@ -78,10 +78,13 @@ def validate_session(value: Any, catalog: dict[str, int]) -> dict[str, Any]:
 def session_request(body: Any, catalog: dict[str, int], *, reset: bool = False):
     data = require_object(body, "request")
     mutation_id, revision = validate_envelope(data)
-    keys = {"mutationId", "baseRevision"} | (set() if reset else {"session"})
+    keys = {"mutationId", "baseRevision", "sessionRevision"} | (set() if reset else {"session"})
     if set(data) != keys:
         raise ContractError("unsupported working session request fields")
-    return mutation_id, revision, None if reset else validate_session(data["session"], catalog)
+    session_revision = data["sessionRevision"]
+    if session_revision is not None:
+        session_revision = require_int(session_revision, "sessionRevision")
+    return mutation_id, revision, session_revision, None if reset else validate_session(data["session"], catalog)
 
 
 def slot_request(body: Any, catalog: dict[str, int], *, delete: bool = False):
