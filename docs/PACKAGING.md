@@ -8,7 +8,7 @@ $env:BDO_PACKAGE_TRADE_MODEL_DIR=(Resolve-Path .local/models/trade).Path
 & local_app/packaging/build.ps1 -Python .venv/Scripts/python.exe -OutputRoot "$env:TEMP/bdo-package-release"
 ```
 
-결과는 지정 출력 폴더의 `dist/app/BDO 물교 실행.exe`와 그 옆 `_internal/` 전체입니다. exe만 복사하지 않습니다. ONNX 모델은 [개발 안내](DEVELOPMENT.md)의 검증된 모델이어야 합니다.
+결과는 지정 출력 폴더의 `dist/app/BDO 실행.exe`와 그 옆 `_internal/` 전체입니다. exe만 복사하지 않습니다. ONNX 모델은 [개발 안내](DEVELOPMENT.md)의 검증된 모델이어야 합니다.
 
 | 빌드 입력 | 기본 위치/설정 |
 |---|---|

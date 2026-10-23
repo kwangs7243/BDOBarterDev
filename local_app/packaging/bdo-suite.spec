@@ -1,5 +1,5 @@
 # Folder-based, windowed Windows distribution. Run from any working directory:
-# python -m PyInstaller --clean --noconfirm local_app/packaging/bdo-barter.spec
+# python -m PyInstaller --clean --noconfirm local_app/packaging/bdo-suite.spec
 from pathlib import Path
 import os
 import json
@@ -97,12 +97,14 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="BDO 물교 실행",
+    name="BDO 실행",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=False,
+    icon=str(ROOT / "local_app/frontend/bdo.ico"),
+    version=str(ROOT / "local_app/packaging/version-info.txt"),
     disable_windowed_traceback=False,
 )
 collect = COLLECT(

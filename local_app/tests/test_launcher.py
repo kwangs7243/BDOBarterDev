@@ -44,10 +44,12 @@ class LauncherResourceTests(unittest.TestCase):
             def read(self):
                 return self.payload
 
-        with patch.object(launcher, "urlopen", return_value=Response({"ok": True, "service": "bdo-barter-local"})):
+        with patch.object(launcher, "urlopen", return_value=Response({"ok": True, "service": "bdo-suite-local", "workspaces": ["barter", "alchemy"]})):
             self.assertTrue(launcher._health_is_ours())
         with patch.object(launcher, "urlopen", return_value=Response({"ok": True, "service": "other"})):
             self.assertFalse(launcher._health_is_ours())
+        with patch.object(launcher, "urlopen", return_value=Response({"ok": True, "service": "bdo-barter-local"})):
+            self.assertFalse(launcher._health_is_ours(), "legacy barter servers must not open as the integrated suite")
         with patch.object(launcher, "urlopen", side_effect=URLError("offline")):
             self.assertFalse(launcher._health_is_ours())
 

@@ -6,7 +6,7 @@
 
 ```powershell
 $env:PYTHONDONTWRITEBYTECODE='1'
-& 'D:/BDOBarterDev/_dev/recognition-local/r006-env-recovery/venv314/Scripts/python.exe' -B -m local_app.launcher
+& 'D:/BDO/_dev/recognition-local/r006-env-recovery/venv314/Scripts/python.exe' -B -m local_app.launcher
 ```
 
 새 환경은 README의 설치 절차를 사용합니다. `bdo`와 기존 `bdo-barter` 명령도 같은 공통 실행기를 사용합니다. `http://localhost:18765/`에서 물교 또는 연금을 선택합니다. `/alchemy/inventory`, `/alchemy/history`, `/alchemy/settings`, `/alchemy/recipes/<item_id>` 직접 접근과 새로고침을 지원합니다.

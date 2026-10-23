@@ -28,6 +28,8 @@ SQLite의 `inventory`, `settings`, `working_session`, `saved_schedule_slot`, `ap
 
 ## 저장소와 실행 파일
 
-소스의 `local_app/`, `barter/`, `alchemy/`, `reference/`, `tools/` 관계는 PyInstaller `_internal/` 안에서도 유지합니다. 모델과 보정 표본·frontend·연금 카탈로그는 빌드 입력입니다. `local_app/packaging/bdo-barter.spec`가 포함 목록을 정의합니다.
+소스의 `local_app/`, `barter/`, `alchemy/`, `reference/`, `tools/` 관계는 PyInstaller `_internal/` 안에서도 유지합니다. 모델과 보정 표본·frontend·연금 카탈로그는 빌드 입력입니다. `local_app/packaging/bdo-suite.spec`가 포함 목록을 정의합니다.
 
 `local_app/tests/`는 제품 옆에 유지한 회귀·고정 입력입니다. `tools/experiments/`와 `docs/archive/`는 제품 실행 경로에서 분리합니다. 실행 파일·가상환경·개인 DB·전체 캡처·실험 출력은 Git 소스에 포함하지 않습니다.
+
+공통 실행 책임은 `launcher.py`(단일 실행·준비 확인·서버/캡처 종료), `desktop.py`(네이티브 준비·상태 화면), `config.py`(제품 버전·loopback 설정)로 분리합니다. 실행 창은 서버 준비 확인 뒤 브라우저를 열며, 물교 전용 과거 실행 서버를 통합 서버로 오인하지 않도록 별도 suite health 신원을 확인합니다.

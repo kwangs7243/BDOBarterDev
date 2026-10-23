@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
+import shutil
 import sqlite3
 from pathlib import Path
 import subprocess
@@ -66,6 +67,41 @@ def batch_body(mapping, batch_id=None):
     return b"".join(parts), f"multipart/form-data; boundary={boundary}"
 
 
+def exercise_alchemy():
+    data = request("/api/alchemy/catalog?full=1")
+    ids = {item["name"]: item["item_id"] for item in data["items"]}
+    assert len(data["items"]) == 170 and len(data["recipes"]) == 87
+    recipe = next(row for row in data["recipes"] if row["output_item_id"] == ids["맑은 액체 시약"])
+
+    def change(action, **values):
+        state = request("/api/alchemy/state")
+        payload = {"mutationId": str(uuid4()), "baseRevision": state["revision"], **values}
+        return request("/api/alchemy/mutations/" + action, json.dumps(payload).encode())
+
+    change("inventory", changes=[{"item_id": ids[name], "quantity": quantity} for name, quantity in (
+        ("맑은 액체 시약", 0), ("소금", 20), ("여명초", 20), ("정제수", 20), ("야생 들풀", 20))])
+    job = change("start", recipe_id=recipe["recipe_id"], calls=5)["job"]
+    state = request("/api/alchemy/state")
+    assert state["inventory"][ids["소금"]] == 15 and state["inventory"][ids["맑은 액체 시약"]] == 0
+    finish = json.dumps({"mutationId": str(uuid4()), "baseRevision": state["revision"], "job_id": job["job_id"],
+                         "executed_calls": 3, "outputs": {ids["맑은 액체 시약"]: 7}}).encode()
+    result = request("/api/alchemy/mutations/finish", finish)
+    assert request("/api/alchemy/mutations/finish", finish) == result
+    state = request("/api/alchemy/state")
+    assert state["inventory"][ids["소금"]] == 17 and state["inventory"][ids["맑은 액체 시약"]] == 7
+    goal = change("goal", item_id=ids["조화의 영약"], quantity=25, mode="held", priority=0,
+                  assume_unknown_zero=True)["goal"]
+    assert request("/api/alchemy/plans")["plans"][0]["goal_id"] == goal["goal_id"]
+    backup = request("/api/alchemy/backup")
+    assert backup["format"] == "bdo-alchemy-backup"
+    change("inventory", changes=[{"item_id": ids["소금"], "quantity": 0}])
+    restored = change("restore", backup=backup)
+    assert restored["previous_backup_id"]
+    state = request("/api/alchemy/state")
+    assert state["inventory"][ids["소금"]] == 17 and state["goals"][0]["goal_id"] == goal["goal_id"]
+    return state
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exe", type=Path, required=True)
@@ -86,10 +122,16 @@ def main():
     with tempfile.TemporaryDirectory(prefix="bdo-package-live-") as temporary:
         environment = {key: value for key, value in os.environ.items() if not key.startswith("BDO_TRADE_OCR_")}
         environment["LOCALAPPDATA"] = temporary
+        environment["BROWSER"] = f'"{Path(os.sys.executable).with_name("pythonw.exe")}" -c pass %s'
         process = subprocess.Popen([str(args.exe.resolve())], cwd=temporary, env=environment,
                                    creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             wait_for(lambda: request("/api/health").get("ok"))
+            suite = request("/suite-health")
+            assert suite["service"] == "bdo-suite-local" and suite["workspaces"] == ["barter", "alchemy"]
+            with urlopen(BASE + "/", timeout=10) as response:
+                portal = response.read().decode("utf-8")
+                assert 'href="/barter/"' in portal and 'href="/alchemy/"' in portal
             native = request("/api/native-capture")
             assert native["available"] and native["mode"] == "NONE" and native["state"] == "IDLE", native
             assert not native["hotkeyRegistered"] and native["pending"] == 0, native
@@ -147,12 +189,13 @@ def main():
                                    "PYTHON": str(Path(os.sys.executable)),
                                    "BDO_LIVE_REPORT_DIR": str(args.out.parent / "browser")}
             browser_checks = []
-            for script in ("browser_trade_live_list.mjs", "browser_warehouse_scan.mjs", "browser_scheduler.mjs"):
-                completed = subprocess.run([r"C:\Program Files\nodejs\node.exe", str(Path(__file__).parent / script)],
+            alchemy_before = exercise_alchemy()
+            for script in ("browser_trade_live_list.mjs", "browser_warehouse_scan.mjs", "browser_scheduler.mjs", "packaging/browser_suite.mjs"):
+                completed = subprocess.run([shutil.which("node"), str(Path(__file__).parent / script)],
                                            cwd=Path(__file__).resolve().parents[2], env=browser_environment,
                                            creationflags=subprocess.CREATE_NO_WINDOW, capture_output=True,
                                            text=True, encoding="utf-8", timeout=300)
-                (args.out.parent / (script + ".log")).write_text(completed.stdout + completed.stderr, encoding="utf-8")
+                (args.out.parent / (script.replace("/", "-") + ".log")).write_text(completed.stdout + completed.stderr, encoding="utf-8")
                 assert completed.returncode == 0, f"{script}: {completed.stderr[-2000:]}"
                 browser_checks.append(script)
             before = request("/api/bootstrap")
@@ -170,9 +213,12 @@ def main():
             process = restarted
             wait_for(lambda: request("/api/health").get("ok"))
             assert request("/api/bootstrap") == before, "Packaged restart changed persisted data"
+            assert request("/api/alchemy/state") == alchemy_before, "Packaged restart changed alchemy data"
             with closing(sqlite3.connect(databases[0])) as connection:
                 assert list(connection.iterdump()) == persisted_feedback
             report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numeric": numeric,
+                      "suitePortal": True, "alchemyActualCrafting": True, "alchemyDuplicateFinish": True,
+                      "alchemyBackupRestore": True, "alchemyRestartPersistence": True,
                       "intermediateProgressObserved": True, "progressSamples": len(observed_progress),
                       "correctedFields": [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]],
                       "fullyCorrectRows": fully_correct, "ocrDurationMs": ocr_duration_ms,

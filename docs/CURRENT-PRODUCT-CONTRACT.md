@@ -6,7 +6,7 @@
 
 ## 제품과 입력
 
-- Windows localhost 앱이며 실행 파일은 `D:\BDOBarterDev\app\BDO 물교 실행.exe`, 주소는 `http://localhost:18765`다. 단일 실행, health 준비 후 브라우저 열기, 정상 종료를 지원한다.
+- Windows localhost 앱이며 실행 파일은 `D:\BDO\app\BDO 실행.exe`, 주소는 `http://localhost:18765`다. 단일 실행, health 준비 후 브라우저 열기, 정상 종료를 지원한다.
 - charcoal/blue UI, sidebar의 현재 회차·창고 재고·출항 브리핑·지도, 출항/검수/설정 dialog의 승인된 구조와 정보 밀도를 유지한다.
 - 주 캡처는 native Windows 창 선택·물교/창고 별 persistent ROI·수동 F10이다. 게임 입력 자동화와 자동 스크롤을 하지 않는다.
 - 파일·붙여넣기와 native 캡처를 사용할 수 없을 때 표시되는 ‘다른 방법 · 화면 공유로 캡처’를 지원한다. 화면 공유는 명시 연결/재연결, 별도 ROI, PNG 캡처를 지원하며 native 캡처와 독립적이다. 연결이 끝나도 이미 받은 대기 프레임을 임의 폐기하지 않는다.

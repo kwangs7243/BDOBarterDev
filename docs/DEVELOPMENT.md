@@ -20,12 +20,12 @@ $env:PYTHONDONTWRITEBYTECODE='1'
 
 ## 기존 설치 환경 재사용
 
-기존 PC의 `D:/BDOBarterDev/_dev/recognition-local/`은 소스 저장소와 별개인 환경입니다. 이번 구조 정리로 이동하지 않습니다. 해당 환경을 재사용한다면 다음 변수만 지정합니다.
+기존 PC의 `D:/BDO/_dev/recognition-local/`은 소스 저장소와 별개인 환경입니다. 이번 구조 정리로 이동하지 않습니다. 해당 환경을 재사용한다면 다음 변수만 지정합니다.
 
 ```powershell
-$env:PYTHON='D:/BDOBarterDev/_dev/recognition-local/r006-env-recovery/venv314/Scripts/python.exe'
-$env:BDO_TRADE_OCR_PYTHON='D:/BDOBarterDev/_dev/recognition-local/envs/t010b1-ocr/Scripts/python.exe'
-$env:BDO_TRADE_OCR_MODEL_DIR='D:/BDOBarterDev/_dev/recognition-local/models/t010b1/official_models/korean_PP-OCRv5_mobile_rec_onnx'
+$env:PYTHON='D:/BDO/_dev/recognition-local/r006-env-recovery/venv314/Scripts/python.exe'
+$env:BDO_TRADE_OCR_PYTHON='D:/BDO/_dev/recognition-local/envs/t010b1-ocr/Scripts/python.exe'
+$env:BDO_TRADE_OCR_MODEL_DIR='D:/BDO/_dev/recognition-local/models/t010b1/official_models/korean_PP-OCRv5_mobile_rec_onnx'
 $env:PYTHONDONTWRITEBYTECODE='1'
 & $env:PYTHON -B -m local_app.launcher
 ```

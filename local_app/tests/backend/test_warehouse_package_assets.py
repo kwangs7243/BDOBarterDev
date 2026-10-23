@@ -9,7 +9,7 @@ from unittest.mock import patch
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[3]
-SPEC = ROOT / 'local_app/packaging/bdo-barter.spec'
+SPEC = ROOT / 'local_app/packaging/bdo-suite.spec'
 BASE = ROOT / 'tools/warehouse_patch/quantity_templates.npz'
 
 
