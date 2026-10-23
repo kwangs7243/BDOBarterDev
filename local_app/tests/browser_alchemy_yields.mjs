@@ -111,6 +111,7 @@ try {
     );
   await page.goto(url);
   await loaded();
+  assert.match(await page.locator(".intro").innerText(), /제작 방법:/);
   const row = () => page.locator(`[data-shortage="${target}"]`);
   assert.match(await row().innerText(), /기록 없음/);
   await row().getByRole("button", { name: "횟수 입력", exact: true }).click();
