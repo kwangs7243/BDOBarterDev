@@ -45,3 +45,23 @@ class AlchemyIconTests(unittest.TestCase):
                 catalog["items"][0]["icon"] = path
                 with self.assertRaises(AlchemyError):
                     validate_catalog(catalog)
+
+
+    def test_legacy_saved_png_icon_paths_resolve_to_current_game_icons(self):
+        root = Path(__file__).resolve().parents[3] / "alchemy"
+        catalog = load_catalog()
+        with tempfile.TemporaryDirectory(prefix="bdo-icon-compat-") as temporary:
+            client = create_app(Path(temporary) / "barter.sqlite3", testing=True).test_client()
+            for name in ("평온의 오일", "허풍선이 버섯", "대양의 영약"):
+                item = next(i for i in catalog["items"] if i["name"] == name)
+                response = client.get("/alchemy/assets/icons/" + item["item_id"] + ".png")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.mimetype, "image/webp")
+                self.assertEqual(response.data, (root / "frontend" / item["icon"]).read_bytes())
+
+    def test_distinct_mushrooms_and_oils_do_not_share_the_old_wrong_image(self):
+        root = Path(__file__).resolve().parents[3] / "alchemy"
+        items = {i["name"]: i for i in load_catalog()["items"]}
+        for group in (("허풍선이 버섯", "점쟁이 버섯", "호랑이 버섯"), ("평온의 오일", "재생의 오일"), ("광대 버섯", "난쟁이 버섯", "유령 버섯")):
+            hashes = [sha256((root / "frontend" / items[name]["icon"]).read_bytes()).hexdigest() for name in group]
+            self.assertEqual(len(set(hashes)),len(group))

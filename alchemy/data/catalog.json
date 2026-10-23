@@ -11,7 +11,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7cf8ffc293b6.png"
+      "icon": "icons/i-7cf8ffc293b6.webp"
     },
     {
       "item_id": "i-3d09660e6295",
@@ -22,7 +22,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-3d09660e6295.png"
+      "icon": "icons/i-3d09660e6295.webp"
     },
     {
       "item_id": "i-2c8897961887",
@@ -33,7 +33,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-2c8897961887.png"
+      "icon": "icons/i-2c8897961887.webp"
     },
     {
       "item_id": "i-d7a9dfe65a1a",
@@ -44,7 +44,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "외부 수급 경계: 솎아내기/상점/거래소. 본 카탈로그는 정제수 이후의 연금 트리를 전개합니다.",
-      "icon": "icons/i-d7a9dfe65a1a.png"
+      "icon": "icons/i-d7a9dfe65a1a.webp"
     },
     {
       "item_id": "i-a1a5dda5464f",
@@ -55,7 +55,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a1a5dda5464f.png"
+      "icon": "icons/i-a1a5dda5464f.webp"
     },
     {
       "item_id": "i-a92327c3d546",
@@ -66,7 +66,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a92327c3d546.png"
+      "icon": "icons/i-a92327c3d546.webp"
     },
     {
       "item_id": "i-7921a3bb40fa",
@@ -77,7 +77,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7921a3bb40fa.png"
+      "icon": "icons/i-7921a3bb40fa.webp"
     },
     {
       "item_id": "i-7b911520f08a",
@@ -88,7 +88,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7b911520f08a.png"
+      "icon": "icons/i-7b911520f08a.webp"
     },
     {
       "item_id": "i-e34b426e3b29",
@@ -99,7 +99,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-e34b426e3b29.png"
+      "icon": "icons/i-e34b426e3b29.webp"
     },
     {
       "item_id": "i-ba560a40d964",
@@ -110,7 +110,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ba560a40d964.png"
+      "icon": "icons/i-ba560a40d964.webp"
     },
     {
       "item_id": "i-9f7e100087e0",
@@ -121,7 +121,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-9f7e100087e0.png"
+      "icon": "icons/i-9f7e100087e0.webp"
     },
     {
       "item_id": "i-ee3683791b7e",
@@ -132,7 +132,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ee3683791b7e.png"
+      "icon": "icons/i-ee3683791b7e.webp"
     },
     {
       "item_id": "i-707b9d9f0edc",
@@ -143,7 +143,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-707b9d9f0edc.png"
+      "icon": "icons/i-707b9d9f0edc.webp"
     },
     {
       "item_id": "i-9610230d0f57",
@@ -154,7 +154,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-9610230d0f57.png"
+      "icon": "icons/i-9610230d0f57.webp"
     },
     {
       "item_id": "i-59034ba3a980",
@@ -165,7 +165,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-59034ba3a980.png"
+      "icon": "icons/i-59034ba3a980.webp"
     },
     {
       "item_id": "i-b3c96eb97bc0",
@@ -176,7 +176,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b3c96eb97bc0.png"
+      "icon": "icons/i-b3c96eb97bc0.webp"
     },
     {
       "item_id": "i-ced07eea782b",
@@ -187,7 +187,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ced07eea782b.png"
+      "icon": "icons/i-ced07eea782b.webp"
     },
     {
       "item_id": "i-19ba15a7e481",
@@ -198,7 +198,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-19ba15a7e481.png"
+      "icon": "icons/i-19ba15a7e481.webp"
     },
     {
       "item_id": "i-42bd9b6cfb4b",
@@ -211,7 +211,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-42bd9b6cfb4b.png"
+      "icon": "icons/i-42bd9b6cfb4b.webp"
     },
     {
       "item_id": "i-6dad53e02bd2",
@@ -222,7 +222,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6dad53e02bd2.png"
+      "icon": "icons/i-6dad53e02bd2.webp"
     },
     {
       "item_id": "i-bc8a6316b387",
@@ -233,7 +233,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-bc8a6316b387.png"
+      "icon": "icons/i-bc8a6316b387.webp"
     },
     {
       "item_id": "i-00f61f8d6789",
@@ -244,7 +244,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-00f61f8d6789.png"
+      "icon": "icons/i-00f61f8d6789.webp"
     },
     {
       "item_id": "i-19d4f15f01d5",
@@ -255,7 +255,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-19d4f15f01d5.png"
+      "icon": "icons/i-19d4f15f01d5.webp"
     },
     {
       "item_id": "i-55684eba98d6",
@@ -266,7 +266,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-55684eba98d6.png"
+      "icon": "icons/i-55684eba98d6.webp"
     },
     {
       "item_id": "i-98cd310424ca",
@@ -277,7 +277,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-98cd310424ca.png"
+      "icon": "icons/i-98cd310424ca.webp"
     },
     {
       "item_id": "i-552d692d19d6",
@@ -288,7 +288,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-552d692d19d6.png"
+      "icon": "icons/i-552d692d19d6.webp"
     },
     {
       "item_id": "i-f07468f5f97f",
@@ -299,7 +299,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-f07468f5f97f.png"
+      "icon": "icons/i-f07468f5f97f.webp"
     },
     {
       "item_id": "i-e17b6bea7238",
@@ -310,7 +310,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-e17b6bea7238.png"
+      "icon": "icons/i-e17b6bea7238.webp"
     },
     {
       "item_id": "i-d09eae6b3e93",
@@ -321,7 +321,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-d09eae6b3e93.png"
+      "icon": "icons/i-d09eae6b3e93.webp"
     },
     {
       "item_id": "i-5a2199f11101",
@@ -332,7 +332,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-5a2199f11101.png"
+      "icon": "icons/i-5a2199f11101.webp"
     },
     {
       "item_id": "i-abf45013360f",
@@ -343,7 +343,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-abf45013360f.png"
+      "icon": "icons/i-abf45013360f.webp"
     },
     {
       "item_id": "i-f3fc14af3666",
@@ -354,7 +354,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-f3fc14af3666.png"
+      "icon": "icons/i-f3fc14af3666.webp"
     },
     {
       "item_id": "i-28f40ad86226",
@@ -365,7 +365,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-28f40ad86226.png"
+      "icon": "icons/i-28f40ad86226.webp"
     },
     {
       "item_id": "i-5bf0a37196d7",
@@ -376,7 +376,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-5bf0a37196d7.png"
+      "icon": "icons/i-5bf0a37196d7.webp"
     },
     {
       "item_id": "i-6249cdbec3ba",
@@ -387,7 +387,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6249cdbec3ba.png"
+      "icon": "icons/i-6249cdbec3ba.webp"
     },
     {
       "item_id": "i-27f6aa1a001b",
@@ -398,7 +398,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-27f6aa1a001b.png"
+      "icon": "icons/i-27f6aa1a001b.webp"
     },
     {
       "item_id": "i-ef864bed494e",
@@ -409,7 +409,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ef864bed494e.png"
+      "icon": "icons/i-ef864bed494e.webp"
     },
     {
       "item_id": "i-1d4769826724",
@@ -420,7 +420,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-1d4769826724.png"
+      "icon": "icons/i-1d4769826724.webp"
     },
     {
       "item_id": "i-a77567213fda",
@@ -431,7 +431,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a77567213fda.png"
+      "icon": "icons/i-a77567213fda.webp"
     },
     {
       "item_id": "i-4a4795387bbd",
@@ -442,7 +442,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-4a4795387bbd.png"
+      "icon": "icons/i-4a4795387bbd.webp"
     },
     {
       "item_id": "i-bce973aaa6f5",
@@ -453,7 +453,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-bce973aaa6f5.png"
+      "icon": "icons/i-bce973aaa6f5.webp"
     },
     {
       "item_id": "i-7b34c215d25b",
@@ -464,7 +464,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7b34c215d25b.png"
+      "icon": "icons/i-7b34c215d25b.webp"
     },
     {
       "item_id": "i-6158cff3642f",
@@ -475,7 +475,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6158cff3642f.png"
+      "icon": "icons/i-6158cff3642f.webp"
     },
     {
       "item_id": "i-87c88b18c2a4",
@@ -486,7 +486,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-87c88b18c2a4.png"
+      "icon": "icons/i-87c88b18c2a4.webp"
     },
     {
       "item_id": "i-88bf1157dd57",
@@ -497,7 +497,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-88bf1157dd57.png"
+      "icon": "icons/i-88bf1157dd57.webp"
     },
     {
       "item_id": "i-1b401c94f5dd",
@@ -508,7 +508,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-1b401c94f5dd.png"
+      "icon": "icons/i-1b401c94f5dd.webp"
     },
     {
       "item_id": "i-9f494e6bc8fa",
@@ -519,7 +519,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-9f494e6bc8fa.png"
+      "icon": "icons/i-9f494e6bc8fa.webp"
     },
     {
       "item_id": "i-b5fc1134e07a",
@@ -530,7 +530,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b5fc1134e07a.png"
+      "icon": "icons/i-b5fc1134e07a.webp"
     },
     {
       "item_id": "i-b1d6a9618ce2",
@@ -541,7 +541,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b1d6a9618ce2.png"
+      "icon": "icons/i-b1d6a9618ce2.webp"
     },
     {
       "item_id": "i-2668d72ec1f0",
@@ -552,7 +552,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-2668d72ec1f0.png"
+      "icon": "icons/i-2668d72ec1f0.webp"
     },
     {
       "item_id": "i-57da669e80bf",
@@ -563,7 +563,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-57da669e80bf.png"
+      "icon": "icons/i-57da669e80bf.webp"
     },
     {
       "item_id": "i-6a4140e675fc",
@@ -574,7 +574,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6a4140e675fc.png"
+      "icon": "icons/i-6a4140e675fc.webp"
     },
     {
       "item_id": "i-7be932bfc91f",
@@ -585,7 +585,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7be932bfc91f.png"
+      "icon": "icons/i-7be932bfc91f.webp"
     },
     {
       "item_id": "i-719186084d01",
@@ -596,7 +596,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-719186084d01.png"
+      "icon": "icons/i-719186084d01.webp"
     },
     {
       "item_id": "i-0ee2dbd759e1",
@@ -607,7 +607,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-0ee2dbd759e1.png"
+      "icon": "icons/i-0ee2dbd759e1.webp"
     },
     {
       "item_id": "i-1b99bede0f65",
@@ -618,7 +618,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-1b99bede0f65.png"
+      "icon": "icons/i-1b99bede0f65.webp"
     },
     {
       "item_id": "i-3c852d3313e5",
@@ -629,7 +629,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-3c852d3313e5.png"
+      "icon": "icons/i-3c852d3313e5.webp"
     },
     {
       "item_id": "i-0b7fcf977ea5",
@@ -640,7 +640,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-0b7fcf977ea5.png"
+      "icon": "icons/i-0b7fcf977ea5.webp"
     },
     {
       "item_id": "i-2f2faa2629ed",
@@ -651,7 +651,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-2f2faa2629ed.png"
+      "icon": "icons/i-2f2faa2629ed.webp"
     },
     {
       "item_id": "i-094afc202e69",
@@ -662,7 +662,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-094afc202e69.png"
+      "icon": "icons/i-094afc202e69.webp"
     },
     {
       "item_id": "i-694b5d097f5a",
@@ -673,7 +673,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-694b5d097f5a.png"
+      "icon": "icons/i-694b5d097f5a.webp"
     },
     {
       "item_id": "i-746c3a6c2e86",
@@ -684,7 +684,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-746c3a6c2e86.png"
+      "icon": "icons/i-746c3a6c2e86.webp"
     },
     {
       "item_id": "i-42ca8d33f800",
@@ -695,7 +695,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-42ca8d33f800.png"
+      "icon": "icons/i-42ca8d33f800.webp"
     },
     {
       "item_id": "i-a84ffbe2e94f",
@@ -706,7 +706,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a84ffbe2e94f.png"
+      "icon": "icons/i-a84ffbe2e94f.webp"
     },
     {
       "item_id": "i-030816156612",
@@ -717,7 +717,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-030816156612.png"
+      "icon": "icons/i-030816156612.webp"
     },
     {
       "item_id": "i-a125c9abecef",
@@ -728,7 +728,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a125c9abecef.png"
+      "icon": "icons/i-a125c9abecef.webp"
     },
     {
       "item_id": "i-4e788a20eb6a",
@@ -739,7 +739,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-4e788a20eb6a.png"
+      "icon": "icons/i-4e788a20eb6a.webp"
     },
     {
       "item_id": "i-daa16c47e0c8",
@@ -750,7 +750,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-daa16c47e0c8.png"
+      "icon": "icons/i-daa16c47e0c8.webp"
     },
     {
       "item_id": "i-0bd8af84dce6",
@@ -761,7 +761,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-0bd8af84dce6.png"
+      "icon": "icons/i-0bd8af84dce6.webp"
     },
     {
       "item_id": "i-e4874d567845",
@@ -772,7 +772,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-e4874d567845.png"
+      "icon": "icons/i-e4874d567845.webp"
     },
     {
       "item_id": "i-5d1f205fa14d",
@@ -783,7 +783,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-5d1f205fa14d.png"
+      "icon": "icons/i-5d1f205fa14d.webp"
     },
     {
       "item_id": "i-e3319e120d0e",
@@ -794,7 +794,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-e3319e120d0e.png"
+      "icon": "icons/i-e3319e120d0e.webp"
     },
     {
       "item_id": "i-65c27f942bf8",
@@ -805,7 +805,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-65c27f942bf8.png"
+      "icon": "icons/i-65c27f942bf8.webp"
     },
     {
       "item_id": "i-2903cb8465cb",
@@ -816,7 +816,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-2903cb8465cb.png"
+      "icon": "icons/i-2903cb8465cb.webp"
     },
     {
       "item_id": "i-08890b815f90",
@@ -827,7 +827,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-08890b815f90.png"
+      "icon": "icons/i-08890b815f90.webp"
     },
     {
       "item_id": "i-d10a8d183595",
@@ -838,7 +838,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-d10a8d183595.png"
+      "icon": "icons/i-d10a8d183595.webp"
     },
     {
       "item_id": "i-6a4d4590ff78",
@@ -849,7 +849,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6a4d4590ff78.png"
+      "icon": "icons/i-6a4d4590ff78.webp"
     },
     {
       "item_id": "i-d38e2a760601",
@@ -860,7 +860,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-d38e2a760601.png"
+      "icon": "icons/i-d38e2a760601.webp"
     },
     {
       "item_id": "i-b7e0c3652e42",
@@ -871,7 +871,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b7e0c3652e42.png"
+      "icon": "icons/i-b7e0c3652e42.webp"
     },
     {
       "item_id": "i-5fd41dcd8a55",
@@ -882,7 +882,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-5fd41dcd8a55.png"
+      "icon": "icons/i-5fd41dcd8a55.webp"
     },
     {
       "item_id": "i-09fc4def223f",
@@ -893,7 +893,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-09fc4def223f.png"
+      "icon": "icons/i-09fc4def223f.webp"
     },
     {
       "item_id": "i-ffa87e4aaab3",
@@ -904,7 +904,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ffa87e4aaab3.png"
+      "icon": "icons/i-ffa87e4aaab3.webp"
     },
     {
       "item_id": "i-9df6a528c8e7",
@@ -915,7 +915,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-9df6a528c8e7.png"
+      "icon": "icons/i-9df6a528c8e7.webp"
     },
     {
       "item_id": "i-7c1cfa76301b",
@@ -926,7 +926,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7c1cfa76301b.png"
+      "icon": "icons/i-7c1cfa76301b.webp"
     },
     {
       "item_id": "i-97b30d97161d",
@@ -937,7 +937,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-97b30d97161d.png"
+      "icon": "icons/i-97b30d97161d.webp"
     },
     {
       "item_id": "i-17d98bdbb345",
@@ -948,7 +948,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-17d98bdbb345.png"
+      "icon": "icons/i-17d98bdbb345.webp"
     },
     {
       "item_id": "i-46b39ca1100c",
@@ -959,7 +959,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-46b39ca1100c.png"
+      "icon": "icons/i-46b39ca1100c.webp"
     },
     {
       "item_id": "i-26e0ffefda23",
@@ -970,7 +970,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-26e0ffefda23.png"
+      "icon": "icons/i-26e0ffefda23.webp"
     },
     {
       "item_id": "i-7043e4da2fc9",
@@ -981,7 +981,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7043e4da2fc9.png"
+      "icon": "icons/i-7043e4da2fc9.webp"
     },
     {
       "item_id": "i-7ba9ec5cda01",
@@ -992,7 +992,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7ba9ec5cda01.png"
+      "icon": "icons/i-7ba9ec5cda01.webp"
     },
     {
       "item_id": "i-bf562842534a",
@@ -1003,7 +1003,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-bf562842534a.png"
+      "icon": "icons/i-bf562842534a.webp"
     },
     {
       "item_id": "i-ef7a84693ed2",
@@ -1014,7 +1014,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ef7a84693ed2.png"
+      "icon": "icons/i-ef7a84693ed2.webp"
     },
     {
       "item_id": "i-5bfadf78b312",
@@ -1025,7 +1025,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-5bfadf78b312.png"
+      "icon": "icons/i-5bfadf78b312.webp"
     },
     {
       "item_id": "i-6fed759d8a98",
@@ -1036,7 +1036,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6fed759d8a98.png"
+      "icon": "icons/i-6fed759d8a98.webp"
     },
     {
       "item_id": "i-ddf472b47ba6",
@@ -1047,7 +1047,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-ddf472b47ba6.png"
+      "icon": "icons/i-ddf472b47ba6.webp"
     },
     {
       "item_id": "i-375d276a5af0",
@@ -1058,7 +1058,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-375d276a5af0.png"
+      "icon": "icons/i-375d276a5af0.webp"
     },
     {
       "item_id": "i-131d7233712b",
@@ -1069,7 +1069,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-131d7233712b.png"
+      "icon": "icons/i-131d7233712b.webp"
     },
     {
       "item_id": "i-2961704c5869",
@@ -1080,7 +1080,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-2961704c5869.png"
+      "icon": "icons/i-2961704c5869.webp"
     },
     {
       "item_id": "i-e4e42596c3a2",
@@ -1091,7 +1091,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-e4e42596c3a2.png"
+      "icon": "icons/i-e4e42596c3a2.webp"
     },
     {
       "item_id": "i-6f1de798754e",
@@ -1102,7 +1102,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-6f1de798754e.png"
+      "icon": "icons/i-6f1de798754e.webp"
     },
     {
       "item_id": "i-447835be05cf",
@@ -1113,7 +1113,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-447835be05cf.png"
+      "icon": "icons/i-447835be05cf.webp"
     },
     {
       "item_id": "i-3c073a5ca2c8",
@@ -1124,7 +1124,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-3c073a5ca2c8.png"
+      "icon": "icons/i-3c073a5ca2c8.webp"
     },
     {
       "item_id": "i-7822f106d7f2",
@@ -1135,7 +1135,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-7822f106d7f2.png"
+      "icon": "icons/i-7822f106d7f2.webp"
     },
     {
       "item_id": "i-3631000b59d1",
@@ -1146,7 +1146,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-3631000b59d1.png"
+      "icon": "icons/i-3631000b59d1.webp"
     },
     {
       "item_id": "i-28f389720750",
@@ -1157,7 +1157,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-28f389720750.png"
+      "icon": "icons/i-28f389720750.webp"
     },
     {
       "item_id": "i-05d934cf6e53",
@@ -1168,7 +1168,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-05d934cf6e53.png"
+      "icon": "icons/i-05d934cf6e53.webp"
     },
     {
       "item_id": "i-76ef148af6ed",
@@ -1179,7 +1179,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-76ef148af6ed.png"
+      "icon": "icons/i-76ef148af6ed.webp"
     },
     {
       "item_id": "i-b7dd4d9e95b9",
@@ -1190,7 +1190,7 @@
       "craftable": false,
       "acquisition": "연금 성공 시 확률 추가 산출 · 보장 생산 계획 제외",
       "notes": "",
-      "icon": "icons/i-b7dd4d9e95b9.png"
+      "icon": "icons/i-b7dd4d9e95b9.webp"
     },
     {
       "item_id": "i-12fec880d79f",
@@ -1201,7 +1201,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-12fec880d79f.png"
+      "icon": "icons/i-12fec880d79f.webp"
     },
     {
       "item_id": "i-af70f6af56f9",
@@ -1212,7 +1212,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-af70f6af56f9.png"
+      "icon": "icons/i-af70f6af56f9.webp"
     },
     {
       "item_id": "i-36acd5d12687",
@@ -1223,7 +1223,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-36acd5d12687.png"
+      "icon": "icons/i-36acd5d12687.webp"
     },
     {
       "item_id": "i-5cd5845c0928",
@@ -1245,7 +1245,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-bfe6c6de63fe.png"
+      "icon": "icons/i-bfe6c6de63fe.webp"
     },
     {
       "item_id": "i-cf822ec62724",
@@ -1256,7 +1256,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-cf822ec62724.png"
+      "icon": "icons/i-cf822ec62724.webp"
     },
     {
       "item_id": "i-c49599479c40",
@@ -1289,7 +1289,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-409bf65b9d72.png"
+      "icon": "icons/i-409bf65b9d72.webp"
     },
     {
       "item_id": "i-8013fb04c36a",
@@ -1300,7 +1300,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-8013fb04c36a.png"
+      "icon": "icons/i-8013fb04c36a.webp"
     },
     {
       "item_id": "i-3f041c1d45ca",
@@ -1311,7 +1311,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-3f041c1d45ca.png"
+      "icon": "icons/i-3f041c1d45ca.webp"
     },
     {
       "item_id": "i-b17e6ab3368e",
@@ -1322,7 +1322,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b17e6ab3368e.png"
+      "icon": "icons/i-b17e6ab3368e.webp"
     },
     {
       "item_id": "i-b74c198ecf21",
@@ -1333,7 +1333,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b74c198ecf21.png"
+      "icon": "icons/i-b74c198ecf21.webp"
     },
     {
       "item_id": "i-944c6d64079f",
@@ -1344,7 +1344,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-944c6d64079f.png"
+      "icon": "icons/i-944c6d64079f.webp"
     },
     {
       "item_id": "i-22d7a6398eb3",
@@ -1355,7 +1355,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-22d7a6398eb3.png"
+      "icon": "icons/i-22d7a6398eb3.webp"
     },
     {
       "item_id": "i-5a012a842902",
@@ -1366,7 +1366,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-5a012a842902.png"
+      "icon": "icons/i-5a012a842902.webp"
     },
     {
       "item_id": "i-026aecb72d80",
@@ -1377,7 +1377,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-026aecb72d80.png"
+      "icon": "icons/i-026aecb72d80.webp"
     },
     {
       "item_id": "i-33353b0f05c7",
@@ -1388,7 +1388,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-33353b0f05c7.png"
+      "icon": "icons/i-33353b0f05c7.webp"
     },
     {
       "item_id": "i-8b782df30446",
@@ -1399,7 +1399,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-8b782df30446.png"
+      "icon": "icons/i-8b782df30446.webp"
     },
     {
       "item_id": "i-b562e1a27950",
@@ -1410,7 +1410,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-b562e1a27950.png"
+      "icon": "icons/i-b562e1a27950.webp"
     },
     {
       "item_id": "i-2cf2bd2b5cb0",
@@ -1421,7 +1421,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-2cf2bd2b5cb0.png"
+      "icon": "icons/i-2cf2bd2b5cb0.webp"
     },
     {
       "item_id": "i-9c9d3fddcb9b",
@@ -1432,7 +1432,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-9c9d3fddcb9b.png"
+      "icon": "icons/i-9c9d3fddcb9b.webp"
     },
     {
       "item_id": "i-a0ddb1ea3c04",
@@ -1454,7 +1454,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a403f7a6499b.png"
+      "icon": "icons/i-a403f7a6499b.webp"
     },
     {
       "item_id": "i-af0c02a3a91a",
@@ -1465,7 +1465,7 @@
       "craftable": false,
       "acquisition": "그믐달 상점 구매",
       "notes": "",
-      "icon": "icons/i-af0c02a3a91a.png"
+      "icon": "icons/i-af0c02a3a91a.webp"
     },
     {
       "item_id": "i-abd7869a7ce0",
@@ -1476,7 +1476,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-abd7869a7ce0.png"
+      "icon": "icons/i-abd7869a7ce0.webp"
     },
     {
       "item_id": "i-98c38273cf87",
@@ -1487,7 +1487,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-98c38273cf87.png"
+      "icon": "icons/i-98c38273cf87.webp"
     },
     {
       "item_id": "i-a1e608e1595d",
@@ -1498,7 +1498,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-a1e608e1595d.png"
+      "icon": "icons/i-a1e608e1595d.webp"
     },
     {
       "item_id": "i-be620f124ca8",
@@ -1509,7 +1509,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-be620f124ca8.png"
+      "icon": "icons/i-be620f124ca8.webp"
     },
     {
       "item_id": "i-e9724b3bb97c",
@@ -1520,7 +1520,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-e9724b3bb97c.png"
+      "icon": "icons/i-e9724b3bb97c.webp"
     },
     {
       "item_id": "i-bc7c68adf21e",
@@ -1531,7 +1531,7 @@
       "craftable": true,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-bc7c68adf21e.png"
+      "icon": "icons/i-bc7c68adf21e.webp"
     },
     {
       "item_id": "i-ac975c527877",
@@ -1542,7 +1542,7 @@
       "craftable": true,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-ac975c527877.png"
+      "icon": "icons/i-ac975c527877.webp"
     },
     {
       "item_id": "i-26c33c7d8f41",
@@ -1553,7 +1553,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-26c33c7d8f41.png"
+      "icon": "icons/i-26c33c7d8f41.webp"
     },
     {
       "item_id": "i-6a6f95244e9a",
@@ -1564,7 +1564,7 @@
       "craftable": true,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-6a6f95244e9a.png"
+      "icon": "icons/i-6a6f95244e9a.webp"
     },
     {
       "item_id": "i-0196ddf60e62",
@@ -1575,7 +1575,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-0196ddf60e62.png"
+      "icon": "icons/i-0196ddf60e62.webp"
     },
     {
       "item_id": "i-23bd32c749af",
@@ -1586,7 +1586,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-23bd32c749af.png"
+      "icon": "icons/i-23bd32c749af.webp"
     },
     {
       "item_id": "i-0bd7902923f0",
@@ -1597,7 +1597,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-0bd7902923f0.png"
+      "icon": "icons/i-0bd7902923f0.webp"
     },
     {
       "item_id": "i-de75693782ae",
@@ -1608,7 +1608,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-de75693782ae.png"
+      "icon": "icons/i-de75693782ae.webp"
     },
     {
       "item_id": "i-e5ebc357ad73",
@@ -1619,7 +1619,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-e5ebc357ad73.png"
+      "icon": "icons/i-e5ebc357ad73.webp"
     },
     {
       "item_id": "i-a2ec3a637cb6",
@@ -1630,7 +1630,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-a2ec3a637cb6.png"
+      "icon": "icons/i-a2ec3a637cb6.webp"
     },
     {
       "item_id": "i-d961c3de416f",
@@ -1641,7 +1641,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-d961c3de416f.png"
+      "icon": "icons/i-d961c3de416f.webp"
     },
     {
       "item_id": "i-d2ebc51d6676",
@@ -1652,7 +1652,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-d2ebc51d6676.png"
+      "icon": "icons/i-d2ebc51d6676.webp"
     },
     {
       "item_id": "i-ff5861c00d5a",
@@ -1663,7 +1663,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-ff5861c00d5a.png"
+      "icon": "icons/i-ff5861c00d5a.webp"
     },
     {
       "item_id": "i-65bda641d5b3",
@@ -1674,7 +1674,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-65bda641d5b3.png"
+      "icon": "icons/i-65bda641d5b3.webp"
     },
     {
       "item_id": "i-e6647075cb75",
@@ -1685,7 +1685,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-e6647075cb75.png"
+      "icon": "icons/i-e6647075cb75.webp"
     },
     {
       "item_id": "i-e07c1f1d8047",
@@ -1696,7 +1696,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-e07c1f1d8047.png"
+      "icon": "icons/i-e07c1f1d8047.webp"
     },
     {
       "item_id": "i-311ee6d66ad3",
@@ -1707,7 +1707,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-311ee6d66ad3.png"
+      "icon": "icons/i-311ee6d66ad3.webp"
     },
     {
       "item_id": "i-48e548841709",
@@ -1718,7 +1718,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-48e548841709.png"
+      "icon": "icons/i-48e548841709.webp"
     },
     {
       "item_id": "i-28e34e66e0e4",
@@ -1729,7 +1729,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-28e34e66e0e4.png"
+      "icon": "icons/i-28e34e66e0e4.webp"
     },
     {
       "item_id": "i-5e41bfa36314",
@@ -1740,7 +1740,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-5e41bfa36314.png"
+      "icon": "icons/i-5e41bfa36314.webp"
     },
     {
       "item_id": "i-2b06c55255fa",
@@ -1751,7 +1751,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
       "notes": "",
-      "icon": "icons/i-2b06c55255fa.png"
+      "icon": "icons/i-2b06c55255fa.webp"
     },
     {
       "item_id": "i-f39230d2300b",
@@ -1762,7 +1762,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-f39230d2300b.png"
+      "icon": "icons/i-f39230d2300b.webp"
     },
     {
       "item_id": "i-46647f9d918f",
@@ -1773,7 +1773,7 @@
       "craftable": false,
       "acquisition": "외부 수급 · 게임 내 획득처 확인",
       "notes": "",
-      "icon": "icons/i-46647f9d918f.png"
+      "icon": "icons/i-46647f9d918f.webp"
     },
     {
       "item_id": "i-05e09aae4837",
@@ -1784,7 +1784,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-05e09aae4837.png"
+      "icon": "icons/i-05e09aae4837.webp"
     },
     {
       "item_id": "i-8139d570ae21",
@@ -1795,7 +1795,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-8139d570ae21.png"
+      "icon": "icons/i-8139d570ae21.webp"
     },
     {
       "item_id": "i-340a851bc039",
@@ -1806,7 +1806,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-340a851bc039.png"
+      "icon": "icons/i-340a851bc039.webp"
     },
     {
       "item_id": "i-c82933b72991",
@@ -1817,7 +1817,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-c82933b72991.png"
+      "icon": "icons/i-c82933b72991.webp"
     },
     {
       "item_id": "i-c0cdee787670",
@@ -1828,7 +1828,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-c0cdee787670.png"
+      "icon": "icons/i-c0cdee787670.webp"
     },
     {
       "item_id": "i-451319078780",
@@ -1839,7 +1839,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-451319078780.png"
+      "icon": "icons/i-451319078780.webp"
     },
     {
       "item_id": "i-467e46d75a85",
@@ -1850,7 +1850,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-467e46d75a85.png"
+      "icon": "icons/i-467e46d75a85.webp"
     },
     {
       "item_id": "i-cac50916d994",
@@ -1861,7 +1861,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-cac50916d994.png"
+      "icon": "icons/i-cac50916d994.webp"
     },
     {
       "item_id": "i-f62b39465974",
@@ -1872,7 +1872,7 @@
       "craftable": false,
       "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
       "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
-      "icon": "icons/i-f62b39465974.png"
+      "icon": "icons/i-f62b39465974.webp"
     }
   ],
   "recipes": [
