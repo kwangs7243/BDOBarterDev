@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from local_app.tools.warehouse_feedback_calibration import calibrate
+from barter.tools.warehouse_feedback_calibration import calibrate
 from tools.warehouse_patch.warehouse_patch import GridDetectionError, QuantityReader, crop_inner_slots, detect_grid, load_reference
 
 ROOT = Path(__file__).resolve().parents[3]

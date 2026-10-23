@@ -56,7 +56,7 @@ try {
     try { return await readFile(join(profile, "chrome-profile", "DevToolsActivePort"), "utf8"); } catch { return false; }
   }, "Chrome DevTools");
   const debugPort = portText.trim().split(/\r?\n/)[0];
-  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT" });
+  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(new URL("/barter/", baseUrl).href)}`, { method: "PUT" });
   if (!targetResponse.ok) throw new Error(`Chrome target create failed: ${targetResponse.status}`);
   const target = await targetResponse.json();
   socket = new WebSocket(target.webSocketDebuggerUrl);

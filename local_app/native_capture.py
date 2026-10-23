@@ -12,7 +12,7 @@ from pathlib import Path
 
 from local_app.native_diagnostics import CaptureDiagnostics
 
-from local_app.backend.recognition_contracts import validate_capture_metadata, validate_capture_payload
+from barter.backend.recognition_contracts import validate_capture_metadata, validate_capture_payload
 
 MAX_BYTES = 20 * 1024 * 1024
 MAX_FRAMES = 100

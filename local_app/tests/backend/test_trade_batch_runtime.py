@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from local_app.backend.services.trade_batch_runtime import (
+from barter.backend.services.trade_batch_runtime import (
     TradeBatchRuntime, TradeBatchRuntimeError, MODEL_BUNDLE_SHA256, MODEL_CONFIG_SHA256, MODEL_ONNX_SHA256)
 
 
@@ -92,7 +92,7 @@ class LiveRuntimeTests(unittest.TestCase):
             for name in ("python.exe", "worker.py", "inference.onnx", "inference.yml"):
                 (root/name).write_text("fixture")
             runtime = TradeBatchRuntime(python_path=root/"python.exe", worker_path=root/"worker.py", model_dir=root)
-            with patch("local_app.backend.services.trade_batch_runtime._sha256", side_effect=[MODEL_ONNX_SHA256, MODEL_CONFIG_SHA256]):
+            with patch("barter.backend.services.trade_batch_runtime._sha256", side_effect=[MODEL_ONNX_SHA256, MODEL_CONFIG_SHA256]):
                 self.assertTrue(runtime.status()["available"])
             self.assertEqual(runtime.status()["reason"], "engine_integrity_error")
             (root/"inference.yml").unlink()
@@ -138,7 +138,7 @@ class LiveRuntimeTests(unittest.TestCase):
             self.assertEqual(runtime.progress('retry')['stage'], 'complete')
 
     def test_frozen_worker_uses_current_executable(self):
-        with patch("local_app.backend.services.trade_batch_runtime.sys.frozen", True, create=True), patch.dict("os.environ", {}, clear=True):
+        with patch("barter.backend.services.trade_batch_runtime.sys.frozen", True, create=True), patch.dict("os.environ", {}, clear=True):
             runtime = ReadyRuntime(runner=fake_worker)
             self.assertTrue(runtime.packaged_worker)
             self.assertEqual(runtime.recognize_live("batch", [self.capture])["runtime"]["rowCount"], 1)

@@ -30,7 +30,7 @@ try {
   chrome = spawn(chromePath, ["--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking", "--remote-debugging-port=0", "--remote-allow-origins=*", `--user-data-dir=${join(profile, "chrome-profile")}`, "about:blank"], { stdio: "ignore", windowsHide: true });
   const portFile = join(profile, "chrome-profile", "DevToolsActivePort");
   const devtoolsPort = (await waitFor(async () => { try { return (await readFile(portFile, "utf8")).trim().split(/\r?\n/)[0]; } catch { return false; } }, "Chrome CDP port")).trim();
-  const targetResponse = await fetch(`http://127.0.0.1:${devtoolsPort}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT" });
+  const targetResponse = await fetch(`http://127.0.0.1:${devtoolsPort}/json/new?${encodeURIComponent(new URL("/barter/", baseUrl).href)}`, { method: "PUT" });
   if (!targetResponse.ok) throw new Error(`Chrome target create failed: HTTP ${targetResponse.status}`);
   const target = await targetResponse.json();
   socket = new WebSocket(target.webSocketDebuggerUrl);

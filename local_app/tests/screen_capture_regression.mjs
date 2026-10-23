@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { CaptureError, CaptureQueue, ScreenCaptureSession } from "../frontend/js/capture.js";
+import { CaptureError, CaptureQueue, ScreenCaptureSession } from "../../barter/frontend/js/capture.js";
 
 class EventHub {
   #listeners = new Map();

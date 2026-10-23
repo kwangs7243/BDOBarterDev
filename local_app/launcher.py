@@ -1,4 +1,4 @@
-"""Double-click launcher for the localhost BDO Barter application."""
+"""Double-click launcher for the localhost BDO application."""
 from __future__ import annotations
 
 import ctypes
@@ -15,13 +15,13 @@ import webbrowser
 
 if len(sys.argv) > 1 and sys.argv[1] == "--trade-ocr-worker":
     sys.argv.pop(1)
-    from local_app.tools.trade_batch_worker import main
+    from barter.tools.trade_batch_worker import main
     raise SystemExit(main())
 
 from local_app.backend.app import HOST, PORT, create_app
 
 APP_URL = f"http://{HOST}:{PORT}/"
-HEALTH_URL = f"http://{HOST}:{PORT}/api/health"
+HEALTH_URL = f"http://{HOST}:{PORT}/suite-health"
 MUTEX_NAME = "Local\\BDOBarter-18765"
 ERROR_ALREADY_EXISTS = 183
 WM_APP_SHUTDOWN = 0x8001
@@ -30,7 +30,7 @@ IDC_EXIT = 102
 
 
 def resource_root() -> Path:
-    """Return the root containing local_app, reference, and scanner resources."""
+    """Return the root containing the portal, workspaces, and scanner resources."""
     if getattr(sys, "frozen", False):
         return Path(getattr(sys, "_MEIPASS")).resolve()
     return Path(__file__).resolve().parents[1]
@@ -244,7 +244,7 @@ def _run_manager_window(server, server_thread: threading.Thread, app) -> None:
     if not user32.RegisterClassW(ctypes.byref(window_class)):
         raise ctypes.WinError(ctypes.get_last_error())
     window_handle = user32.CreateWindowExW(
-        0, class_name, "BDO 물교 실행 중", 0x00C00000 | 0x10000000,
+        0, class_name, "BDO 통합 프로그램 실행 중", 0x00C00000 | 0x10000000,
         100, 100, 350, 145, None, None, hinstance, None,
     )
     if not window_handle:
@@ -276,7 +276,7 @@ def run_launcher() -> int:
                     return 0
                 time.sleep(0.2)
             _message_box(
-                "BDO 물교가 이미 실행 중입니다",
+                "BDO 프로그램이 이미 실행 중입니다",
                 "기존 실행을 찾았지만 localhost 서버가 응답하지 않습니다. 잠시 뒤 다시 실행해 주세요.",
             )
             return 1
@@ -288,7 +288,7 @@ def run_launcher() -> int:
         if os.name == "nt":
             from local_app.native_capture import NativeCaptureController
             from local_app.native_win32 import Win32CapturePlatform
-            from local_app.backend.storage import default_database_path
+            from barter.backend.storage import default_database_path
             native_capture = NativeCaptureController(Win32CapturePlatform(), default_database_path().with_name("native-capture-profiles.json"))
         app = create_app(reference_path=packaged_root / "reference" / "barter_items.json", native_capture=native_capture)
         try:
@@ -313,7 +313,7 @@ def run_launcher() -> int:
         _run_manager_window(server, server_thread, app)
         return 0
     except Exception as error:
-        _message_box("BDO 물교 시작 실패", _friendly_start_error(error), error=True)
+        _message_box("BDO 프로그램 시작 실패", _friendly_start_error(error), error=True)
         return 1
     finally:
         if native_capture is not None:

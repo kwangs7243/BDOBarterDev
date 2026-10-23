@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { CaptureError, DEFAULT_TRADE_ROI, ScreenCaptureSession, displayedVideoContentRect, moveNormalizedRegion, normalizeRegion, regionToSourceRect, resizeNormalizedRegion } from "../frontend/js/capture.js";
+import { CaptureError, DEFAULT_TRADE_ROI, ScreenCaptureSession, displayedVideoContentRect, moveNormalizedRegion, normalizeRegion, regionToSourceRect, resizeNormalizedRegion } from "../../barter/frontend/js/capture.js";
 
 assert.deepEqual(regionToSourceRect({ x: .1, y: .2, width: .3, height: .4 }, 1920, 1080), { x: 192, y: 216, width: 576, height: 433 }, "fractional bottom edge uses ceil");
 assert.deepEqual(regionToSourceRect({ x: .999, y: .999, width: .001, height: .001 }, 3, 3), { x: 2, y: 2, width: 1, height: 1 }, "minor edge rounding clamps inside the frame");

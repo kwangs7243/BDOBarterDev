@@ -2,9 +2,13 @@
 
 ## 실행과 화면
 
-`python -m local_app.launcher` → Windows 단일 실행 검사 → Waitress/Flask 서버 → health 확인 → 브라우저와 관리 창 순서로 실행합니다. 고정 주소는 `http://localhost:18765`입니다. `local_app/backend/app.py`가 API·frontend를 연결하고 `backend/storage.py`가 SQLite와 기준 품목을 담당합니다.
+`python -m local_app.launcher` → Windows 단일 실행 검사 → Waitress/Flask 서버 → `/suite-health` 확인 → 브라우저와 관리 창 순서로 실행합니다. 고정 주소는 `http://localhost:18765`입니다. `/`에서 `/barter/`와 `/alchemy/`를 선택합니다. 공통 서버는 `local_app/backend/app.py`, 물교 저장은 `barter/backend/storage.py`, 연금 저장은 `alchemy/storage.py`입니다.
 
-화면은 `local_app/frontend/`의 HTML/CSS/JavaScript로 구성합니다. 별도 frontend 빌드나 npm 런타임 패키지가 없습니다. `js/domain/`의 계산 모듈을 UI에서 사용하고 고정 입력 회귀로 결과를 비교합니다.
+앱 간 이동은 독립 문서 전환입니다. 물교 Storage는 최초 물교 데이터 요청에서 초기화합니다. 연금 Storage는 레시피 전체를 인스턴스에 보관하지 않고 요청별로 읽으며, 클라이언트 상세 캐시는 최대 32개 품목입니다. 연금 기록은 페이지 단위로 조회합니다. 카탈로그 전체 편집·내보내기는 해당 기능을 요청할 때만 불러옵니다.
+
+순수 `alchemy.engine.plan_goals`는 DAG 상위에서 하위로 필요량을 합산하고 우선순위별 실제 재고를 한 번만 할당합니다. 예상 산출은 실제 재고에 추가하지 않습니다. SQLite `BEGIN IMMEDIATE` 안에서 revision·영수증·재료 차감·작업·원장을 함께 저장합니다. 취소·부분 완료는 미수행 회차의 재료만 반환하고 완료는 실제 산출을 추가합니다. 상세 계약은 [연금 안내](ALCHEMY.md)에 있습니다.
+
+화면은 `barter/frontend/`의 HTML/CSS/JavaScript로 구성합니다. 별도 frontend 빌드나 npm 런타임 패키지가 없습니다. `js/domain/`의 계산 모듈을 UI에서 사용하고 고정 입력 회귀로 결과를 비교합니다.
 
 ## 캡처와 인식
 
@@ -24,6 +28,6 @@ SQLite의 `inventory`, `settings`, `working_session`, `saved_schedule_slot`, `ap
 
 ## 저장소와 실행 파일
 
-소스의 `local_app/`, `reference/`, `tools/` 관계는 PyInstaller `_internal/` 안에서도 유지합니다. 모델과 보정 표본·frontend는 빌드 입력입니다. `local_app/packaging/bdo-barter.spec`가 포함 목록을 정의합니다.
+소스의 `local_app/`, `barter/`, `alchemy/`, `reference/`, `tools/` 관계는 PyInstaller `_internal/` 안에서도 유지합니다. 모델과 보정 표본·frontend·연금 카탈로그는 빌드 입력입니다. `local_app/packaging/bdo-barter.spec`가 포함 목록을 정의합니다.
 
 `local_app/tests/`는 제품 옆에 유지한 회귀·고정 입력입니다. `tools/experiments/`와 `docs/archive/`는 제품 실행 경로에서 분리합니다. 실행 파일·가상환경·개인 DB·전체 캡처·실험 출력은 Git 소스에 포함하지 않습니다.

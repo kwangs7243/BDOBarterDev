@@ -8,13 +8,13 @@ from unittest.mock import patch
 import numpy as np
 from PIL import Image
 
-from local_app.tools import trade_template_reader as templates
-from local_app.tools.trade_live_ocr import _crop, _ink
+from barter.tools import trade_template_reader as templates
+from barter.tools.trade_live_ocr import _crop, _ink
 
 
 class TradeTemplateReaderTests(unittest.TestCase):
     def test_repository_bank_matches_pinned_runtime_integrity(self):
-        path = Path(__file__).resolve().parents[2] / 'recognition_data/trade-templates.json'
+        path = Path(__file__).resolve().parents[3] / 'barter/recognition_data/trade-templates.json'
         reader = templates.TemplateReader(path, ink=_ink, crop=_crop)
         self.assertTrue(reader.stats['available'], 'fresh source checkout must include its verified bank')
         self.assertGreater(reader.stats['referenceCount'], 0)

@@ -21,7 +21,7 @@ try {
   chrome = spawn(chromePath, ["--headless=new", "--no-sandbox", "--disable-gpu", "--no-first-run", "--disable-extensions", "--disable-background-networking", "--remote-debugging-port=0", "--remote-allow-origins=*", `--user-data-dir=${join(profile, "chrome-profile")}`, "about:blank"], { stdio: "ignore", windowsHide: true });
   const portText = await waitFor(async () => { try { return await readFile(join(profile, "chrome-profile", "DevToolsActivePort"), "utf8"); } catch { return false; } }, "Chrome DevTools");
   const debugPort = portText.trim().split(/\r?\n/)[0];
-  const response = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT" });
+  const response = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(new URL("/barter/", baseUrl).href)}`, { method: "PUT" });
   if (!response.ok) throw new Error(`Chrome target create failed: ${response.status}`);
   const target = await response.json(); socket = new WebSocket(target.webSocketDebuggerUrl);
   await Promise.race([new Promise((ok, fail) => { socket.addEventListener("open", ok, { once: true }); socket.addEventListener("error", fail, { once: true }); }), delay(10000).then(() => { throw new Error("DevTools connection timed out"); })]);

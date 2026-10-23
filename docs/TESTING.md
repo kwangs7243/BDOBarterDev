@@ -18,6 +18,7 @@ npm run test:browser
 - Python: `local_app/tests/`의 저장·API·인식 계약·native·실험 도구 회귀.
 - Domain: `local_app/tests/*.mjs`의 순수 계산·입력·타이머·클라이언트 계약.
 - Browser: `browser_*.mjs`가 임시 서버와 headless Chrome을 시작해 화면과 저장 흐름을 검사.
+- 연금: `test_alchemy_icons.py`는 전체 170종의 이름 매핑·원본 해시·이미지 디코딩·로컬 HTTP 제공을 검사합니다. `test_alchemy_engine.py`와 `test_alchemy_storage.py`는 DAG·예약·미확인·제작 차감/완료/취소/정정·복원·동시 요청·DB 오류 롤백을 검사합니다. `browser_alchemy.mjs`는 실제 카탈로그와 임시 SQLite로 일괄 입력·부분 완료·서버 재시작·정정·백업·화면 격리를 검사합니다.
 - 일반 전체 Node 실행: `npm test`. Domain과 브라우저를 순차 실행합니다.
 
 브라우저 검사는 `npm ci`로 Playwright 개발 의존성을 설치합니다. 기존 도구 환경을 사용하는 경우에만 `BDO_NODE_MODULES`로 해당 node_modules 경로를 지정할 수 있습니다. 개인 PC의 Codex 캐시 경로를 코드 기본값으로 사용하지 않습니다.

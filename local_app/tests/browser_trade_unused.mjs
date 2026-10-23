@@ -19,7 +19,7 @@ try {
   const before=await (await fetch(base+"api/bootstrap")).json();
   chrome=spawn(process.env.BDO_CHROME ?? "C:/Program Files/Google/Chrome/Application/chrome.exe",["--headless=new","--no-sandbox","--disable-gpu","--no-first-run","--disable-extensions","--disable-background-networking","--remote-debugging-port=0","--remote-allow-origins=*",`--user-data-dir=${join(temporary,"chrome")}`,"about:blank"],{windowsHide:true,stdio:"ignore"});
   const port=Number((await waitFor(()=>readFile(join(temporary,"chrome/DevToolsActivePort"),"utf8"))).split(/\r?\n/)[0]);
-  const target=await (await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(base)}`,{method:"PUT",signal:AbortSignal.timeout(5000)})).json();
+  const target=await (await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(base+'barter/')}`,{method:"PUT",signal:AbortSignal.timeout(5000)})).json();
   socket=new WebSocket(target.webSocketDebuggerUrl);
   await Promise.race([new Promise((ok,fail)=>{socket.addEventListener("open",ok,{once:true});socket.addEventListener("error",fail,{once:true});}),delay(5000).then(()=>{throw Error("DevTools connection timed out");})]);
   let next=0;const pending=new Map();

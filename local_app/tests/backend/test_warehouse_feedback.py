@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import zipfile
 from unittest.mock import patch
-from local_app.backend.services import warehouse_scan
+from barter.backend.services import warehouse_scan
 from pathlib import Path
 from local_app.backend.app import create_app
 

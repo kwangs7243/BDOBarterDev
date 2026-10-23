@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
-const source = await readFile(new URL("../frontend/js/domain/timer-ui.js", import.meta.url), "utf8");
+const source = await readFile(new URL("../../barter/frontend/js/domain/timer-ui.js", import.meta.url), "utf8");
 let tick, now = 1000, alarms = 0;
 const nodes = new Map();
 const context = vm.createContext({

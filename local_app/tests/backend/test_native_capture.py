@@ -14,7 +14,7 @@ from unittest.mock import patch
 from PIL import Image
 
 from local_app.backend.app import create_app
-from local_app.backend.recognition_contracts import RecognitionContractError, validate_capture_metadata
+from barter.backend.recognition_contracts import RecognitionContractError, validate_capture_metadata
 from local_app.native_diagnostics import CaptureDiagnostics
 from local_app.native_capture import NativeCaptureController, NativeCaptureError, MAX_BYTES, adjust_roi
 from .test_trade_batch_runtime import ReadyRuntime, fake_worker
@@ -516,7 +516,7 @@ class NativeApiTests(NativeFixture):
         self.prepare("warehouse");packet=self.capture();metadata=packet["metadata"]
         png=self.controller.image(self.receiver,packet["generation"],metadata["captureId"])
         before=self.client.get("/api/bootstrap").get_json()
-        from local_app.backend.services import warehouse_scan
+        from barter.backend.services import warehouse_scan
         output={"type":"master_inventory_patch","version":1,"items":{}}
         report={"input":{},"slots":[]}
         with patch.object(warehouse_scan,"convert",return_value=(output,report)) as scan:

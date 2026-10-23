@@ -10,7 +10,7 @@ trade_model = Path(os.environ.get("BDO_PACKAGE_TRADE_MODEL_DIR", ROOT / ".local/
 if not all((trade_model / name).is_file() for name in ("inference.onnx", "inference.yml")):
     raise RuntimeError("The verified local trade OCR model is required for packaging.")
 warehouse_templates = Path(os.environ.get("BDO_PACKAGE_WAREHOUSE_TEMPLATES",
-    ROOT / "local_app" / "recognition_data" / "warehouse-templates.npz"))
+    ROOT / "barter" / "recognition_data" / "warehouse-templates.npz"))
 if not warehouse_templates.is_file():
     raise RuntimeError("Verified warehouse feedback templates are required for packaging. "
                        "Set BDO_PACKAGE_WAREHOUSE_TEMPLATES to the calibrated quantity_templates.npz.")
@@ -24,45 +24,48 @@ with np.load(warehouse_templates, allow_pickle=False) as warehouse_data:
             or len(warehouse_data["feedback_values"]) != verified_rows
             or len(warehouse_data["feedback_item_names"]) != verified_rows):
         raise RuntimeError("Warehouse feedback templates and their verified-row provenance do not agree.")
-trade_templates = os.environ.get("BDO_PACKAGE_TRADE_TEMPLATES", str(ROOT / "local_app/recognition_data/trade-templates.json"))
+trade_templates = os.environ.get("BDO_PACKAGE_TRADE_TEMPLATES", str(ROOT / "barter/recognition_data/trade-templates.json"))
 if trade_templates:
     import hashlib
     import sys
     sys.path.insert(0, str(ROOT))
-    from local_app.tools.trade_template_reader import BANK_SHA256
+    from barter.tools.trade_template_reader import BANK_SHA256
     trade_templates = Path(trade_templates)
     if hashlib.sha256(trade_templates.read_bytes()).hexdigest() != BANK_SHA256:
         raise RuntimeError("Trade template bank integrity verification failed.")
 
 datas = [
-    (str(trade_model / "inference.onnx"), "local_app/recognition_data/trade-model"),
-    (str(trade_model / "inference.yml"), "local_app/recognition_data/trade-model"),
-    (str(ROOT / "local_app" / "tools" / "trade_live_ocr.py"), "local_app/tools"),
-    (str(ROOT / "local_app" / "tools" / "trade_batch_worker.py"), "local_app/tools"),
     (str(ROOT / "local_app" / "frontend"), "local_app/frontend"),
+    (str(ROOT / "alchemy" / "frontend"), "alchemy/frontend"),
+    (str(ROOT / "alchemy" / "data"), "alchemy/data"),
+    (str(trade_model / "inference.onnx"), "barter/recognition_data/trade-model"),
+    (str(trade_model / "inference.yml"), "barter/recognition_data/trade-model"),
+    (str(ROOT / "barter" / "tools" / "trade_live_ocr.py"), "barter/tools"),
+    (str(ROOT / "barter" / "tools" / "trade_batch_worker.py"), "barter/tools"),
+    (str(ROOT / "barter" / "frontend"), "barter/frontend"),
     (str(ROOT / "reference" / "barter_items.json"), "reference"),
     (str(ROOT / "reference" / "icons"), "reference/icons"),
     (str(ROOT / "tools" / "warehouse_patch" / "warehouse_patch.py"), "tools/warehouse_patch"),
     (str(warehouse_templates), "tools/warehouse_patch"),
 ]
 if trade_templates:
-    datas.append((str(trade_templates), "local_app/recognition_data"))
-datas.append((str(ROOT / "local_app/tools/trade_template_reader.py"), "local_app/tools"))
+    datas.append((str(trade_templates), "barter/recognition_data"))
+datas.append((str(ROOT / "barter/tools/trade_template_reader.py"), "barter/tools"))
 hiddenimports = [
-    "local_app.tools.trade_template_reader",
-    "local_app.tools.trade_batch_worker",
-    "local_app.tools.trade_live_ocr",
+    "barter.tools.trade_template_reader",
+    "barter.tools.trade_batch_worker",
+    "barter.tools.trade_live_ocr",
     "onnxruntime",
     "cv2",
     "yaml",
-    "local_app.backend.api.maintenance",
-    "local_app.backend.api.scan",
-    "local_app.backend.api.state",
-    "local_app.backend.services.warehouse_scan",
+    "barter.backend.api.maintenance",
+    "barter.backend.api.scan",
+    "barter.backend.api.state",
+    "barter.backend.services.warehouse_scan",
     "tools.warehouse_patch.warehouse_patch",
     "local_app.native_capture",
     "local_app.native_win32",
-    "local_app.backend.api.native_capture",
+    "barter.backend.api.native_capture",
     "PIL.ImageGrab",
     "waitress",
     "waitress.server",

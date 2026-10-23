@@ -19,9 +19,9 @@ class WarehousePackageAssetsTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.spec_path = self.root / 'local_app/packaging'
         self.spec_path.mkdir(parents=True)
-        bank = self.root / 'local_app/recognition_data/trade-templates.json'
+        bank = self.root / 'barter/recognition_data/trade-templates.json'
         bank.parent.mkdir(parents=True)
-        shutil.copyfile(ROOT / 'local_app/recognition_data/trade-templates.json', bank)
+        shutil.copyfile(ROOT / 'barter/recognition_data/trade-templates.json', bank)
         self.trade = self.root / 'trade-model'
         self.trade.mkdir()
         for filename in ('inference.onnx', 'inference.yml'):
@@ -67,9 +67,11 @@ class WarehousePackageAssetsTests(unittest.TestCase):
         calibrated = self.calibrated()
         os.environ['BDO_PACKAGE_WAREHOUSE_TEMPLATES'] = str(calibrated)
         assets = self.load_assets()
+        for resource in ('local_app/frontend', 'barter/frontend', 'alchemy/frontend'):
+            self.assertIn((str(self.root / resource), resource), assets['datas'])
         self.assertIn((str(calibrated), 'tools/warehouse_patch'), assets['datas'])
-        self.assertIn((str(self.root / 'local_app/recognition_data/trade-templates.json'),
-                       'local_app/recognition_data'), assets['datas'])
+        self.assertIn((str(self.root / 'barter/recognition_data/trade-templates.json'),
+                       'barter/recognition_data'), assets['datas'])
         self.assertEqual(assets['canonicalize_warehouse_data']([
             ('tools/warehouse_patch/calibrated.npz', str(calibrated), 'DATA')]), [
             ('tools/warehouse_patch/quantity_templates.npz', str(calibrated), 'DATA')])

@@ -5,7 +5,7 @@ import uuid
 
 from PIL import Image
 
-from local_app.backend.recognition_contracts import (
+from barter.backend.recognition_contracts import (
     MAX_IMAGE_BYTES,
     RecognitionContractError,
     validate_capture_metadata,

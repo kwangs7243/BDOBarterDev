@@ -2,6 +2,8 @@
 
 이 문서는 2026-10-19 현재 승인된 desktop 앱의 유지보수 기준이다. 미래 아키텍처나 미구현 기능을 현재 계약으로 취급하지 않는다. 이전 설계·실사·보고서는 Git history와 저장소 외부 archive에 보관한다.
 
+2026-10-23 소스는 사용자 지시서에 따라 BDO Suite로 확장되었다. `/`는 통합 메인, `/barter/`는 기존 물교, `/alchemy/`는 독립 연금 앱이다. 아래 물교 계약은 계속 유지하며 설치 실행 파일을 소스 변경만으로 교체하지 않는다. 연금의 별도 DB·계산·제작 트랜잭션·검증 범위는 [ALCHEMY.md](ALCHEMY.md), 사용자 요구 원문은 [BDO-SUITE-SPEC.md](BDO-SUITE-SPEC.md)에 있다.
+
 ## 제품과 입력
 
 - Windows localhost 앱이며 실행 파일은 `D:\BDOBarterDev\app\BDO 물교 실행.exe`, 주소는 `http://localhost:18765`다. 단일 실행, health 준비 후 브라우저 열기, 정상 종료를 지원한다.
@@ -31,7 +33,7 @@
 ## 저장·개선 데이터
 
 - Main DB는 `%LOCALAPPDATA%\BDOBarter\data\bdo.sqlite3`, schema 4다. inventory/settings/working_session/saved_schedule_slot/app_meta/mutation_receipt는 운영 상태다. 기존 값과 CAS/idempotency 의미를 유지한다.
-- `trade_correction`, `warehouse_scan`, `warehouse_feedback`는 개선용 history다. 현재 인식은 이 테이블을 학습 없이 자동 읽어 결과를 바꾸지 않는다. 현재 정답 사전·창고 보정 표본은 `local_app/recognition_data/`에서 명시적으로 버전 관리한다. 창고 calibrated template는 별도 검증된 NPZ이며 package에 포함된다.
+- `trade_correction`, `warehouse_scan`, `warehouse_feedback`는 개선용 history다. 현재 인식은 이 테이블을 학습 없이 자동 읽어 결과를 바꾸지 않는다. 현재 정답 사전·창고 보정 표본은 `barter/recognition_data/`에서 명시적으로 버전 관리한다. 창고 calibrated template는 별도 검증된 NPZ이며 package에 포함된다.
 - 개선 history 초기화는 명시 사용자 요청, 외부 백업·행 수/해시·ZIP 검증 이후에만 한다. schema, 운영 상태, native ROI 프로필을 유지한다. 평소 테스트는 실제 사용자 DB를 수정하지 않는다.
 - legacy feedback payload의 읽기/검증은 현재 호환 계약에 필요한 경우 유지한다. 과거 stage/spec라는 이유만으로 유효한 데이터 호환을 없애지 않는다.
 
@@ -43,4 +45,4 @@
 
 ## 저장소 구조
 
-실행·개발 기준은 저장소 루트다. `_dev/`를 제거하고 `local_app/`, `reference/`, `tools/`, `docs/`로 분리했다. 설치 앱·실제 AppData는 Git 구조와 별개다. 과거 실험 계약은 `docs/archive/`에 보존한다. ML·숫자 단위 조합은 현재 제품에 적용하지 않았다.
+실행·개발 기준은 저장소 루트다. `local_app/`는 공통 실행기·서버·native·통합 메인·검증·패키징, `barter/`는 물교, `alchemy/`는 연금이다. `reference/`, `tools/`, `docs/`는 기준 자료·창고 도구·문서를 보관한다. 설치 앱·실제 AppData는 Git 구조와 별개다. 과거 실험 계약은 `docs/archive/`에 보존한다. 물교 ML·숫자 단위 조합은 현재 제품에 적용하지 않았다.

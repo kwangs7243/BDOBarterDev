@@ -19,6 +19,8 @@ class LauncherResourceTests(unittest.TestCase):
     def test_source_resource_root_contains_all_runtime_assets(self):
         root = launcher.resource_root()
         self.assertTrue((root / "local_app" / "frontend" / "index.html").is_file())
+        self.assertTrue((root / "barter" / "frontend" / "index.html").is_file())
+        self.assertTrue((root / "alchemy" / "frontend" / "index.html").is_file())
         self.assertTrue((root / "reference" / "barter_items.json").is_file())
         self.assertTrue((root / "tools" / "warehouse_patch" / "quantity_templates.npz").is_file())
 

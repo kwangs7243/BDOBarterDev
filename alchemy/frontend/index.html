@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BDO 연금 · 제작 작업실</title>
+  <link rel="stylesheet" href="/alchemy/assets/alchemy.css">
+  <script type="module" src="/alchemy/assets/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">작업 영역으로 이동</a>
+  <aside class="sidebar">
+    <a class="brand" href="/"><span aria-hidden="true">◈</span><div>BDO SUITE<small>모험가의 작업실</small></div></a>
+    <div class="workspace-label">ALCHEMY WORKSHOP</div>
+    <nav aria-label="연금 메뉴">
+      <a href="/alchemy/" data-nav="dashboard"><span aria-hidden="true">◈</span>제작 대시보드</a>
+      <a href="/alchemy/inventory" data-nav="inventory"><span aria-hidden="true">▤</span>공통 재고</a>
+      <a href="/alchemy/history" data-nav="history"><span aria-hidden="true">◷</span>제작·재고 기록</a>
+      <a href="/alchemy/settings" data-nav="settings"><span aria-hidden="true">⚙</span>데이터·백업</a>
+    </nav>
+    <div class="sidebar-bottom"><a href="/barter/">물교 작업실 ↗</a><a href="/">통합 메인으로</a><p>내 PC에 저장 · 실제 수량 기준</p></div>
+  </aside>
+  <div class="workspace">
+    <header class="app-header"><div><span class="header-crumb">모험가의 작업실 / 연금</span><h1 id="page-title">제작 대시보드</h1></div><div class="header-actions"><span class="local-badge">● 로컬 저장</span><button type="button" id="refresh">새로 불러오기</button></div></header>
+    <div id="status" role="status" aria-live="polite">저장 상태를 불러오는 중입니다.</div>
+    <div id="retry-area" hidden><button id="retry" type="button">저장 결과 재확인</button><span>응답을 받지 못했습니다. 같은 트랜잭션으로 결과를 확인합니다.</span></div>
+    <main id="content" tabindex="-1" aria-busy="true"></main>
+    <footer class="footer"><span>BLACK & GOLD · ALCHEMY WORKSHOP</span><span id="data-version"></span></footer>
+  </div>
+  <dialog id="work-dialog" aria-labelledby="dialog-title"><div class="dialog-header"><h2 id="dialog-title">제작 작업</h2><button type="button" id="close-dialog" aria-label="닫기">×</button></div><div id="dialog-content"></div></dialog>
+</body>
+</html>

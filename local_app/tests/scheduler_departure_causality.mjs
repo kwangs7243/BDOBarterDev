@@ -4,13 +4,13 @@ import vm from 'node:vm';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
-const catalog=JSON.parse(readFileSync(resolve(root,'local_app/frontend/data/trade-catalog.json'),'utf8'));
+const catalog=JSON.parse(readFileSync(resolve(root,'barter/frontend/data/trade-catalog.json'),'utf8'));
 const weights={1:100,2:400,3:900,4:1000,5:1000,6:2000,7:2000,coin:0};
 const weight=(tier,name)=>tier===0||tier==='mat'?catalog.itemWeights[name]:weights[tier];
 export function environment(){
  const elements=Object.fromEntries(Object.entries({normalWeight:22689,maxWeight:40259,maxParley:1250000,parleyPerTrade:10278,parleyCrow:15576,'retry-completion-save':0}).map(([k,v])=>[k,{value:v,hidden:true}]));
  const messages=[];const ctx={console:{log(){},warn(){}},document:{getElementById:id=>elements[id]||null,querySelector:()=>null,querySelectorAll:()=>[]},alert:m=>messages.push(m),renderModeColumn(){},CustomEvent:class{},dispatchEvent(){},crypto:globalThis.crypto,setTimeout,clearTimeout,setInterval(){},clearInterval(){}};ctx.window=ctx;vm.createContext(ctx);
- for(const name of ['constants','routing','scheduler','tier7','schedule-edit','timer-ui','completion','scheduler-runtime'])vm.runInContext(readFileSync(resolve(root,'local_app/frontend/js/domain/'+name+'.js'),'utf8'),ctx,{filename:name});
+ for(const name of ['constants','routing','scheduler','tier7','schedule-edit','timer-ui','completion','scheduler-runtime'])vm.runInContext(readFileSync(resolve(root,'barter/frontend/js/domain/'+name+'.js'),'utf8'),ctx,{filename:name});
  ctx.showToast=m=>messages.push(m);return {ctx,elements,messages};
 }
 export function audit(sorties,initial,normal,max,mode,normalCost,coinCost,budget){

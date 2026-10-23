@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="820" viewBox="0 0 1920 820" fill="none">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="820" gradientUnits="userSpaceOnUse"><stop stop-color="#132732"/><stop offset=".55" stop-color="#697f80"/><stop offset="1" stop-color="#263e47"/></linearGradient>
+    <linearGradient id="water" x2="0" y1="450" y2="820" gradientUnits="userSpaceOnUse"><stop stop-color="#748e91"/><stop offset="1" stop-color="#132d3b"/></linearGradient>
+    <radialGradient id="light"><stop stop-color="#eee2bd" stop-opacity=".48"/><stop offset="1" stop-color="#d4d3b9" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mountain" x1="1480" y1="150" x2="1600" y2="650" gradientUnits="userSpaceOnUse"><stop stop-color="#344c51"/><stop offset="1" stop-color="#142e38"/></linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1920v820H0z"/>
+  <ellipse cx="1320" cy="300" rx="660" ry="360" fill="url(#light)"/>
+  <path fill="#5d777c" d="m0 433 180-68 170 51 173-102 126 37 97-90 160 127 127-61 128 88 175-76 114 44 135-68 155 124 200-64v350H0Z"/>
+  <path fill="#45636b" d="m0 489 214-70 141 45 175-93 138 122 184-64 132 50 136-118 102 70 151-50 203 112 144-34 200 45v316H0Z"/>
+  <path fill="url(#water)" d="M0 511h1920v309H0z"/>
+  <path fill="url(#mountain)" d="m1158 530 119-85 72-122 61-39 46-111 43 54 62-75 66 152 60-45 61 115 65 11 107 94v341h-426l-103-142-126-52-207-35Z"/>
+  <path stroke="#8c9a8d" stroke-opacity=".25" d="m1357 390 42-163 62 109 66-32 12 179m-124-199-16 151 59 42-18 81m147-284-24 136 59 63 17 102"/>
+  <path fill="#102731" d="m1420 651 128-95 102 29 91-79 68 12 111-21v323h-434Z"/>
+  <g stroke="#b1c0b9" stroke-opacity=".18"><path d="M760 550h350m-510 26h362m75 0h165m-368 30h270m-533 35h267m121 0h205M420 687h550m-150 55h355m-590 40h490"/></g>
+  <path fill="#172f38" d="m1030 538 7-37 6 37h23l-9 11h-41l-10-11Z"/><path stroke="#93a7a5" stroke-opacity=".5" d="M1037 501v-42l-20 35h20m5-25 19 27h-19"/>
+  <path stroke="#aebcb7" stroke-opacity=".4" d="m1110 246 9-4 7 4m49-18 9-3 7 4m-137 43 7-2 5 3"/>
+</svg>
