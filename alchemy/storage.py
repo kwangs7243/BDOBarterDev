@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from .catalog import AlchemyError, graph, ingredients, integer, load_catalog, validate_catalog
 from .engine import plan_goals
+from .yields import observed_yields
 
 SCHEMA_VERSION = 1
 TABLES = {"inventory": ("item_id", "quantity", "checked_at"), "goals": ("goal_id", "data"),
@@ -82,6 +83,10 @@ class AlchemyStorage:
     def _records(self, db, table):
         return [json.loads(r[0]) for r in db.execute(f"SELECT data FROM {table} ORDER BY rowid")]
 
+    def _yield_statistics(self, db):
+        rows = db.execute("SELECT data FROM jobs WHERE json_extract(data, '$.status')='completed'")
+        return observed_yields(json.loads(row[0]) for row in rows)
+
     def snapshot(self):
         with closing(self.connect()) as db:
             db.execute("BEGIN")
@@ -89,12 +94,12 @@ class AlchemyStorage:
             return {"schema_version": SCHEMA_VERSION, "revision": db.execute("SELECT revision FROM meta").fetchone()[0],
                     "data_version": self.catalog(db)["version"], "goals": goals,
                     "jobs": [json.loads(r[0]) for r in db.execute("SELECT data FROM jobs WHERE json_extract(data,'$.status')='in_progress' ORDER BY rowid")],
-                    "inventory": self._stock(db), "settings": {r[0]: json.loads(r[1]) for r in db.execute("SELECT key,value FROM settings WHERE key!='catalog'")}}
+                    "inventory": self._stock(db), "yield_statistics": self._yield_statistics(db), "settings": {r[0]: json.loads(r[1]) for r in db.execute("SELECT key,value FROM settings WHERE key!='catalog'")}}
 
     def plans(self):
         with closing(self.connect()) as db:
             db.execute("BEGIN")
-            plans = plan_goals(self.catalog(db), self._stock(db), self._records(db, "goals"))
+            plans = plan_goals(self.catalog(db), self._stock(db), self._records(db, "goals"), self._yield_statistics(db))
             jobs = [json.loads(r[0]) for r in db.execute("SELECT data FROM jobs WHERE json_extract(data,'$.status')='in_progress'")]
             for plan in plans:
                 for row in plan["rows"]:
@@ -215,7 +220,7 @@ class AlchemyStorage:
             if any(not isinstance(goal[key], dict) for key in ("choices", "substitutions", "expected_yields")):
                 raise AlchemyError("제작 경로 설정 형식이 잘못됐습니다.")
             graph(catalog, item, goal["choices"], goal["substitutions"])
-            planned = plan_goals(catalog, self._stock(db), [{**goal, "active": True}])[0]
+            planned = plan_goals(catalog, self._stock(db), [{**goal, "active": True}], self._yield_statistics(db))[0]
             if planned["errors"]:
                 raise AlchemyError(" / ".join(planned["errors"]), 409)
             self._put(db, "goals", gid, goal)
@@ -234,7 +239,7 @@ class AlchemyStorage:
                 if stock.get(row["item_id"]) is None or stock[row["item_id"]] < required:
                     raise AlchemyError(f'{items[row["item_id"]]["name"]}: 재고 부족 또는 미확인입니다.', 409, "insufficient_inventory")
             # Only this goal may spend its reserved stock. Unassigned work cannot spend other goals' reservations.
-            plans = plan_goals(catalog, stock, self._records(db, "goals"))
+            plans = plan_goals(catalog, stock, self._records(db, "goals"), self._yield_statistics(db))
             goal_id = p.get("goal_id")
             if goal_id is not None:
                 target = next((g for g in self._records(db, "goals") if g["goal_id"] == goal_id), None)
@@ -246,7 +251,7 @@ class AlchemyStorage:
                 target["substitutions"] = {**target["substitutions"], **substitutions}
                 graph(catalog, target["item_id"], target["choices"], target["substitutions"])
                 self._put(db, "goals", goal_id, target)
-                plans = plan_goals(catalog, stock, self._records(db, "goals"))
+                plans = plan_goals(catalog, stock, self._records(db, "goals"), self._yield_statistics(db))
             reserved = {}
             for plan in plans:
                 if plan["goal_id"] != goal_id:

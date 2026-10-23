@@ -6,6 +6,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from .catalog import AlchemyError, graph, validate_catalog
 from .storage import AlchemyStorage
+from .yields import recipe_key
 
 alchemy_api = Blueprint("alchemy_api", __name__, url_prefix="/api/alchemy")
 
@@ -80,7 +81,10 @@ def recipes(item_id):
         for v in r["inputs"]:
             ids.add(v["item_id"])
             ids.update(a["item_id"] for a in v.get("alternatives", []))
-    return {"item": items[item_id], "recipes": options, "items": {i: items[i] for i in ids}, "errors": errors}
+    with closing(store().connect()) as db:
+        statistics = store()._yield_statistics(db)
+    return {"item": items[item_id], "recipes": options, "items": {i: items[i] for i in ids}, "errors": errors,
+            "yield_history": {r["recipe_id"]: statistics.get(recipe_key(r)) for r in options}}
 
 
 @alchemy_api.get("/plans")

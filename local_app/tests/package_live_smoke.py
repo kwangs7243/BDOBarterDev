@@ -89,9 +89,15 @@ def exercise_alchemy():
     assert request("/api/alchemy/mutations/finish", finish) == result
     state = request("/api/alchemy/state")
     assert state["inventory"][ids["소금"]] == 17 and state["inventory"][ids["맑은 액체 시약"]] == 7
+    learned = state["yield_statistics"]
+    observed = next(v for v in learned.values() if v["recipe_id"] == recipe["recipe_id"])
+    assert (observed["total_calls"], observed["total_output"], observed["jobs"]) == (3, 7, 1)
     goal = change("goal", item_id=ids["조화의 영약"], quantity=25, mode="held", priority=0,
                   assume_unknown_zero=True)["goal"]
-    assert request("/api/alchemy/plans")["plans"][0]["goal_id"] == goal["goal_id"]
+    plan = request("/api/alchemy/plans")["plans"][0]
+    assert plan["goal_id"] == goal["goal_id"]
+    learned_row = next(row for row in plan["rows"] if row["item_id"] == recipe["output_item_id"])
+    assert learned_row["yield_source"] == "history" and learned_row["expected_yield"] == 7 / 3
     backup = request("/api/alchemy/backup")
     assert backup["format"] == "bdo-alchemy-backup"
     change("inventory", changes=[{"item_id": ids["소금"], "quantity": 0}])
@@ -99,6 +105,7 @@ def exercise_alchemy():
     assert restored["previous_backup_id"]
     state = request("/api/alchemy/state")
     assert state["inventory"][ids["소금"]] == 17 and state["goals"][0]["goal_id"] == goal["goal_id"]
+    assert state["yield_statistics"] == learned
     return state
 
 
@@ -217,7 +224,7 @@ def main():
             with closing(sqlite3.connect(databases[0])) as connection:
                 assert list(connection.iterdump()) == persisted_feedback
             report = {"ok": True, "runtime": runtime, "images": 16, "rows": 80, "numeric": numeric,
-                      "suitePortal": True, "alchemyActualCrafting": True, "alchemyDuplicateFinish": True,
+                      "suitePortal": True, "alchemyActualCrafting": True, "alchemyYieldLearning": True, "alchemyDuplicateFinish": True,
                       "alchemyBackupRestore": True, "alchemyRestartPersistence": True,
                       "intermediateProgressObserved": True, "progressSamples": len(observed_progress),
                       "correctedFields": [{name: field["corrected"] for name, field in row["fields"].items()} for row in result["rows"]],

@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import math
 from .catalog import AlchemyError, MAX_QUANTITY, graph, ingredients, integer
+from .yields import recipe_key
 
 
-def plan_goals(catalog, inventory, goals):
+def plan_goals(catalog, inventory, goals, yield_statistics=None):
+    yield_statistics = yield_statistics or {}
     pool = dict(inventory)
     results = []
     for goal in sorted((g for g in goals if g.get("active", True)), key=lambda g: (g.get("priority", 0), g["goal_id"])):
@@ -48,17 +50,31 @@ def plan_goals(catalog, inventory, goals):
                         result["errors"].append(f'{row["name"]}: 레시피 검증 필요')
                     else:
                         output = recipe["output_quantity"]
+                        consumed = ingredients(recipe, goal.get("substitutions"))
+                        observed = yield_statistics.get(recipe_key(recipe, consumed))
+                        source = "fixed" if recipe["yield_type"] == "fixed" else "minimum"
                         expectation = goal.get("expected_yields", {}).get(recipe["recipe_id"])
+                        if recipe["yield_type"] != "fixed" and expectation is None and observed:
+                            output = observed["average"]
+                            source = "history"
+                        row.update(yield_source=source, yield_history=observed, expected_yield=output,
+                                   estimate=source != "fixed")
+                        if output == 0 and expectation is None:
+                            row["status"] = "yield_unknown"
+                            result["rows"].append(row)
+                            continue
                         if expectation is not None:
                             if type(expectation) not in (int, float) or not math.isfinite(expectation) or expectation < output or expectation > MAX_QUANTITY:
                                 raise AlchemyError("기대 수율은 보장 산출 이상인 유한한 수여야 합니다.")
                             if recipe["yield_type"] == "fixed" and expectation != output:
                                 raise AlchemyError("고정 제작식의 산출 단위는 변경할 수 없습니다.")
                             output = expectation
-                        calls = math.ceil(missing / output)
+                            source = "manual"
+                        calls = ((missing * observed["total_calls"] + observed["total_output"] - 1) // observed["total_output"]
+                                 if source == "history" else math.ceil(missing / output))
                         integer(calls, "제작 횟수", minimum=1)
                         row.update(calls=calls, planned_output=calls * output, surplus=calls * output - missing,
-                                   expected_yield=output, estimate=expectation is not None)
+                                   expected_yield=output, estimate=source != "fixed", yield_source=source)
                         row["inputs"] = [{**v, "quantity": integer(v["quantity"] * calls, "제작 재료 합계")}
                                          for v in ingredients(recipe, goal.get("substitutions"))]
                         row["ready"] = all(goal_pool.get(v["item_id"]) is not None and goal_pool[v["item_id"]] >= v["quantity"] for v in row["inputs"])
