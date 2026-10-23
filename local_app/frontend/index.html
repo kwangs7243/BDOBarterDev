@@ -1,109 +1,44 @@
 <!doctype html>
 <html lang="ko">
   <head>
-    <link rel="icon" type="image/svg+xml" href="/portal-assets/bdo.svg" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BDO · 모험가의 작업실</title>
+    <title>BDO Suite</title>
+    <link rel="icon" type="image/svg+xml" href="/portal-assets/bdo.svg" />
     <link rel="stylesheet" href="/portal-assets/portal.css" />
   </head>
   <body>
-    <a class="skip-link" href="#workspaces">작업실 선택으로 이동</a>
     <header class="site-header">
       <a class="brand" href="/" aria-label="BDO 통합 메인"
-        ><span class="brand-emblem" aria-hidden="true">◈</span
-        ><span>BDO<small>모험가의 작업실</small></span></a
+        ><span aria-hidden="true">◈</span> BDO Suite</a
       >
-      <nav aria-label="프로그램 선택">
-        <a href="/barter/">물물교환</a><a href="/alchemy/">연금</a>
-      </nav>
-      <span class="header-note">나의 검은사막 생활</span>
     </header>
-    <main>
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-content">
-          <p class="eyebrow">THE ADVENTURE CONTINUES</p>
-          <h1 id="hero-title">모험의 다음 장을<br />준비하세요.</h1>
-          <p class="hero-description">
-            바다를 향한 항해부터, 새로운 연금의 발견까지.<br />당신의 생활을
-            위한 하나의 작업실.
-          </p>
-          <a class="hero-link" href="#workspaces"
-            >작업실 선택 <span aria-hidden="true">↓</span></a
+    <main id="workspaces">
+      <h1>프로그램 선택</h1>
+      <div class="workspace-grid">
+        <a class="workspace-card barter-card" href="/barter/">
+          <svg viewBox="0 0 120 100" fill="none" aria-hidden="true">
+            <path
+              d="M60 12v55M58 16 29 57h29ZM66 28l25 29H66ZM22 68h78L86 85H38ZM13 92q12-8 24 0t24 0t24 0t24 0"
+            />
+          </svg>
+          <h2>물물교환</h2>
+          <span class="card-action"
+            >열기 <span aria-hidden="true">↗</span></span
           >
-        </div>
-        <span class="hero-caption" aria-hidden="true"
-          >BLACK DESERT · LIFE WORKSPACE</span
-        >
-      </section>
-      <section
-        class="workspaces"
-        id="workspaces"
-        aria-labelledby="workspaces-title"
-      >
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">CHOOSE YOUR WORKSPACE</p>
-            <h2 id="workspaces-title">오늘은 어떤 모험을 떠나시나요?</h2>
-          </div>
-          <p>필요한 작업실을 선택하세요.</p>
-        </div>
-        <div class="workspace-grid">
-          <a class="workspace-card barter-card" href="/barter/">
-            <span class="card-number" aria-hidden="true">01 / BARTER</span>
-            <svg
-              class="workspace-symbol"
-              viewBox="0 0 120 100"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M60 12v55M58 16 29 57h29ZM66 28l25 29H66ZM22 68h78L86 85H38ZM13 92q12-8 24 0t24 0t24 0t24 0"
-              />
-            </svg>
-            <div class="card-content">
-              <span class="card-state">항해 작업실</span>
-              <h3>물물교환</h3>
-              <p>
-                현재 회차와 창고 재고를 확인하고<br />다음 출항과 교환 동선을
-                준비하세요.
-              </p>
-              <span class="card-action"
-                >물교 시작하기 <span aria-hidden="true">↗</span></span
-              >
-            </div>
-          </a>
-          <a class="workspace-card alchemy-card" href="/alchemy/">
-            <span class="card-number" aria-hidden="true">02 / ALCHEMY</span>
-            <svg
-              class="workspace-symbol"
-              viewBox="0 0 120 100"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M46 12h28M50 12v28L28 75q-7 14 10 14h44q17 0 10-14L70 40V12M38 64h44M48 74h1M66 80h1M62 53h1"
-              />
-              <circle cx="60" cy="27" r="2" />
-            </svg>
-            <div class="card-content">
-              <span class="card-state">제작 작업실</span>
-              <h3>연금</h3>
-              <p>
-                재료와 제작 목표를 준비하고<br />실제 산출량으로 제작 기록을
-                남기세요.
-              </p>
-              <span class="card-action"
-                >연금 작업실 열기 <span aria-hidden="true">↗</span></span
-              >
-            </div>
-          </a>
-        </div>
-      </section>
+        </a>
+        <a class="workspace-card alchemy-card" href="/alchemy/">
+          <svg viewBox="0 0 120 100" fill="none" aria-hidden="true">
+            <path
+              d="M46 12h28M50 12v28L28 75q-7 14 10 14h44q17 0 10-14L70 40V12M38 64h44M48 74h1M66 80h1M62 53h1"
+            />
+          </svg>
+          <h2>연금</h2>
+          <span class="card-action"
+            >열기 <span aria-hidden="true">↗</span></span
+          >
+        </a>
+      </div>
     </main>
-    <footer class="site-footer">
-      <span>BDO · 모험가의 작업실</span
-      ><span>항해와 발견, 그리고 당신의 기록.</span>
-    </footer>
   </body>
 </html>

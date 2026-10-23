@@ -1,196 +1,58 @@
 :root {
   color-scheme: dark;
-  --ink: #eae4d8;
-  --muted: #a7aaa8;
-  --gold: #c5ab75;
-  --line: #d5c7a62b;
-  --surface: #11191c;
   font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+  color: #eae4d8;
   background: #0c1215;
-  color: var(--ink);
-  scroll-behavior: smooth;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
+  min-height: 100svh;
+  background:
+    linear-gradient(#0c1215cc, #0c1215f5),
+    url("/portal-assets/horizon.svg") center/cover fixed;
 }
 a {
   color: inherit;
   text-decoration: none;
 }
 a:focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid #c5ab75;
   outline-offset: 6px;
 }
-svg {
-  stroke: currentColor;
-  stroke-width: 1.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.skip-link {
-  position: absolute;
-  top: -100px;
-  left: 24px;
-  z-index: 5;
-  background: #111;
-  padding: 16px;
-}
-.skip-link:focus {
-  top: 12px;
-}
 .site-header {
-  height: 94px;
-  padding: 0 5vw;
+  height: 88px;
+  padding: 0 6vw;
   display: flex;
   align-items: center;
-  gap: 64px;
-  border-bottom: 1px solid var(--line);
-  position: relative;
-  z-index: 1;
-  background: #0a1115;
+  border-bottom: 1px solid #d5c7a625;
+  background: #0a1115dd;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-  letter-spacing: 0.16em;
+  gap: 16px;
   font:
-    27px Georgia,
+    26px Georgia,
     serif;
+  letter-spacing: 0.08em;
 }
-.brand-emblem {
-  color: var(--gold);
-  font-size: 39px;
+.brand > span {
+  color: #c5ab75;
+  font-size: 35px;
 }
-.brand small {
-  display: block;
-  margin-top: 5px;
-  font:
-    10px "Malgun Gothic",
-    sans-serif;
-  letter-spacing: 0.14em;
-  color: var(--muted);
-}
-.site-header nav {
-  display: flex;
-  gap: 44px;
-  font-size: 14px;
-}
-.site-header nav a {
-  padding: 16px 0;
-}
-.site-header nav a:hover {
-  color: var(--gold);
-}
-.header-note {
-  margin-left: auto;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-}
-.hero {
-  min-height: 530px;
-  height: 55vh;
-  max-height: 730px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 58px 9vw;
-  background:
-    linear-gradient(90deg, #0b1319ee 0%, #0b13199c 42%, #0b131922 100%),
-    url("/portal-assets/horizon.svg") center 65% / cover;
-  overflow: hidden;
-}
-.hero:after {
-  content: "";
-  position: absolute;
-  inset: auto 0 0;
-  height: 130px;
-  background: linear-gradient(transparent, #0c1215);
-  pointer-events: none;
-}
-.hero-content {
-  z-index: 1;
-  position: relative;
-}
-.eyebrow {
-  font:
-    11px Georgia,
-    serif;
-  letter-spacing: 0.24em;
-  color: var(--gold);
-  margin: 0 0 22px;
+main {
+  width: min(960px, 88vw);
+  margin: 0 auto;
+  padding: clamp(64px, 12vh, 130px) 0 64px;
 }
 h1 {
-  font-family: "Batang", "바탕", Georgia, serif;
-  font-size: clamp(38px, 3.7vw, 64px);
+  margin: 0 0 28px;
+  font-size: 15px;
   font-weight: 400;
-  line-height: 1.45;
-  letter-spacing: -0.05em;
-  margin: 0 0 22px;
-}
-.hero-description {
-  color: #b9c1c2;
-  font-size: 14px;
-  line-height: 1.95;
-  word-break: keep-all;
-}
-.hero-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 48px;
-  margin-top: 22px;
-  padding: 14px 0;
-  border-bottom: 1px solid #bda36b99;
-  font-size: 13px;
-  color: #ddcda9;
-}
-.hero-link span {
-  font-size: 19px;
-}
-.hero-caption {
-  position: absolute;
-  right: 5vw;
-  bottom: 56px;
-  color: #bdc6c480;
-  font:
-    10px Georgia,
-    serif;
-  letter-spacing: 0.22em;
-}
-.workspaces {
-  max-width: 1400px;
-  padding: 60px 6vw 80px;
-  margin: auto;
-  scroll-margin-top: 24px;
-}
-.section-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 30px;
-}
-.section-heading .eyebrow {
-  font-size: 10px;
-  margin-bottom: 13px;
-}
-h2 {
-  font:
-    400 clamp(21px, 2vw, 29px) "Batang",
-    "바탕",
-    serif;
-  letter-spacing: -0.04em;
-  margin: 0;
-}
-.section-heading > p {
-  color: var(--muted);
-  font-size: 12px;
-  margin: 0 0 3px;
+  color: #c5c2b8;
 }
 .workspace-grid {
   display: grid;
@@ -198,153 +60,82 @@ h2 {
   gap: 24px;
 }
 .workspace-card {
-  min-height: 326px;
-  padding: 28px 32px;
+  min-height: 280px;
   position: relative;
-  border: 1px solid var(--line);
   overflow: hidden;
+  padding: 38px 32px 28px;
+  border: 1px solid #d5c7a62b;
+  background:
+    radial-gradient(ellipse at 95% 15%, #315b6c60, transparent 75%), #121e25;
   transition:
     border-color 0.2s,
     transform 0.2s;
-  background:
-    radial-gradient(ellipse at 95% 15%, #315b6c60, transparent 65%), #121e25;
 }
 .alchemy-card {
   background:
-    radial-gradient(ellipse at 95% 15%, #58705b45, transparent 65%), #19201f;
+    radial-gradient(ellipse at 95% 15%, #58705b45, transparent 75%), #19201f;
 }
 .workspace-card:hover {
   border-color: #c5ab75a6;
   transform: translateY(-3px);
 }
-.card-number {
+.workspace-card svg {
+  width: 132px;
+  height: 110px;
+  display: block;
+  margin: 0 0 22px auto;
+  stroke: #b8c1b05c;
+  stroke-width: 1;
+}
+h2 {
+  margin: 0 0 22px;
   font:
-    10px Georgia,
-    serif;
-  letter-spacing: 0.17em;
-  color: #9baeb2;
-}
-.workspace-symbol {
-  width: 155px;
-  height: 140px;
-  position: absolute;
-  right: 30px;
-  top: 49px;
-  color: #9ebac145;
-  stroke-width: 0.8;
-}
-.alchemy-card .workspace-symbol {
-  color: #b2ba9245;
-}
-.card-content {
-  position: relative;
-  margin-top: 34px;
-}
-.card-state {
-  font-size: 11px;
-  color: var(--gold);
-  letter-spacing: 0.05em;
-}
-h3 {
-  font:
-    400 32px "Batang",
+    400 30px "Batang",
     "바탕",
+    Georgia,
     serif;
-  letter-spacing: -0.04em;
-  margin: 12px 0 14px;
-}
-.card-content p {
-  font-size: 12px;
-  color: #aab7bb;
-  line-height: 1.9;
-  margin: 0 0 26px;
 }
 .card-action {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  border-top: 1px solid var(--line);
-  padding-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #d5c7a62b;
   color: #dfd5c0;
+  font-size: 12px;
 }
 .card-action > span {
-  font-size: 20px;
-  font-family: serif;
+  font: 20px serif;
 }
-.site-footer {
-  border-top: 1px solid var(--line);
-  padding: 28px 6vw;
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  color: #7c8a8f;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-}
-@media (min-width: 1800px) {
-  .workspaces {
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
-@media (max-width: 720px) {
+@media (max-width: 600px) {
   .site-header {
-    height: 80px;
-    padding: 0 6vw;
-    gap: 20px;
-    justify-content: space-between;
+    height: 72px;
   }
   .brand {
     font-size: 23px;
   }
-  .brand-emblem {
-    font-size: 30px;
-  }
-  .site-header nav {
-    gap: 22px;
-    font-size: 12px;
-  }
-  .header-note {
-    display: none;
-  }
-  .hero {
-    min-height: 490px;
-    padding: 50px 8vw;
-    background-position: 60% center;
-  }
-  .hero-caption {
-    display: none;
-  }
-  .workspaces {
-    padding: 38px 6vw 48px;
-  }
-  .section-heading {
-    display: block;
-  }
-  .section-heading > p {
-    margin-top: 14px;
+  main {
+    padding-top: 40px;
   }
   .workspace-grid {
     grid-template-columns: 1fr;
     gap: 18px;
   }
   .workspace-card {
-    min-height: 305px;
-    padding: 24px;
+    min-height: 220px;
+    padding: 26px;
   }
-  .workspace-symbol {
-    right: 22px;
+  .workspace-card svg {
+    position: absolute;
+    right: 24px;
+    top: 18px;
+    width: 90px;
+    height: 85px;
   }
-  .site-footer {
-    flex-direction: column;
-    gap: 10px;
+  h2 {
+    margin: 80px 0 20px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    scroll-behavior: auto;
-  }
   .workspace-card {
     transition: none;
   }

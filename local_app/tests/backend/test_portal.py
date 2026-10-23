@@ -12,7 +12,7 @@ class PortalTests(unittest.TestCase):
             client = create_app(database, testing=True).test_client()
             before = client.get("/api/bootstrap").get_json()
             for path, marker in (
-                ("/", "모험의 다음 장을"),
+                ("/", "프로그램 선택"),
                 ("/barter/", 'id="trade-session-panel"'),
                 ("/barter", 'id="trade-session-panel"'),
                 ("/alchemy/", "제작 작업실"),

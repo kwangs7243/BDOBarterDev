@@ -38,7 +38,7 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   page.on('response', response => {if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`);});
   await page.goto(base);
-  await assert.doesNotReject(() => page.getByRole('heading', {name: '모험의 다음 장을 준비하세요.'}).waitFor());
+  await assert.doesNotReject(() => page.getByRole('heading', {name: '프로그램 선택'}).waitFor());
   await page.screenshot({path: join(output, 'portal-desktop.png'), fullPage: true});
   await page.locator('.barter-card').click();
   await page.waitForFunction(() => document.querySelector('#app-content')?.getAttribute('aria-busy') === 'false');
