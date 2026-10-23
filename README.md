@@ -1,8 +1,12 @@
-# BDO 물교 도우미
+# BDO Suite — 물교·연금 작업실
+
+하나의 Windows 로컬 서버에서 물교와 연금을 선택합니다. `/`는 통합 메인, `/barter/`는 물교, `/alchemy/`는 연금입니다. 별도 프런트엔드 빌드나 외부 서비스 연결이 필요하지 않습니다.
+
+연금은 공통 재고, 목표별 재료 예약, 하위 제작 트리, 제작 시작 시 재료 차감, 실제 산출량 추가, 부분 완료·취소·정정, 기록·백업을 제공합니다. 사용법과 출처·검증 범위는 [연금 안내](docs/ALCHEMY.md)에 있습니다.
 
 검은사막 물물교환을 위한 **Windows 로컬 데스크톱 도우미**입니다. 현재 회차와 창고 재고를 관리하고, 교환 순서·적재·출항 브리핑과 지도 동선을 계산합니다. 서버는 PC의 `127.0.0.1:18765`에서 실행됩니다.
 
-## 제공 기능
+## 물교 기능
 
 - 창을 선택하고 저장한 영역에서 수동 **F10 캡처**. 물교·창고 영역을 각각 보관하고 재시작 후 복원합니다.
 - 물교 목록의 섬·품목·수량·횟수를 로컬에서 인식하고, 확인이 필요한 값은 원본 이미지와 함께 검수합니다.
@@ -24,18 +28,22 @@ py -3.12 -m venv .venv
 
 물교 OCR은 추가 의존성과 검증된 ONNX 모델이 필요합니다. 준비 방법과 기존 설치 환경 재사용은 [개발 안내](docs/DEVELOPMENT.md), Windows 실행 파일 빌드는 [패키징 안내](docs/PACKAGING.md)를 참고하세요. 개발 실행도 기본적으로 실제 사용자 AppData를 사용하므로 자동 검증은 별도 임시 DB에서 수행합니다.
 
-기존에 설치한 `app/BDO 물교 실행.exe`와 바로가기는 계속 사용할 수 있습니다. 이 저장소 정리는 설치 앱이나 사용자 데이터를 이동하지 않습니다.
+일반 실행은 루트의 `BDO 실행.lnk` 또는 `app/BDO 실행.exe`를 사용합니다. 준비 화면에서 로컬 서비스를 시작한 뒤 통합 메인이 자동으로 열립니다. 실행 창의 `통합 앱 열기`로 다시 열고 `서버 종료`로 저장·캡처를 마무리한 뒤 종료합니다. 브라우저만 닫으면 서버는 유지됩니다. 개발 환경·빌드 산출물과 운영 데이터는 Git 소스와 분리합니다.
 
 ## 프로젝트 구조
 
 ```text
-local_app/                 앱 소스
-  backend/                 Flask API, SQLite 저장, 인식 worker 연결
-  frontend/                화면과 스케줄·완료·지도 계산
-  recognition_data/        검증된 물교 정답 사전·창고 보정 자료
-  tools/                   제품에서 사용하는 OCR worker와 보정 도구
+local_app/                 공통 실행기·Flask 서버·native 캡처
+  frontend/                통합 메인
+  backend/app.py           공통 서버 조립, origin/종료 보호
   packaging/               PyInstaller 빌드
   tests/                   자동 회귀와 고정 입력, 별도 실사 도구
+barter/                    물교 전용 API·화면·인식 서비스·보정 자료
+alchemy/                   연금 앱
+  data/catalog.json        버전·출처를 가진 품목·제작식
+  engine.py                순수 DAG 계산과 목표별 예약
+  storage.py               독립 SQLite·원장·제작 트랜잭션
+  frontend/                연금 전용 화면
 reference/                 창고 품목 70종과 아이콘
 tools/                    창고 판독기와 개발 도구
   warehouse_patch/         창고 인식·원본 숫자 표본 생성
@@ -51,6 +59,8 @@ package.json               Node 테스트 명령·Playwright 개발 의존성
 ## 문서와 검증
 
 - [사용 안내](docs/USAGE.md): 캡처·검수·회차 적용·재고와 데이터 위치
+- [연금 안내](docs/ALCHEMY.md): 제작·재고·복구·데이터 출처
+- [BDO Suite 구현 지시서](docs/BDO-SUITE-SPEC.md): 사용자 제공 원문
 - [개발 안내](docs/DEVELOPMENT.md): 환경 구성과 런타임 리소스
 - [구조와 데이터 흐름](docs/ARCHITECTURE.md)
 - [현재 제품 계약](docs/CURRENT-PRODUCT-CONTRACT.md)

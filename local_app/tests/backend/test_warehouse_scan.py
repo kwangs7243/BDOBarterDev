@@ -13,14 +13,14 @@ from unittest.mock import patch
 from PIL import Image
 
 from local_app.backend.app import PORT, create_app
-from local_app.backend.services import warehouse_scan
-from local_app.backend.storage import load_catalog
+from barter.backend.services import warehouse_scan
+from barter.backend.storage import load_catalog
 from tools.warehouse_patch.warehouse_patch import convert
 
 
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = ROOT / "reference" / "barter_items.json"
-TEMPLATES = ROOT / "local_app/recognition_data/warehouse-templates.npz"
+TEMPLATES = ROOT / "barter/recognition_data/warehouse-templates.npz"
 if not TEMPLATES.is_file():
     TEMPLATES = ROOT / "recognition-local/models/warehouse/quantity_templates.npz"
 if not TEMPLATES.is_file():

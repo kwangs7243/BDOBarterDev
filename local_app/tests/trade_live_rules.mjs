@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { applyLiveTradeRules, prepareLiveTradeRows, getItemTier, processParsedTrades, compareTradeOrder } from "../frontend/js/domain/trade-import.js";
-const catalog = JSON.parse(await readFile(new URL("../frontend/data/trade-catalog.json", import.meta.url), "utf8"));
+import { applyLiveTradeRules, prepareLiveTradeRows, getItemTier, processParsedTrades, compareTradeOrder } from "../../barter/frontend/js/domain/trade-import.js";
+const catalog = JSON.parse(await readFile(new URL("../../barter/frontend/data/trade-catalog.json", import.meta.url), "utf8"));
 assert.equal(getItemTier("까마귀 주화", catalog.masterData, ["추가 품목", ...catalog.specialItems]), "coin");
 const fields = (fromItem, toItem, reqAmount = null, amount = null) => Object.fromEntries(Object.entries({island:"나르보 섬", fromItem, toItem, reqAmount, count:1, yield:amount}).map(([name, corrected]) => [name, {corrected, rawOCR:String(corrected ?? ""), reviewRequired:corrected === null}]));
 for (const [source, destination, amount] of [[1,2,null],[2,3,null],[3,4,2],[4,5,1],[5,6,1],[6,7,1]]) {

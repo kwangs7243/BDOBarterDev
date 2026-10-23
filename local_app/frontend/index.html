@@ -1,187 +1,109 @@
 <!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BDO 물교</title>
-  <link rel="stylesheet" href="/assets/css/app.css">
-  <link rel="stylesheet" href="/assets/css/warehouse-scan.css">
-  <link rel="stylesheet" href="/assets/css/trade-roi.css">
-  <link rel="stylesheet" href="/assets/css/trade-recognition.css">
-  <link rel="stylesheet" href="/assets/css/patch-review.css">
-  <link rel="stylesheet" href="/assets/css/trade-session.css">
-  <link rel="stylesheet" href="/assets/css/schedule.css">
-  <link rel="stylesheet" href="/assets/css/map-viewer.css" data-map-viewer>
-  <link rel="stylesheet" href="/assets/css/workspace.css">
-</head>
-<body>
-  <a class="skip-link" href="#app-content">작업 영역으로 이동</a>
-  <aside class="app-sidebar" aria-label="주 메뉴">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M16 3 28 10v12L16 29 4 22V10Z"/><path d="m21 10-3 9-7 3 3-9Z"/><path d="m14 13 4 6"/></svg></span><div><h1>BDO 물교</h1><span>항해 작업실</span></div></div>
-    <p class="nav-caption">작업 공간</p>
-    <nav class="workspace-nav" aria-label="작업 화면">
-      <button type="button" data-workspace-view="session" aria-current="page"><svg class="nav-icon" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 7h7M7 10h7M7 13h4"/></svg>현재 회차</button>
-      <button type="button" data-open-tool="open-schedule"><svg class="nav-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m3 10 14-7-7 14-1-6Z"/></svg>출항 브리핑</button>
-      <button type="button" data-workspace-view="inventory"><svg class="nav-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m3 6 7-3 7 3v9l-7 3-7-3ZM3 6l7 3 7-3M10 9v9"/></svg>창고 재고</button>
-      <button type="button" data-open-tool="open-map-speed"><svg class="nav-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="M10 1v4m0 10v4M1 10h4m10 0h4m-3-8-2 5-5 2 2-5Z"/></svg>지도·항로</button>
-    </nav>
-    <div class="sidebar-capture"><p class="nav-caption">화면 가져오기</p><button type="button" data-open-tool="open-trade-capture">물교 캡처 <kbd>F10</kbd></button><button type="button" data-open-tool="open-warehouse-scan">창고 스캔</button><p>게임에서 캡처한 뒤<br>필요한 값만 확인하세요.</p></div>
-    <div class="sidebar-footer"><button type="button" data-open-tool="open-settings">선박·교섭력 설정</button><span>로컬 저장 · 수동 적용</span></div>
-  </aside>
-  <header class="app-header">
-    <div class="workspace-location"><span>항해 작업실</span><span aria-hidden="true">/</span><strong id="workspace-title">현재 회차</strong></div>
-    <span id="runtime-status" role="status">저장 상태를 불러오는 중입니다.</span>
-    <div class="header-utilities">
-      <button id="open-settings" type="button">선박·교섭력</button>
-      <details class="header-tools">
-        <summary>도구</summary>
-        <div class="header-tool-actions" aria-label="보조 도구">
-          <button id="open-tuning" type="button">계산 튜닝</button>
-          <button id="open-map-tools" type="button">지도·항로</button>
-          <button id="reload-state" type="button" title="영구 설정 다시 읽기" aria-label="영구 설정 다시 읽기">설정 다시 읽기</button>
+  <head>
+    <link rel="icon" type="image/svg+xml" href="/portal-assets/bdo.svg" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BDO · 모험가의 작업실</title>
+    <link rel="stylesheet" href="/portal-assets/portal.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#workspaces">작업실 선택으로 이동</a>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="BDO 통합 메인"
+        ><span class="brand-emblem" aria-hidden="true">◈</span
+        ><span>BDO<small>모험가의 작업실</small></span></a
+      >
+      <nav aria-label="프로그램 선택">
+        <a href="/barter/">물물교환</a><a href="/alchemy/">연금</a>
+      </nav>
+      <span class="header-note">나의 검은사막 생활</span>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <p class="eyebrow">THE ADVENTURE CONTINUES</p>
+          <h1 id="hero-title">모험의 다음 장을<br />준비하세요.</h1>
+          <p class="hero-description">
+            바다를 향한 항해부터, 새로운 연금의 발견까지.<br />당신의 생활을
+            위한 하나의 작업실.
+          </p>
+          <a class="hero-link" href="#workspaces"
+            >작업실 선택 <span aria-hidden="true">↓</span></a
+          >
         </div>
-      </details>
-    </div>
-  </header>
-  <main id="app-content" aria-busy="true" class="workspace" data-view="session" tabindex="-1">
-    <section class="panel session-panel" id="trade-session-panel">
-      <div class="panel-heading session-heading"><div><h2>현재 회차</h2><span id="session-trade-count" class="hint">회차 없음</span></div><div class="session-input-actions"><button id="open-trade-capture" class="primary" type="button">물교 화면 가져오기</button><button id="open-json-import" type="button">JSON 입력</button><button id="add-manual-trade" type="button">행 추가</button><details class="session-management"><summary>회차 관리</summary><div class="session-management-actions"><button id="toggle-all-trades" type="button">전체 비활성</button><button id="reset-session" class="danger" type="button">회차 초기화</button></div></details></div></div>
-      <div class="session-toolbar"><div class="session-budget"><label for="remaining-parley">남은 교섭력</label><input id="remaining-parley" type="number" min="0" step="1"></div><div class="session-plan-actions"><span class="session-action-label">계획</span><button id="open-schedule" class="primary" type="button">스케줄 브리핑</button></div><div class="session-map-actions"><span class="session-action-label">지도</span><button id="open-map-speed" type="button">쾌속 지도</button><button id="open-map-balance" type="button">균형 지도</button></div><span id="trade-import-status" class="status-note" role="status"></span></div>
-      <div class="list-filter-bar"><label for="trade-search">교환 찾기</label><input id="trade-search" type="search" placeholder="섬 또는 품목 검색"><label for="trade-visibility" class="sr-only">교환 상태</label><select id="trade-visibility"><option value="all">모든 교환</option><option value="active">사용 중</option><option value="excluded">제외·삭제됨</option></select><span id="trade-filter-summary" role="status"></span></div>
-      <div id="trade-list-root" class="trade-list-scroll"></div>
-    </section>
-    <section class="panel inventory-panel" id="mainPanel">
-      <div class="panel-heading"><div><h2>창고</h2><span class="hint">현재 재고와 목표 재고</span></div><button id="open-warehouse-scan" type="button">창고 스캔</button></div>
-      <div class="inventory-toolbar"><label class="search-field" for="inventory-search">품목 검색<input id="inventory-search" type="search" placeholder="예: 씨앗 주머니"></label><label class="field" for="inventory-stock-filter">재고 상태<select id="inventory-stock-filter"><option value="all">모든 품목</option><option value="short">목표 미달</option><option value="unknown">미확인</option></select></label><span id="inventory-filter-summary" role="status"></span></div>
-      <div class="inventory-tier-tabs" role="group" aria-label="재고 단계"><button type="button" data-inventory-tier="all" aria-pressed="true">전체</button><button type="button" data-inventory-tier="1" aria-pressed="false">1단</button><button type="button" data-inventory-tier="2" aria-pressed="false">2단</button><button type="button" data-inventory-tier="3" aria-pressed="false">3단</button><button type="button" data-inventory-tier="4" aria-pressed="false">4단</button><button type="button" data-inventory-tier="5" aria-pressed="false">5단</button></div>
-      <p class="inventory-null-hint">빈칸 = 미확인 · 0 = 확인된 0개 · 수량을 수정하면 저장됩니다.</p>
-      <div id="inventory-root"></div>
-      <details class="tier-rule-details"><summary>단계 규칙</summary><div id="tier-rules-root"></div></details>
-    </section>
-  </main>
-
-  <dialog id="settings-dialog" class="app-dialog settings-dialog" aria-labelledby="settings-title">
-    <div class="dialog-titlebar"><div><h2 id="settings-title">선박·교섭력 설정</h2><p class="tool-dialog-context">선박 성능과 교환 비용, 자주 쓰는 설정을 관리합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body settings-sections"><section><h3>선박과 교역 모드</h3><p class="hint">현재 회차의 적재 한도와 항해 속도에 사용합니다.</p><div id="ship-root"></div></section><section><h3>교섭력과 교환 비용</h3><p class="hint">시작 교섭력은 새 회차부터, 교환 비용은 현재 회차에도 적용됩니다.</p><div id="parley-root"></div></section><section><h3>빠른 설정</h3><div id="presets-root"></div></section></div>
-  </dialog>
-
-  <dialog id="json-import-dialog" class="app-dialog small-dialog" aria-labelledby="json-dialog-title">
-    <div class="dialog-titlebar"><h2 id="json-dialog-title">물교 JSON 입력</h2><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body"><label class="field" for="trade-json-input">물교 JSON<textarea id="trade-json-input" class="json-editor" spellcheck="false" placeholder='[{"island":"...","fromItem":"...","toItem":"...","reqAmount":1,"count":1,"yield":1}]'></textarea></label><div class="actions"><button id="apply-new-session" class="primary" type="button">새 회차로 적용</button><button id="append-current-trades" type="button">현재 회차에 추가</button><button type="button" data-close-dialog>취소</button></div><p class="hint">붙여넣은 입력은 적용 후 비웁니다. 오류가 있으면 고친 뒤 다시 시도할 수 있습니다.</p></div>
-  </dialog>
-
-  <dialog id="trade-capture-dialog" class="app-dialog small-dialog trade-capture-dialog" aria-labelledby="trade-capture-title" data-capture-context="trade">
-    <div class="dialog-titlebar"><h2 id="trade-capture-title">물교 화면 가져오기</h2><button type="button" data-close-trade-capture aria-label="닫기">×</button></div>
-    <div class="dialog-body">
-      <ol class="capture-workflow" aria-label="물교 입력 순서"><li><b>1</b> 이미지 준비</li><li><b>2</b> 인식 · 필요한 값 확인</li><li><b>3</b> 회차에 적용</li></ol>
-      <div class="capture-workspace"><section class="capture-inputs" aria-label="인식할 이미지 준비">
-      <details class="trade-roi-panel capture-browser-options" aria-label="물교 화면 캡처 영역"><summary>다른 방법 · 화면 공유로 캡처</summary>
-        <section id="screen-capture-session" class="screen-capture-session" aria-label="화면 공유 연결">
-          <span id="screen-capture-status" role="status" aria-live="polite">화면 연결 안 됨</span>
-          <div class="screen-capture-actions"><button id="connect-screen-capture" type="button">화면 연결</button><button id="disconnect-screen-capture" type="button" disabled>연결 끊기</button></div>
-        </section>
-        <p class="capture-status" data-role="trade-preview-status" role="status" aria-live="polite">화면이 연결되지 않았습니다. 위의 ‘화면 연결’을 먼저 사용하세요.</p>
-        <div class="trade-preview-stage" data-role="trade-preview-stage">
-          <video data-role="trade-preview-video" muted autoplay playsinline aria-label="연결된 화면 미리보기"></video>
-          <div class="trade-roi-box" data-role="trade-roi" role="group" aria-label="물교 캡처 영역" hidden>
-            <button type="button" class="trade-roi-move" data-roi-move aria-label="캡처 영역 이동"></button>
-            <button type="button" class="trade-roi-handle n" data-roi-handle="n" aria-label="위쪽 크기 조절"></button>
-            <button type="button" class="trade-roi-handle s" data-roi-handle="s" aria-label="아래쪽 크기 조절"></button>
-            <button type="button" class="trade-roi-handle e" data-roi-handle="e" aria-label="오른쪽 크기 조절"></button>
-            <button type="button" class="trade-roi-handle w" data-roi-handle="w" aria-label="왼쪽 크기 조절"></button>
-            <button type="button" class="trade-roi-handle ne" data-roi-handle="ne" aria-label="오른쪽 위 크기 조절"></button>
-            <button type="button" class="trade-roi-handle nw" data-roi-handle="nw" aria-label="왼쪽 위 크기 조절"></button>
-            <button type="button" class="trade-roi-handle se" data-roi-handle="se" aria-label="오른쪽 아래 크기 조절"></button>
-            <button type="button" class="trade-roi-handle sw" data-roi-handle="sw" aria-label="왼쪽 아래 크기 조절"></button>
+        <span class="hero-caption" aria-hidden="true"
+          >BLACK DESERT · LIFE WORKSPACE</span
+        >
+      </section>
+      <section
+        class="workspaces"
+        id="workspaces"
+        aria-labelledby="workspaces-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CHOOSE YOUR WORKSPACE</p>
+            <h2 id="workspaces-title">오늘은 어떤 모험을 떠나시나요?</h2>
           </div>
+          <p>필요한 작업실을 선택하세요.</p>
         </div>
-        <div class="actions trade-roi-actions">
-          <button type="button" data-action="capture-trade-roi" disabled>선택 영역 캡처</button>
-          <button type="button" data-action="reset-trade-roi">영역 초기화</button>
+        <div class="workspace-grid">
+          <a class="workspace-card barter-card" href="/barter/">
+            <span class="card-number" aria-hidden="true">01 / BARTER</span>
+            <svg
+              class="workspace-symbol"
+              viewBox="0 0 120 100"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M60 12v55M58 16 29 57h29ZM66 28l25 29H66ZM22 68h78L86 85H38ZM13 92q12-8 24 0t24 0t24 0t24 0"
+              />
+            </svg>
+            <div class="card-content">
+              <span class="card-state">항해 작업실</span>
+              <h3>물물교환</h3>
+              <p>
+                현재 회차와 창고 재고를 확인하고<br />다음 출항과 교환 동선을
+                준비하세요.
+              </p>
+              <span class="card-action"
+                >물교 시작하기 <span aria-hidden="true">↗</span></span
+              >
+            </div>
+          </a>
+          <a class="workspace-card alchemy-card" href="/alchemy/">
+            <span class="card-number" aria-hidden="true">02 / ALCHEMY</span>
+            <svg
+              class="workspace-symbol"
+              viewBox="0 0 120 100"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M46 12h28M50 12v28L28 75q-7 14 10 14h44q17 0 10-14L70 40V12M38 64h44M48 74h1M66 80h1M62 53h1"
+              />
+              <circle cx="60" cy="27" r="2" />
+            </svg>
+            <div class="card-content">
+              <span class="card-state">제작 작업실</span>
+              <h3>연금</h3>
+              <p>
+                재료와 제작 목표를 준비하고<br />실제 산출량으로 제작 기록을
+                남기세요.
+              </p>
+              <span class="card-action"
+                >연금 작업실 열기 <span aria-hidden="true">↗</span></span
+              >
+            </div>
+          </a>
         </div>
-      </details>
-      <label class="field" for="trade-capture-files">이미지 파일 선택<input id="trade-capture-files" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" multiple></label>
-      <button type="button" class="capture-paste-target" data-capture-paste-target>붙여넣기 준비 · 이 버튼에 포커스를 두고 Ctrl+V</button>
-      <p class="capture-status" data-role="capture-status" role="status" aria-live="polite"></p>
-      <div class="actions"><button type="button" data-action="clear-trade-queue" disabled>스크린샷 전체삭제</button></div>
-      <ol class="capture-draft-list" data-role="capture-list"></ol>
       </section>
-      <section class="trade-recognition-panel" data-role="trade-recognition" aria-labelledby="trade-recognition-title" aria-busy="false">
-        <div class="trade-recognition-toolbar">
-          <div><h3 id="trade-recognition-title">물교 결과 만들기</h3><p data-role="trade-runtime-status" role="status" aria-live="polite">로컬 인식 엔진 확인 전</p><p class="trade-queue-summary" data-role="trade-queue-summary" aria-live="polite">준비된 이미지 0개</p></div>
-          <button type="button" data-action="recognize-trade" disabled>인식 결과 만들기</button>
-        </div>
-        <p data-role="trade-recognition-status" role="status" aria-live="polite"></p>
-        <div class="trade-recognition-progress" data-role="trade-recognition-progress" hidden>
-          <progress aria-label="물교 인식 진행" max="1"></progress>
-          <span data-role="trade-progress-label" role="status" aria-live="polite"></span>
-        </div>
-        <div class="recognition-empty">
-          <svg class="capture-empty-mark" viewBox="0 0 120 76" fill="none" aria-hidden="true"><rect x="13" y="11" width="94" height="54" rx="4"/><path d="M25 26h12m9 0h48M25 38h12m9 0h34M25 50h12m9 0h41"/><path class="capture-corners" d="M5 23V4h22m66 0h22v19M5 53v19h22m66 0h22V53"/></svg>
-          <p class="empty-eyebrow">이미지에서 교환 목록으로</p><h3>캡처한 교환을 여기서 확인하세요</h3>
-          <p>왼쪽에서 캡처를 시작하거나 이미지 파일을 추가하세요.</p>
-          <ol class="empty-next-steps"><li><kbd>F10</kbd><span>게임에서 캡처<small>캡처 시작 후 사용</small></span></li><li><span class="empty-step-number">→</span><span>인식 결과 만들기<small>확인이 필요한 값만 검수</small></span></li></ol>
-          <p class="empty-alternative">파일 선택 · <kbd>Ctrl</kbd> + <kbd>V</kbd> 붙여넣기도 가능</p>
-        </div>
-        <div data-role="trade-recognition-result" class="trade-recognition-result" hidden></div>
-      </section>
-      </div>
-      <div class="actions"><button type="button" data-close-trade-capture>닫기</button></div>
-    </div>
-  </dialog>
-
-  <dialog id="schedule-dialog" class="app-dialog briefing-dialog" aria-labelledby="briefing-title">
-    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="briefing-title">출항 브리핑</h2><p class="tool-dialog-context">현재 회차 경로와 저장된 스케줄을 확인합니다.</p></div><div class="dialog-actions tool-dialog-actions"><button id="generate-schedule" class="primary" type="button">스케줄 생성 / 다시 계산</button><button type="button" data-close-dialog aria-label="닫기">×</button></div></div>
-    <div class="dialog-body briefing-body">
-      <div class="briefing-toolbar tool-dialog-toolbar">
-        <section class="tool-dialog-group briefing-calculation" aria-label="계산 설정">
-          <label class="brief-config-mode" for="brief-session-mode">현재 회차 교역 모드<select id="brief-session-mode"></select></label>
-          <div class="brief-mode-tabs" role="tablist" aria-label="브리핑 보기"><button type="button" role="tab" aria-selected="false" data-brief-mode="speed">⚡ 쾌속</button><button type="button" role="tab" aria-selected="false" data-brief-mode="balance">⚖️ 균형</button><button type="button" role="tab" aria-selected="true" data-brief-mode="both">둘 다</button></div>
-          <p id="schedule-status" class="status-note tool-dialog-status" role="status" aria-live="polite"></p>
-        </section>
-        <section class="tool-dialog-group briefing-saved-schedule" aria-label="저장된 스케줄">
-          <span class="tool-dialog-group-label">저장된 스케줄</span>
-          <div id="schedule-slot-controls" class="schedule-slot-controls" aria-label="스케줄 저장 슬롯"></div>
-          <button id="retry-completion-save" type="button" hidden>완료 저장 재시도</button>
-        </section>
-        <section class="tool-dialog-group tool-dialog-secondary briefing-secondary-tools" aria-label="보조 도구">
-          <span class="tool-dialog-group-label">보조 도구</span>
-          <button id="brief-open-tuning" type="button">계산 튜닝</button><button id="brief-map-speed" type="button">쾌속 지도</button><button id="brief-map-balance" type="button">균형 지도</button><button id="open-engine-diagnostics" type="button">결정 과정 보기</button>
-        </section>
-      </div>
-      <div id="schedule-columns" class="schedule-columns" data-mode="both"><section><h3 id="header-speed">⚡ 쾌속 모드</h3><div id="summary-speed" class="mode-settlement" aria-live="polite"></div><div id="col-speed" class="schedule-column"></div></section><section><h3 id="header-balance">⚖️ 균형 모드</h3><div id="summary-balance" class="mode-settlement" aria-live="polite"></div><div id="col-balance" class="schedule-column"></div></section></div>
-      <details class="briefing-free-route"><summary>자유 항로 · 추가 경유지</summary><div id="free-route-root"></div></details>
-      <details class="schedule-diagnostics"><summary>계산 진단 데이터</summary><pre id="schedule-diagnostics">아직 계산하지 않았습니다.</pre><button id="copy-engine-diagnostics" type="button">진단 복사</button></details>
-      <div class="compat-inputs" aria-hidden="true"><input id="maxParley" type="number"><input id="normalWeight" type="number"><input id="maxWeight" type="number"><input id="parleyPerTrade" type="number"><input id="parleyCrow" type="number"></div>
-      <div id="waypointModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="waypoint-title">
-        <div class="modal-card"><h3 id="waypoint-title">경유지 추가</h3><input id="wpMode" type="hidden"><input id="wpSortieIdx" type="hidden"><label class="field">섬 이름<input id="wpIsland" type="text"></label><label class="field">기준 교환<select id="wpAnchorSelect"></select></label><fieldset><legend>삽입 위치</legend><label><input type="radio" name="wpPos" value="before" checked> 앞</label><label><input type="radio" name="wpPos" value="after"> 뒤</label></fieldset><label class="inline-field"><input id="wpUseMat" type="checkbox"> 재료 사용</label><div id="wpMatBox" class="hidden"><label class="field">재료명<input id="wpMatName" type="text"></label><label class="field">수량<input id="wpMatCount" type="number" min="1" value="1"></label></div><div class="actions"><button id="confirm-waypoint" class="primary" type="button">추가</button><button id="close-waypoint" type="button">취소</button></div></div>
-      </div>
-    </div>
-  </dialog>
-
-  <dialog id="tuning-dialog" class="app-dialog tuning-dialog" aria-labelledby="tuning-title">
-    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="tuning-title">계산 튜닝</h2><p class="tool-dialog-context">현재 회차 설정과 다음 회차 기본값을 구분해 관리합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body tool-dialog-content"><div class="tuning-tabs tool-dialog-tabs" role="tablist" aria-label="설정 적용 범위"><button type="button" role="tab" aria-selected="true" aria-controls="tuning-root" data-tuning-tab="temporary">이번 회차 임시 적용</button><button type="button" role="tab" aria-selected="false" aria-controls="tuning-root" data-tuning-tab="durable">영구 기본값 저장</button></div><p class="hint tool-dialog-scope">임시 적용 · 현재 회차만 변경하고 스케줄을 다시 계산합니다. 영구 저장 · 다음 새 회차부터 기본값으로 사용합니다.</p><div id="tuning-root" aria-live="polite"></div></div>
-  </dialog>
-
-  <dialog id="map-tools-dialog" class="app-dialog map-tools-dialog" aria-labelledby="map-tools-title">
-    <div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="map-tools-title">지도·항로</h2><p class="tool-dialog-context">현재 회차 경로 설정과 지도 뷰어를 함께 사용합니다.</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div>
-    <div class="dialog-body tool-dialog-content"><div class="map-tools-grid"><section class="tool-dialog-workspace"><h3>항로 지도</h3><p class="hint">지도에서 섬과 경로를 확인하고 경유지·좌표·메모를 편집합니다.</p><div id="map-root"></div></section><section class="tool-dialog-workspace"><h3>지도와 화면 설정</h3><details><summary>좌표 · 항로 보정 · 메모</summary><div id="navigation-root"></div></details><details><summary>화면 배율 · 패널 배치</summary><div id="viewer-root"></div></details></section></div></div>
-  </dialog>
-
-  <dialog id="engine-diagnostics-dialog" class="app-dialog small-dialog" aria-labelledby="engine-diagnostics-title"><div class="dialog-titlebar tool-dialog-titlebar"><div class="tool-dialog-heading"><h2 id="engine-diagnostics-title">항로 결정 과정</h2><p class="tool-dialog-context">ENGINE_DEBUG · 계산 근거와 후보 선택 설명</p></div><button type="button" data-close-dialog aria-label="닫기">×</button></div><div class="dialog-body tool-dialog-content"><p class="tool-dialog-intro">계산기에 기록된 서류 점수와 후보별 선택 근거를 보여줍니다. 저장된 근거가 없는 제외 사유는 추정하지 않습니다. 타이머는 새로고침 후 초기화됩니다.</p><div id="engine-debug-content"></div><details class="tool-dialog-raw"><summary>원본 ENGINE_DEBUG JSON</summary><pre id="engine-debug-raw"></pre></details><button id="copy-engine-diagnostics-dialog" type="button">진단 정보 복사</button><p id="diagnostics-copy-status" class="tool-dialog-status" role="status" aria-live="polite"></p></div></dialog>
-
-
-  <script src="/assets/js/domain/constants.js"></script>
-  <script src="/assets/js/domain/routing.js"></script>
-  <script src="/assets/js/domain/scheduler.js"></script>
-  <script src="/assets/js/domain/tier7.js"></script>
-  <script src="/assets/js/domain/schedule-edit.js"></script>
-  <script src="/assets/js/domain/timer-ui.js"></script>
-  <script src="/assets/js/domain/completion.js"></script>
-  <script src="/assets/js/domain/scheduler-runtime.js"></script>
-  <script type="module" src="/assets/js/state.js"></script>
-  <script type="module" src="/assets/js/modal-ui.js"></script>
-  <script type="module" src="/assets/js/app.js"></script>
-</body>
+    </main>
+    <footer class="site-footer">
+      <span>BDO · 모험가의 작업실</span
+      ><span>항해와 발견, 그리고 당신의 기록.</span>
+    </footer>
+  </body>
 </html>

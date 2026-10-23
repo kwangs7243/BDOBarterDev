@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bdo-barter-local-app"
-version = "0.1.0"
-description = "Local BDO Barter application with review-first trade recognition"
+name = "bdo-suite"
+version = "1.0.0"
+description = "Local BDO application with barter and alchemy workspaces"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -21,6 +21,7 @@ ocr = ["onnxruntime>=1.30,<2", "opencv-python-headless==4.10.0.84", "PyYAML>=6,<
 package = ["pyinstaller>=6.10,<7", "onnxruntime>=1.30,<2", "opencv-python-headless==4.10.0.84", "PyYAML>=6,<7"]
 
 [project.scripts]
+bdo = "local_app.launcher:run_launcher"
 bdo-barter = "local_app.launcher:run_launcher"
 
 [project.urls]
@@ -31,11 +32,13 @@ include-package-data = false
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["local_app*", "tools.warehouse_patch*"]
-exclude = ["local_app.tests*", "local_app.packaging*", "local_app.frontend*", "local_app.recognition_data*"]
+include = ["local_app*", "barter*", "alchemy*", "tools.warehouse_patch*"]
+exclude = ["local_app.tests*", "local_app.packaging*", "local_app.frontend*", "barter.frontend*", "barter.recognition_data*", "alchemy.frontend*"]
 
 [tool.setuptools.package-data]
-local_app = ["frontend/**/*", "recognition_data/*.json", "recognition_data/*.npz"]
+local_app = ["frontend/**/*"]
+barter = ["frontend/**/*", "recognition_data/*.json", "recognition_data/*.npz"]
+alchemy = ["frontend/**/*", "data/*.json"]
 "tools.warehouse_patch" = ["*.npz"]
 
 [tool.pytest.ini_options]

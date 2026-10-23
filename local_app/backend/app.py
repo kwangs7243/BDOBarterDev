@@ -8,34 +8,42 @@ from pathlib import Path
 from flask import Flask, g, jsonify, request, send_from_directory
 from werkzeug.exceptions import BadRequest, RequestEntityTooLarge
 
-from .api.scan import scan_api
-from .api.maintenance import maintenance_api
-from .api.state import api
-from .api.session import session_api
-from .api.recognition import recognition_api
-from .api.native_capture import native_capture_api
-from .contracts import ContractError
-from .services.trade_batch_runtime import TradeBatchRuntime
-from .storage import MutationConflict, RevisionConflict, Storage, default_database_path, load_catalog
+from alchemy.routes import alchemy_pages
+from alchemy.api import alchemy_api
+from alchemy.storage import AlchemyStorage, default_database_path as alchemy_database_path
+from local_app.lazy import LazyResource
+from local_app.config import HOST, PORT, SERVICE, VERSION
+from barter.routes import barter_pages
+from barter.backend.api.scan import scan_api
+from barter.backend.api.maintenance import maintenance_api
+from barter.backend.api.state import api
+from barter.backend.api.session import session_api
+from barter.backend.api.recognition import recognition_api
+from barter.backend.api.native_capture import native_capture_api
+from barter.backend.contracts import ContractError
+from barter.backend.services.trade_batch_runtime import TradeBatchRuntime
+from barter.backend.storage import MutationConflict, RevisionConflict, Storage, default_database_path, load_catalog
 
-HOST = "127.0.0.1"
-PORT = 18765
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 # Recognition feedback also carries the bounded full review snapshot.
 MAX_REQUEST_BYTES = MAX_UPLOAD_BYTES + 2 * 1024 * 1024 + 128 * 1024
 
 
 def create_app(database_path: str | Path | None = None, *, reference_path: str | Path | None = None,
-               testing: bool = False, native_capture=None) -> Flask:
+               testing: bool = False, native_capture=None, alchemy_path: str | Path | None = None) -> Flask:
     root = Path(__file__).resolve().parents[1]
     frontend = root / "frontend"
-    catalog, order = load_catalog(Path(reference_path) if reference_path else None)
-    app = Flask(__name__, static_folder=str(frontend), static_url_path="/assets")
+    app = Flask(__name__, static_folder=str(frontend), static_url_path="/portal-assets")
     app.config.update(TESTING=testing, MAX_CONTENT_LENGTH=MAX_REQUEST_BYTES)
     db_path = Path(database_path) if database_path else default_database_path()
-    store = Storage(db_path, catalog, order)
-    store.initialize()
-    app.extensions["bdo_storage"] = store
+    def initialize_barter():
+        catalog, order = load_catalog(Path(reference_path) if reference_path else None)
+        store = Storage(db_path, catalog, order)
+        store.initialize()
+        return store
+    app.extensions["bdo_storage"] = LazyResource(initialize_barter)
+    alchemy_db = Path(alchemy_path) if alchemy_path else db_path.with_name("alchemy.sqlite3") if testing else alchemy_database_path()
+    app.extensions["alchemy_storage"] = AlchemyStorage(alchemy_db)
     app.extensions["trade_batch_runtime"] = TradeBatchRuntime()
     if native_capture is not None:
         app.extensions["native_capture"] = native_capture
@@ -43,6 +51,9 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
     app.extensions["bdo_mutation_condition"] = mutation_condition
     app.extensions["bdo_mutation_state"] = {"active": 0, "stopping": False}
     app.extensions["bdo_shutdown_complete"] = threading.Event()
+    app.register_blueprint(barter_pages)
+    app.register_blueprint(alchemy_pages)
+    app.register_blueprint(alchemy_api)
     app.register_blueprint(api)
     app.register_blueprint(session_api)
     app.register_blueprint(scan_api)
@@ -63,6 +74,8 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         capture_request = request.path.startswith("/api/native-capture")
         capture_mutation = capture_request and request.method in {"PATCH", "PUT", "POST", "DELETE"}
         recognition_mutation = recognition_request and request.method in {"PATCH", "PUT", "POST", "DELETE"}
+        alchemy_request = request.path.startswith("/api/alchemy/")
+        alchemy_mutation = alchemy_request and request.method in {"PATCH", "PUT", "POST", "DELETE"}
         if recognition_request and request.method == "OPTIONS":
             return jsonify({"ok": False, "error": {"code": "cors_preflight_denied", "message": "Cross-origin preflight is not accepted."}}), 403
         origin = request.headers.get("Origin")
@@ -72,7 +85,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
                 allowed_origins.add(origin)
             if origin not in allowed_origins:
                 return jsonify({"ok": False, "error": {"code": "invalid_origin", "message": "Cross-origin requests are not accepted."}}), 403
-        if recognition_mutation or session_mutation or capture_mutation:
+        if recognition_mutation or session_mutation or capture_mutation or alchemy_mutation:
             expected_origin = f"http://{host}"
             if origin is None:
                 return jsonify({"ok": False, "error": {"code": "origin_required", "message": "A same-origin request is required."}}), 403
@@ -84,7 +97,7 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
         state_mutation = request.method in {"PATCH", "PUT", "POST", "DELETE"} and (request.path in {
             "/api/inventory", "/api/inventory/order", "/api/settings", "/api/warehouse-scan"
         } or request.path.startswith(("/api/working-session", "/api/schedule-slots/")))
-        if recognition_request or state_mutation or capture_request:
+        if recognition_request or state_mutation or capture_request or alchemy_request:
             with mutation_condition:
                 state = app.extensions["bdo_mutation_state"]
                 if state["stopping"]:
@@ -107,6 +120,10 @@ def create_app(database_path: str | Path | None = None, *, reference_path: str |
     @app.get("/")
     def frontend_index():
         return send_from_directory(frontend, "index.html")
+
+    @app.get("/suite-health")
+    def suite_health():
+        return jsonify({"ok": True, "service": SERVICE, "version": VERSION, "workspaces": ["barter", "alchemy"]})
 
     @app.errorhandler(ContractError)
     def handle_contract_error(error: ContractError):

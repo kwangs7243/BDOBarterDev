@@ -7,7 +7,7 @@ import {
   captureFromPaste,
   captureLimits,
   isEditableTarget,
-} from "../frontend/js/capture.js";
+} from "../../barter/frontend/js/capture.js";
 
 const pngSignature = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
 function chunk(name, data = new Uint8Array()) {

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
-from local_app.tools.trade_live_ocr import FIELDS, recognize_live
+from barter.tools.trade_live_ocr import FIELDS, recognize_live
 
 
 def evaluate(result, mapping, oracle):

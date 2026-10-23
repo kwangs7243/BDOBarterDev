@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { getTradeRecognitionRuntime, recognizeTradeLiveList, saveTradeCorrections, TradeRecognitionError } from "../frontend/js/trade-recognition-client.js";
+import { getTradeRecognitionRuntime, recognizeTradeLiveList, saveTradeCorrections, TradeRecognitionError } from "../../barter/frontend/js/trade-recognition-client.js";
 
 const capture = (captureId) => ({ blob: new Blob(["png"], {type:"image/png"}), metadata:{captureId,taskType:"trade"} });
 const first=capture(crypto.randomUUID()), second=capture(crypto.randomUUID());

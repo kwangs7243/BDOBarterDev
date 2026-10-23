@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";
-import { getItemTier as importTier } from "../frontend/js/domain/trade-import.js";
+import { getItemTier as importTier } from "../../barter/frontend/js/domain/trade-import.js";
 
-const catalog = JSON.parse(await readFile(new URL("../frontend/data/trade-catalog.json", import.meta.url), "utf8"));
+const catalog = JSON.parse(await readFile(new URL("../../barter/frontend/data/trade-catalog.json", import.meta.url), "utf8"));
 const expected = { "순수한 진주 결정": 0.30, "화려한 진주 결정": 0.10, "화려한 암염 주괴": 0.30,
   "빛나는 코발트 주괴": 0.30, "오킬루아의 꽃": 0, "파도의 블랙스톤": 0.01,
   "대양의 견고한 현철": 0.30, "유실된 무역품 상자": 50 };
@@ -16,7 +16,7 @@ const context = { console, document:{getElementById:id=>elements[id] || null, qu
 context.window = context;
 vm.createContext(context);
 for (const name of ["constants", "routing", "scheduler", "tier7", "schedule-edit", "timer-ui", "completion", "scheduler-runtime"]) {
-  vm.runInContext(await readFile(new URL(`../frontend/js/domain/${name}.js`, import.meta.url), "utf8"), context, {filename:name});
+  vm.runInContext(await readFile(new URL(`../../barter/frontend/js/domain/${name}.js`, import.meta.url), "utf8"), context, {filename:name});
 }
 for (const [name,weight] of Object.entries(expected)) {
   assert.ok(catalog.specialItems.includes(name));

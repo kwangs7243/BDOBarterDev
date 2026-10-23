@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 from werkzeug.serving import make_server
 
 from local_app.backend.app import HOST, PORT, create_app, serve_local
-from local_app.backend.storage import Storage, default_database_path, load_catalog
+from barter.backend.storage import Storage, default_database_path, load_catalog
 
 
 ITEM_A = "갈퀴 꽃 씨앗 주머니"
@@ -61,7 +61,7 @@ class StorageApiTests(unittest.TestCase):
         health = self.client.get("/api/health", base_url=self.local)
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.get_json()["schemaVersion"], 4)
-        page = self.client.get("/", base_url=self.local)
+        page = self.client.get("/barter/", base_url=self.local)
         self.assertEqual(page.status_code, 200)
         self.assertIn("/assets/js/state.js", page.get_data(as_text=True))
         page.close()

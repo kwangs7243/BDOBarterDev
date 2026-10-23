@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {runInNewContext} from "node:vm";
-import {prepareLiveTradeRows} from "../frontend/js/domain/trade-import.js";
-import {applyUnusedTradePolicy, setTradeRowIncluded, validateUnusedTradePolicy} from "../frontend/js/domain/trade-unused-policy.js";
+import {prepareLiveTradeRows} from "../../barter/frontend/js/domain/trade-import.js";
+import {applyUnusedTradePolicy, setTradeRowIncluded, validateUnusedTradePolicy} from "../../barter/frontend/js/domain/trade-unused-policy.js";
 
-const load = async (name) => JSON.parse(await readFile(new URL(`../frontend/data/${name}`, import.meta.url), "utf8"));
+const load = async (name) => JSON.parse(await readFile(new URL(`../../barter/frontend/data/${name}`, import.meta.url), "utf8"));
 const catalog = await load("trade-catalog.json");
 const policy = validateUnusedTradePolicy(await load("trade-unused-policy.json"), catalog);
-const coordinates = runInNewContext(`${await readFile(new URL("../frontend/js/domain/constants.js", import.meta.url), "utf8")}\nislandCoordinates;`, {window:{}});
+const coordinates = runInNewContext(`${await readFile(new URL("../../barter/frontend/js/domain/constants.js", import.meta.url), "utf8")}\nislandCoordinates;`, {window:{}});
 const field = (corrected) => ({corrected, rawOCR:String(corrected ?? ""), confidence:.99, reviewRequired:corrected === null});
 const makeRow = (toItem, island = "나르보 섬") => ({captureId:"capture", ordinal:0, fields:Object.fromEntries(Object.entries({
   island, fromItem:catalog.masterData[5][0], toItem, reqAmount:1, count:null, yield:null,

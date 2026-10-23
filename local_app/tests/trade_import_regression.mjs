@@ -4,10 +4,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   applyMasterNameRules, getBestMatch, getItemTier, getSafeUniqueItemMatch, parseTradeJsonText, processParsedTrades,
-} from "../frontend/js/domain/trade-import.js";
+} from "../../barter/frontend/js/domain/trade-import.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const catalog = JSON.parse(await readFile(resolve(root, "local_app/frontend/data/trade-catalog.json"), "utf8"));
+const catalog = JSON.parse(await readFile(resolve(root, "barter/frontend/data/trade-catalog.json"), "utf8"));
 // Expected results were executed against V1 before removing the migration source.
 const baseline = JSON.parse(await readFile(resolve(root, "local_app/tests/fixtures/import-expected.json"), "utf8"));
 const correctedBaseline = structuredClone(baseline.catalog);

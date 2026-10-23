@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import {context, catalog, elements} from "./special_item_weights.mjs";
-import {prepareLiveTradeRows, processParsedTrades} from "../frontend/js/domain/trade-import.js";
+import {prepareLiveTradeRows, processParsedTrades} from "../../barter/frontend/js/domain/trade-import.js";
 
 assert.equal(catalog.masterData[0].length,86);
 for (const name of catalog.masterData[0]) {

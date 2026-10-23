@@ -35,7 +35,7 @@ try {
   const activePortPath = join(profile, "chrome-profile", "DevToolsActivePort");
   const activePortText = await waitFor(async () => { try { return await readFile(activePortPath, "utf8"); } catch { return false; } }, "Chrome DevTools endpoint");
   const debugPort = activePortText.trim().split(/\r?\n/)[0];
-  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT" });
+  const targetResponse = await fetch(`http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(new URL("/barter/", baseUrl).href)}`, { method: "PUT" });
   assert.equal(targetResponse.ok, true, "Chrome creates the application target");
   const target = await targetResponse.json();
   socket = new WebSocket(target.webSocketDebuggerUrl);

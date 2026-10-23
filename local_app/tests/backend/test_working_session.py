@@ -209,6 +209,7 @@ class WorkingSessionTests(unittest.TestCase):
 
 
     def test_future_schema_is_refused_without_reset(self):
+        self.app.extensions["bdo_storage"].initialize()
         with closing(sqlite3.connect(self.path)) as db:
             db.execute("UPDATE app_meta SET schema_version = 99")
             db.commit()

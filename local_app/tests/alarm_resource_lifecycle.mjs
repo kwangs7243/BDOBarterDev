@@ -14,7 +14,7 @@ function environment({failStart=false,rejectClose=false}={}) {
   }
   const ctx={AudioContext,console:{warn(){}},setTimeout:callback=>{const id=++nextTimer;timers.set(id,callback);return id;},clearTimeout:id=>timers.delete(id)};
   ctx.window=ctx;vm.createContext(ctx);
-  vm.runInContext(readFileSync(new URL('../frontend/js/domain/completion.js',import.meta.url),'utf8'),ctx);
+  vm.runInContext(readFileSync(new URL('../../barter/frontend/js/domain/completion.js',import.meta.url),'utf8'),ctx);
   return {ctx,contexts,timers};
 }
 {

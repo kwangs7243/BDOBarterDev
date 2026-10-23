@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 from PIL import Image, ImageDraw
-from local_app.tools.trade_live_ocr import LocalReader, fixed_layout_offset, _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
+from barter.tools.trade_live_ocr import LocalReader, fixed_layout_offset, _requirement_crop, accept_quantity_consensus, apply_trade_rules, detect_live_rows, merge_quantity_readings, read_count, read_numeric, read_requirement, read_yield, correct_name, read_catalog_name, recognize_live
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/trade-recognition"
 
@@ -73,10 +73,10 @@ class LiveListTests(unittest.TestCase):
                 (2, {**verified, "variants":[{"text":"10", "confidence":.9}] * 3}, False),
                 (2, {**verified, "variants":verified["variants"] + [{"text":"11", "confidence":.99}]}, False)):
             with self.subTest(groups=groups, value=value):
-                with patch("local_app.tools.trade_live_ocr.read_numeric", side_effect=[primary, value]), \
-                        patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                        patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined), \
-                        patch("local_app.tools.trade_live_ocr._outlined_quantity_image", return_value=(Image.new("RGB", (20,20)), groups)):
+                with patch("barter.tools.trade_live_ocr.read_numeric", side_effect=[primary, value]), \
+                        patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                        patch("barter.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined), \
+                        patch("barter.tools.trade_live_ocr._outlined_quantity_image", return_value=(Image.new("RGB", (20,20)), groups)):
                     result = read_requirement(None, Image.new("RGB", (1000,70)))
                 self.assertEqual(result["reviewRequired"], not accepted)
                 self.assertEqual(result["corrected"], 10)
@@ -263,10 +263,10 @@ class LiveListTests(unittest.TestCase):
         token = {"corrected": None, "reviewRequired": True, "variants": []}
         outlined = {"corrected": 200, "confidence": .98,
                     "variants": [{"text": "200", "confidence": .98, "method": "outline-mask"}]}
-        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
-                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined), \
-                patch("local_app.tools.trade_live_ocr._outlined_quantity_image", return_value=None):
+        with patch("barter.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("barter.tools.trade_live_ocr.read_outlined_requirement", return_value=outlined), \
+                patch("barter.tools.trade_live_ocr._outlined_quantity_image", return_value=None):
             result = read_requirement(None, Image.new("RGB", (1000, 70)))
         self.assertEqual(result["corrected"], 200)
         self.assertEqual(result["rawOCR"], "20")
@@ -277,9 +277,9 @@ class LiveListTests(unittest.TestCase):
     def test_confirmed_requirement_bypasses_outline_candidate(self):
         primary = {"rawOCR": "100", "corrected": 100, "confidence": .99, "reviewRequired": False, "variants": []}
         token = {"corrected": None, "reviewRequired": True, "variants": []}
-        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
-                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                patch("local_app.tools.trade_live_ocr.read_outlined_requirement") as outlined:
+        with patch("barter.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("barter.tools.trade_live_ocr.read_outlined_requirement") as outlined:
             result = read_requirement(None, Image.new("RGB", (1000, 70)))
         self.assertEqual(result, primary)
         outlined.assert_not_called()
@@ -287,19 +287,19 @@ class LiveListTests(unittest.TestCase):
     def test_unresolved_outline_does_not_replace_existing_requirement(self):
         primary = {"rawOCR": "", "corrected": None, "confidence": 0, "reviewRequired": True, "variants": []}
         token = {"corrected": None, "reviewRequired": True, "variants": []}
-        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
-                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value=None):
+        with patch("barter.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("barter.tools.trade_live_ocr.read_outlined_requirement", return_value=None):
             result = read_requirement(None, Image.new("RGB", (1000, 70)))
         self.assertEqual(result, primary)
 
     def test_small_font_candidate_cannot_become_automatic_truth(self):
         primary = {"rawOCR": "1", "corrected": 1, "confidence": .99, "reviewRequired": True, "variants": []}
         token = {"corrected": None, "reviewRequired": True, "variants": []}
-        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=primary), \
-                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=token), \
-                patch("local_app.tools.trade_live_ocr.read_outlined_requirement", return_value={"corrected": 1, "confidence": 1, "variants": []}), \
-                patch("local_app.tools.trade_live_ocr._outlined_quantity_image", return_value=None):
+        with patch("barter.tools.trade_live_ocr.read_numeric", return_value=primary), \
+                patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=token), \
+                patch("barter.tools.trade_live_ocr.read_outlined_requirement", return_value={"corrected": 1, "confidence": 1, "variants": []}), \
+                patch("barter.tools.trade_live_ocr._outlined_quantity_image", return_value=None):
             result = read_requirement(None, Image.new("RGB", (658, 47)))
         self.assertEqual(result["corrected"], 1)
         self.assertTrue(result["reviewRequired"])
@@ -323,9 +323,9 @@ class LiveListTests(unittest.TestCase):
                 self.assertEqual(len(detect_live_rows(image.resize(size, Image.Resampling.LANCZOS))), 6)
 
     def test_zero_and_unknown_are_distinct(self):
-        with patch("local_app.tools.trade_live_ocr.read_name", return_value=("남은 교환 횟수: 0회", .95)):
+        with patch("barter.tools.trade_live_ocr.read_name", return_value=("남은 교환 횟수: 0회", .95)):
             self.assertEqual(read_count(None, None)["corrected"], 0)
-        with patch("local_app.tools.trade_live_ocr.read_name", return_value=("남은 교환 횟수: ?회", .95)):
+        with patch("barter.tools.trade_live_ocr.read_name", return_value=("남은 교환 횟수: ?회", .95)):
             self.assertIsNone(read_count(None, None)["corrected"])
 
     def test_unmatched_name_remains_visible(self):
@@ -353,7 +353,7 @@ class LiveListTests(unittest.TestCase):
     def test_color_agreement_restores_name_lost_by_thresholding(self):
         reader = Mock()
         reader.read.side_effect = [("[2단계] 정제된 식수", .91), ("[2단계] 정제된 식수", .90)]
-        with patch("local_app.tools.trade_live_ocr.read_name", return_value=("[2단계]정세된스수", .88)):
+        with patch("barter.tools.trade_live_ocr.read_name", return_value=("[2단계]정세된스수", .88)):
             result = read_catalog_name(reader, Image.new("RGB", (30, 20)), ["정제된 식수"])
         self.assertEqual(result["corrected"], "정제된 식수")
         self.assertFalse(result["reviewRequired"])
@@ -363,20 +363,20 @@ class LiveListTests(unittest.TestCase):
     def test_agreement_cannot_confirm_unknown_names(self):
         for raw in ("완전히 새로운 품목",):
             reader = Mock(); reader.read.return_value = (raw, .99)
-            with patch("local_app.tools.trade_live_ocr.read_name", return_value=(raw, .99)):
+            with patch("barter.tools.trade_live_ocr.read_name", return_value=(raw, .99)):
                 result = read_catalog_name(reader, Image.new("RGB", (30, 20)), ["고대인을 형상화한 초상화"])
             self.assertTrue(result["reviewRequired"])
 
     def test_known_name_conflict_remains_reviewable(self):
         reader = Mock(); reader.read.return_value = ("다른 물품", .99)
-        with patch("local_app.tools.trade_live_ocr.read_name", return_value=("원본물퐁", .89)):
+        with patch("barter.tools.trade_live_ocr.read_name", return_value=("원본물퐁", .89)):
             result = read_catalog_name(reader, Image.new("RGB", (30, 20)), ["원본 물품", "다른 물품"])
         self.assertEqual(result["corrected"], "다른 물품")
         self.assertTrue(result["reviewRequired"])
 
     def test_unresolved_name_keeps_independently_recognized_stage_for_fixed_ratio(self):
         reader = Mock(); reader.read.return_value = ("[4단계] 금주화가 담긴 낡은", .96)
-        with patch("local_app.tools.trade_live_ocr.read_name", return_value=("[4단계] 금주화가 담긴 낡은", .96)):
+        with patch("barter.tools.trade_live_ocr.read_name", return_value=("[4단계] 금주화가 담긴 낡은", .96)):
             source = read_catalog_name(reader, Image.new("RGB", (30, 20)), ["금주화가 담긴 낡은 상자", "금주화가 담긴 낡은 항아리"])
         self.assertTrue(source["reviewRequired"])
         self.assertEqual(source["recognizedStage"], 4)
@@ -388,15 +388,15 @@ class LiveListTests(unittest.TestCase):
 
     def test_count_color_agreement_restores_missing_one_without_inventing_zero(self):
         reader = Mock(); reader.read.return_value = ("남은 교환 횟수: 1회", .92)
-        with patch("local_app.tools.trade_live_ocr.read_name", return_value=("남은교환횟수:회", .93)):
+        with patch("barter.tools.trade_live_ocr.read_name", return_value=("남은교환횟수:회", .93)):
             result = read_count(reader, Image.new("RGB", (30, 20)))
         self.assertEqual(result["corrected"], 1)
         self.assertFalse(result["reviewRequired"])
 
     def test_single_digit_fallback_cannot_truncate_unconstrained_currency_amount(self):
         unknown = {"rawOCR": "", "corrected": None, "reviewRequired": True, "confidence": 0, "variants": []}
-        with patch("local_app.tools.trade_live_ocr.read_numeric", return_value=unknown) as read, \
-                patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=unknown):
+        with patch("barter.tools.trade_live_ocr.read_numeric", return_value=unknown) as read, \
+                patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=unknown):
             result = read_yield(None, Image.new("RGB", (1000, 100)))
         self.assertIsNone(result["corrected"])
         self.assertEqual(read.call_count, 1)
@@ -407,8 +407,8 @@ class LiveListTests(unittest.TestCase):
                  "variants": [{"text": "3", "confidence": .98}]}
         two = {**three, "corrected": 2, "variants": [{"text": "2", "confidence": .97}]}
         for alternate, review in ((three, False), (two, True)):
-            with patch("local_app.tools.trade_live_ocr.read_numeric", side_effect=[unknown, three, alternate]), \
-                    patch("local_app.tools.trade_live_ocr.read_quantity_token", return_value=unknown):
+            with patch("barter.tools.trade_live_ocr.read_numeric", side_effect=[unknown, three, alternate]), \
+                    patch("barter.tools.trade_live_ocr.read_quantity_token", return_value=unknown):
                 result = read_yield(None, Image.new("RGB", (1000, 100)), (2, 3))
             self.assertEqual(result["corrected"], 3)
             self.assertEqual(result["reviewRequired"], review)
@@ -436,9 +436,9 @@ class LiveListTests(unittest.TestCase):
 
     def test_field_failure_cannot_hide_rows(self):
         mapping = json.loads((FIXTURES / "live-list-mapping.json").read_text(encoding="utf-8"))
-        with patch("local_app.tools.trade_live_ocr.LocalReader"), \
-                patch("local_app.tools.trade_live_ocr.read_numeric", side_effect=RuntimeError("numeric failure")), \
-                patch("local_app.tools.trade_live_ocr.read_name", return_value=("파라타마 섬", .95)):
+        with patch("barter.tools.trade_live_ocr.LocalReader"), \
+                patch("barter.tools.trade_live_ocr.read_numeric", side_effect=RuntimeError("numeric failure")), \
+                patch("barter.tools.trade_live_ocr.read_name", return_value=("파라타마 섬", .95)):
             result = recognize_live([{"captureId": "one", "imagePath": FIXTURES / mapping[0]["image"]}], Path("unused"), "batch")
         self.assertEqual(len(result["rows"]), 6)
         self.assertEqual(result["rows"][0]["fields"]["island"]["corrected"], "파라타마 섬")
@@ -447,10 +447,10 @@ class LiveListTests(unittest.TestCase):
 
     def test_catalog_failure_preserves_raw_names(self):
         mapping = json.loads((FIXTURES / "live-list-mapping.json").read_text(encoding="utf-8"))
-        with patch("local_app.tools.trade_live_ocr.LocalReader"), \
+        with patch("barter.tools.trade_live_ocr.LocalReader"), \
                 patch("pathlib.Path.read_text", side_effect=OSError("catalog unavailable")), \
-                patch("local_app.tools.trade_live_ocr.read_numeric", side_effect=RuntimeError("numeric failure")), \
-                patch("local_app.tools.trade_live_ocr.read_name", return_value=("알 수 없는 새 물품", .95)):
+                patch("barter.tools.trade_live_ocr.read_numeric", side_effect=RuntimeError("numeric failure")), \
+                patch("barter.tools.trade_live_ocr.read_name", return_value=("알 수 없는 새 물품", .95)):
             result = recognize_live([{"captureId": "one", "imagePath": FIXTURES / mapping[0]["image"]}], Path("unused"), "batch")
         self.assertEqual(len(result["rows"]), 6)
         field = result["rows"][0]["fields"]["fromItem"]
@@ -462,21 +462,21 @@ class LiveListTests(unittest.TestCase):
         captures=[{"captureId":"one","imagePath":FIXTURES / mapping[0]["image"]}]
         uncertain={"rawOCR":"uncertain","corrected":None,"reviewRequired":True,"confidence":0}
         confirmed={"rawOCR":"3회","corrected":3,"reviewRequired":False,"confidence":.99}
-        with patch("local_app.tools.trade_live_ocr.LocalReader"), \
-                patch("local_app.tools.trade_live_ocr.read_numeric",side_effect=RuntimeError("numeric failure")), \
-                patch("local_app.tools.trade_live_ocr.read_count",side_effect=lambda *args:uncertain.copy()), \
-                patch("local_app.tools.trade_live_ocr.read_name",return_value=("파라타마 섬",.95)):
+        with patch("barter.tools.trade_live_ocr.LocalReader"), \
+                patch("barter.tools.trade_live_ocr.read_numeric",side_effect=RuntimeError("numeric failure")), \
+                patch("barter.tools.trade_live_ocr.read_count",side_effect=lambda *args:uncertain.copy()), \
+                patch("barter.tools.trade_live_ocr.read_name",return_value=("파라타마 섬",.95)):
             original=recognize_live(captures,Path("unused"),"batch")
-            with patch("local_app.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
-                    patch("local_app.tools.trade_live_ocr.read_count",side_effect=[entry.copy() for _ in range(6) for entry in (uncertain,confirmed)]):
+            with patch("barter.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
+                    patch("barter.tools.trade_live_ocr.read_count",side_effect=[entry.copy() for _ in range(6) for entry in (uncertain,confirmed)]):
                 translated=recognize_live(captures,Path("unused"),"batch")
-            with patch("local_app.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
-                    patch("local_app.tools.trade_live_ocr.read_count",side_effect=lambda *args:confirmed.copy()) as read:
+            with patch("barter.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
+                    patch("barter.tools.trade_live_ocr.read_count",side_effect=lambda *args:confirmed.copy()) as read:
                 stable=recognize_live(captures,Path("unused"),"batch")
                 self.assertEqual(read.call_count,6)
             conflicting={**uncertain,"variants":[{"text":"2","confidence":.99}]}
-            with patch("local_app.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
-                    patch("local_app.tools.trade_live_ocr.read_count",side_effect=[entry.copy() for _ in range(6) for entry in (conflicting,confirmed)]):
+            with patch("barter.tools.trade_live_ocr.fixed_layout_offset",return_value=3), \
+                    patch("barter.tools.trade_live_ocr.read_count",side_effect=[entry.copy() for _ in range(6) for entry in (conflicting,confirmed)]):
                 held=recognize_live(captures,Path("unused"),"batch")
         for before,after in zip(original["rows"],translated["rows"]):
             self.assertEqual(before["rowBox"],after["rowBox"])
@@ -498,10 +498,10 @@ class LiveListTests(unittest.TestCase):
             path = Path(folder) / 'capture.png'
             Image.new('RGB', (1000, 100)).save(path)
             captures = [{'captureId': 'one', 'imagePath': path}]
-            with patch('local_app.tools.trade_live_ocr.LocalReader'), \
-                    patch('local_app.tools.trade_live_ocr.detect_live_rows', return_value=[(0, 100)]), \
-                    patch('local_app.tools.trade_live_ocr.read_numeric', side_effect=RuntimeError('numeric failure')), \
-                    patch('local_app.tools.trade_live_ocr.read_name', return_value=('새 품목', .95)):
+            with patch('barter.tools.trade_live_ocr.LocalReader'), \
+                    patch('barter.tools.trade_live_ocr.detect_live_rows', return_value=[(0, 100)]), \
+                    patch('barter.tools.trade_live_ocr.read_numeric', side_effect=RuntimeError('numeric failure')), \
+                    patch('barter.tools.trade_live_ocr.read_name', return_value=('새 품목', .95)):
                 original = recognize_live(captures, Path('unused'), 'batch')
                 monitored = recognize_live(captures, Path('unused'), 'batch', on_progress=events.append)
                 broken = recognize_live(captures, Path('unused'), 'batch',

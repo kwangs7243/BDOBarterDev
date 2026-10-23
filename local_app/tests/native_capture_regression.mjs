@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
-import { NativeCaptureReceiver } from "../frontend/js/native-capture-ui.js";
-import { CaptureQueue, captureFromNative } from "../frontend/js/capture.js";
+import { NativeCaptureReceiver } from "../../barter/frontend/js/native-capture-ui.js";
+import { CaptureQueue, captureFromNative } from "../../barter/frontend/js/capture.js";
 
 const blob = new Blob([Uint8Array.of(137,80,78,71,13,10,26,10,0,0,0,0,73,69,78,68,0,0,0,0)], { type: "image/png" });
 const sha256 = createHash("sha256").update(Buffer.from(await blob.arrayBuffer())).digest("hex");

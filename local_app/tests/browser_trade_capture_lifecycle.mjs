@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.BDO_NODE_MODULES
  ? require.resolve('playwright',{paths:[process.env.BDO_NODE_MODULES]}) : 'playwright');
-const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'../frontend');
+const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'../../barter/frontend');
 const server=createServer(async(req,res)=>{
  try{
   const pathname=new URL(req.url,'http://localhost').pathname;

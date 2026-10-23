@@ -9,7 +9,7 @@ from uuid import uuid4
 from PIL import Image
 from werkzeug.datastructures import MultiDict
 from local_app.backend.app import create_app
-from local_app.backend.services.trade_batch_runtime import ENGINE_ID, MODEL_BUNDLE_SHA256, WORKER_VERSION
+from barter.backend.services.trade_batch_runtime import ENGINE_ID, MODEL_BUNDLE_SHA256, WORKER_VERSION
 from .test_recognition_contracts import capture_metadata
 from .test_trade_batch_runtime import ReadyRuntime, fake_worker
 

@@ -2,7 +2,7 @@
 
 ## 물교
 
-`local_app/tools/trade_live_ocr.py`가 행·필드를 나누고, `trade_template_reader.py`가 글자 전체의 전경을 추출·정규화한 특징 해시를 조회합니다. 현재 bank는 `local_app/recognition_data/trade-templates.json`이며 reference 881개입니다. 전체 모양·라벨이 충돌 없이 일치하는 입력만 처리하고 나머지는 기존 OCR 경로로 넘깁니다.
+`barter/tools/trade_live_ocr.py`가 행·필드를 나누고, `trade_template_reader.py`가 글자 전체의 전경을 추출·정규화한 특징 해시를 조회합니다. 현재 bank는 `barter/recognition_data/trade-templates.json`이며 reference 881개입니다. 전체 모양·라벨이 충돌 없이 일치하는 입력만 처리하고 나머지는 기존 OCR 경로로 넘깁니다.
 
 정답 조회는 모든 이미지를 순서대로 비교하는 방식이 아닙니다. native/scaled 특징 키로 조회합니다. 현재 적용 조건은 원본 native pixels, 987×456 입력과 고정 영역 조건입니다. 위치 보정과 전체 숫자·잘린 경계 검사를 유지합니다.
 
@@ -19,7 +19,7 @@
 
 ## 창고
 
-창고 품목은 `reference/`의 70종 카탈로그·아이콘과 대조합니다. 숫자와 전체 슬롯 보정은 `local_app/recognition_data/warehouse-templates.npz`의 검증 자료를 사용합니다. 설치 패키지에서는 같은 파일을 `tools/warehouse_patch/quantity_templates.npz`로 포함합니다.
+창고 품목은 `reference/`의 70종 카탈로그·아이콘과 대조합니다. 숫자와 전체 슬롯 보정은 `barter/recognition_data/warehouse-templates.npz`의 검증 자료를 사용합니다. 설치 패키지에서는 같은 파일을 `tools/warehouse_patch/quantity_templates.npz`로 포함합니다.
 
 `tools/warehouse_patch/quantity_templates.npz`의 원본과 배포 보정 파일을 혼동하지 않습니다. 빌드는 검증 행·출처가 없는 원본 자료를 현재 보정 자료로 대신하지 않습니다. 모호한 수량은 검수 대상으로 유지하며 5와 3처럼 비슷한 숫자를 확신만으로 자동 확정하지 않습니다.
 

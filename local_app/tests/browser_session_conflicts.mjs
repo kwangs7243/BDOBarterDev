@@ -4,7 +4,9 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {chromium} from 'playwright';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const {chromium}=require(process.env.BDO_NODE_MODULES?require.resolve('playwright',{paths:[process.env.BDO_NODE_MODULES]}):'playwright');
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 const temp=await mkdtemp(join(tmpdir(),'bdo-session-conflicts-'));
@@ -26,7 +28,7 @@ try {
   const url=external?process.env.BDO_TEST_URL.replace(/\/$/,''):`http://127.0.0.1:${port}`;
   browser=await chromium.launch({executablePath:process.env.BDO_CHROME||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
   const context=await browser.newContext();
-  const open=async()=>{const page=await context.newPage();await page.goto(url);await page.waitForFunction(()=>document.querySelector('#app-content')?.getAttribute('aria-busy')==='false');return page;};
+  const open=async()=>{const page=await context.newPage();await page.goto(url+'/barter/');await page.waitForFunction(()=>document.querySelector('#app-content')?.getAttribute('aria-busy')==='false');return page;};
   const first=await open();
   await first.evaluate(async()=>{
     const {state}=await import('/assets/js/state.js');

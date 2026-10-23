@@ -8,15 +8,17 @@ $env:BDO_PACKAGE_TRADE_MODEL_DIR=(Resolve-Path .local/models/trade).Path
 & local_app/packaging/build.ps1 -Python .venv/Scripts/python.exe -OutputRoot "$env:TEMP/bdo-package-release"
 ```
 
-결과는 지정 출력 폴더의 `dist/app/BDO 물교 실행.exe`와 그 옆 `_internal/` 전체입니다. exe만 복사하지 않습니다. ONNX 모델은 [개발 안내](DEVELOPMENT.md)의 검증된 모델이어야 합니다.
+결과는 지정 출력 폴더의 `dist/app/BDO 실행.exe`와 그 옆 `_internal/` 전체입니다. exe만 복사하지 않습니다. ONNX 모델은 [개발 안내](DEVELOPMENT.md)의 검증된 모델이어야 합니다.
 
 | 빌드 입력 | 기본 위치/설정 |
 |---|---|
-| frontend·backend·native·worker | 저장소의 `local_app/` |
+| 공통 실행기·native·통합 메인 | `local_app/` |
+| 물교 화면·API·worker | `barter/` |
+| 연금 화면·API·카탈로그 | `alchemy/` (`data/catalog.json` 포함) |
 | 품목·아이콘 | `reference/` |
 | 물교 ONNX/YAML | `.local/models/trade/` 또는 `BDO_PACKAGE_TRADE_MODEL_DIR` |
-| 물교 정답 사전 | `local_app/recognition_data/trade-templates.json` 또는 `BDO_PACKAGE_TRADE_TEMPLATES` |
-| 창고 보정 표본 | `local_app/recognition_data/warehouse-templates.npz` 또는 `BDO_PACKAGE_WAREHOUSE_TEMPLATES` |
+| 물교 정답 사전 | `barter/recognition_data/trade-templates.json` 또는 `BDO_PACKAGE_TRADE_TEMPLATES` |
+| 창고 보정 표본 | `barter/recognition_data/warehouse-templates.npz` 또는 `BDO_PACKAGE_WAREHOUSE_TEMPLATES` |
 
 물교 사전은 reader의 SHA-256과 일치해야 합니다. 창고 표본은 `feedback_slots`, 검증 행 수, 수량·품목·출처가 일치해야 합니다. 원본 숫자 사전만으로 보정된 배포 자료를 대신하지 않습니다. 일반 빌드에서도 현재 정답 사전이 포함되므로 별도 환경변수를 빠뜨려 인식 가속이 누락되지 않습니다.
 

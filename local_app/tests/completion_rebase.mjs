@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 
 globalThis.window = {addEventListener(){}};
-const {state,applyBootstrap} = await import('../frontend/js/state.js');
-const {saveCompletionInventory,whenPersistenceIdle} = await import('../frontend/js/persistence.js');
+const {state,applyBootstrap} = await import('../../barter/frontend/js/state.js');
+const {saveCompletionInventory,whenPersistenceIdle} = await import('../../barter/frontend/js/persistence.js');
 const session = {id:'same-session'};
 const snapshot = (revision,source,target=0,sessionRevision=1) => ({revision,sessionRevision,
   workingSession:session,inventory:[{programName:'source',stock:source},{programName:'target',stock:target}],settings:{},order:{}});

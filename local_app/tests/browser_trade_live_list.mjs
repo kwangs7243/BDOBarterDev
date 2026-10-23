@@ -60,7 +60,7 @@ try {
   ], { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
   let chromeErrors = ""; chrome.stderr.on("data", (data) => { chromeErrors += data.toString(); });
   const portText = await waitFor(async () => { try { return await readFile(join(profile, "chrome/DevToolsActivePort"), "utf8"); } catch { return false; } }, "Chrome");
-  const target = await (await fetch(`http://127.0.0.1:${portText.trim().split(/\r?\n/)[0]}/json/new?${encodeURIComponent(baseUrl)}`, { method: "PUT", signal: AbortSignal.timeout(10000) })).json();
+  const target = await (await fetch(`http://127.0.0.1:${portText.trim().split(/\r?\n/)[0]}/json/new?${encodeURIComponent(new URL("/barter/", baseUrl).href)}`, { method: "PUT", signal: AbortSignal.timeout(10000) })).json();
   socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((done, reject) => {
     const timer=setTimeout(()=>reject(new Error(`Chrome connection timeout: ${chromeErrors}`)),10000);

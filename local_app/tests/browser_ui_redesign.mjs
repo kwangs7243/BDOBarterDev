@@ -19,7 +19,7 @@ try {
  browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
  const page=await browser.newPage({viewport:{width:1920,height:1080}}), errors=[];
  page.on('pageerror',error=>errors.push(error.message));
- await page.goto(url); await page.waitForFunction(()=>document.querySelectorAll('.inventory-row').length===70);
+ await page.goto(url + "/barter/"); await page.waitForFunction(()=>document.querySelectorAll('.inventory-row').length===70);
  const accessibility=await page.evaluate(()=>{
    const ids=[...document.querySelectorAll('[id]')].map(node=>node.id);
    return {duplicates:ids.filter((id,index)=>ids.indexOf(id)!==index),
@@ -46,7 +46,7 @@ try {
    await p.saveInventory(Object.fromEntries(state.inventory.map((v,i)=>[v.programName,{stock:i%4===0?3:80}])));
    window.__bdoRenderAll();
  });
- const catalog=JSON.parse(await readFile(resolve(root,'local_app/frontend/data/trade-catalog.json'),'utf8'));
+ const catalog=JSON.parse(await readFile(resolve(root,'barter/frontend/data/trade-catalog.json'),'utf8'));
  const islands=['아지르 섬','나르보 섬','바레미 섬','웨이타 섬','오스트라 섬','이리야 섬'];
  const trades=islands.map((island,i)=>({island,fromItem:catalog.masterData[(i%4)+1][i],toItem:catalog.masterData[(i%4)+2][i],reqAmount:1,count:6,yield:(i%4)===3?1:3}));
  await page.locator('#open-json-import').click(); await page.locator('#trade-json-input').fill(JSON.stringify(trades)); await page.locator('#apply-new-session').click();
