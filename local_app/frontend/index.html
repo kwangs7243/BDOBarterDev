@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BDO Suite</title>
     <link rel="icon" type="image/svg+xml" href="/portal-assets/bdo.svg" />
+    <link
+      rel="preload"
+      href="/portal-assets/fonts/PretendardVariable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/portal-assets/portal.css" />
   </head>
   <body>
@@ -12,30 +19,58 @@
       <a class="brand" href="/" aria-label="BDO 통합 메인"
         ><span aria-hidden="true">◈</span> BDO Suite</a
       >
+      <span class="header-label">검은사막 생활 도구</span>
     </header>
     <main id="workspaces">
-      <h1>프로그램 선택</h1>
+      <section class="intro" aria-labelledby="intro-title">
+        <div>
+          <p class="eyebrow">BLACK DESERT ONLINE</p>
+          <h1 id="intro-title">모험가의 작업실</h1>
+          <p class="intro-copy">물물교환과 연금을 한곳에서.</p>
+        </div>
+        <svg
+          class="compass"
+          viewBox="0 0 160 160"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle cx="80" cy="80" r="58" />
+          <circle cx="80" cy="80" r="46" />
+          <path
+            d="M80 6v24M80 130v24M6 80h24M130 80h24M27 27l16 16M117 117l16 16M27 133l16-16M117 43l16-16M80 37l12 31 31 12-31 12-12 31-12-31-31-12 31-12Z"
+          />
+          <path class="compass-center" d="m80 59 21 21-21 21-21-21Z" />
+        </svg>
+      </section>
+      <div class="section-heading">
+        <h2>프로그램 선택</h2>
+        <span aria-hidden="true"></span>
+      </div>
       <div class="workspace-grid">
         <a class="workspace-card barter-card" href="/barter/">
+          <span class="card-label">BARTER</span>
           <svg viewBox="0 0 120 100" fill="none" aria-hidden="true">
             <path
               d="M60 12v55M58 16 29 57h29ZM66 28l25 29H66ZM22 68h78L86 85H38ZM13 92q12-8 24 0t24 0t24 0t24 0"
             />
           </svg>
-          <h2>물물교환</h2>
+          <h3>물물교환</h3>
+          <p>회차 관리 · 창고 재고 · 출항 계획</p>
           <span class="card-action"
-            >열기 <span aria-hidden="true">↗</span></span
+            >물교 작업실 열기 <span aria-hidden="true">↗</span></span
           >
         </a>
         <a class="workspace-card alchemy-card" href="/alchemy/">
+          <span class="card-label">ALCHEMY</span>
           <svg viewBox="0 0 120 100" fill="none" aria-hidden="true">
             <path
               d="M46 12h28M50 12v28L28 75q-7 14 10 14h44q17 0 10-14L70 40V12M38 64h44M48 74h1M66 80h1M62 53h1"
             />
           </svg>
-          <h2>연금</h2>
+          <h3>연금</h3>
+          <p>재고 관리 · 제작 계획 · 수율 기록</p>
           <span class="card-action"
-            >열기 <span aria-hidden="true">↗</span></span
+            >연금 작업실 열기 <span aria-hidden="true">↗</span></span
           >
         </a>
       </div>
