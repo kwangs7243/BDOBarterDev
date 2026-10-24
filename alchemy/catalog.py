@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
+from urllib.parse import urlparse
+from datetime import date
 
 MAX_QUANTITY = 1_000_000_000
 
@@ -36,6 +38,9 @@ def validate_catalog(data):
         raise AlchemyError("품목 ID 중복 또는 이름 누락입니다.")
     if any(v.get("icon") is not None and not re.fullmatch(r"icons/[A-Za-z0-9_-]{1,100}\.(?:png|webp)", str(v["icon"])) for v in items.values()):
         raise AlchemyError("아이콘은 앱에 포함된 icons/*.png 또는 *.webp 경로를 사용하세요.")
+    game_ids = [v["game_item_id"] for v in items.values() if "game_item_id" in v]
+    if any(type(i) is not int or i <= 0 for i in game_ids) or len(set(game_ids)) != len(game_ids):
+        raise AlchemyError("게임 품목 ID는 양의 정수이며 중복될 수 없습니다.")
     recipes = {}
     for r in data["recipes"]:
         rid = r.get("recipe_id")
@@ -62,6 +67,38 @@ def validate_catalog(data):
             raise AlchemyError("검증된 제작식은 출처와 확인일이 필요합니다.")
         if any(not isinstance(url, str) or not url.startswith(("https://", "http://")) for url in r.get("source_urls", [])):
             raise AlchemyError("출처는 HTTP/HTTPS URL이어야 합니다.")
+        if r.get("batch_group") and (r["yield_type"] != "fixed" or r["output_quantity"] not in (10, 100)):
+            raise AlchemyError("자동 배치 그룹은 고정 10개·100개식이어야 합니다.")
+        if "output_range" in r:
+            bounds = r["output_range"]
+            integer(bounds.get("min"), "최소 산출", minimum=1)
+            integer(bounds.get("max"), "최대 산출", minimum=bounds["min"])
+        if r.get("source_evidence"):
+            for evidence in r["source_evidence"]:
+                url = urlparse(evidence.get("url", ""))
+                if url.scheme not in {"http", "https"} or not url.netloc or not evidence.get("locator"):
+                    raise AlchemyError("개별 제작식 근거 위치와 출처가 필요합니다.")
+                if evidence.get("kind") == "official" and url.hostname != "www.kr.playblackdesert.com":
+                    raise AlchemyError("공식 근거는 한국 검은사막 공식 출처여야 합니다.")
+                try:
+                    date.fromisoformat(evidence["checked_at"])
+                except (KeyError, ValueError, TypeError):
+                    raise AlchemyError("근거 확인일 형식을 확인하세요.") from None
+            if r.get("verification") == "verified" and not any(
+                urlparse(url).path not in {"/", "/dataninfo/card/", "/kr/recipes/alchemy/", "/kr/mrecipes/"}
+                for url in r["source_urls"]
+            ):
+                raise AlchemyError("공통 카테고리가 아닌 개별 제작식 출처를 입력하세요.")
+        extras = r.get("additional_output_ids", [])
+        if len(extras) != len(set(extras)) or r["output_item_id"] in extras:
+            raise AlchemyError("추가 산출 ID가 중복됐습니다.")
+        for row in r["inputs"]:
+            alternates = row.get("alternatives", [])
+            ids = [a["item_id"] for a in alternates]
+            if len(ids) != len(set(ids)) or row["item_id"] in ids:
+                raise AlchemyError("대체 재료가 중복됐습니다.")
+            if any(a.get("mixing_allowed", False) is not False for a in alternates):
+                raise AlchemyError("동일 슬롯 혼합은 인게임 검증 후 지원할 수 있습니다.")
         recipes[rid] = r
     for i in data.get("products", []):
         if i not in items or not any(r["output_item_id"] == i for r in recipes.values()):
@@ -74,6 +111,8 @@ def ingredients(recipe, selections=None):
     result = []
     for row in recipe["inputs"]:
         chosen = selections.get(f'{recipe["recipe_id"]}:{row["item_id"]}', row["item_id"])
+        if not isinstance(chosen, str):
+            raise AlchemyError("동일 슬롯의 일반·상위 재료 혼합은 검증되지 않았습니다.")
         if chosen == row["item_id"]:
             result.append({"item_id": chosen, "quantity": row["quantity"]})
         else:
@@ -87,11 +126,14 @@ def ingredients(recipe, selections=None):
     return [{"item_id": i, "quantity": q} for i, q in merged.items()]
 
 
-def graph(catalog, root, choices=None, substitutions=None):
+def graph(catalog, root, choices=None, substitutions=None, batch_policies=None):
     items, recipes = validate_catalog(catalog)
     if root not in items:
         raise AlchemyError("등록되지 않은 품목입니다.")
     choices = choices or {}
+    batch_policies = batch_policies or {}
+    if not isinstance(batch_policies, dict) or any(p not in {"manual", "surplus", "shortage", "calls"} for p in batch_policies.values()):
+        raise AlchemyError("배치 선택 기준을 확인하세요.")
     selected, visiting, finished, order = {}, set(), set(), []
 
     def visit(item):
@@ -106,9 +148,16 @@ def graph(catalog, root, choices=None, substitutions=None):
         if rid and (recipe is None or recipe["output_item_id"] != item):
             raise AlchemyError("선택한 제작 경로가 품목과 맞지 않습니다.")
         if recipe:
-            selected[item] = recipe
-            for row in ingredients(recipe, substitutions):
-                visit(row["item_id"])
+            candidates = [recipe]
+            if batch_policies.get(item, "manual") != "manual":
+                candidates = [r for r in options if r.get("batch_group") and r.get("batch_group") == recipe.get("batch_group")
+                              and r.get("verification") == "verified" and not r.get("update_conflict")]
+                if len(candidates) != 2 or {r["output_quantity"] for r in candidates} != {10, 100}:
+                    raise AlchemyError("이 품목은 검증된 10개·100개 혼합 배치가 없습니다.")
+            selected[item] = {**recipe, "_batch_options": candidates} if len(candidates) > 1 else recipe
+            for candidate in candidates:
+                for row in ingredients(candidate, substitutions):
+                    visit(row["item_id"])
         visiting.remove(item)
         finished.add(item)
         order.append(item)

@@ -21,7 +21,7 @@ const labels = {
   unknown: "재고 확인 필요",
   yield_unknown: "수율 기록 확인 필요",
   supplied: "확보",
-  ready: "제작 가능",
+  ready: "지금 단독 제작 가능",
   short: "재료 부족",
   unverified: "검증 필요",
   in_progress: "제작 중",
@@ -68,8 +68,67 @@ function remember(items) {
 }
 const icon = (id, large = false) =>
   icons.has(id)
-    ? `<img class="item-icon${large ? " large" : ""}" src="/alchemy/assets/${esc(icons.get(id))}" width="${large ? 44 : 28}" height="${large ? 44 : 28}" alt="" loading="lazy" decoding="async">`
+    ? `<img class="item-icon${large ? " large" : ""}" src="/alchemy/assets/${esc(icons.get(id))}" width="${large ? 44 : 28}" height="${large ? 44 : 28}" alt="" data-item-id="${esc(id)}" loading="lazy" decoding="async">`
     : "";
+document.addEventListener(
+  "error",
+  (event) => {
+    const image = event.target;
+    if (
+      !(image instanceof HTMLImageElement) ||
+      !image.matches(".item-icon") ||
+      image.dataset.failed
+    )
+      return;
+    image.dataset.failed = "true";
+    image.classList.add("image-unavailable");
+    image.alt = "이미지 확인 필요";
+    image.title = name(image.dataset.itemId) + " · 이미지 확인 필요";
+    image.src = "/alchemy/assets/item-unavailable.svg";
+  },
+  true,
+);
+function batchButtons(row, title = "횟수 입력") {
+  const batches = row.batches?.length
+    ? row.batches
+    : [{ recipe_id: row.recipe_id, calls: row.calls ?? 1 }];
+  return batches
+    .map(
+      (b) =>
+        `<button type="button" class="small" data-start="${row.item_id}" data-recipe="${b.recipe_id}" data-calls="${b.calls}">${esc(title)}${batches.length > 1 ? ` · ${fmt(b.planned_output)}개 (${fmt(b.calls)}회)` : ""}</button>`,
+    )
+    .join("");
+}
+function batchPolicy() {
+  if (
+    !goal ||
+    new Set(
+      detail.recipes.filter((r) => r.batch_group).map((r) => r.output_quantity),
+    ).size !== 2
+  )
+    return "";
+  const current = goal.batch_policies?.[detail.item.item_id] ?? "manual";
+  return `<form id="batch-policy-form" data-protect><label>배치 선택 기준<select name="policy">${[
+    ["manual", "수동 경로 고정"],
+    ["surplus", "목표 초과 생산 최소화"],
+    ["shortage", "현재고 기반 직접 재료 부족량 최소화"],
+    ["calls", "제작 회차 최소화"],
+  ]
+    .map(
+      ([key, label]) =>
+        `<option value="${key}" ${key === current ? "selected" : ""}>${label}</option>`,
+    )
+    .join(
+      "",
+    )}</select></label><button type="submit">배치 기준 저장</button><p class="hint">10개·100개식을 조합합니다. 부족량은 직접 투입 재료 개수의 합으로 비교하며, 은화 비용이나 전체 하위 제작 비용을 뜻하지 않습니다. 미확인 재고는 별도로 표시합니다.</p></form>`;
+}
+function updatePanel() {
+  const update = state.catalog_update;
+  if (!update?.available) return "";
+  if (update.base_unknown)
+    return `<section class="panel"><h2>카탈로그 기준 버전 확인 필요</h2><p>기존 수정본을 유지했습니다. 기준 버전이 없어 자동 병합할 수 없습니다. 백업을 내보낸 뒤 새 배포본과 비교해 카탈로그를 가져오세요.</p></section>`;
+  return `<section class="panel"><h2>배포 카탈로그 갱신</h2><p>배포 버전 ${esc(update.upstream_version)} · 사용자 수정이 없는 항목은 최신 값으로 표시합니다. 충돌한 제작식은 새 제작을 보류합니다.</p><form id="catalog-update-form" data-protect>${update.conflicts.map((c) => `<details class="catalog-conflict"><summary>${esc(c.key)} · 양쪽 변경</summary><div class="conflict-values"><pre>${esc(JSON.stringify(c.user, null, 2))}</pre><pre>${esc(JSON.stringify(c.upstream, null, 2))}</pre></div><label>왼쪽: 내 수정 / 오른쪽: 배포 수정<select name="${esc(c.key)}" required><option value="">유지할 값 선택</option><option value="user">내 수정 유지</option><option value="upstream">배포 수정 적용</option></select></label></details>`).join("")}<button type="submit">선택 병합하고 이전 상태 백업</button></form></section>`;
+}
 function status(text, kind = "info") {
   $("#status").textContent = text;
   $("#status").dataset.kind = kind;
@@ -130,6 +189,12 @@ async function load() {
   if (page === "inventory") await inventory();
   if (page === "history") await history();
   if (page === "settings") settings();
+  if (page !== "settings" && state.catalog_update?.available) {
+    $("#content").insertAdjacentHTML(
+      "afterbegin",
+      `<p class="callout">카탈로그 갱신 확인이 필요합니다. <a href="/alchemy/settings">데이터·백업에서 확인</a></p>`,
+    );
+  }
   $("#content").setAttribute("aria-busy", "false");
   status("저장 상태를 확인했습니다. 미확인 재고는 0개와 구분합니다.");
 }
@@ -252,6 +317,10 @@ function yieldBasis(r) {
     return `기록 평균 ${fmt(r.expected_yield)}개/회 · 누적 ${fmt(h.total_calls)}회 (${fmt(h.jobs)}건)`;
   if (r.yield_source === "manual")
     return `수동 설정 ${fmt(r.expected_yield)}개/회`;
+  if (r.batches?.length > 1)
+    return r.batches
+      .map((b) => `${fmt(b.planned_output)}개 배치 · ${fmt(b.calls)}회`)
+      .join(" + ");
   if (r.yield_source === "fixed") return `고정 ${fmt(r.expected_yield)}개/회`;
   if (r.yield_source === "minimum")
     return `기록 없음 · ${fmt(r.expected_yield)}개/회 가정`;
@@ -268,13 +337,6 @@ function focusedRows(p) {
   visit(detail.item.item_id);
   return p.rows.filter((r) => reachable.has(r.item_id));
 }
-function shortages(p) {
-  const rows = focusedRows(p).filter(
-    (r) => r.recipe_id && (r.missing !== 0 || r.unknown),
-  );
-  return `<section class="panel" id="craft-shortages"><div class="panel-heading"><h2>부족한 제작품·중간재</h2><span class="hint">재료 확인 → 제작할 횟수 입력 → 실제 산출 기록</span></div><p class="hint">가변 산출은 내 완료 기록의 평균으로 계산합니다. 기록이 없으면 제작식의 산출 기준을 가정합니다. 아래 필요량과 횟수는 계획값이며, 실제 재고에는 완료 후 입력한 수량만 더합니다.</p>${rows.length ? `<div class="table-wrap"><table><thead><tr><th>품목</th><th class="num">계획 필요</th><th class="num">재고</th><th class="num">부족</th><th>계산 기준</th><th>제작</th></tr></thead><tbody>${rows.map((r) => `<tr data-shortage="${r.item_id}"><td class="item-name">${icon(r.item_id)}${esc(r.name)}</td><td class="num">${fmt(r.need)}</td><td class="num">${fmt(r.stock)}</td><td class="num">${fmt(r.missing)}</td><td><span class="yield-basis">${esc(yieldBasis(r))}</span>${r.calls ? `<div class="hint">계획상 ${fmt(r.calls)}회</div>` : ""}<a class="hint" href="${link(r.item_id, goal.goal_id)}">수율·제작식 설정 ↗</a></td><td><div class="actions"><a class="small" href="${link(r.item_id, goal.goal_id)}">재료 확인</a><button type="button" class="small" data-start="${r.item_id}" data-recipe="${r.recipe_id}" data-calls="${r.calls ?? 1}">횟수 입력</button></div></td></tr>`).join("")}</tbody></table></div>` : '<p class="empty">부족한 제작품·중간재가 없습니다.</p>'}</section>`;
-}
-
 function materialTable(materials) {
   return materials.length
     ? `<div class="table-wrap"><table><thead><tr><th>재료</th><th class="num">필요</th><th class="num">재고</th><th class="num">예약</th><th class="num">부족</th><th>상태</th></tr></thead><tbody>${materials.map((r) => `<tr><td class="item-name"><a href="${link(r.item_id, goal?.goal_id)}">${icon(r.item_id)}${esc(r.name)}</a></td><td class="num">${fmt(r.need)}</td><td class="num">${fmt(r.stock)}</td><td class="num">${fmt(r.allocated)}</td><td class="num">${fmt(r.missing)}</td><td>${badge(r.status)}</td></tr>`).join("")}</tbody></table></div>`
@@ -284,7 +346,21 @@ function recipeCards() {
   return detail.recipes
     .map(
       (r) =>
-        `<details class="recipe-option"><summary><strong>${esc(r.method)} · ${fmt(r.output_quantity)}개 기준</strong>${badge(r.verification === "verified" ? "supplied" : "unverified")}<span class="source-tag">${r.source_kind === "official" ? "공식 패치 대조" : r.source_kind === "user_checked" ? "사용자 확인" : "보조 DB 대조"} · ${esc(r.verified_at ?? "미확인")}</span></summary><ul>${r.inputs.map((i) => `<li>${icon(i.item_id)}${esc(name(i.item_id))} ${fmt(i.quantity)}개${i.alternatives?.length ? " · 검증된 대체 가능" : ""}</li>`).join("")}</ul><p class="hint">${r.yield_type === "fixed" ? "고정 산출" : "가변 산출: 내 기록 평균으로 계획 · 실제 입력량만 재고 반영"} · 요구 단계 ${esc(r.required_skill ?? "미확인")}</p>${detail.yield_history?.[r.recipe_id] ? `<p class="yield-record">내 완료 기록 · ${fmt(detail.yield_history[r.recipe_id].average)}개/회 · 누적 ${fmt(detail.yield_history[r.recipe_id].total_calls)}회 / ${fmt(detail.yield_history[r.recipe_id].total_output)}개</p>` : '<p class="hint">이 제작식의 완료 기록이 없습니다.</p>'}<p class="sources">${r.source_urls.map((url, i) => `<a href="${esc(/^https?:\/\//.test(url) ? url : "#")}" target="_blank" rel="noopener noreferrer">검증 출처 ${i + 1} ↗</a>`).join("")}</p><div class="actions">${goal ? `<button type="button" data-select-recipe="${r.recipe_id}">이 경로로 계획</button>` : ""}<button type="button" data-start="${r.output_item_id}" data-recipe="${r.recipe_id}" ${r.verification !== "verified" || detail.errors.some((v) => v.recipe_id === r.recipe_id) ? "disabled" : ""}>제작 시작 미리보기</button></div></details>`,
+        `<details class="recipe-option"><summary><strong>${esc(r.method)} · ${fmt(r.output_quantity)}개 기준</strong>${badge(r.verification === "verified" ? "supplied" : "unverified")}<span class="source-tag">${r.source_kind === "official" ? "공식 패치 대조" : r.source_kind === "user_checked" ? "사용자 확인" : "보조 DB 대조"} · ${esc(r.verified_at ?? "미확인")}</span></summary><ul>${r.inputs.map((i) => `<li>${icon(i.item_id)}${esc(name(i.item_id))} ${fmt(i.quantity)}개${i.alternatives?.length ? " · 검증된 대체 가능" : ""}</li>`).join("")}</ul><p class="hint">${r.yield_type === "fixed" ? "고정 산출" : "가변 산출: 내 기록 평균으로 계획 · 실제 입력량만 재고 반영"} · 요구 단계 ${esc(r.required_skill ?? "미확인")}</p>${detail.yield_history?.[r.recipe_id] ? `<p class="yield-record">내 완료 기록 · ${fmt(detail.yield_history[r.recipe_id].average)}개/회 · 누적 ${fmt(detail.yield_history[r.recipe_id].total_calls)}회 / ${fmt(detail.yield_history[r.recipe_id].total_output)}개</p>` : '<p class="hint">이 제작식의 완료 기록이 없습니다.</p>'}${
+          r.audit?.status === "UNRESOLVED"
+            ? `<p class="hint">추가 확인 필요: ${r.audit.unresolved_fields
+                .map(
+                  (f) =>
+                    ({
+                      yield_type: "실제 산출 범위",
+                      alternatives: "대체재 제작 경로",
+                      user_changes: "사용자 수정 내용 재검증",
+                    })[f] ?? f,
+                )
+                .map(esc)
+                .join(" / ")}</p>`
+            : ""
+        }<p class="sources">${r.source_urls.map((url, i) => `<a href="${esc(/^https?:\/\//.test(url) ? url : "#")}" target="_blank" rel="noopener noreferrer">검증 출처 ${i + 1} ↗</a>`).join("")}</p><div class="actions">${goal ? `<button type="button" data-select-recipe="${r.recipe_id}">이 경로로 계획</button>` : ""}<button type="button" data-start="${r.output_item_id}" data-recipe="${r.recipe_id}" ${r.verification !== "verified" || r.update_conflict || detail.errors.some((v) => v.recipe_id === r.recipe_id) ? "disabled" : ""}>제작 시작 미리보기</button></div></details>`,
     )
     .join("");
 }
@@ -302,7 +378,7 @@ async function renderDetail() {
   remember(p?.rows ?? []);
   $("#page-title").textContent = name(id);
   $("#content").innerHTML =
-    `<div class="intro"><div><span class="eyebrow">RECIPE & PRODUCTION</span><h2>${icon(id, true)}${esc(name(id))}</h2><p class="muted">현재 재고 ${fmt(state.inventory[id])}개 · ${esc(detail.recipes.length ? "제작 방법: " + [...new Set(detail.recipes.map((r) => r.method))].join(" / ") : detail.item.acquisition)}</p></div><a href="/alchemy/">목표 목록으로</a></div>${p ? (state.jobs.length ? jobs() : "") + shortages(p) : ""}<section class="panel"><h2>${goal ? "제작 목표" : "이 품목의 목표 만들기"}</h2>${nested ? `<p class="hint">이 단계는 <a href="${link(goal.item_id, goal.goal_id)}">${esc(name(goal.item_id))} 목표</a>에 속합니다. 아래에서 선택한 경로와 수율을 해당 목표에 저장합니다.</p>` : goalForm(id)}${goal ? `<div class="filter-row"><label><input id="assume-zero" type="checkbox" ${goal.assume_unknown_zero ? "checked" : ""}> 미확인을 0으로 가정하여 계획만 계산</label><span class="hint">확정 재고로 저장하거나 차감하지 않습니다.</span></div>` : ""}</section><div class="layout-two"><section class="panel"><div class="panel-heading"><h2>단계별 제작 계획</h2><span class="hint">공유 재료는 전체 합산 수량입니다.</span></div>${p ? `<div class="plan-summary"><div><strong>${fmt(p.progress_percent)}${p.progress_percent == null ? "" : "%"}</strong><span>배정된 실제 최종품 달성률</span></div><div><strong>${fmt(p.progress)} / ${fmt(p.target)}</strong><span>중간재·예상 산출 제외</span></div><div><strong>${Object.keys(p.reservations).length}</strong><span>공통 재고 예약 품목</span></div></div>${p.errors.map((s) => `<p class="error-note">${esc(s)}</p>`).join("")}<div class="filter-row"><select id="plan-filter" aria-label="제작 단계 표시"><option value="all">전체 단계</option><option value="short">부족·미확인만</option><option value="ready">제작 가능한 단계</option><option value="base">최하위 재료만</option></select><input id="plan-search" type="search" placeholder="단계 이름 찾기" aria-label="단계 이름 찾기"></div><div id="plan-tree"></div>` : '<div class="empty">목표를 등록하면 보유 중간재를 반영한 계획을 보여줍니다.</div>'}</section><div><section class="panel"><h2>제작 경로 비교</h2><p class="hint">10개·100개식은 촉매제와 예외 수량이 다른 별도 제작식입니다.</p>${detail.recipes.length ? recipeCards() : `<p class="callout">외부 수급 품목 · ${esc(detail.item.acquisition)}</p>`}${
+    `<div class="intro"><div><span class="eyebrow">RECIPE & PRODUCTION</span><h2>${icon(id, true)}${esc(name(id))}</h2><p class="muted">현재 재고 ${fmt(state.inventory[id])}개 · ${esc(detail.recipes.length ? "제작 방법: " + [...new Set(detail.recipes.map((r) => r.method))].join(" / ") : detail.item.acquisition)}</p></div><a href="/alchemy/">목표 목록으로</a></div>${p && state.jobs.length ? jobs() : ""}<section class="panel"><h2>${goal ? "제작 목표" : "이 품목의 목표 만들기"}</h2>${nested ? `<p class="hint">이 단계는 <a href="${link(goal.item_id, goal.goal_id)}">${esc(name(goal.item_id))} 목표</a>에 속합니다. 아래에서 선택한 경로와 수율을 해당 목표에 저장합니다.</p>` : goalForm(id)}${goal ? `<div class="filter-row"><label><input id="assume-zero" type="checkbox" ${goal.assume_unknown_zero ? "checked" : ""}> 미확인을 0으로 가정하여 계획만 계산</label><span class="hint">확정 재고로 저장하거나 차감하지 않습니다.</span></div>` : ""}</section><div class="layout-two"><section class="panel"><div class="panel-heading"><h2>단계별 제작 계획</h2><span class="hint">공유 재료는 전체 합산 수량입니다.</span></div>${p ? `<div class="plan-summary"><div><strong>${fmt(p.progress_percent)}${p.progress_percent == null ? "" : "%"}</strong><span>배정된 실제 최종품 달성률</span></div><div><strong>${fmt(p.progress)} / ${fmt(p.target)}</strong><span>중간재·예상 산출 제외</span></div><div><strong>${Object.keys(p.reservations).length}</strong><span>공통 재고 예약 품목</span></div></div>${`<p class="callout">${p.has_unknown ? "전체 목표: 미확인 재고 있음" : p.materials_satisfied ? "전체 목표: 계획상 재료 충족" : "전체 목표: 재료 부족"}${p.has_estimates ? " · 실측 수율에 따른 예상" : ""}</p><p class="hint">지금 단독 제작 가능은 각 단계 하나의 기준입니다. 여러 단계가 같은 재료를 쓰면 전체 재료는 부족할 수 있습니다.</p>`}${p.errors.map((s) => `<p class="error-note">${esc(s)}</p>`).join("")}<div class="filter-row"><select id="plan-filter" aria-label="제작 단계 표시"><option value="all">전체 단계</option><option value="short">부족·미확인만</option><option value="ready">제작 가능한 단계</option><option value="base">최하위 재료만</option></select><input id="plan-search" type="search" placeholder="단계 이름 찾기" aria-label="단계 이름 찾기"></div><div id="plan-tree"></div>` : '<div class="empty">목표를 등록하면 보유 중간재를 반영한 계획을 보여줍니다.</div>'}</section><div><section class="panel"><h2>제작 경로 비교</h2><p class="hint">10개·100개식은 촉매제와 예외 수량이 다른 별도 제작식입니다.</p>${batchPolicy()}${detail.recipes.length ? recipeCards() : `<p class="callout">외부 수급 품목 · ${esc(detail.item.acquisition)}</p>`}${
       goal && detail.recipes.some((r) => r.yield_type !== "fixed")
         ? `<form id="yield-form" data-protect><div class="form-row"><label class="wide">수동 수율 대상<select name="recipe_id" id="yield-recipe">${detail.recipes
             .filter((r) => r.yield_type !== "fixed")
@@ -362,7 +438,7 @@ function tree(p) {
       d.dataset.rendered = "1";
       const r = byId.get(d.dataset.tree);
       $(".branch-slot", d).innerHTML =
-        `<div class="tree-actions"><a href="${link(r.item_id, goal?.goal_id)}">제작식·수급 보기 ↗</a>${r.recipe_id ? `<button type="button" class="small" data-start="${r.item_id}" data-recipe="${r.recipe_id}" data-calls="${r.calls ?? 1}">제작 미리보기</button>` : ""}</div>${r.calls ? `<p class="hint">계획 산출 ${fmt(r.planned_output)}개 · 초과 ${fmt(r.surplus)}개 · ${esc(yieldBasis(r))}</p>` : ""}${r.inputs.map((v) => (byId.has(v.item_id) ? node(byId.get(v.item_id)) : "")).join("")}`;
+        `<div class="tree-actions"><a href="${link(r.item_id, goal?.goal_id)}">제작식·수급 보기 ↗</a>${r.recipe_id ? `${batchButtons(r, "제작 미리보기")}` : ""}</div>${r.ready ? `<p class="hint">${r.plan_ready ? "현재고를 계획 순서에 배정 가능" : "공유 재료 중복: 현재고 순서 배정 부족"}</p>` : ""}${r.calls ? `<p class="hint">계획 산출 ${fmt(r.planned_output)}개 · 초과 ${fmt(r.surplus)}개 · ${esc(yieldBasis(r))}</p>` : ""}${r.inputs.map((v) => (byId.has(v.item_id) ? node(byId.get(v.item_id)) : "")).join("")}`;
     },
     { capture: true },
   );
@@ -395,6 +471,7 @@ async function history() {
     restore: "백업 복원",
     settings: "설정 변경",
     catalog: "레시피 변경",
+    catalog_update: "배포 제작식 갱신",
   };
   $("#content").innerHTML =
     `<div class="intro"><div><span class="eyebrow">PRODUCTION LEDGER</span><h2>모든 변화의 기록</h2><p class="muted">재고 증감과 제작 작업을 트랜잭션 단위로 기록합니다.</p></div></div><section class="panel"><h2>제작·재고 원장</h2>${
@@ -418,7 +495,7 @@ async function history() {
 }
 function settings() {
   $("#content").innerHTML =
-    `<div class="intro"><div><span class="eyebrow">DATA & RECOVERY</span><h2>기록을 안전하게 보관하세요.</h2><p class="muted">연금 재고·목표·진행 작업·원장을 함께 내보냅니다. 물교 데이터는 포함하지 않습니다.</p></div></div><div class="settings-grid"><section class="panel"><h2>연금 데이터 백업</h2><p class="hint">스키마 ${state.schema_version} · SQLite. 복원 전 현재 연금 상태는 별도 자동 백업됩니다.</p><button class="primary" type="button" id="export-backup">전체 데이터 내보내기</button><hr><label for="backup-file" class="hint">가져올 연금 백업 JSON</label><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-preview"></div></section><section class="panel"><h2>레시피 카탈로그</h2><p>${catalog.item_count}개 품목 · ${catalog.recipe_count}개 제작식</p><p class="hint">공식 패치 대조 ${catalog.official_recipe_count}개 · 보조 DB·사용자 대조 ${catalog.recipe_count - catalog.official_recipe_count}개<br>버전 ${esc(catalog.version)}</p>${catalog.notes.map((n) => `<p class="hint">${esc(n)}</p>`).join("")}<div class="actions"><button type="button" id="export-catalog">카탈로그 내보내기</button><button type="button" id="edit-catalog">제작식 편집</button></div><p class="hint">출처와 검증 상태를 함께 관리합니다. 미검증 제작식은 자동 차감을 차단합니다.</p><label for="catalog-file" class="hint">카탈로그 JSON 가져오기</label><input type="file" id="catalog-file" accept="application/json,.json"><div id="catalog-preview"></div></section></div><section class="panel"><h2>화면 기본 설정</h2><form id="preferences-form" data-protect><div class="form-row"><label>제작 트리 기본 표시<select name="tree_filter">${Object.entries(
+    `${updatePanel()}<div class="intro"><div><span class="eyebrow">DATA & RECOVERY</span><h2>기록을 안전하게 보관하세요.</h2><p class="muted">연금 재고·목표·진행 작업·원장을 함께 내보냅니다. 물교 데이터는 포함하지 않습니다.</p></div></div><div class="settings-grid"><section class="panel"><h2>연금 데이터 백업</h2><p class="hint">스키마 ${state.schema_version} · SQLite. 복원 전 현재 연금 상태는 별도 자동 백업됩니다.</p><button class="primary" type="button" id="export-backup">전체 데이터 내보내기</button><hr><label for="backup-file" class="hint">가져올 연금 백업 JSON</label><input type="file" id="backup-file" accept="application/json,.json"><div id="backup-preview"></div></section><section class="panel"><h2>레시피 카탈로그</h2><p>${catalog.item_count}개 품목 · ${catalog.recipe_count}개 제작식</p><p class="hint">공식 패치 대조 ${catalog.official_recipe_count}개 · 보조 DB·사용자 대조 ${catalog.recipe_count - catalog.official_recipe_count}개<br>버전 ${esc(catalog.version)}</p>${catalog.notes.map((n) => `<p class="hint">${esc(n)}</p>`).join("")}<div class="actions"><button type="button" id="export-catalog">카탈로그 내보내기</button><button type="button" id="edit-catalog">제작식 편집</button></div><p class="hint">출처와 검증 상태를 함께 관리합니다. 미검증 제작식은 자동 차감을 차단합니다.</p><label for="catalog-file" class="hint">카탈로그 JSON 가져오기</label><input type="file" id="catalog-file" accept="application/json,.json"><div id="catalog-preview"></div></section></div><section class="panel"><h2>화면 기본 설정</h2><form id="preferences-form" data-protect><div class="form-row"><label>제작 트리 기본 표시<select name="tree_filter">${Object.entries(
       {
         all: "전체 단계",
         short: "부족·미확인만",
@@ -631,6 +708,26 @@ async function submit(form) {
   }
   if (form.id === "bulk-apply")
     await save("inventory", { changes: form._changes }, form);
+  if (form.id === "batch-policy-form") {
+    await save(
+      "goal",
+      {
+        ...goal,
+        batch_policies: {
+          ...goal.batch_policies,
+          [detail.item.item_id]: f.get("policy"),
+        },
+      },
+      form,
+    );
+  }
+  if (form.id === "catalog-update-form") {
+    await save(
+      "catalog_update",
+      { token: state.catalog_update.token, resolutions: Object.fromEntries(f) },
+      form,
+    );
+  }
   if (form.id === "start-form") {
     const r = startRecipe(),
       substitutions = { ...(goal?.substitutions ?? {}) };
@@ -861,6 +958,10 @@ document.addEventListener("click", async (event) => {
         await save("goal", {
           ...goal,
           choices: { ...goal.choices, [r.output_item_id]: r.recipe_id },
+          batch_policies: {
+            ...goal.batch_policies,
+            [r.output_item_id]: "manual",
+          },
         });
       }
       return;

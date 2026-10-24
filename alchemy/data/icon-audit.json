@@ -1,0 +1,4828 @@
+{
+  "checked_at": "2026-10-24",
+  "items": [
+    {
+      "item_id": "i-33353b0f05c7",
+      "name": "[파티] 불멸 : 조화의 영약 - 아인",
+      "game_item_id": 1404,
+      "source_url": "https://bdocodex.com/kr/item/1404/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 불멸 : 조화의 영약 - 아인",
+      "recorded_source_name": "[파티] 불멸 : 조화의 영약 - 아인",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001404.webp",
+      "source_sha256": "9445819553b8e1418e86320a53e912def5693f04aeea9dfd387c34efbe57fcb0",
+      "local_sha256": "9445819553b8e1418e86320a53e912def5693f04aeea9dfd387c34efbe57fcb0",
+      "manifest_sha256": "9445819553b8e1418e86320a53e912def5693f04aeea9dfd387c34efbe57fcb0",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "0c5276e5c1bb257ab2796694beab524d9895460bd7e78234f121c78fc4ba4be6",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-9c9d3fddcb9b",
+      "name": "[파티] 불멸 : 조화의 영약 - 에다니아",
+      "game_item_id": 1408,
+      "source_url": "https://bdocodex.com/kr/item/1408/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 불멸 : 조화의 영약 - 에다니아",
+      "recorded_source_name": "[파티] 불멸 : 조화의 영약 - 에다니아",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001408.webp",
+      "source_sha256": "a79d9a89ececf8fc9d78f01c35fd4e3bc84fbcc3299d055775ee047bfcb05f88",
+      "local_sha256": "a79d9a89ececf8fc9d78f01c35fd4e3bc84fbcc3299d055775ee047bfcb05f88",
+      "manifest_sha256": "a79d9a89ececf8fc9d78f01c35fd4e3bc84fbcc3299d055775ee047bfcb05f88",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f96b6e48c8eff9474bdd626d04a948d2a93729e507560ce98044b08b492acf0c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5a012a842902",
+      "name": "[파티] 불멸 : 조화의 영약 - 인간",
+      "game_item_id": 1402,
+      "source_url": "https://bdocodex.com/kr/item/1402/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 불멸 : 조화의 영약 - 인간",
+      "recorded_source_name": "[파티] 불멸 : 조화의 영약 - 인간",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001402.webp",
+      "source_sha256": "df7d1e0a91df50a6247f1afb6b1bac477e017886bfcb5264d9a6e7d43c68a8cd",
+      "local_sha256": "df7d1e0a91df50a6247f1afb6b1bac477e017886bfcb5264d9a6e7d43c68a8cd",
+      "manifest_sha256": "df7d1e0a91df50a6247f1afb6b1bac477e017886bfcb5264d9a6e7d43c68a8cd",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "9ac112208a41e402848d2f27cc1aed5ae7a040bf707821a4ff661d22c02e0296",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b562e1a27950",
+      "name": "[파티] 불멸 : 조화의 영약 - 카마실비아",
+      "game_item_id": 1406,
+      "source_url": "https://bdocodex.com/kr/item/1406/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 불멸 : 조화의 영약 - 카마실비아",
+      "recorded_source_name": "[파티] 불멸 : 조화의 영약 - 카마실비아",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001406.webp",
+      "source_sha256": "f6ec634b471496f27e1290487f02c32d9a183b48d131964ea7ab97d35b8a91fc",
+      "local_sha256": "f6ec634b471496f27e1290487f02c32d9a183b48d131964ea7ab97d35b8a91fc",
+      "manifest_sha256": "f6ec634b471496f27e1290487f02c32d9a183b48d131964ea7ab97d35b8a91fc",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "ce99e101953ef8393d78072e11f2eb4b71faa39bddc21cc06f83263e22132940",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-026aecb72d80",
+      "name": "[파티] 조화의 영약 - 아인",
+      "game_item_id": 1403,
+      "source_url": "https://bdocodex.com/kr/item/1403/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 조화의 영약 - 아인",
+      "recorded_source_name": "[파티] 조화의 영약 - 아인",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001403.webp",
+      "source_sha256": "435573f6290bd8da4a03b72cae40a06b5ebef167b687ae3467f50dd4046b78f4",
+      "local_sha256": "435573f6290bd8da4a03b72cae40a06b5ebef167b687ae3467f50dd4046b78f4",
+      "manifest_sha256": "435573f6290bd8da4a03b72cae40a06b5ebef167b687ae3467f50dd4046b78f4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7b241d3fc23d838eddf027193e96b51511f9235123256b758de9ca462a7e0740",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2cf2bd2b5cb0",
+      "name": "[파티] 조화의 영약 - 에다니아",
+      "game_item_id": 1407,
+      "source_url": "https://bdocodex.com/kr/item/1407/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 조화의 영약 - 에다니아",
+      "recorded_source_name": "[파티] 조화의 영약 - 에다니아",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001407.webp",
+      "source_sha256": "1858293d76997119063c0a6eccda0d3254cb8d5c4e279cc3ffcacbebe699eec7",
+      "local_sha256": "1858293d76997119063c0a6eccda0d3254cb8d5c4e279cc3ffcacbebe699eec7",
+      "manifest_sha256": "1858293d76997119063c0a6eccda0d3254cb8d5c4e279cc3ffcacbebe699eec7",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c70c9416c07d3ab2798f85f802671a04c776262e46f5937f0ac54ac1a56e3887",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-944c6d64079f",
+      "name": "[파티] 조화의 영약 - 인간",
+      "game_item_id": 1401,
+      "source_url": "https://bdocodex.com/kr/item/1401/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 조화의 영약 - 인간",
+      "recorded_source_name": "[파티] 조화의 영약 - 인간",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001401.webp",
+      "source_sha256": "f59a98371130fecc3cfb80b16b25ee8f21ba80e76a62b7dcde39fd6de3d3bbf3",
+      "local_sha256": "f59a98371130fecc3cfb80b16b25ee8f21ba80e76a62b7dcde39fd6de3d3bbf3",
+      "manifest_sha256": "f59a98371130fecc3cfb80b16b25ee8f21ba80e76a62b7dcde39fd6de3d3bbf3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "0b76e5a1f3c5948292373538520b68006c9d24a1744e513b6b466037a858cdad",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-8b782df30446",
+      "name": "[파티] 조화의 영약 - 카마실비아",
+      "game_item_id": 1405,
+      "source_url": "https://bdocodex.com/kr/item/1405/",
+      "status": "CONFIRMED",
+      "source_name": "[파티] 조화의 영약 - 카마실비아",
+      "recorded_source_name": "[파티] 조화의 영약 - 카마실비아",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001405.webp",
+      "source_sha256": "0f48968fbf367521458ae9dd9462767c7e7a0856e281f230f567e9ff42c21b94",
+      "local_sha256": "0f48968fbf367521458ae9dd9462767c7e7a0856e281f230f567e9ff42c21b94",
+      "manifest_sha256": "0f48968fbf367521458ae9dd9462767c7e7a0856e281f230f567e9ff42c21b94",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "64310fff7174b2320a4e020ba4a6af967764d9aafb3382ae0bd8a01910818995",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-26e0ffefda23",
+      "name": "가시나무 수액",
+      "game_item_id": 5023,
+      "source_url": "https://bdocodex.com/kr/item/5023/",
+      "status": "CONFIRMED",
+      "source_name": "가시나무 수액",
+      "recorded_source_name": "가시나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005023.webp",
+      "source_sha256": "d24add734686873895c1cf42fee4a61f258a075db9a37cf676164e8d726e9ea0",
+      "local_sha256": "d24add734686873895c1cf42fee4a61f258a075db9a37cf676164e8d726e9ea0",
+      "manifest_sha256": "d24add734686873895c1cf42fee4a61f258a075db9a37cf676164e8d726e9ea0",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "2609a7284e079257f169a6f1130d148220a98a636b5259c235f71e980ea3c6e1",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e5ebc357ad73",
+      "name": "가혹한 관통의 비약",
+      "game_item_id": 681,
+      "source_url": "https://bdocodex.com/kr/item/681/",
+      "status": "CONFIRMED",
+      "source_name": "가혹한 관통의 비약",
+      "recorded_source_name": "가혹한 관통의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000618.webp",
+      "source_sha256": "13930ca4a7640a9837f3e1d7c0d2163120149bb31a18b7e72fac21f793e23864",
+      "local_sha256": "13930ca4a7640a9837f3e1d7c0d2163120149bb31a18b7e72fac21f793e23864",
+      "manifest_sha256": "13930ca4a7640a9837f3e1d7c0d2163120149bb31a18b7e72fac21f793e23864",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "13e59416b3aba5b004b07052f5383e2f0a842f0f1c8930820e4f7d9306d25e74",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a2ec3a637cb6",
+      "name": "가혹한 죽음의 비약",
+      "game_item_id": 687,
+      "source_url": "https://bdocodex.com/kr/item/687/",
+      "status": "CONFIRMED",
+      "source_name": "가혹한 죽음의 비약",
+      "recorded_source_name": "가혹한 죽음의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000624.webp",
+      "source_sha256": "6f21b53656eafc2e5653a9daa02a78c5550ed4878d34b99edc3fcc8641245158",
+      "local_sha256": "6f21b53656eafc2e5653a9daa02a78c5550ed4878d34b99edc3fcc8641245158",
+      "manifest_sha256": "6f21b53656eafc2e5653a9daa02a78c5550ed4878d34b99edc3fcc8641245158",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "cb0b4e99bb4b32bec94100b44e0d961e9e3afa73ca6e9bf7691f29d9a37594c6",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2903cb8465cb",
+      "name": "간파의 비약",
+      "game_item_id": 698,
+      "source_url": "https://bdocodex.com/kr/item/698/",
+      "status": "CONFIRMED",
+      "source_name": "간파의 비약",
+      "recorded_source_name": "간파의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000635.webp",
+      "source_sha256": "1f9c47836007057a5376971fd9eb69da071d58018fd17049e3dcff915620a9cb",
+      "local_sha256": "1f9c47836007057a5376971fd9eb69da071d58018fd17049e3dcff915620a9cb",
+      "manifest_sha256": "1f9c47836007057a5376971fd9eb69da071d58018fd17049e3dcff915620a9cb",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "2d6aae5974fb5f85e703290cbdafe6fca770a6d6412db2fe811fa7ed2afc4f6d",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-bfe6c6de63fe",
+      "name": "감람석 원석",
+      "game_item_id": 4415,
+      "source_url": "https://bdocodex.com/kr/item/4415/",
+      "status": "CONFIRMED",
+      "source_name": "감람석 원석",
+      "recorded_source_name": "감람석 원석",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004415.webp",
+      "source_sha256": "460a6cc2ae202b78212f4db6f8b540ee6d340ae313d5464ef93c2e77f780c521",
+      "local_sha256": "460a6cc2ae202b78212f4db6f8b540ee6d340ae313d5464ef93c2e77f780c521",
+      "manifest_sha256": "460a6cc2ae202b78212f4db6f8b540ee6d340ae313d5464ef93c2e77f780c521",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "729481e0f4af8f2c9c83ea3774c1d65d75f8bb9e0434137095c608cefb50e3d5",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e6647075cb75",
+      "name": "강고한 의지의 비약",
+      "game_item_id": 703,
+      "source_url": "https://bdocodex.com/kr/item/703/",
+      "status": "CONFIRMED",
+      "source_name": "강고한 의지의 비약",
+      "recorded_source_name": "강고한 의지의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000640.webp",
+      "source_sha256": "af3af31106911491ba1416b6aba628f07c9ef5b2b9080da935cb9ac4fc2500a4",
+      "local_sha256": "af3af31106911491ba1416b6aba628f07c9ef5b2b9080da935cb9ac4fc2500a4",
+      "manifest_sha256": "af3af31106911491ba1416b6aba628f07c9ef5b2b9080da935cb9ac4fc2500a4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "113a92b1adb1abe2477eba4487bf2598a0a6654f175032f6170c642a861b36e7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e07c1f1d8047",
+      "name": "강력한 그리폰의 비약",
+      "game_item_id": 741,
+      "source_url": "https://bdocodex.com/kr/item/741/",
+      "status": "CONFIRMED",
+      "source_name": "강력한 그리폰의 비약",
+      "recorded_source_name": "강력한 그리폰의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000745.webp",
+      "source_sha256": "2e6bb839192ffb157a96b840823fa2de9438ce93f2c10c5a2c3fd8ea095eaea4",
+      "local_sha256": "2e6bb839192ffb157a96b840823fa2de9438ce93f2c10c5a2c3fd8ea095eaea4",
+      "manifest_sha256": "2e6bb839192ffb157a96b840823fa2de9438ce93f2c10c5a2c3fd8ea095eaea4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "aa7e7958c2dfa1922209bc3f96e33356ced1b977aa0d63697d3d5f06a29b87af",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-311ee6d66ad3",
+      "name": "강력한 생명력의 비약",
+      "game_item_id": 709,
+      "source_url": "https://bdocodex.com/kr/item/709/",
+      "status": "CONFIRMED",
+      "source_name": "강력한 생명력의 비약",
+      "recorded_source_name": "강력한 생명력의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000646.webp",
+      "source_sha256": "513f06fa71eea6186022f7ad6cb90b46edc7ffd22840ac0d662b1c542ffddf64",
+      "local_sha256": "513f06fa71eea6186022f7ad6cb90b46edc7ffd22840ac0d662b1c542ffddf64",
+      "manifest_sha256": "513f06fa71eea6186022f7ad6cb90b46edc7ffd22840ac0d662b1c542ffddf64",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f698ce26eb6118f5e6afa48b2f6d2d54d70382bb6cff6ae8cb40bdde7f5376a8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ac975c527877",
+      "name": "강력한 약탈의 비약",
+      "game_item_id": 677,
+      "source_url": "https://bdocodex.com/kr/item/677/",
+      "status": "CONFIRMED",
+      "source_name": "강력한 약탈의 비약",
+      "recorded_source_name": "강력한 약탈의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000614.webp",
+      "source_sha256": "b729d1c75f99af7ed01f1efc19e83d5460377583295ffa0486f5075bd395f2d4",
+      "local_sha256": "b729d1c75f99af7ed01f1efc19e83d5460377583295ffa0486f5075bd395f2d4",
+      "manifest_sha256": "b729d1c75f99af7ed01f1efc19e83d5460377583295ffa0486f5075bd395f2d4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d357902f5c2a1dfc7d4d5fd74483545fba4284113ed2027d7d48e655fede1e9a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6a6f95244e9a",
+      "name": "강력한 에다니아의 비약",
+      "game_item_id": 1410,
+      "source_url": "https://bdocodex.com/kr/item/1410/",
+      "status": "CONFIRMED",
+      "source_name": "강력한 에다니아의 비약",
+      "recorded_source_name": "강력한 에다니아의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001410.webp",
+      "source_sha256": "b6e4e043e939afa2816dbef2d1e3123565b13646f1f47558f462306eac70ef24",
+      "local_sha256": "b6e4e043e939afa2816dbef2d1e3123565b13646f1f47558f462306eac70ef24",
+      "manifest_sha256": "b6e4e043e939afa2816dbef2d1e3123565b13646f1f47558f462306eac70ef24",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "88730a99b55cedbdc32aaebd5d1682f80cae4aaff404ad8dab082cbe43cb031b",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-28e34e66e0e4",
+      "name": "강력한 충격의 비약",
+      "game_item_id": 763,
+      "source_url": "https://bdocodex.com/kr/item/763/",
+      "status": "CONFIRMED",
+      "source_name": "강력한 충격의 비약",
+      "recorded_source_name": "강력한 충격의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000765.webp",
+      "source_sha256": "ef215aa05c1e4813486da301c1b1fdc9c99f5008ccc0420f8721e2769f31d202",
+      "local_sha256": "ef215aa05c1e4813486da301c1b1fdc9c99f5008ccc0420f8721e2769f31d202",
+      "manifest_sha256": "ef215aa05c1e4813486da301c1b1fdc9c99f5008ccc0420f8721e2769f31d202",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "93c3d94afa9c185ee3aa0cf5223e3fc0f42de799be3e57d055b36f23eae4df44",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-48e548841709",
+      "name": "강철 방어의 비약",
+      "game_item_id": 717,
+      "source_url": "https://bdocodex.com/kr/item/717/",
+      "status": "CONFIRMED",
+      "source_name": "강철 방어의 비약",
+      "recorded_source_name": "강철 방어의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000654.webp",
+      "source_sha256": "2e1c66de9966465306f672ee6ab5198a61852f7c5051584e52fab99af6cdd80b",
+      "local_sha256": "2e1c66de9966465306f672ee6ab5198a61852f7c5051584e52fab99af6cdd80b",
+      "manifest_sha256": "2e1c66de9966465306f672ee6ab5198a61852f7c5051584e52fab99af6cdd80b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "097c74dfee83c53b580cae03e0044dc4f31f709c8f0fd9d8af5e09217e8e9a18",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-cf822ec62724",
+      "name": "격노의 영약",
+      "game_item_id": 1389,
+      "source_url": "https://bdocodex.com/kr/item/1389/",
+      "status": "CONFIRMED",
+      "source_name": "격노의 영약",
+      "recorded_source_name": "격노의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001389.webp",
+      "source_sha256": "7e427aaf0b2fac96b9099ada48897cd0546d3d53f36c9b69be57629ee78aeb20",
+      "local_sha256": "7e427aaf0b2fac96b9099ada48897cd0546d3d53f36c9b69be57629ee78aeb20",
+      "manifest_sha256": "7e427aaf0b2fac96b9099ada48897cd0546d3d53f36c9b69be57629ee78aeb20",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "6e4c1a70afcdefc43fb3dc8d41935648915470d2fed5a73f2b1a3d80ab47da4c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-f3fc14af3666",
+      "name": "고목나무 껍질",
+      "game_item_id": 5008,
+      "source_url": "https://bdocodex.com/kr/item/5008/",
+      "status": "CONFIRMED",
+      "source_name": "고목나무 껍질",
+      "recorded_source_name": "고목나무 껍질",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005008.webp",
+      "source_sha256": "cb80162144d5c66fc8c9eec8dcd84bbb75fcbd5a695c34a4eafe8485e98c17d7",
+      "local_sha256": "cb80162144d5c66fc8c9eec8dcd84bbb75fcbd5a695c34a4eafe8485e98c17d7",
+      "manifest_sha256": "cb80162144d5c66fc8c9eec8dcd84bbb75fcbd5a695c34a4eafe8485e98c17d7",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "55a42495b93c2f23658107e64e711ed5f20a6186540d859845d1710c6680074c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-00f61f8d6789",
+      "name": "곰 피",
+      "game_item_id": 6213,
+      "source_url": "https://bdocodex.com/kr/item/6213/",
+      "status": "CONFIRMED",
+      "source_name": "곰 피",
+      "recorded_source_name": "곰 피",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006207.webp",
+      "source_sha256": "a36b24895542b301ee1f221ba17816173b3c20f7f624381b907b5b5ae85db71d",
+      "local_sha256": "a36b24895542b301ee1f221ba17816173b3c20f7f624381b907b5b5ae85db71d",
+      "manifest_sha256": "a36b24895542b301ee1f221ba17816173b3c20f7f624381b907b5b5ae85db71d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f6b1478c205e3f85e2d841d05fb52fd54cc1dad4416b6f2343663d8633d3e34f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-af70f6af56f9",
+      "name": "관철의 향수",
+      "game_item_id": 1413,
+      "source_url": "https://bdocodex.com/kr/item/1413/",
+      "status": "CONFIRMED",
+      "source_name": "관철의 향수",
+      "recorded_source_name": "관철의 향수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001412.webp",
+      "source_sha256": "d20015946f96afe031bd7ce389106aa8615d51eb26592c78436549fd3b788c8e",
+      "local_sha256": "d20015946f96afe031bd7ce389106aa8615d51eb26592c78436549fd3b788c8e",
+      "manifest_sha256": "d20015946f96afe031bd7ce389106aa8615d51eb26592c78436549fd3b788c8e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8e020016bf1e161f23742e8e294d1db0c26a1565b619014062e9e5b2c0044a09",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a84ffbe2e94f",
+      "name": "관통의 비약",
+      "game_item_id": 680,
+      "source_url": "https://bdocodex.com/kr/item/680/",
+      "status": "CONFIRMED",
+      "source_name": "관통의 비약",
+      "recorded_source_name": "관통의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000617.webp",
+      "source_sha256": "7fdfa429094088fd7cd6c6fd9cb07f6039f264e5b8cbb54c0b1f8184275d5884",
+      "local_sha256": "7fdfa429094088fd7cd6c6fd9cb07f6039f264e5b8cbb54c0b1f8184275d5884",
+      "manifest_sha256": "7fdfa429094088fd7cd6c6fd9cb07f6039f264e5b8cbb54c0b1f8184275d5884",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "4608971101a326c1eadbace8ba36139b5efccf854837b017602fe8c0f8465931",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-65c27f942bf8",
+      "name": "광대 버섯",
+      "game_item_id": 5419,
+      "source_url": "https://bdocodex.com/kr/item/5419/",
+      "status": "CONFIRMED",
+      "source_name": "광대 버섯",
+      "recorded_source_name": "광대 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005419.webp",
+      "source_sha256": "13b71d86d7ca08b3b8cb3dccb2e57849672e272e29e87fe54899750d328c7046",
+      "local_sha256": "13b71d86d7ca08b3b8cb3dccb2e57849672e272e29e87fe54899750d328c7046",
+      "manifest_sha256": "13b71d86d7ca08b3b8cb3dccb2e57849672e272e29e87fe54899750d328c7046",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "053039ff1f84eec15c69a36b60b619d168e1b31e0683759f954720816f8e87e6",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e34b426e3b29",
+      "name": "광대의 혈액",
+      "game_item_id": 6353,
+      "source_url": "https://bdocodex.com/kr/item/6353/",
+      "status": "CONFIRMED",
+      "source_name": "광대의 혈액",
+      "recorded_source_name": "광대의 혈액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006353.webp",
+      "source_sha256": "405b56acdfc8b7a7aa06c018bc32bfb8df685d37d888619ecd0542b74e47bf35",
+      "local_sha256": "405b56acdfc8b7a7aa06c018bc32bfb8df685d37d888619ecd0542b74e47bf35",
+      "manifest_sha256": "405b56acdfc8b7a7aa06c018bc32bfb8df685d37d888619ecd0542b74e47bf35",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "decb9a8542a57462818c34b5e6d520a205f6c785988864416a60d2ab00b3fe11",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-4a4795387bbd",
+      "name": "광란의 비약",
+      "game_item_id": 672,
+      "source_url": "https://bdocodex.com/kr/item/672/",
+      "status": "CONFIRMED",
+      "source_name": "광란의 비약",
+      "recorded_source_name": "광란의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000609.webp",
+      "source_sha256": "9f1081deb8939497ac587bb82c90479f552861ad9512c7f2d3b3fa8e5a47b3ce",
+      "local_sha256": "9f1081deb8939497ac587bb82c90479f552861ad9512c7f2d3b3fa8e5a47b3ce",
+      "manifest_sha256": "9f1081deb8939497ac587bb82c90479f552861ad9512c7f2d3b3fa8e5a47b3ce",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "983ba27daa1b1b8d15c2567a568bac2570a53e61e99d2df8ac708e110a7005aa",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b17e6ab3368e",
+      "name": "광폭의 영약",
+      "game_item_id": 1397,
+      "source_url": "https://bdocodex.com/kr/item/1397/",
+      "status": "CONFIRMED",
+      "source_name": "광폭의 영약",
+      "recorded_source_name": "광폭의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001397.webp",
+      "source_sha256": "57df24d663954647193783d339a0187219eab929bfae5d9c119d68dd56ae7b08",
+      "local_sha256": "57df24d663954647193783d339a0187219eab929bfae5d9c119d68dd56ae7b08",
+      "manifest_sha256": "57df24d663954647193783d339a0187219eab929bfae5d9c119d68dd56ae7b08",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d3faf8d73664a2973d197faee691394e683a384a808cfa95290bbbfe4fd9216f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-87c88b18c2a4",
+      "name": "구름 버섯",
+      "game_item_id": 5410,
+      "source_url": "https://bdocodex.com/kr/item/5410/",
+      "status": "CONFIRMED",
+      "source_name": "구름 버섯",
+      "recorded_source_name": "구름 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005410.webp",
+      "source_sha256": "207f042c33333a1076c7a1f8d6a0d739ab9cca2a63b3783892de390c5aeb1d9a",
+      "local_sha256": "207f042c33333a1076c7a1f8d6a0d739ab9cca2a63b3783892de390c5aeb1d9a",
+      "manifest_sha256": "207f042c33333a1076c7a1f8d6a0d739ab9cca2a63b3783892de390c5aeb1d9a",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "388d802004e58c9510352554e4e0e4e8acfb2a74424f5fef03f1a4746f5ba5ef",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5bf0a37196d7",
+      "name": "균열의 가루",
+      "game_item_id": 4803,
+      "source_url": "https://bdocodex.com/kr/item/4803/",
+      "status": "CONFIRMED",
+      "source_name": "균열의 가루",
+      "recorded_source_name": "균열의 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004803.webp",
+      "source_sha256": "5e582801b56850fd407cfbff267c3b12901b05cefd5aa9f43dbfac41f01d5f96",
+      "local_sha256": "5e582801b56850fd407cfbff267c3b12901b05cefd5aa9f43dbfac41f01d5f96",
+      "manifest_sha256": "5e582801b56850fd407cfbff267c3b12901b05cefd5aa9f43dbfac41f01d5f96",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "91cdaf086eb3980e29908a5678d186254330083dfd503e07ae9054abcea60277",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7c1cfa76301b",
+      "name": "그리폰의 발톱",
+      "game_item_id": 9741,
+      "source_url": "https://bdocodex.com/kr/item/9741/",
+      "status": "CONFIRMED",
+      "source_name": "그리폰의 발톱",
+      "recorded_source_name": "그리폰의 발톱",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00009741.webp",
+      "source_sha256": "2e88cadc9e54073c795d8396ac5997026839e0528f8aaa9cb628c1a0f012e566",
+      "local_sha256": "2e88cadc9e54073c795d8396ac5997026839e0528f8aaa9cb628c1a0f012e566",
+      "manifest_sha256": "2e88cadc9e54073c795d8396ac5997026839e0528f8aaa9cb628c1a0f012e566",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8199239b63f643130ebd83bdbf66199ca351d9ffdbc6b8d14ea8e7780ab874d9",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-9df6a528c8e7",
+      "name": "그리폰의 비약",
+      "game_item_id": 740,
+      "source_url": "https://bdocodex.com/kr/item/740/",
+      "status": "CONFIRMED",
+      "source_name": "그리폰의 비약",
+      "recorded_source_name": "그리폰의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000744.webp",
+      "source_sha256": "61362f4a29136a28f77cb011c1a74b5b174d61be9784be15daa5314759e7a61a",
+      "local_sha256": "61362f4a29136a28f77cb011c1a74b5b174d61be9784be15daa5314759e7a61a",
+      "manifest_sha256": "61362f4a29136a28f77cb011c1a74b5b174d61be9784be15daa5314759e7a61a",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "5d6bca0c11d658fae8346c6ea872c30b8ba6a778082fd1edbac4be7b185746d7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2668d72ec1f0",
+      "name": "기력의 비약",
+      "game_item_id": 722,
+      "source_url": "https://bdocodex.com/kr/item/722/",
+      "status": "CONFIRMED",
+      "source_name": "기력의 비약",
+      "recorded_source_name": "기력의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000659.webp",
+      "source_sha256": "e0a96e7127423b32cf2d933193e5dba0f6e9b5a5317d9a2dc1fc5cdd7e7f53cc",
+      "local_sha256": "e0a96e7127423b32cf2d933193e5dba0f6e9b5a5317d9a2dc1fc5cdd7e7f53cc",
+      "manifest_sha256": "e0a96e7127423b32cf2d933193e5dba0f6e9b5a5317d9a2dc1fc5cdd7e7f53cc",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a35a725aa8a7820ac46f302173100b56b53242bd26b251a18e3b4bf086d9d5d7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-c82933b72991",
+      "name": "기민한 주문의 비약",
+      "game_item_id": 693,
+      "source_url": "https://bdocodex.com/kr/item/693/",
+      "status": "CONFIRMED",
+      "source_name": "기민한 주문의 비약",
+      "recorded_source_name": "기민한 주문의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000630.webp",
+      "source_sha256": "82204337e2ae6a4a3893554352217885452c341151895e231f27b55e3ced0fbc",
+      "local_sha256": "82204337e2ae6a4a3893554352217885452c341151895e231f27b55e3ced0fbc",
+      "manifest_sha256": "82204337e2ae6a4a3893554352217885452c341151895e231f27b55e3ced0fbc",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d955a0c46b9e4f89d888ee935040a1772dae3ffd8084ed232ba6486b02b653a4",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-23bd32c749af",
+      "name": "끝없는 광란의 비약",
+      "game_item_id": 673,
+      "source_url": "https://bdocodex.com/kr/item/673/",
+      "status": "CONFIRMED",
+      "source_name": "끝없는 광란의 비약",
+      "recorded_source_name": "끝없는 광란의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000610.webp",
+      "source_sha256": "1af8cf3e36bfb545e1588a4140500e1d7214d3e6be5c98139b680f576e9663aa",
+      "local_sha256": "1af8cf3e36bfb545e1588a4140500e1d7214d3e6be5c98139b680f576e9663aa",
+      "manifest_sha256": "1af8cf3e36bfb545e1588a4140500e1d7214d3e6be5c98139b680f576e9663aa",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "39d612854f612d77ed286c08c91f48eb4169194e9631154c74bc824d1770dc6e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-0196ddf60e62",
+      "name": "끝없는 분노의 비약",
+      "game_item_id": 705,
+      "source_url": "https://bdocodex.com/kr/item/705/",
+      "status": "CONFIRMED",
+      "source_name": "끝없는 분노의 비약",
+      "recorded_source_name": "끝없는 분노의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000642.webp",
+      "source_sha256": "d47fe34ab61a30623e93084cec0461cffa5a68f5e2ed297125edcf81348f447f",
+      "local_sha256": "d47fe34ab61a30623e93084cec0461cffa5a68f5e2ed297125edcf81348f447f",
+      "manifest_sha256": "d47fe34ab61a30623e93084cec0461cffa5a68f5e2ed297125edcf81348f447f",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "3c591cbd6915bd25037ff4dd3e13923323accbc2155d046897477fc17451bfab",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6a4140e675fc",
+      "name": "나선의 비약",
+      "game_item_id": 782,
+      "source_url": "https://bdocodex.com/kr/item/782/",
+      "status": "CONFIRMED",
+      "source_name": "나선의 비약",
+      "recorded_source_name": "나선의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000784.webp",
+      "source_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+      "local_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+      "manifest_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "881e4fb5030cfa67e073f4b08cfb63832633d9e648b807c7b0d6b7e80c60503a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "shared_image_exception": "서로 다른 게임 ID의 원본 파일도 같은 SHA-256·픽셀을 사용하므로 허용. 새 게임 캡처는 NOT_RUN.",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a77567213fda",
+      "name": "난쟁이 버섯",
+      "game_item_id": 5409,
+      "source_url": "https://bdocodex.com/kr/item/5409/",
+      "status": "CONFIRMED",
+      "source_name": "난쟁이 버섯",
+      "recorded_source_name": "난쟁이 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005409.webp",
+      "source_sha256": "6f1a9ec28a0a7e1e138c6126f7e31717e13e16a4420ad155df0073cd908a0c1e",
+      "local_sha256": "6f1a9ec28a0a7e1e138c6126f7e31717e13e16a4420ad155df0073cd908a0c1e",
+      "manifest_sha256": "6f1a9ec28a0a7e1e138c6126f7e31717e13e16a4420ad155df0073cd908a0c1e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d8c03e68c0f0436c3730f2153c7655c4ba9f090afb04bf7519873b8ac3444107",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-d2ebc51d6676",
+      "name": "날카로운 간파의 비약",
+      "game_item_id": 699,
+      "source_url": "https://bdocodex.com/kr/item/699/",
+      "status": "CONFIRMED",
+      "source_name": "날카로운 간파의 비약",
+      "recorded_source_name": "날카로운 간파의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000636.webp",
+      "source_sha256": "1c0476ca24e2444f2ad8a7109fd4bc70c89e955bb8b048d4791e0ef6647c9a08",
+      "local_sha256": "1c0476ca24e2444f2ad8a7109fd4bc70c89e955bb8b048d4791e0ef6647c9a08",
+      "manifest_sha256": "1c0476ca24e2444f2ad8a7109fd4bc70c89e955bb8b048d4791e0ef6647c9a08",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b5f39f6f0527395ed58f31baba9fc2f2f8a2c0e3341a19a8eb03bedf255718b5",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-abd7869a7ce0",
+      "name": "넓은 대양의 영약",
+      "game_item_id": 890073,
+      "source_url": "https://bdocodex.com/kr/item/890073/",
+      "status": "CONFIRMED",
+      "source_name": "넓은 대양의 영약",
+      "recorded_source_name": "넓은 대양의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00890073.webp",
+      "source_sha256": "5b0f170d6d6800c55e32d02f0e9ed5cdb6e2bfd5a43a3cdf1c6a002c5c988c3c",
+      "local_sha256": "5b0f170d6d6800c55e32d02f0e9ed5cdb6e2bfd5a43a3cdf1c6a002c5c988c3c",
+      "manifest_sha256": "5b0f170d6d6800c55e32d02f0e9ed5cdb6e2bfd5a43a3cdf1c6a002c5c988c3c",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "abbdd71ea2336d779e65372eb8098d6ce036b656817d5fc1a76e09c1f8f2359c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-05e09aae4837",
+      "name": "넘치는 기력의 비약",
+      "game_item_id": 723,
+      "source_url": "https://bdocodex.com/kr/item/723/",
+      "status": "CONFIRMED",
+      "source_name": "넘치는 기력의 비약",
+      "recorded_source_name": "넘치는 기력의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000660.webp",
+      "source_sha256": "89134560cdb56093c531ce29e2c4f0d74a080cd0d0d8ca333b95f83febd6f62e",
+      "local_sha256": "89134560cdb56093c531ce29e2c4f0d74a080cd0d0d8ca333b95f83febd6f62e",
+      "manifest_sha256": "89134560cdb56093c531ce29e2c4f0d74a080cd0d0d8ca333b95f83febd6f62e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b0f4cbd62e4fbf145a9c9905f3791b0ed6a073ea5b29cd3c6f14061fe463fb3a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-36acd5d12687",
+      "name": "녹음의 향수",
+      "game_item_id": 890,
+      "source_url": "https://bdocodex.com/kr/item/890/",
+      "status": "CONFIRMED",
+      "source_name": "녹음의 향수",
+      "recorded_source_name": "녹음의 향수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00000890.webp",
+      "source_sha256": "e8e5933c4b14880b67345e83173b9fe7379e0ad717bbefca5bb35ba84d2a324c",
+      "local_sha256": "e8e5933c4b14880b67345e83173b9fe7379e0ad717bbefca5bb35ba84d2a324c",
+      "manifest_sha256": "e8e5933c4b14880b67345e83173b9fe7379e0ad717bbefca5bb35ba84d2a324c",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "729a908e3e3379bfdfb76b42eda654f2c5e0266f291c9b40e1ba150167431f64",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ba560a40d964",
+      "name": "늑대 피",
+      "game_item_id": 6214,
+      "source_url": "https://bdocodex.com/kr/item/6214/",
+      "status": "CONFIRMED",
+      "source_name": "늑대 피",
+      "recorded_source_name": "늑대 피",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006226.webp",
+      "source_sha256": "32c622538b925eae7b9cc66ff5c03f039a0f03cc4d65f65d65917f3a4c2e72ec",
+      "local_sha256": "32c622538b925eae7b9cc66ff5c03f039a0f03cc4d65f65d65917f3a4c2e72ec",
+      "manifest_sha256": "32c622538b925eae7b9cc66ff5c03f039a0f03cc4d65f65d65917f3a4c2e72ec",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f8408de7def065c8b00c6b24e0e7195d212e5b959f791006307dffc2d0faaa42",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-694b5d097f5a",
+      "name": "단풍나무 수액",
+      "game_item_id": 5002,
+      "source_url": "https://bdocodex.com/kr/item/5002/",
+      "status": "CONFIRMED",
+      "source_name": "단풍나무 수액",
+      "recorded_source_name": "단풍나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005002.webp",
+      "source_sha256": "57d5f016a1e8bf03cf5a3434bf7011ebcd749ccb3d2fbfae404f5afa775b569a",
+      "local_sha256": "57d5f016a1e8bf03cf5a3434bf7011ebcd749ccb3d2fbfae404f5afa775b569a",
+      "manifest_sha256": "57d5f016a1e8bf03cf5a3434bf7011ebcd749ccb3d2fbfae404f5afa775b569a",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "608fb09f3e508d2473efe9679850438dee351c3d1ec0b887f1a4a7743ab172ce",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a403f7a6499b",
+      "name": "대양의 영약",
+      "game_item_id": 890072,
+      "source_url": "https://bdocodex.com/kr/item/890072/",
+      "status": "CONFIRMED",
+      "source_name": "대양의 영약",
+      "recorded_source_name": "대양의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00890072.webp",
+      "source_sha256": "7e01b471e0a005b6a3271ef7251f996d59d5dc45b0ad828c7478619e9afcc3cb",
+      "local_sha256": "7e01b471e0a005b6a3271ef7251f996d59d5dc45b0ad828c7478619e9afcc3cb",
+      "manifest_sha256": "7e01b471e0a005b6a3271ef7251f996d59d5dc45b0ad828c7478619e9afcc3cb",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f4d47bdf9a6a2135913ffac9592f65e487aa327813e459e89710f96e40a4fc15",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-be620f124ca8",
+      "name": "대양의 정수",
+      "game_item_id": 821467,
+      "source_url": "https://bdocodex.com/kr/item/821467/",
+      "status": "CONFIRMED",
+      "source_name": "대양의 정수",
+      "recorded_source_name": "대양의 정수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/00890075.webp",
+      "source_sha256": "158b96dceba1efa73024ba61151000251c62d07b267a28d1c5edee65371aa9ba",
+      "local_sha256": "158b96dceba1efa73024ba61151000251c62d07b267a28d1c5edee65371aa9ba",
+      "manifest_sha256": "158b96dceba1efa73024ba61151000251c62d07b267a28d1c5edee65371aa9ba",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "308dc1350d6d8e42092bd8c1712b3e29a6e4e4132b8ba8560e8b3b75785c6535",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ddf472b47ba6",
+      "name": "대양의 오일",
+      "game_item_id": 9727,
+      "source_url": "https://bdocodex.com/kr/item/9727/",
+      "status": "CONFIRMED",
+      "source_name": "대양의 오일",
+      "recorded_source_name": "대양의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00009727.webp",
+      "source_sha256": "9674767b06a183006da6717fd47abb97db1bdf358729c0ba7b56948ebecccd96",
+      "local_sha256": "9674767b06a183006da6717fd47abb97db1bdf358729c0ba7b56948ebecccd96",
+      "manifest_sha256": "9674767b06a183006da6717fd47abb97db1bdf358729c0ba7b56948ebecccd96",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d10478bb0e5ae9adb20ebba76814464b67bacd7e7760285a911bfc64a151db44",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "MISMATCH",
+      "correction": "현재 명칭으로 변경; 대왕 고래 오일은 historical_aliases로 보존. 게임 ID와 파일은 유지.",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": [
+        "source_name"
+      ]
+    },
+    {
+      "item_id": "i-e17b6bea7238",
+      "name": "대지의 가루",
+      "game_item_id": 4804,
+      "source_url": "https://bdocodex.com/kr/item/4804/",
+      "status": "CONFIRMED",
+      "source_name": "대지의 가루",
+      "recorded_source_name": "대지의 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004804.webp",
+      "source_sha256": "ce45e53dfaaf917579095b9ec638501e083578ba8a3f39ec67cd867274fed036",
+      "local_sha256": "ce45e53dfaaf917579095b9ec638501e083578ba8a3f39ec67cd867274fed036",
+      "manifest_sha256": "ce45e53dfaaf917579095b9ec638501e083578ba8a3f39ec67cd867274fed036",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "16aff63c0380e603cbc127c969eb1b7f4e4e6644e7ee6a9bafe06eed8b19f96d",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7822f106d7f2",
+      "name": "델로티아",
+      "game_item_id": 5538,
+      "source_url": "https://bdocodex.com/kr/item/5538/",
+      "status": "CONFIRMED",
+      "source_name": "델로티아",
+      "recorded_source_name": "델로티아",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005538.webp",
+      "source_sha256": "1004973e8d3dd25ba7e235ee4e36d415a0439e1f8a8536da92141ace5945e2c2",
+      "local_sha256": "1004973e8d3dd25ba7e235ee4e36d415a0439e1f8a8536da92141ace5945e2c2",
+      "manifest_sha256": "1004973e8d3dd25ba7e235ee4e36d415a0439e1f8a8536da92141ace5945e2c2",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "14ea728da32d49f1497f0cad300e79a68edb27e6a97cf08717c13f5e78c2dfc0",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7ba9ec5cda01",
+      "name": "델로티아 가루",
+      "game_item_id": 5605,
+      "source_url": "https://bdocodex.com/kr/item/5605/",
+      "status": "CONFIRMED",
+      "source_name": "델로티아 가루",
+      "recorded_source_name": "델로티아 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005605.webp",
+      "source_sha256": "32f679e432f352e5a710511e2de53d03d31576c3dba645cf284d34cf12cd0bf5",
+      "local_sha256": "32f679e432f352e5a710511e2de53d03d31576c3dba645cf284d34cf12cd0bf5",
+      "manifest_sha256": "32f679e432f352e5a710511e2de53d03d31576c3dba645cf284d34cf12cd0bf5",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "83557ed767c2ad471b591572005efc9787c5f2eed29178ce85bd2b5a78adb1d3",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-55684eba98d6",
+      "name": "도마뱀 피",
+      "game_item_id": 6208,
+      "source_url": "https://bdocodex.com/kr/item/6208/",
+      "status": "CONFIRMED",
+      "source_name": "도마뱀 피",
+      "recorded_source_name": "도마뱀 피",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006217.webp",
+      "source_sha256": "3eb1bd6c49ccd3346263b413cc4a1b58b76ab9a0efda9a9fc2962694c2800903",
+      "local_sha256": "3eb1bd6c49ccd3346263b413cc4a1b58b76ab9a0efda9a9fc2962694c2800903",
+      "manifest_sha256": "3eb1bd6c49ccd3346263b413cc4a1b58b76ab9a0efda9a9fc2962694c2800903",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "6cd0e0417f4aee2eb16c651bb1585b81ee29f66694ed539a17307f70aecda979",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-9610230d0f57",
+      "name": "돼지 피",
+      "game_item_id": 6205,
+      "source_url": "https://bdocodex.com/kr/item/6205/",
+      "status": "CONFIRMED",
+      "source_name": "돼지 피",
+      "recorded_source_name": "돼지 피",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006201.webp",
+      "source_sha256": "b0e60a25ff7c36bb4c107173234fe2a48a95978aa12f22ec1a38d1fe02b51027",
+      "local_sha256": "b0e60a25ff7c36bb4c107173234fe2a48a95978aa12f22ec1a38d1fe02b51027",
+      "manifest_sha256": "b0e60a25ff7c36bb4c107173234fe2a48a95978aa12f22ec1a38d1fe02b51027",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f2fd867f8c20bd8f3e9899e7c345b14f4e7a0be16007b47da62444906401da49",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a1e608e1595d",
+      "name": "드넓은 대양의 영약",
+      "game_item_id": 890074,
+      "source_url": "https://bdocodex.com/kr/item/890074/",
+      "status": "CONFIRMED",
+      "source_name": "드넓은 대양의 영약",
+      "recorded_source_name": "드넓은 대양의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00890074.webp",
+      "source_sha256": "ba1f284d618fa0b92aec9c3390c716c0ea7d7c0f22d083ac6d6358d948b55457",
+      "local_sha256": "ba1f284d618fa0b92aec9c3390c716c0ea7d7c0f22d083ac6d6358d948b55457",
+      "manifest_sha256": "ba1f284d618fa0b92aec9c3390c716c0ea7d7c0f22d083ac6d6358d948b55457",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8fa920626dc0dffc0866ae719bb719e75b9ca0176c2e61dc84ba7632baa76f56",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-76ef148af6ed",
+      "name": "루살카 산호",
+      "game_item_id": 821255,
+      "source_url": "https://bdocodex.com/kr/item/821255/",
+      "status": "CONFIRMED",
+      "source_name": "루살카 산호",
+      "recorded_source_name": "루살카 산호",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00821255.webp",
+      "source_sha256": "e850b2b891c9f27108da5b3c09395e76f011c2efa44fdc69671c7b6d45303ea9",
+      "local_sha256": "e850b2b891c9f27108da5b3c09395e76f011c2efa44fdc69671c7b6d45303ea9",
+      "manifest_sha256": "e850b2b891c9f27108da5b3c09395e76f011c2efa44fdc69671c7b6d45303ea9",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "068df5356d0310168b820654619b77f507564b86764405ac1b1b4559b0c41c9f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5cd5845c0928",
+      "name": "마력이 깃든 감람석 가루",
+      "game_item_id": 4496,
+      "source_url": "https://bdocodex.com/kr/item/4496/",
+      "status": "CONFIRMED",
+      "source_name": "마력이 깃든 감람석 가루",
+      "recorded_source_name": "마력이 깃든 감람석 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004496.webp",
+      "source_sha256": "4dd37ef9aa0449c965427e05eb40c81364b8bbd43c83c9aa6e36a2d6a50dfc65",
+      "local_sha256": "4dd37ef9aa0449c965427e05eb40c81364b8bbd43c83c9aa6e36a2d6a50dfc65",
+      "manifest_sha256": "4dd37ef9aa0449c965427e05eb40c81364b8bbd43c83c9aa6e36a2d6a50dfc65",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "ccd2a5b8a7fa2abb85bb1ec5ea56bb8735213e250f9f8f7880c616a9effd671d",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-c49599479c40",
+      "name": "마력이 깃든 촉매제",
+      "game_item_id": 820936,
+      "source_url": "https://bdocodex.com/kr/item/820936/",
+      "status": "CONFIRMED",
+      "source_name": "마력이 깃든 촉매제",
+      "recorded_source_name": "마력이 깃든 촉매제",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/000820936.webp",
+      "source_sha256": "89d95794f4ce91c06ac0afd8c6c8c83b0dd217be58ab791ac55b40b3eab170f4",
+      "local_sha256": "89d95794f4ce91c06ac0afd8c6c8c83b0dd217be58ab791ac55b40b3eab170f4",
+      "manifest_sha256": "89d95794f4ce91c06ac0afd8c6c8c83b0dd217be58ab791ac55b40b3eab170f4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "4a83cbadd6755622af13f964c1814b5159d57b6cdee1b5bdb7b90e34382c7758",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7cf8ffc293b6",
+      "name": "맑은 액체 시약",
+      "game_item_id": 5301,
+      "source_url": "https://bdocodex.com/kr/item/5301/",
+      "status": "CONFIRMED",
+      "source_name": "맑은 액체 시약",
+      "recorded_source_name": "맑은 액체 시약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005301.webp",
+      "source_sha256": "f660c36b8c9ae5fe7c8b9ac0741b365c7c075b65fa8701c43eff1d3569e1de24",
+      "local_sha256": "f660c36b8c9ae5fe7c8b9ac0741b365c7c075b65fa8701c43eff1d3569e1de24",
+      "manifest_sha256": "f660c36b8c9ae5fe7c8b9ac0741b365c7c075b65fa8701c43eff1d3569e1de24",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "2a7cf3d51be3efc5efdd23dea28eef2756fb4fe94ac07638ecc19f735ec4f965",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-f62b39465974",
+      "name": "매서운 아인 사냥의 비약",
+      "game_item_id": 679,
+      "source_url": "https://bdocodex.com/kr/item/679/",
+      "status": "CONFIRMED",
+      "source_name": "매서운 아인 사냥의 비약",
+      "recorded_source_name": "매서운 아인 사냥의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000616.webp",
+      "source_sha256": "d1f1b184a5fc7ea1bfafdaba9d6c49e657f8cf0beba2909aa7af8c7a4bb411cd",
+      "local_sha256": "d1f1b184a5fc7ea1bfafdaba9d6c49e657f8cf0beba2909aa7af8c7a4bb411cd",
+      "manifest_sha256": "d1f1b184a5fc7ea1bfafdaba9d6c49e657f8cf0beba2909aa7af8c7a4bb411cd",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "79bf5d2dc8fc255a49a11b3d7b59b7afad63a215b0b7dfad4ff8ccc74964fb08",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-c0cdee787670",
+      "name": "무자비한 하늘의 비약",
+      "game_item_id": 721,
+      "source_url": "https://bdocodex.com/kr/item/721/",
+      "status": "CONFIRMED",
+      "source_name": "무자비한 하늘의 비약",
+      "recorded_source_name": "무자비한 하늘의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000658.webp",
+      "source_sha256": "a1af769aaf040d9afd14a96f7e89088414b536e70d5f3ed5ac2b03ca634c398d",
+      "local_sha256": "a1af769aaf040d9afd14a96f7e89088414b536e70d5f3ed5ac2b03ca634c398d",
+      "manifest_sha256": "a1af769aaf040d9afd14a96f7e89088414b536e70d5f3ed5ac2b03ca634c398d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f70ed20c3eeb22512522052c1c4423aa36be340aeb11d3d486608d6f7853388c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-1d4769826724",
+      "name": "물푸레나무 수액",
+      "game_item_id": 5001,
+      "source_url": "https://bdocodex.com/kr/item/5001/",
+      "status": "CONFIRMED",
+      "source_name": "물푸레나무 수액",
+      "recorded_source_name": "물푸레나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005001.webp",
+      "source_sha256": "55957fae6ef998b138618c1dc935ac6eac7f403f66ed41ac1d1530ad6531f13b",
+      "local_sha256": "55957fae6ef998b138618c1dc935ac6eac7f403f66ed41ac1d1530ad6531f13b",
+      "manifest_sha256": "55957fae6ef998b138618c1dc935ac6eac7f403f66ed41ac1d1530ad6531f13b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "856082190d92f71b300102c7a7cca1b383b4212abc8f105504db544e91a8dd38",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-719186084d01",
+      "name": "바람의 비약",
+      "game_item_id": 688,
+      "source_url": "https://bdocodex.com/kr/item/688/",
+      "status": "CONFIRMED",
+      "source_name": "바람의 비약",
+      "recorded_source_name": "바람의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000625.webp",
+      "source_sha256": "0efda17cf0538dd5ad5ed25542e4fd4c831eb241586a128936fa7177437734c2",
+      "local_sha256": "0efda17cf0538dd5ad5ed25542e4fd4c831eb241586a128936fa7177437734c2",
+      "manifest_sha256": "0efda17cf0538dd5ad5ed25542e4fd4c831eb241586a128936fa7177437734c2",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a6d31a7e574417a0087defc31f05485d7a540eec68aa00d62c6b672ee32d1e15",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b1d6a9618ce2",
+      "name": "방어의 비약",
+      "game_item_id": 716,
+      "source_url": "https://bdocodex.com/kr/item/716/",
+      "status": "CONFIRMED",
+      "source_name": "방어의 비약",
+      "recorded_source_name": "방어의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000653.webp",
+      "source_sha256": "deffaddd80aad696bb51859314169b4256e8f995f1af8ef720f9507b09cb5317",
+      "local_sha256": "deffaddd80aad696bb51859314169b4256e8f995f1af8ef720f9507b09cb5317",
+      "manifest_sha256": "deffaddd80aad696bb51859314169b4256e8f995f1af8ef720f9507b09cb5317",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c2cb3aae2510d9462295566a67db350d1e085be4e748e771a3afd7b3cdd687f6",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ef864bed494e",
+      "name": "분노의 비약",
+      "game_item_id": 704,
+      "source_url": "https://bdocodex.com/kr/item/704/",
+      "status": "CONFIRMED",
+      "source_name": "분노의 비약",
+      "recorded_source_name": "분노의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000641.webp",
+      "source_sha256": "84b71c28675886947402aca5f26712ed1ab95fdefce1d088e7ac448630724b3f",
+      "local_sha256": "84b71c28675886947402aca5f26712ed1ab95fdefce1d088e7ac448630724b3f",
+      "manifest_sha256": "84b71c28675886947402aca5f26712ed1ab95fdefce1d088e7ac448630724b3f",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "97c799b6f32858d924dddbe62f7db303dc96f5eaa85ffdf3a6ad9c37664f4a6f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-98cd310424ca",
+      "name": "불굴의 오일",
+      "game_item_id": 6603,
+      "source_url": "https://bdocodex.com/kr/item/6603/",
+      "status": "CONFIRMED",
+      "source_name": "불굴의 오일",
+      "recorded_source_name": "불굴의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006603.webp",
+      "source_sha256": "fb99e3260e39d2fa6b08c4967f5951897b2dd0885822dc5d0260d65a187df6dd",
+      "local_sha256": "fb99e3260e39d2fa6b08c4967f5951897b2dd0885822dc5d0260d65a187df6dd",
+      "manifest_sha256": "fb99e3260e39d2fa6b08c4967f5951897b2dd0885822dc5d0260d65a187df6dd",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "54a3f65ae84d4425202bce5fc56419e2c64819275489b9eadc0c0e82bdae3d4e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a0ddb1ea3c04",
+      "name": "불멸 : 조화의 영약",
+      "game_item_id": 1400,
+      "source_url": "https://bdocodex.com/kr/item/1400/",
+      "status": "CONFIRMED",
+      "source_name": "불멸 : 조화의 영약",
+      "recorded_source_name": "불멸 : 조화의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001400.webp",
+      "source_sha256": "3396c797dcbfb23403f2deced5e5c99079fdb47061ea1685220612721e69d4e3",
+      "local_sha256": "3396c797dcbfb23403f2deced5e5c99079fdb47061ea1685220612721e69d4e3",
+      "manifest_sha256": "3396c797dcbfb23403f2deced5e5c99079fdb47061ea1685220612721e69d4e3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "bf768807f3421d0ca311efc84ba265966c25233a0c5df9fdf78d1240c7bd6116",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6249cdbec3ba",
+      "name": "붉은 나무혹",
+      "game_item_id": 5011,
+      "source_url": "https://bdocodex.com/kr/item/5011/",
+      "status": "CONFIRMED",
+      "source_name": "붉은 나무혹",
+      "recorded_source_name": "붉은 나무혹",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005011.webp",
+      "source_sha256": "63badbdd26d31840a827eb4979d545e315d788c69e8a8862586c63585d7f459b",
+      "local_sha256": "63badbdd26d31840a827eb4979d545e315d788c69e8a8862586c63585d7f459b",
+      "manifest_sha256": "63badbdd26d31840a827eb4979d545e315d788c69e8a8862586c63585d7f459b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "40151daf8035c80ab25972de0ecf992d729975ab488767816679d582dbd42458",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5fd41dcd8a55",
+      "name": "블랙스톤 가루",
+      "game_item_id": 4901,
+      "source_url": "https://bdocodex.com/kr/item/4901/",
+      "status": "CONFIRMED",
+      "source_name": "블랙스톤 가루",
+      "recorded_source_name": "블랙스톤 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004901.webp",
+      "source_sha256": "fd3a5b191fe7efae846ff80976963e18d1e78d3b7bab5f4840350b851b697a94",
+      "local_sha256": "fd3a5b191fe7efae846ff80976963e18d1e78d3b7bab5f4840350b851b697a94",
+      "manifest_sha256": "fd3a5b191fe7efae846ff80976963e18d1e78d3b7bab5f4840350b851b697a94",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "3a69a4786c27b0c1e890751196e02539a6829fb0731a5c2e07ea0a5c6ffa9a76",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b7dd4d9e95b9",
+      "name": "빛나는 가루",
+      "game_item_id": 9733,
+      "source_url": "https://bdocodex.com/kr/item/9733/",
+      "status": "CONFIRMED",
+      "source_name": "빛나는 가루",
+      "recorded_source_name": "빛나는 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00009733.webp",
+      "source_sha256": "61d78b60d52fa9e80ff8f3101c0ffcf233bcf9002381a18893d637d4d7827fd3",
+      "local_sha256": "61d78b60d52fa9e80ff8f3101c0ffcf233bcf9002381a18893d637d4d7827fd3",
+      "manifest_sha256": "61d78b60d52fa9e80ff8f3101c0ffcf233bcf9002381a18893d637d4d7827fd3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "3d7efc3b9d22ffa1a6e6a3b954990d6f3510ad14f181723009141230fb89471a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-8139d570ae21",
+      "name": "빛나는 나선의 비약",
+      "game_item_id": 783,
+      "source_url": "https://bdocodex.com/kr/item/783/",
+      "status": "CONFIRMED",
+      "source_name": "빛나는 나선의 비약",
+      "recorded_source_name": "빛나는 나선의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000785.webp",
+      "source_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+      "local_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+      "manifest_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "01d87bb3d055ecdeaca0d9b382473022edcd9b8809b0dabb4e9d1b48751d4252",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "shared_image_exception": "서로 다른 게임 ID의 원본 파일도 같은 SHA-256·픽셀을 사용하므로 허용. 새 게임 캡처는 NOT_RUN.",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e4874d567845",
+      "name": "사신의 비약",
+      "game_item_id": 712,
+      "source_url": "https://bdocodex.com/kr/item/712/",
+      "status": "CONFIRMED",
+      "source_name": "사신의 비약",
+      "recorded_source_name": "사신의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000649.webp",
+      "source_sha256": "6f29f41be7c40bebbf292f99cadf5891a78153d23f6e7556a151673050159f22",
+      "local_sha256": "6f29f41be7c40bebbf292f99cadf5891a78153d23f6e7556a151673050159f22",
+      "manifest_sha256": "6f29f41be7c40bebbf292f99cadf5891a78153d23f6e7556a151673050159f22",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "38db4d39e8759bb85d9b56e20e84fff13ebe0b19f7cb3920a8b18fe1dfb08ed8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-131d7233712b",
+      "name": "산호 결정",
+      "game_item_id": 6533,
+      "source_url": "https://bdocodex.com/kr/item/6533/",
+      "status": "CONFIRMED",
+      "source_name": "산호 결정",
+      "recorded_source_name": "산호 결정",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006533.webp",
+      "source_sha256": "caf7f8a643c28dd3c669dcc8e22857293434a69d3015db744b362df4c3517d22",
+      "local_sha256": "caf7f8a643c28dd3c669dcc8e22857293434a69d3015db744b362df4c3517d22",
+      "manifest_sha256": "caf7f8a643c28dd3c669dcc8e22857293434a69d3015db744b362df4c3517d22",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "4174a5e9b3986aa9f5bc75a49e70ace8986bee825efcc87ce60f06c743266b2f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7b34c215d25b",
+      "name": "삼나무 수액",
+      "game_item_id": 5010,
+      "source_url": "https://bdocodex.com/kr/item/5010/",
+      "status": "CONFIRMED",
+      "source_name": "삼나무 수액",
+      "recorded_source_name": "삼나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005010.webp",
+      "source_sha256": "a48ba0bd8ecf23f5cf8eed896581619c31bde6ea1501931f9b972043f4f08f6d",
+      "local_sha256": "a48ba0bd8ecf23f5cf8eed896581619c31bde6ea1501931f9b972043f4f08f6d",
+      "manifest_sha256": "a48ba0bd8ecf23f5cf8eed896581619c31bde6ea1501931f9b972043f4f08f6d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c13364127effb2f9d340972843208b4f6dfaaf707949cbf9cde32f4f74258ad4",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-0bd7902923f0",
+      "name": "상급 집중의 비약",
+      "game_item_id": 701,
+      "source_url": "https://bdocodex.com/kr/item/701/",
+      "status": "CONFIRMED",
+      "source_name": "상급 집중의 비약",
+      "recorded_source_name": "상급 집중의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000638.webp",
+      "source_sha256": "5a36bf4fcb7b905b341a1d5f8bfdc9a1e0e113a8470dcf74acff76bb04e0b67d",
+      "local_sha256": "5a36bf4fcb7b905b341a1d5f8bfdc9a1e0e113a8470dcf74acff76bb04e0b67d",
+      "manifest_sha256": "5a36bf4fcb7b905b341a1d5f8bfdc9a1e0e113a8470dcf74acff76bb04e0b67d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c7d32e36ce71dd70a6a7334cc9c74f24af8c9eb13567085baa7e1f47fd890d96",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b5fc1134e07a",
+      "name": "생명력 회복제(소형)",
+      "game_item_id": 517,
+      "source_url": "https://bdocodex.com/kr/item/517/",
+      "status": "CONFIRMED",
+      "source_name": "생명력 회복제(소형)",
+      "recorded_source_name": "생명력 회복제(소형)",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000517.webp",
+      "source_sha256": "e5be04e4dcaabcd15d8332ba8ddffd649820d74cc53afa0cad921cbb98fcddb0",
+      "local_sha256": "e5be04e4dcaabcd15d8332ba8ddffd649820d74cc53afa0cad921cbb98fcddb0",
+      "manifest_sha256": "e5be04e4dcaabcd15d8332ba8ddffd649820d74cc53afa0cad921cbb98fcddb0",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8221c982c549c24d7274ac44f7034e93cf8bab7877dd986af3b1b71c06803d4b",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-9f494e6bc8fa",
+      "name": "생명력의 비약",
+      "game_item_id": 708,
+      "source_url": "https://bdocodex.com/kr/item/708/",
+      "status": "CONFIRMED",
+      "source_name": "생명력의 비약",
+      "recorded_source_name": "생명력의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000645.webp",
+      "source_sha256": "2321f273a3d325808b804a2acc5a63ee1ebda3af4499d90f545054a466f6268d",
+      "local_sha256": "2321f273a3d325808b804a2acc5a63ee1ebda3af4499d90f545054a466f6268d",
+      "manifest_sha256": "2321f273a3d325808b804a2acc5a63ee1ebda3af4499d90f545054a466f6268d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c7b88f85ac79f2f28827267cfc0782bb1ecbe86bd57c7ae0eb8dbc4f6e2097ab",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-1b401c94f5dd",
+      "name": "설원 삼나무 수액",
+      "game_item_id": 5024,
+      "source_url": "https://bdocodex.com/kr/item/5024/",
+      "status": "CONFIRMED",
+      "source_name": "설원 삼나무 수액",
+      "recorded_source_name": "설원 삼나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005024.webp",
+      "source_sha256": "df5c96e80bd45d935e51b8724b055d748767db2e1a635b7f97124229dcb44cf9",
+      "local_sha256": "df5c96e80bd45d935e51b8724b055d748767db2e1a635b7f97124229dcb44cf9",
+      "manifest_sha256": "df5c96e80bd45d935e51b8724b055d748767db2e1a635b7f97124229dcb44cf9",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "67f127d5fa9fc127002dc4141cac655cfd858b87b91ef9f6ac6c36e98bf2e750",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7921a3bb40fa",
+      "name": "설탕",
+      "game_item_id": 9002,
+      "source_url": "https://bdocodex.com/kr/item/9002/",
+      "status": "CONFIRMED",
+      "source_name": "설탕",
+      "recorded_source_name": "설탕",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00009002.webp",
+      "source_sha256": "9f95044ee8f46eee0a20074becc5ff445c39396295faf188eb16543031273a96",
+      "local_sha256": "9f95044ee8f46eee0a20074becc5ff445c39396295faf188eb16543031273a96",
+      "manifest_sha256": "9f95044ee8f46eee0a20074becc5ff445c39396295faf188eb16543031273a96",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "5ae33c7a375c14cc478adf2fc98afe04a2ee05b06d9cef99b5d0510f7e7dc1eb",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-abf45013360f",
+      "name": "세월의 가루",
+      "game_item_id": 4805,
+      "source_url": "https://bdocodex.com/kr/item/4805/",
+      "status": "CONFIRMED",
+      "source_name": "세월의 가루",
+      "recorded_source_name": "세월의 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004805.webp",
+      "source_sha256": "95ef9ff005f4cb3a4f83ad2dd421e78bb4a893dcf47b958a7fbd251935907f6c",
+      "local_sha256": "95ef9ff005f4cb3a4f83ad2dd421e78bb4a893dcf47b958a7fbd251935907f6c",
+      "manifest_sha256": "95ef9ff005f4cb3a4f83ad2dd421e78bb4a893dcf47b958a7fbd251935907f6c",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a816a020a844c54905a18d9cf6b315fba29d3cbaec5ff08210ae5c3c7c8c4bc9",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-bf562842534a",
+      "name": "세월의 비약",
+      "game_item_id": 749,
+      "source_url": "https://bdocodex.com/kr/item/749/",
+      "status": "CONFIRMED",
+      "source_name": "세월의 비약",
+      "recorded_source_name": "세월의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000751.webp",
+      "source_sha256": "4a93e1cc13ac10c7996f491d9cc8fd25aa5395a3d198e7761138ea7bea369f14",
+      "local_sha256": "4a93e1cc13ac10c7996f491d9cc8fd25aa5395a3d198e7761138ea7bea369f14",
+      "manifest_sha256": "4a93e1cc13ac10c7996f491d9cc8fd25aa5395a3d198e7761138ea7bea369f14",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8e51745930e37549535244d70173c93d19fa99bd3fe58dff640c71ae8cdf7619",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-3d09660e6295",
+      "name": "소금",
+      "game_item_id": 9001,
+      "source_url": "https://bdocodex.com/kr/item/9001/",
+      "status": "CONFIRMED",
+      "source_name": "소금",
+      "recorded_source_name": "소금",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00009001.webp",
+      "source_sha256": "4599cebb3c171b8a9c98f86f56b23e6e57cba24806babb54d957be45feaf96ed",
+      "local_sha256": "4599cebb3c171b8a9c98f86f56b23e6e57cba24806babb54d957be45feaf96ed",
+      "manifest_sha256": "4599cebb3c171b8a9c98f86f56b23e6e57cba24806babb54d957be45feaf96ed",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f7652d2f6f6b572aeac7d7626ab53cdb4786cd1de88e27b59dae92419fae5d36",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-1b99bede0f65",
+      "name": "소나무 수액",
+      "game_item_id": 5003,
+      "source_url": "https://bdocodex.com/kr/item/5003/",
+      "status": "CONFIRMED",
+      "source_name": "소나무 수액",
+      "recorded_source_name": "소나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005003.webp",
+      "source_sha256": "c16f33371542f26f17f3c01d4a822d8467df638f8cd6fcbc08bb707c2e1d3d10",
+      "local_sha256": "c16f33371542f26f17f3c01d4a822d8467df638f8cd6fcbc08bb707c2e1d3d10",
+      "manifest_sha256": "c16f33371542f26f17f3c01d4a822d8467df638f8cd6fcbc08bb707c2e1d3d10",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8ef94994e6002e23c215e38403c91b4ff40940e493e07fd17b27d7cbf3229fad",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-08890b815f90",
+      "name": "송로 버섯",
+      "game_item_id": 5420,
+      "source_url": "https://bdocodex.com/kr/item/5420/",
+      "status": "CONFIRMED",
+      "source_name": "송로 버섯",
+      "recorded_source_name": "송로 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005420.webp",
+      "source_sha256": "9ce915228cb2396b0f2e26bd3922c45699db88717f733ef26cc30246fceea10b",
+      "local_sha256": "9ce915228cb2396b0f2e26bd3922c45699db88717f733ef26cc30246fceea10b",
+      "manifest_sha256": "9ce915228cb2396b0f2e26bd3922c45699db88717f733ef26cc30246fceea10b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f1df3c71b2f0da47192d1507bd98771e3303d49c9a053de2d67ca97fd686fe1d",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6dad53e02bd2",
+      "name": "수도사의 가지",
+      "game_item_id": 5007,
+      "source_url": "https://bdocodex.com/kr/item/5007/",
+      "status": "CONFIRMED",
+      "source_name": "수도사의 가지",
+      "recorded_source_name": "수도사의 가지",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005007.webp",
+      "source_sha256": "f6b72f7759fc6903d87bc67f29608f2be8adb78c288ca91fe340b672b8c75d59",
+      "local_sha256": "f6b72f7759fc6903d87bc67f29608f2be8adb78c288ca91fe340b672b8c75d59",
+      "manifest_sha256": "f6b72f7759fc6903d87bc67f29608f2be8adb78c288ca91fe340b672b8c75d59",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "ace3ad76f87f62930464e47a0686ba1fecd60ca7f9e7e25fed980dbb689a1b8e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5e41bfa36314",
+      "name": "숙련된 일꾼의 비약",
+      "game_item_id": 725,
+      "source_url": "https://bdocodex.com/kr/item/725/",
+      "status": "CONFIRMED",
+      "source_name": "숙련된 일꾼의 비약",
+      "recorded_source_name": "숙련된 일꾼의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000662.webp",
+      "source_sha256": "740c5ebfbc05463e98b1f116410b280c9e3738443d00ed44b0d991b20c66f753",
+      "local_sha256": "740c5ebfbc05463e98b1f116410b280c9e3738443d00ed44b0d991b20c66f753",
+      "manifest_sha256": "740c5ebfbc05463e98b1f116410b280c9e3738443d00ed44b0d991b20c66f753",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "5c9b3078befecb2b8d1fb72d5c8fdb3405f46d81ffc3003df1f709d7f69533dc",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-17d98bdbb345",
+      "name": "숙련의 비약",
+      "game_item_id": 1155,
+      "source_url": "https://bdocodex.com/kr/item/1155/",
+      "status": "CONFIRMED",
+      "source_name": "숙련의 비약",
+      "recorded_source_name": "숙련의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001354.webp",
+      "source_sha256": "4268f1112e5d2c9aabfcc92034286df5a34f78c9cf94abdb9c1ef8c7f5ce995e",
+      "local_sha256": "4268f1112e5d2c9aabfcc92034286df5a34f78c9cf94abdb9c1ef8c7f5ce995e",
+      "manifest_sha256": "4268f1112e5d2c9aabfcc92034286df5a34f78c9cf94abdb9c1ef8c7f5ce995e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "2b82c9a6811224388c9cd73ba4d629866d9663636756687dc196b3874410342a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a92327c3d546",
+      "name": "순수한 가루 시약",
+      "game_item_id": 5302,
+      "source_url": "https://bdocodex.com/kr/item/5302/",
+      "status": "CONFIRMED",
+      "source_name": "순수한 가루 시약",
+      "recorded_source_name": "순수한 가루 시약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005302.webp",
+      "source_sha256": "5e8be31999c980f342170b6a8c5c689d47799c4724021322f7e5e1440d6fe197",
+      "local_sha256": "5e8be31999c980f342170b6a8c5c689d47799c4724021322f7e5e1440d6fe197",
+      "manifest_sha256": "5e8be31999c980f342170b6a8c5c689d47799c4724021322f7e5e1440d6fe197",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "f87a97e2ef78c48af3ae743c4443dd363498bff4d3168809f64b4432d0d56bae",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e9724b3bb97c",
+      "name": "신록의 영약",
+      "game_item_id": 791,
+      "source_url": "https://bdocodex.com/kr/item/791/",
+      "status": "CONFIRMED",
+      "source_name": "신록의 영약",
+      "recorded_source_name": "신록의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000791.webp",
+      "source_sha256": "5b292d5ee0e6d5b135acc6891d5f8bed66561c917baf199ae82e69fd7bb52fb5",
+      "local_sha256": "5b292d5ee0e6d5b135acc6891d5f8bed66561c917baf199ae82e69fd7bb52fb5",
+      "manifest_sha256": "5b292d5ee0e6d5b135acc6891d5f8bed66561c917baf199ae82e69fd7bb52fb5",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7fcbeec3c1018ec8e62756bc859a23e82c69387efe19213e3fe7b9e4f2e3e976",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-3c852d3313e5",
+      "name": "신속의 비약",
+      "game_item_id": 690,
+      "source_url": "https://bdocodex.com/kr/item/690/",
+      "status": "CONFIRMED",
+      "source_name": "신속의 비약",
+      "recorded_source_name": "신속의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000627.webp",
+      "source_sha256": "7a02fd0525e437ef52f2ca0385eeb00244923332b2f9501f30ca1da86225055d",
+      "local_sha256": "7a02fd0525e437ef52f2ca0385eeb00244923332b2f9501f30ca1da86225055d",
+      "manifest_sha256": "7a02fd0525e437ef52f2ca0385eeb00244923332b2f9501f30ca1da86225055d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "28ed82fb936dcc3d926b645e69dc0aba58fa0374427a7f509b045b274426da75",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e4e42596c3a2",
+      "name": "신속의 향수",
+      "game_item_id": 735,
+      "source_url": "https://bdocodex.com/kr/item/735/",
+      "status": "CONFIRMED",
+      "source_name": "신속의 향수",
+      "recorded_source_name": "신속의 향수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00000735.webp",
+      "source_sha256": "1c12934e81d330931665bb73242ea05afa85ea5f08df025fcf2ca2b23563d143",
+      "local_sha256": "1c12934e81d330931665bb73242ea05afa85ea5f08df025fcf2ca2b23563d143",
+      "manifest_sha256": "1c12934e81d330931665bb73242ea05afa85ea5f08df025fcf2ca2b23563d143",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "fc60c87d71816a49e21a5550e6260db5f1ea1cab06094e8054536380234f24dc",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-19d4f15f01d5",
+      "name": "신수의 혈액",
+      "game_item_id": 6351,
+      "source_url": "https://bdocodex.com/kr/item/6351/",
+      "status": "CONFIRMED",
+      "source_name": "신수의 혈액",
+      "recorded_source_name": "신수의 혈액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006351.webp",
+      "source_sha256": "b9cd4679a3638e1e35749d19e071b32336c4a5d5444d3cfd7fdb224d23f0c27c",
+      "local_sha256": "b9cd4679a3638e1e35749d19e071b32336c4a5d5444d3cfd7fdb224d23f0c27c",
+      "manifest_sha256": "b9cd4679a3638e1e35749d19e071b32336c4a5d5444d3cfd7fdb224d23f0c27c",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "e43833f050acae9b8c911357e537f64ec837a6d93f75355020c0ec67941f527f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-27f6aa1a001b",
+      "name": "심연의 오일",
+      "game_item_id": 6606,
+      "source_url": "https://bdocodex.com/kr/item/6606/",
+      "status": "CONFIRMED",
+      "source_name": "심연의 오일",
+      "recorded_source_name": "심연의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006606.webp",
+      "source_sha256": "c71032f8ae25cb67b31437d7ea8021fc2714c32fe4fd0595306bf379b12dad76",
+      "local_sha256": "c71032f8ae25cb67b31437d7ea8021fc2714c32fe4fd0595306bf379b12dad76",
+      "manifest_sha256": "c71032f8ae25cb67b31437d7ea8021fc2714c32fe4fd0595306bf379b12dad76",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "4a7a6ac322fe77af791cc50c743fc87fa9786ad45db7d47996ef53f1263116dd",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-375d276a5af0",
+      "name": "심해의 향수",
+      "game_item_id": 771,
+      "source_url": "https://bdocodex.com/kr/item/771/",
+      "status": "CONFIRMED",
+      "source_name": "심해의 향수",
+      "recorded_source_name": "심해의 향수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000771.webp",
+      "source_sha256": "b245cd82a67c507932ed1388c9c69f786c8a0ff1b8666e05f54990f200605e11",
+      "local_sha256": "b245cd82a67c507932ed1388c9c69f786c8a0ff1b8666e05f54990f200605e11",
+      "manifest_sha256": "b245cd82a67c507932ed1388c9c69f786c8a0ff1b8666e05f54990f200605e11",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a5d80f132c9cb3008643b25ba410ec03466cc9caa23e6d62925e1dfb71500606",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-09fc4def223f",
+      "name": "아인 사냥의 비약",
+      "game_item_id": 678,
+      "source_url": "https://bdocodex.com/kr/item/678/",
+      "status": "CONFIRMED",
+      "source_name": "아인 사냥의 비약",
+      "recorded_source_name": "아인 사냥의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000615.webp",
+      "source_sha256": "5c7785df7e0dd3938dcd2944c64f1d6b576a8a4c7863e97beb22d735e02e25b1",
+      "local_sha256": "5c7785df7e0dd3938dcd2944c64f1d6b576a8a4c7863e97beb22d735e02e25b1",
+      "manifest_sha256": "5c7785df7e0dd3938dcd2944c64f1d6b576a8a4c7863e97beb22d735e02e25b1",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "31df149f62ec3c8cfcbda9e11b5d42ee2ad8fefa0c6262184f862d15102fbc88",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-e3319e120d0e",
+      "name": "암살자의 비약",
+      "game_item_id": 696,
+      "source_url": "https://bdocodex.com/kr/item/696/",
+      "status": "CONFIRMED",
+      "source_name": "암살자의 비약",
+      "recorded_source_name": "암살자의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000633.webp",
+      "source_sha256": "4ed0e57c6b13b17e8066faf2c9ab518e5a918a8619c5a86de77fe5d05871466f",
+      "local_sha256": "4ed0e57c6b13b17e8066faf2c9ab518e5a918a8619c5a86de77fe5d05871466f",
+      "manifest_sha256": "4ed0e57c6b13b17e8066faf2c9ab518e5a918a8619c5a86de77fe5d05871466f",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "709b7e535ba25b75928b20ae1682f44af61019eda9c4661062cceca2303b419a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a1a5dda5464f",
+      "name": "야생 들풀",
+      "game_item_id": 5439,
+      "source_url": "https://bdocodex.com/kr/item/5439/",
+      "status": "CONFIRMED",
+      "source_name": "야생 들풀",
+      "recorded_source_name": "야생 들풀",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005439.webp",
+      "source_sha256": "19b0947dde9f99124260e321ec1c50247f961eb5326c60ba85b8ebe8df2a2f93",
+      "local_sha256": "19b0947dde9f99124260e321ec1c50247f961eb5326c60ba85b8ebe8df2a2f93",
+      "manifest_sha256": "19b0947dde9f99124260e321ec1c50247f961eb5326c60ba85b8ebe8df2a2f93",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "45ea78775c87bbedacacd6d60282cb97f893e4f3287e84e78622a6ac4188ecc3",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-daa16c47e0c8",
+      "name": "약탈의 비약",
+      "game_item_id": 676,
+      "source_url": "https://bdocodex.com/kr/item/676/",
+      "status": "CONFIRMED",
+      "source_name": "약탈의 비약",
+      "recorded_source_name": "약탈의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000613.webp",
+      "source_sha256": "e54120c658f27430d737172c2e0d1c9c44443edfbd1bd08665d9f0c446ba37df",
+      "local_sha256": "e54120c658f27430d737172c2e0d1c9c44443edfbd1bd08665d9f0c446ba37df",
+      "manifest_sha256": "e54120c658f27430d737172c2e0d1c9c44443edfbd1bd08665d9f0c446ba37df",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "4c934bd3712ffc27ab544e473b530ac00b13e39eba3c2384f2c62b1b7e9d78c7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-9f7e100087e0",
+      "name": "어둠의 가루",
+      "game_item_id": 4801,
+      "source_url": "https://bdocodex.com/kr/item/4801/",
+      "status": "CONFIRMED",
+      "source_name": "어둠의 가루",
+      "recorded_source_name": "어둠의 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004801.webp",
+      "source_sha256": "4bb18c27839ff86e4a6affa493fe7619c1ca34d3fc1fe5b7a4a2437514dac8fb",
+      "local_sha256": "4bb18c27839ff86e4a6affa493fe7619c1ca34d3fc1fe5b7a4a2437514dac8fb",
+      "manifest_sha256": "4bb18c27839ff86e4a6affa493fe7619c1ca34d3fc1fe5b7a4a2437514dac8fb",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "48b4c5585a2b53fd5a193882ae0895fe81ff0adca60b67e7cee767d3f22180bc",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-3631000b59d1",
+      "name": "에다니아의 비약",
+      "game_item_id": 1409,
+      "source_url": "https://bdocodex.com/kr/item/1409/",
+      "status": "CONFIRMED",
+      "source_name": "에다니아의 비약",
+      "recorded_source_name": "에다니아의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001409.webp",
+      "source_sha256": "d9d4830a306ee38c1673ba5b92cf3927c1e68588010ff2f63902689f9a0a8c2e",
+      "local_sha256": "d9d4830a306ee38c1673ba5b92cf3927c1e68588010ff2f63902689f9a0a8c2e",
+      "manifest_sha256": "d9d4830a306ee38c1673ba5b92cf3927c1e68588010ff2f63902689f9a0a8c2e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c617e8c35edb9a5f79802980503e222318a3d140cdc6fb383fb5da4a12f0fdf4",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2c8897961887",
+      "name": "여명초",
+      "game_item_id": 5401,
+      "source_url": "https://bdocodex.com/kr/item/5401/",
+      "status": "CONFIRMED",
+      "source_name": "여명초",
+      "recorded_source_name": "여명초",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005401.webp",
+      "source_sha256": "7768a4f7d9c3a62b4c006bb2c21daebf27bc70d303ea8f7dbd118d69fbfd00ed",
+      "local_sha256": "7768a4f7d9c3a62b4c006bb2c21daebf27bc70d303ea8f7dbd118d69fbfd00ed",
+      "manifest_sha256": "7768a4f7d9c3a62b4c006bb2c21daebf27bc70d303ea8f7dbd118d69fbfd00ed",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "88a097598f79c1a48317ea7aa459740d2b2b4e41bea8b3f88f7d3fe4efb1dfa4",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-19ba15a7e481",
+      "name": "여우 피",
+      "game_item_id": 6203,
+      "source_url": "https://bdocodex.com/kr/item/6203/",
+      "status": "CONFIRMED",
+      "source_name": "여우 피",
+      "recorded_source_name": "여우 피",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006210.webp",
+      "source_sha256": "ca27ffd923fb1e6c7fe49b53aa3ce070bc94e6ccc7b00bc79b478e61971ebe84",
+      "local_sha256": "ca27ffd923fb1e6c7fe49b53aa3ce070bc94e6ccc7b00bc79b478e61971ebe84",
+      "manifest_sha256": "ca27ffd923fb1e6c7fe49b53aa3ce070bc94e6ccc7b00bc79b478e61971ebe84",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8ce5d70018e225a161b938458188316c44135436f3c796146a3f09f45cefd095",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-05d934cf6e53",
+      "name": "열망의 향수",
+      "game_item_id": 1411,
+      "source_url": "https://bdocodex.com/kr/item/1411/",
+      "status": "CONFIRMED",
+      "source_name": "열망의 향수",
+      "recorded_source_name": "열망의 향수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001411.webp",
+      "source_sha256": "be0e962d06d367c811f8ffcda07ebd0f20bc7d37a21cc717a94f57c6b0316e2d",
+      "local_sha256": "be0e962d06d367c811f8ffcda07ebd0f20bc7d37a21cc717a94f57c6b0316e2d",
+      "manifest_sha256": "be0e962d06d367c811f8ffcda07ebd0f20bc7d37a21cc717a94f57c6b0316e2d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "6437f0ccede9d6cf81eaae1f1e1f826521f88c1b1afb7a40e5e73adf1939f7fa",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-cac50916d994",
+      "name": "완전한 인간 사냥의 비약",
+      "game_item_id": 671,
+      "source_url": "https://bdocodex.com/kr/item/671/",
+      "status": "CONFIRMED",
+      "source_name": "완전한 인간 사냥의 비약",
+      "recorded_source_name": "완전한 인간 사냥의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000608.webp",
+      "source_sha256": "0ecde0c2281cf2072943bee9c5e664e9ba15996eb47b5e873a6070472f771da3",
+      "local_sha256": "0ecde0c2281cf2072943bee9c5e664e9ba15996eb47b5e873a6070472f771da3",
+      "manifest_sha256": "0ecde0c2281cf2072943bee9c5e664e9ba15996eb47b5e873a6070472f771da3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "768bffdee954e1502843531296b7af412552b15206bcb03b2efc0a18ffe37ad5",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6fed759d8a98",
+      "name": "용기의 향수",
+      "game_item_id": 734,
+      "source_url": "https://bdocodex.com/kr/item/734/",
+      "status": "CONFIRMED",
+      "source_name": "용기의 향수",
+      "recorded_source_name": "용기의 향수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00000734.webp",
+      "source_sha256": "770a100126d2b9636105d9cddb09884bf2e3b74367d221ee8d2217f57c819707",
+      "local_sha256": "770a100126d2b9636105d9cddb09884bf2e3b74367d221ee8d2217f57c819707",
+      "manifest_sha256": "770a100126d2b9636105d9cddb09884bf2e3b74367d221ee8d2217f57c819707",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a7279314cd677c504bb63b0b15e4613447cfe964f9d56ffdd9b1874ea956a6ed",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-bce973aaa6f5",
+      "name": "유령 버섯",
+      "game_item_id": 5414,
+      "source_url": "https://bdocodex.com/kr/item/5414/",
+      "status": "CONFIRMED",
+      "source_name": "유령 버섯",
+      "recorded_source_name": "유령 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005414.webp",
+      "source_sha256": "d70c9cc96adbcf620a8ffb160eac770282abf29db1e52a8b085ff756ed33c146",
+      "local_sha256": "d70c9cc96adbcf620a8ffb160eac770282abf29db1e52a8b085ff756ed33c146",
+      "manifest_sha256": "d70c9cc96adbcf620a8ffb160eac770282abf29db1e52a8b085ff756ed33c146",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "e03b209fd3a271652a4def2b2fba86ec114ee4439046e4f28512e09928f6b384",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7b911520f08a",
+      "name": "은빛 철쭉",
+      "game_item_id": 5402,
+      "source_url": "https://bdocodex.com/kr/item/5402/",
+      "status": "CONFIRMED",
+      "source_name": "은빛 철쭉",
+      "recorded_source_name": "은빛 철쭉",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005402.webp",
+      "source_sha256": "7e2ca73e022587a992f8e0b48b314fecf7cf1390e7741d66fad0cd99fa4850c3",
+      "local_sha256": "7e2ca73e022587a992f8e0b48b314fecf7cf1390e7741d66fad0cd99fa4850c3",
+      "manifest_sha256": "7e2ca73e022587a992f8e0b48b314fecf7cf1390e7741d66fad0cd99fa4850c3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "05920a3c3f16af1fc09a547e55edf1cd2f9f3ee9129b692b77e684a4167f7cd8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-c3093ed30e3d",
+      "name": "응축된 마력이 깃든 촉매제",
+      "game_item_id": 821372,
+      "source_url": "https://bdocodex.com/kr/item/821372/",
+      "status": "CONFIRMED",
+      "source_name": "응축된 마력이 깃든 촉매제",
+      "recorded_source_name": "응축된 마력이 깃든 촉매제",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/000821372.webp",
+      "source_sha256": "e25a562088ef7a70df640589e3bfc8986b253e9a9595db00d48e532e789b0db3",
+      "local_sha256": "e25a562088ef7a70df640589e3bfc8986b253e9a9595db00d48e532e789b0db3",
+      "manifest_sha256": "e25a562088ef7a70df640589e3bfc8986b253e9a9595db00d48e532e789b0db3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "86c58f28a8e50147fe92138440d5945fa24e2785ff3186f80d2ce4b886ccb0b6",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-97b30d97161d",
+      "name": "의지의 비약",
+      "game_item_id": 702,
+      "source_url": "https://bdocodex.com/kr/item/702/",
+      "status": "CONFIRMED",
+      "source_name": "의지의 비약",
+      "recorded_source_name": "의지의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000639.webp",
+      "source_sha256": "1ae916a84a7854d11ba24c1d54d315cd214666bd7ddc0927acbe58c919eaa4ff",
+      "local_sha256": "1ae916a84a7854d11ba24c1d54d315cd214666bd7ddc0927acbe58c919eaa4ff",
+      "manifest_sha256": "1ae916a84a7854d11ba24c1d54d315cd214666bd7ddc0927acbe58c919eaa4ff",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "033d55483f0c39d7b8da2d308a4e7480f27bfd6c4d4144232e32646d8df40737",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-22d7a6398eb3",
+      "name": "이벨랍의 정수",
+      "game_item_id": 4986,
+      "source_url": "https://bdocodex.com/kr/item/4986/",
+      "status": "CONFIRMED",
+      "source_name": "이벨랍의 정수",
+      "recorded_source_name": "이벨랍의 정수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004986.webp",
+      "source_sha256": "5fb1753affef3a2d44f2ffb389ee83e3c7e000823c6d40596436450113ff78ee",
+      "local_sha256": "5fb1753affef3a2d44f2ffb389ee83e3c7e000823c6d40596436450113ff78ee",
+      "manifest_sha256": "5fb1753affef3a2d44f2ffb389ee83e3c7e000823c6d40596436450113ff78ee",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "38794f883f2be19aff5bc6bc591903cc38bae49e1c9d1372a0f2370ccca2f686",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b7e0c3652e42",
+      "name": "인간 사냥의 비약",
+      "game_item_id": 670,
+      "source_url": "https://bdocodex.com/kr/item/670/",
+      "status": "CONFIRMED",
+      "source_name": "인간 사냥의 비약",
+      "recorded_source_name": "인간 사냥의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000607.webp",
+      "source_sha256": "e706e9c77e76d511750b07dd142703f3a7a6ee6f0fda0dddb123ed7b0ab72b79",
+      "local_sha256": "e706e9c77e76d511750b07dd142703f3a7a6ee6f0fda0dddb123ed7b0ab72b79",
+      "manifest_sha256": "e706e9c77e76d511750b07dd142703f3a7a6ee6f0fda0dddb123ed7b0ab72b79",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b0f9a81a2ee06fa7c678bb8d9b1a1ded4bf63703e20687014a626d60d98a1b22",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5bfadf78b312",
+      "name": "일꾼의 비약",
+      "game_item_id": 724,
+      "source_url": "https://bdocodex.com/kr/item/724/",
+      "status": "CONFIRMED",
+      "source_name": "일꾼의 비약",
+      "recorded_source_name": "일꾼의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000661.webp",
+      "source_sha256": "5416c38712519eb94137ad0568490a00783d85076709922aa75808313a22d155",
+      "local_sha256": "5416c38712519eb94137ad0568490a00783d85076709922aa75808313a22d155",
+      "manifest_sha256": "5416c38712519eb94137ad0568490a00783d85076709922aa75808313a22d155",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "5e347e4154f4a8b11e800946d6527816698aefc56e8875c9396ec6935c26033b",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-98c38273cf87",
+      "name": "일렁이는 바람의 조각",
+      "game_item_id": 50802,
+      "source_url": "https://bdocodex.com/kr/item/50802/",
+      "status": "CONFIRMED",
+      "source_name": "일렁이는 바람의 조각",
+      "recorded_source_name": "일렁이는 바람의 조각",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/09_petitem/00050802.webp",
+      "source_sha256": "01f5a7b29f4bc28bafd5c475e6906c9725253c008ecf6b74c074ad2b620d2166",
+      "local_sha256": "01f5a7b29f4bc28bafd5c475e6906c9725253c008ecf6b74c074ad2b620d2166",
+      "manifest_sha256": "01f5a7b29f4bc28bafd5c475e6906c9725253c008ecf6b74c074ad2b620d2166",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b48141419c21995ca2acae8b268dcdf6caed775bc634f8ae1a585ae8ee865d07",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-552d692d19d6",
+      "name": "자연의 열매",
+      "game_item_id": 5205,
+      "source_url": "https://bdocodex.com/kr/item/5205/",
+      "status": "CONFIRMED",
+      "source_name": "자연의 열매",
+      "recorded_source_name": "자연의 열매",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005205.webp",
+      "source_sha256": "65832f5214522fd31c637a4b448a27c185e7e35f075b8280a4df5c06cf96d0b6",
+      "local_sha256": "65832f5214522fd31c637a4b448a27c185e7e35f075b8280a4df5c06cf96d0b6",
+      "manifest_sha256": "65832f5214522fd31c637a4b448a27c185e7e35f075b8280a4df5c06cf96d0b6",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b0203674f0bb81e3e7ca72dc2e2eb710391971b6fff2f4968b80f036ead03501",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-42bd9b6cfb4b",
+      "name": "자연의 흔적",
+      "game_item_id": 5960,
+      "source_url": "https://bdocodex.com/kr/item/5960/",
+      "status": "CONFIRMED",
+      "source_name": "자연의 흔적",
+      "recorded_source_name": "자연의 흔적",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005960.webp",
+      "source_sha256": "0f7bb60143bf305314aacf0bda548b03c3c220b86474f1336ba9e14c2c727c18",
+      "local_sha256": "0f7bb60143bf305314aacf0bda548b03c3c220b86474f1336ba9e14c2c727c18",
+      "manifest_sha256": "0f7bb60143bf305314aacf0bda548b03c3c220b86474f1336ba9e14c2c727c18",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "68f174654112120cf156599766d087fdbfc3fd195b480f315d6cd3d181051d6b",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-57da669e80bf",
+      "name": "자작나무 수액",
+      "game_item_id": 5004,
+      "source_url": "https://bdocodex.com/kr/item/5004/",
+      "status": "CONFIRMED",
+      "source_name": "자작나무 수액",
+      "recorded_source_name": "자작나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005004.webp",
+      "source_sha256": "c349250dc9656a0fd61c93e0befb85a0fe3d95a34c6f8575f744b5e679689621",
+      "local_sha256": "c349250dc9656a0fd61c93e0befb85a0fe3d95a34c6f8575f744b5e679689621",
+      "manifest_sha256": "c349250dc9656a0fd61c93e0befb85a0fe3d95a34c6f8575f744b5e679689621",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "6dfb83e10f01889c6aadfb91d6efcda55e2466144886235b3722d4489e6e5080",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-65bda641d5b3",
+      "name": "잔혹한 학살자의 비약",
+      "game_item_id": 719,
+      "source_url": "https://bdocodex.com/kr/item/719/",
+      "status": "CONFIRMED",
+      "source_name": "잔혹한 학살자의 비약",
+      "recorded_source_name": "잔혹한 학살자의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000656.webp",
+      "source_sha256": "1a2b0b4b95efbf03cf5d9248701ca053a78436c5e162fee724ded41c08d6224f",
+      "local_sha256": "1a2b0b4b95efbf03cf5d9248701ca053a78436c5e162fee724ded41c08d6224f",
+      "manifest_sha256": "1a2b0b4b95efbf03cf5d9248701ca053a78436c5e162fee724ded41c08d6224f",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "856e6bc06d31741bb9f05e97356c3db95354a532fded0ca8388c8bd56d43dd7f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-8013fb04c36a",
+      "name": "잠재의 영약",
+      "game_item_id": 1393,
+      "source_url": "https://bdocodex.com/kr/item/1393/",
+      "status": "CONFIRMED",
+      "source_name": "잠재의 영약",
+      "recorded_source_name": "잠재의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001393.webp",
+      "source_sha256": "14ffdd2ceed0ec1ef492809713b055b2991a3f2fb77a170135293f15add54a4e",
+      "local_sha256": "14ffdd2ceed0ec1ef492809713b055b2991a3f2fb77a170135293f15add54a4e",
+      "manifest_sha256": "14ffdd2ceed0ec1ef492809713b055b2991a3f2fb77a170135293f15add54a4e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "852dc293fe2ddbdebe11aee03185db5c212bed79f01528807b173ccec368619e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-46647f9d918f",
+      "name": "잡초",
+      "game_item_id": 5600,
+      "source_url": "https://bdocodex.com/kr/item/5600/",
+      "status": "CONFIRMED",
+      "source_name": "잡초",
+      "recorded_source_name": "잡초",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005600.webp",
+      "source_sha256": "99529bf81dc49638dda453a7ed8d566fb4693500c61a56ff7ab726f0422a072e",
+      "local_sha256": "99529bf81dc49638dda453a7ed8d566fb4693500c61a56ff7ab726f0422a072e",
+      "manifest_sha256": "99529bf81dc49638dda453a7ed8d566fb4693500c61a56ff7ab726f0422a072e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "6b3c1178e1671246ce2ad30fd22f2b9b54fd4e08befc9ac4e80fdf950a3dcde8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-28f40ad86226",
+      "name": "재생의 오일",
+      "game_item_id": 6601,
+      "source_url": "https://bdocodex.com/kr/item/6601/",
+      "status": "CONFIRMED",
+      "source_name": "재생의 오일",
+      "recorded_source_name": "재생의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006601.webp",
+      "source_sha256": "6057089f66abc1384d8c5963adc3ba5fd35216a6a3195da3511a32922540b2cf",
+      "local_sha256": "6057089f66abc1384d8c5963adc3ba5fd35216a6a3195da3511a32922540b2cf",
+      "manifest_sha256": "6057089f66abc1384d8c5963adc3ba5fd35216a6a3195da3511a32922540b2cf",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "79fa37f203c5c3d264777e6c5a8016b4de65cd0236e6ad00f1890e81d98f944c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-af0c02a3a91a",
+      "name": "저무는 달의 눈물",
+      "game_item_id": 4925,
+      "source_url": "https://bdocodex.com/kr/item/4925/",
+      "status": "CONFIRMED",
+      "source_name": "저무는 달의 눈물",
+      "recorded_source_name": "저무는 달의 눈물",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004925.webp",
+      "source_sha256": "8a899105bae3d7e24f75515231fdb55f8a3bc4e5923276e2f35ce93e8ebaf1e1",
+      "local_sha256": "8a899105bae3d7e24f75515231fdb55f8a3bc4e5923276e2f35ce93e8ebaf1e1",
+      "manifest_sha256": "8a899105bae3d7e24f75515231fdb55f8a3bc4e5923276e2f35ce93e8ebaf1e1",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "3e9b6d5a2ca4e79b87bb8aff746d864acf00e215425ec467cb6e26d23d588823",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-409bf65b9d72",
+      "name": "적응의 영약",
+      "game_item_id": 1391,
+      "source_url": "https://bdocodex.com/kr/item/1391/",
+      "status": "CONFIRMED",
+      "source_name": "적응의 영약",
+      "recorded_source_name": "적응의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001391.webp",
+      "source_sha256": "3a90e8b65d593d88bf2dce4bbd965467897a3491d177a26af668854e342af2f4",
+      "local_sha256": "3a90e8b65d593d88bf2dce4bbd965467897a3491d177a26af668854e342af2f4",
+      "manifest_sha256": "3a90e8b65d593d88bf2dce4bbd965467897a3491d177a26af668854e342af2f4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "10b3f618bad63e1469362254d14ac8249c037f8dd865524142d6557a928d2dba",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ffa87e4aaab3",
+      "name": "전나무 수액",
+      "game_item_id": 5009,
+      "source_url": "https://bdocodex.com/kr/item/5009/",
+      "status": "CONFIRMED",
+      "source_name": "전나무 수액",
+      "recorded_source_name": "전나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005009.webp",
+      "source_sha256": "f7665bb17647fed309f861850fc4aa48394effb4b11b25b4861016b5e3151d77",
+      "local_sha256": "f7665bb17647fed309f861850fc4aa48394effb4b11b25b4861016b5e3151d77",
+      "manifest_sha256": "f7665bb17647fed309f861850fc4aa48394effb4b11b25b4861016b5e3151d77",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "1d6f8791dd1e89520945b898563c108f388c2922910577e6950e20b560ab13bd",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-0ee2dbd759e1",
+      "name": "점쟁이 버섯",
+      "game_item_id": 5407,
+      "source_url": "https://bdocodex.com/kr/item/5407/",
+      "status": "CONFIRMED",
+      "source_name": "점쟁이 버섯",
+      "recorded_source_name": "점쟁이 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005407.webp",
+      "source_sha256": "8c5d9274a8dd7079bbebfb7bd1153128544c9638db343f7fff203239d3074aa0",
+      "local_sha256": "8c5d9274a8dd7079bbebfb7bd1153128544c9638db343f7fff203239d3074aa0",
+      "manifest_sha256": "8c5d9274a8dd7079bbebfb7bd1153128544c9638db343f7fff203239d3074aa0",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "e1fc356501ea23f65eb5eb459f8eebdb584a4decf0acec9b17059faca3453e52",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ee3683791b7e",
+      "name": "정령의 잎사귀",
+      "game_item_id": 5006,
+      "source_url": "https://bdocodex.com/kr/item/5006/",
+      "status": "CONFIRMED",
+      "source_name": "정령의 잎사귀",
+      "recorded_source_name": "정령의 잎사귀",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005006.webp",
+      "source_sha256": "b07ca90f3c08a482ba8118691e2665fb8f1eaa41566a23381dddc02ce0bf839c",
+      "local_sha256": "b07ca90f3c08a482ba8118691e2665fb8f1eaa41566a23381dddc02ce0bf839c",
+      "manifest_sha256": "b07ca90f3c08a482ba8118691e2665fb8f1eaa41566a23381dddc02ce0bf839c",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "ac6c8c79df348a1dd1e31cc6692ba363e013c47bf84758002ebce954c455b8f8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-46b39ca1100c",
+      "name": "정제된 델로티아 시약",
+      "game_item_id": 5606,
+      "source_url": "https://bdocodex.com/kr/item/5606/",
+      "status": "CONFIRMED",
+      "source_name": "정제된 델로티아 시약",
+      "recorded_source_name": "정제된 델로티아 시약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005606.webp",
+      "source_sha256": "3006053476f6a0a5e047f7d6fb661194971a6b7226a46805e325d6363b7f379e",
+      "local_sha256": "3006053476f6a0a5e047f7d6fb661194971a6b7226a46805e325d6363b7f379e",
+      "manifest_sha256": "3006053476f6a0a5e047f7d6fb661194971a6b7226a46805e325d6363b7f379e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "9fac367a93e24356b35d7726abf38534ed0a5269a5d4114bab9460e78c8f1ca8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-d7a9dfe65a1a",
+      "name": "정제수",
+      "game_item_id": 6656,
+      "source_url": "https://bdocodex.com/kr/item/6656/",
+      "status": "CONFIRMED",
+      "source_name": "정제수",
+      "recorded_source_name": "정제수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006656.webp",
+      "source_sha256": "9d1094a8413433f64a19114c6fe65a9e3d9f1e527023e2242d32784eb30ade67",
+      "local_sha256": "9d1094a8413433f64a19114c6fe65a9e3d9f1e527023e2242d32784eb30ade67",
+      "manifest_sha256": "9d1094a8413433f64a19114c6fe65a9e3d9f1e527023e2242d32784eb30ade67",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "ab9d3a5081d4e02c041e0e6077867f6a00dcf4d596b69e22b3595a0f092567ea",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b74c198ecf21",
+      "name": "조화의 영약",
+      "game_item_id": 1399,
+      "source_url": "https://bdocodex.com/kr/item/1399/",
+      "status": "CONFIRMED",
+      "source_name": "조화의 영약",
+      "recorded_source_name": "조화의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001399.webp",
+      "source_sha256": "755b6dd6bbf5950896b561a4405d0ec9f4b53eaa0266c9f53c22e2a5320d5956",
+      "local_sha256": "755b6dd6bbf5950896b561a4405d0ec9f4b53eaa0266c9f53c22e2a5320d5956",
+      "manifest_sha256": "755b6dd6bbf5950896b561a4405d0ec9f4b53eaa0266c9f53c22e2a5320d5956",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "53e32f21cfcff90ebca86507d379d3d1810381b9250c8923cf0db1b07d60fb7f",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-707b9d9f0edc",
+      "name": "죄인의 혈액",
+      "game_item_id": 6354,
+      "source_url": "https://bdocodex.com/kr/item/6354/",
+      "status": "CONFIRMED",
+      "source_name": "죄인의 혈액",
+      "recorded_source_name": "죄인의 혈액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006354.webp",
+      "source_sha256": "b2bb29c74c368de0d3f64d5114f0150277ae738884d990380eea4f01d3a45f50",
+      "local_sha256": "b2bb29c74c368de0d3f64d5114f0150277ae738884d990380eea4f01d3a45f50",
+      "manifest_sha256": "b2bb29c74c368de0d3f64d5114f0150277ae738884d990380eea4f01d3a45f50",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "35ecbb6a86fd13b95d77e66101788be9e937a0e96cc298ab3806a1be379f1ddb",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2f2faa2629ed",
+      "name": "주문의 비약",
+      "game_item_id": 692,
+      "source_url": "https://bdocodex.com/kr/item/692/",
+      "status": "CONFIRMED",
+      "source_name": "주문의 비약",
+      "recorded_source_name": "주문의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000629.webp",
+      "source_sha256": "72e953f632e1a78573505a92fc27bcfb6d90fa7b117b49d6865ab89047f8e3ba",
+      "local_sha256": "72e953f632e1a78573505a92fc27bcfb6d90fa7b117b49d6865ab89047f8e3ba",
+      "manifest_sha256": "72e953f632e1a78573505a92fc27bcfb6d90fa7b117b49d6865ab89047f8e3ba",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "0da5a5b52b79301b4aafb8a38fc8203320b91e7054dad7c959f2430af2107d03",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-a125c9abecef",
+      "name": "죽음의 비약",
+      "game_item_id": 686,
+      "source_url": "https://bdocodex.com/kr/item/686/",
+      "status": "CONFIRMED",
+      "source_name": "죽음의 비약",
+      "recorded_source_name": "죽음의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000623.webp",
+      "source_sha256": "0f878c98513e94d524b2ed8d0999c4f4d87dfa1f180325b22d0f79ec7bd2a9c1",
+      "local_sha256": "0f878c98513e94d524b2ed8d0999c4f4d87dfa1f180325b22d0f79ec7bd2a9c1",
+      "manifest_sha256": "0f878c98513e94d524b2ed8d0999c4f4d87dfa1f180325b22d0f79ec7bd2a9c1",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "33096f4b044cc412e76621095f1509ad0b69fd21d34ff2e267f1debdfbf69218",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6158cff3642f",
+      "name": "집중의 비약",
+      "game_item_id": 700,
+      "source_url": "https://bdocodex.com/kr/item/700/",
+      "status": "CONFIRMED",
+      "source_name": "집중의 비약",
+      "recorded_source_name": "집중의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000637.webp",
+      "source_sha256": "1687a44fcdd11e642ba41fdb602aa512875b4bd42961b090b9620220f8ad77ee",
+      "local_sha256": "1687a44fcdd11e642ba41fdb602aa512875b4bd42961b090b9620220f8ad77ee",
+      "manifest_sha256": "1687a44fcdd11e642ba41fdb602aa512875b4bd42961b090b9620220f8ad77ee",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b4b9f1503751e922ad4ff1f3ae950c6bc0a567818dbdce1488d032efe1595962",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7043e4da2fc9",
+      "name": "천년초",
+      "game_item_id": 5406,
+      "source_url": "https://bdocodex.com/kr/item/5406/",
+      "status": "CONFIRMED",
+      "source_name": "천년초",
+      "recorded_source_name": "천년초",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005406.webp",
+      "source_sha256": "12ca7b42d1d0520376a9c7c32cf5ff028a2b90309f2c460b52baecb704a63bbb",
+      "local_sha256": "12ca7b42d1d0520376a9c7c32cf5ff028a2b90309f2c460b52baecb704a63bbb",
+      "manifest_sha256": "12ca7b42d1d0520376a9c7c32cf5ff028a2b90309f2c460b52baecb704a63bbb",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "60f099b42e39e1d0673210e3248964b724a3462102504560c9f33feb4533f660",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-bc7c68adf21e",
+      "name": "청람의 영약",
+      "game_item_id": 800,
+      "source_url": "https://bdocodex.com/kr/item/800/",
+      "status": "CONFIRMED",
+      "source_name": "청람의 영약",
+      "recorded_source_name": "청람의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000800.webp",
+      "source_sha256": "45b266e8289164999f5d204137061df34c32c82f39092132c392179babd115a9",
+      "local_sha256": "45b266e8289164999f5d204137061df34c32c82f39092132c392179babd115a9",
+      "manifest_sha256": "45b266e8289164999f5d204137061df34c32c82f39092132c392179babd115a9",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7b1c8c260b9b4792331b25a0e07867c44f266c8976bff99ad76509ac15f660b2",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-746c3a6c2e86",
+      "name": "충격의 비약",
+      "game_item_id": 762,
+      "source_url": "https://bdocodex.com/kr/item/762/",
+      "status": "CONFIRMED",
+      "source_name": "충격의 비약",
+      "recorded_source_name": "충격의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000764.webp",
+      "source_sha256": "4f2aab0e93bfabe2ed085648ca2528e628a2be8e9c5e93a6f799149fd9b4cb68",
+      "local_sha256": "4f2aab0e93bfabe2ed085648ca2528e628a2be8e9c5e93a6f799149fd9b4cb68",
+      "manifest_sha256": "4f2aab0e93bfabe2ed085648ca2528e628a2be8e9c5e93a6f799149fd9b4cb68",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c313ca69b90a5d975674fa06e6f1a3f1d670b472bc41a10b54abccc57784c3ec",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-7be932bfc91f",
+      "name": "측백나무 수액",
+      "game_item_id": 5020,
+      "source_url": "https://bdocodex.com/kr/item/5020/",
+      "status": "CONFIRMED",
+      "source_name": "측백나무 수액",
+      "recorded_source_name": "측백나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005020.webp",
+      "source_sha256": "5f7e1ec9b1f24d7d7442cd8c40387011d6a31b2aeff0f7c4749c44af21aa3d59",
+      "local_sha256": "5f7e1ec9b1f24d7d7442cd8c40387011d6a31b2aeff0f7c4749c44af21aa3d59",
+      "manifest_sha256": "5f7e1ec9b1f24d7d7442cd8c40387011d6a31b2aeff0f7c4749c44af21aa3d59",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b06d717d74b3cd55e48ccd0c74b7150328a4b65dc2b6be41d84089a590830852",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ff5861c00d5a",
+      "name": "치명적인 암살자의 비약",
+      "game_item_id": 697,
+      "source_url": "https://bdocodex.com/kr/item/697/",
+      "status": "CONFIRMED",
+      "source_name": "치명적인 암살자의 비약",
+      "recorded_source_name": "치명적인 암살자의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000634.webp",
+      "source_sha256": "a0c3efdf3b93ab90791db6cba20a5c71da5606a60ee63618468124d8ae183212",
+      "local_sha256": "a0c3efdf3b93ab90791db6cba20a5c71da5606a60ee63618468124d8ae183212",
+      "manifest_sha256": "a0c3efdf3b93ab90791db6cba20a5c71da5606a60ee63618468124d8ae183212",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a8685946933d7bbb9ed31e31c12bca42c468c23c7b4eff8056ddfc7a67ebcd43",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-de75693782ae",
+      "name": "치명적인 파괴의 비약",
+      "game_item_id": 1181,
+      "source_url": "https://bdocodex.com/kr/item/1181/",
+      "status": "CONFIRMED",
+      "source_name": "치명적인 파괴의 비약",
+      "recorded_source_name": "치명적인 파괴의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001183.webp",
+      "source_sha256": "ae8f9357df71ee7c40390f5ba668c30d31ac903de6938ed22940b0b0da5482fa",
+      "local_sha256": "ae8f9357df71ee7c40390f5ba668c30d31ac903de6938ed22940b0b0da5482fa",
+      "manifest_sha256": "ae8f9357df71ee7c40390f5ba668c30d31ac903de6938ed22940b0b0da5482fa",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "6fbbc272cd02778c73cffe23fbfd8287b6eba87eecbf1dedad2b6b7618f808f7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ef7a84693ed2",
+      "name": "친화의 비약",
+      "game_item_id": 664,
+      "source_url": "https://bdocodex.com/kr/item/664/",
+      "status": "CONFIRMED",
+      "source_name": "친화의 비약",
+      "recorded_source_name": "친화의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000601.webp",
+      "source_sha256": "7d773a5216750cc1c0846680022f5b52426f32207598073b804945be34822fd9",
+      "local_sha256": "7d773a5216750cc1c0846680022f5b52426f32207598073b804945be34822fd9",
+      "manifest_sha256": "7d773a5216750cc1c0846680022f5b52426f32207598073b804945be34822fd9",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "0090d7708932956f6ae2147ade1bf79057dc9e11e35514803ba4537d18888bdf",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-28f389720750",
+      "name": "카프라스 나무 수액",
+      "game_item_id": 5025,
+      "source_url": "https://bdocodex.com/kr/item/5025/",
+      "status": "CONFIRMED",
+      "source_name": "카프라스 나무 수액",
+      "recorded_source_name": "카프라스 나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005025.webp",
+      "source_sha256": "a73cfe33be8102466ab02c5364ad58dfee5bc757ba2faa160813073507266866",
+      "local_sha256": "a73cfe33be8102466ab02c5364ad58dfee5bc757ba2faa160813073507266866",
+      "manifest_sha256": "a73cfe33be8102466ab02c5364ad58dfee5bc757ba2faa160813073507266866",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7f6f7158ef102b720b8e1f40842fd059f001d91e1ded68e0dfaf5baf5b58cc74",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-12fec880d79f",
+      "name": "카프라스의 정수",
+      "game_item_id": 821259,
+      "source_url": "https://bdocodex.com/kr/item/821259/",
+      "status": "CONFIRMED",
+      "source_name": "카프라스의 정수",
+      "recorded_source_name": "카프라스의 정수",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00821271.webp",
+      "source_sha256": "5383d7fd0cfa380cadc23f3fd3dc4375db51328a15c9eecf9ca71b2590baac13",
+      "local_sha256": "5383d7fd0cfa380cadc23f3fd3dc4375db51328a15c9eecf9ca71b2590baac13",
+      "manifest_sha256": "5383d7fd0cfa380cadc23f3fd3dc4375db51328a15c9eecf9ca71b2590baac13",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7510e3ae54add8e8e2f6aec10c69d3021b0a9115a4d98dbe25951f48c3d2da6e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-3f041c1d45ca",
+      "name": "타락의 영약",
+      "game_item_id": 1395,
+      "source_url": "https://bdocodex.com/kr/item/1395/",
+      "status": "CONFIRMED",
+      "source_name": "타락의 영약",
+      "recorded_source_name": "타락의 영약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001395.webp",
+      "source_sha256": "a47dce009214121ddd73a3043e3d8180dc7dc14eb4ac9876b5a25477fef6a0c1",
+      "local_sha256": "a47dce009214121ddd73a3043e3d8180dc7dc14eb4ac9876b5a25477fef6a0c1",
+      "manifest_sha256": "a47dce009214121ddd73a3043e3d8180dc7dc14eb4ac9876b5a25477fef6a0c1",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "95390c1f4a542c9cfbe5a8250edc27aa0589f4541ed45e40ce79952d59e3a400",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-d09eae6b3e93",
+      "name": "타락의 오일",
+      "game_item_id": 6604,
+      "source_url": "https://bdocodex.com/kr/item/6604/",
+      "status": "CONFIRMED",
+      "source_name": "타락의 오일",
+      "recorded_source_name": "타락의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006604.webp",
+      "source_sha256": "ff2c52ef5b4a480ff4c0029e027f5f43dbd18de52ba6f04f0ff51b6d8a601467",
+      "local_sha256": "ff2c52ef5b4a480ff4c0029e027f5f43dbd18de52ba6f04f0ff51b6d8a601467",
+      "manifest_sha256": "ff2c52ef5b4a480ff4c0029e027f5f43dbd18de52ba6f04f0ff51b6d8a601467",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "1afc19dca8d4c970a816cd96ade92f4a0451a5f2dc3e1a255ed1b7749f91c1ca",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6f1de798754e",
+      "name": "타락한 불멸의 오일",
+      "game_item_id": 1178,
+      "source_url": "https://bdocodex.com/kr/item/1178/",
+      "status": "CONFIRMED",
+      "source_name": "타락한 불멸의 오일",
+      "recorded_source_name": "타락한 불멸의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00001178.webp",
+      "source_sha256": "2be88dfe65a67661e268a7dc86faf4d408005f34dd06201253cadf5fe52773c8",
+      "local_sha256": "2be88dfe65a67661e268a7dc86faf4d408005f34dd06201253cadf5fe52773c8",
+      "manifest_sha256": "2be88dfe65a67661e268a7dc86faf4d408005f34dd06201253cadf5fe52773c8",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c22c91d9d863c3685b788a3fb50359c788c9bebb22954de5741bcab1264c9de3",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-3c073a5ca2c8",
+      "name": "타버린 정령의 잔재",
+      "game_item_id": 5964,
+      "source_url": "https://bdocodex.com/kr/item/5964/",
+      "status": "CONFIRMED",
+      "source_name": "타버린 정령의 잔재",
+      "recorded_source_name": "타버린 정령의 잔재",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005964.webp",
+      "source_sha256": "7b00542152c3662c626df971eb54d56b9c594e4b154b49115a9f97fef0c2a052",
+      "local_sha256": "7b00542152c3662c626df971eb54d56b9c594e4b154b49115a9f97fef0c2a052",
+      "manifest_sha256": "7b00542152c3662c626df971eb54d56b9c594e4b154b49115a9f97fef0c2a052",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8ec2011773b1155ddd51dad2ff563b1542c283ae8e7e3394a8da9209b19fb5a5",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-4e788a20eb6a",
+      "name": "태고의 버섯",
+      "game_item_id": 5418,
+      "source_url": "https://bdocodex.com/kr/item/5418/",
+      "status": "CONFIRMED",
+      "source_name": "태고의 버섯",
+      "recorded_source_name": "태고의 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005418.webp",
+      "source_sha256": "41bf46fa1b1af8ace359a77e82efe160c83b40035fa1bc73f657c5724dd5a6a3",
+      "local_sha256": "41bf46fa1b1af8ace359a77e82efe160c83b40035fa1bc73f657c5724dd5a6a3",
+      "manifest_sha256": "41bf46fa1b1af8ace359a77e82efe160c83b40035fa1bc73f657c5724dd5a6a3",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7b42ae63431ad91068f0dba7ed7237c53860ebacfa719dd6f7ebe1f9be634d35",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-447835be05cf",
+      "name": "투로족의 심장",
+      "game_item_id": 44461,
+      "source_url": "https://bdocodex.com/kr/item/44461/",
+      "status": "CONFIRMED",
+      "source_name": "투로족의 심장",
+      "recorded_source_name": "투로족의 심장",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/04_dropitem/00044461.webp",
+      "source_sha256": "f73d49255dbd23c8b21d3c917518dffd0c66f30cfac131b3d9a3996f951d92c4",
+      "local_sha256": "f73d49255dbd23c8b21d3c917518dffd0c66f30cfac131b3d9a3996f951d92c4",
+      "manifest_sha256": "f73d49255dbd23c8b21d3c917518dffd0c66f30cfac131b3d9a3996f951d92c4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d1bad61208c14fe4d20ad022afa30c6dd5bad62943787fddcca9f810977c8afd",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-88bf1157dd57",
+      "name": "파괴의 비약",
+      "game_item_id": 1180,
+      "source_url": "https://bdocodex.com/kr/item/1180/",
+      "status": "CONFIRMED",
+      "source_name": "파괴의 비약",
+      "recorded_source_name": "파괴의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001182.webp",
+      "source_sha256": "f46eb37fa9d5c03207cc5ad21dbc7b8d84bd58c006fcd106fcea0bb0fb3e4030",
+      "local_sha256": "f46eb37fa9d5c03207cc5ad21dbc7b8d84bd58c006fcd106fcea0bb0fb3e4030",
+      "manifest_sha256": "f46eb37fa9d5c03207cc5ad21dbc7b8d84bd58c006fcd106fcea0bb0fb3e4030",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "cff1b343a79d12211dc728c11cc2126abdc95fa2530cf39b275bc7c057a57f42",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2961704c5869",
+      "name": "편백나무 수액",
+      "game_item_id": 5012,
+      "source_url": "https://bdocodex.com/kr/item/5012/",
+      "status": "CONFIRMED",
+      "source_name": "편백나무 수액",
+      "recorded_source_name": "편백나무 수액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005012.webp",
+      "source_sha256": "b41a8626ea52e9e43ea7ce7cea4f86c33b8f46a5b4b85bee99ce38ea41bd2893",
+      "local_sha256": "b41a8626ea52e9e43ea7ce7cea4f86c33b8f46a5b4b85bee99ce38ea41bd2893",
+      "manifest_sha256": "b41a8626ea52e9e43ea7ce7cea4f86c33b8f46a5b4b85bee99ce38ea41bd2893",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "bc577927a7ce0b622ab10f3c250e59213d275e3a51e55f936dd4676a7a0b42c7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-f07468f5f97f",
+      "name": "평온의 오일",
+      "game_item_id": 6605,
+      "source_url": "https://bdocodex.com/kr/item/6605/",
+      "status": "CONFIRMED",
+      "source_name": "평온의 오일",
+      "recorded_source_name": "평온의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006605.webp",
+      "source_sha256": "fbc11ffe0f5bd58cd2917bd7627730516dc1bdbe879ab57ce117719203e015e1",
+      "local_sha256": "fbc11ffe0f5bd58cd2917bd7627730516dc1bdbe879ab57ce117719203e015e1",
+      "manifest_sha256": "fbc11ffe0f5bd58cd2917bd7627730516dc1bdbe879ab57ce117719203e015e1",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c68a1237d2a7b21cfdb7cf28a06f2be04a9d4552f2c1569f910927f13f4964df",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-bc8a6316b387",
+      "name": "폭군의 혈액",
+      "game_item_id": 6352,
+      "source_url": "https://bdocodex.com/kr/item/6352/",
+      "status": "CONFIRMED",
+      "source_name": "폭군의 혈액",
+      "recorded_source_name": "폭군의 혈액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006352.webp",
+      "source_sha256": "746c3b1211f0557715b8f97d1b8cab54b377a7fd59e293df24ba45799f2e2adc",
+      "local_sha256": "746c3b1211f0557715b8f97d1b8cab54b377a7fd59e293df24ba45799f2e2adc",
+      "manifest_sha256": "746c3b1211f0557715b8f97d1b8cab54b377a7fd59e293df24ba45799f2e2adc",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "745f7aa17313613a6c4549a013c4c7c84aa0e2f8885d65b8e89395d23c9e5839",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5a2199f11101",
+      "name": "폭풍의 오일",
+      "game_item_id": 6602,
+      "source_url": "https://bdocodex.com/kr/item/6602/",
+      "status": "CONFIRMED",
+      "source_name": "폭풍의 오일",
+      "recorded_source_name": "폭풍의 오일",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006602.webp",
+      "source_sha256": "42b05000a14db4308ec3a7fd946b7607fafd38f38de19a39e42111a716ee001d",
+      "local_sha256": "42b05000a14db4308ec3a7fd946b7607fafd38f38de19a39e42111a716ee001d",
+      "manifest_sha256": "42b05000a14db4308ec3a7fd946b7607fafd38f38de19a39e42111a716ee001d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "02f2969c569e2f96a4c28e221119240c1fd5298671bc905f5c474583dc3028a6",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-f39230d2300b",
+      "name": "푸른 액체 시약",
+      "game_item_id": 4916,
+      "source_url": "https://bdocodex.com/kr/item/4916/",
+      "status": "CONFIRMED",
+      "source_name": "푸른 액체 시약",
+      "recorded_source_name": "푸른 액체 시약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004916.webp",
+      "source_sha256": "de48ea99502e6548f17112a1e06e811fd652e659a670ce305aec24961864f12b",
+      "local_sha256": "de48ea99502e6548f17112a1e06e811fd652e659a670ce305aec24961864f12b",
+      "manifest_sha256": "de48ea99502e6548f17112a1e06e811fd652e659a670ce305aec24961864f12b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "9217a6b6abd3bcb542d3b6c6608b4540338c84c224fd370e0858f865096c3d09",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-b3c96eb97bc0",
+      "name": "핏빛 나무 옹이",
+      "game_item_id": 5005,
+      "source_url": "https://bdocodex.com/kr/item/5005/",
+      "status": "CONFIRMED",
+      "source_name": "핏빛 나무 옹이",
+      "recorded_source_name": "핏빛 나무 옹이",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005005.webp",
+      "source_sha256": "5f86d38836f0f74fbfaa9035941523302b0ad97266d800babc44f5e183a1b0b4",
+      "local_sha256": "5f86d38836f0f74fbfaa9035941523302b0ad97266d800babc44f5e183a1b0b4",
+      "manifest_sha256": "5f86d38836f0f74fbfaa9035941523302b0ad97266d800babc44f5e183a1b0b4",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d972c008b9f1edda5a79d71568f96f4f6c0ec673ebbd7a5e4e498d92f9ddd4b5",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-5d1f205fa14d",
+      "name": "하늘 버섯",
+      "game_item_id": 5411,
+      "source_url": "https://bdocodex.com/kr/item/5411/",
+      "status": "CONFIRMED",
+      "source_name": "하늘 버섯",
+      "recorded_source_name": "하늘 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005411.webp",
+      "source_sha256": "580b21bc81155a2212946287ace5d08e71f3e932a5e60572f650d4232d20260b",
+      "local_sha256": "580b21bc81155a2212946287ace5d08e71f3e932a5e60572f650d4232d20260b",
+      "manifest_sha256": "580b21bc81155a2212946287ace5d08e71f3e932a5e60572f650d4232d20260b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "1f36451cd46cebe75850440c76d24ca28382db3d27b952e39c4281f18b39117c",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-6a4d4590ff78",
+      "name": "하늘의 비약",
+      "game_item_id": 720,
+      "source_url": "https://bdocodex.com/kr/item/720/",
+      "status": "CONFIRMED",
+      "source_name": "하늘의 비약",
+      "recorded_source_name": "하늘의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000657.webp",
+      "source_sha256": "d8b705ee9ae61eb69f426d8259a4be979849f64de0ad2df1a6ae3cbfb9a8bff7",
+      "local_sha256": "d8b705ee9ae61eb69f426d8259a4be979849f64de0ad2df1a6ae3cbfb9a8bff7",
+      "manifest_sha256": "d8b705ee9ae61eb69f426d8259a4be979849f64de0ad2df1a6ae3cbfb9a8bff7",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a0c64875a6c91853d3919648f438b8ed92b8bca62015d14992dee0969d540ffa",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-d10a8d183595",
+      "name": "학살자의 비약",
+      "game_item_id": 718,
+      "source_url": "https://bdocodex.com/kr/item/718/",
+      "status": "CONFIRMED",
+      "source_name": "학살자의 비약",
+      "recorded_source_name": "학살자의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000655.webp",
+      "source_sha256": "ab3abcafc550927350c132bf7703662f201c458fbc82d77cb6e13c586eba2b63",
+      "local_sha256": "ab3abcafc550927350c132bf7703662f201c458fbc82d77cb6e13c586eba2b63",
+      "manifest_sha256": "ab3abcafc550927350c132bf7703662f201c458fbc82d77cb6e13c586eba2b63",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "b62aa4635847adfa73adc980b49e55eaccbc89c7a19d4ccb6f2ad923163860b7",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-451319078780",
+      "name": "향상된 숙련의 비약",
+      "game_item_id": 1158,
+      "source_url": "https://bdocodex.com/kr/item/1158/",
+      "status": "CONFIRMED",
+      "source_name": "향상된 숙련의 비약",
+      "recorded_source_name": "향상된 숙련의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00001357.webp",
+      "source_sha256": "3626925c41f7db3a0b60a0fabceb24b1c46f42910210998a8294e2c93af660ee",
+      "local_sha256": "3626925c41f7db3a0b60a0fabceb24b1c46f42910210998a8294e2c93af660ee",
+      "manifest_sha256": "3626925c41f7db3a0b60a0fabceb24b1c46f42910210998a8294e2c93af660ee",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "121fcdb11c5d7131282ac297ffe925b33c52f30be24e6ad68fc7b5ea5b0ef47d",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-467e46d75a85",
+      "name": "향상된 친화의 비약",
+      "game_item_id": 665,
+      "source_url": "https://bdocodex.com/kr/item/665/",
+      "status": "CONFIRMED",
+      "source_name": "향상된 친화의 비약",
+      "recorded_source_name": "향상된 친화의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000602.webp",
+      "source_sha256": "ffc5bd7e3b19ec4d1f09522b8396a9aded70cac3cd0172a65ff6fe5e5940ab7e",
+      "local_sha256": "ffc5bd7e3b19ec4d1f09522b8396a9aded70cac3cd0172a65ff6fe5e5940ab7e",
+      "manifest_sha256": "ffc5bd7e3b19ec4d1f09522b8396a9aded70cac3cd0172a65ff6fe5e5940ab7e",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a9a1bb57b68ad4665c27a06ba391a83dddcbb704455c11b68a8bd5f0bf7f80da",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-030816156612",
+      "name": "허풍선이 버섯",
+      "game_item_id": 5417,
+      "source_url": "https://bdocodex.com/kr/item/5417/",
+      "status": "CONFIRMED",
+      "source_name": "허풍선이 버섯",
+      "recorded_source_name": "허풍선이 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005417.webp",
+      "source_sha256": "da9c19d598ad0c8b3e6da3a59368aa1c0e857649a59cb300defc472b11660da9",
+      "local_sha256": "da9c19d598ad0c8b3e6da3a59368aa1c0e857649a59cb300defc472b11660da9",
+      "manifest_sha256": "da9c19d598ad0c8b3e6da3a59368aa1c0e857649a59cb300defc472b11660da9",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7865f934b0a62c35dec9d6e3ceb15f81bc996feefb45efed6e99847251844fc4",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-ced07eea782b",
+      "name": "현자의 혈액",
+      "game_item_id": 6355,
+      "source_url": "https://bdocodex.com/kr/item/6355/",
+      "status": "CONFIRMED",
+      "source_name": "현자의 혈액",
+      "recorded_source_name": "현자의 혈액",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00006355.webp",
+      "source_sha256": "d7b822c26dfac69bbc5047f77a725ff51010ae764ed3f318ffb911111cbd9075",
+      "local_sha256": "d7b822c26dfac69bbc5047f77a725ff51010ae764ed3f318ffb911111cbd9075",
+      "manifest_sha256": "d7b822c26dfac69bbc5047f77a725ff51010ae764ed3f318ffb911111cbd9075",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8853d9e2915002684b50e59ceb4d606ac46af68fff4ac46639b633f6564499fb",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-42ca8d33f800",
+      "name": "호랑이 버섯",
+      "game_item_id": 5412,
+      "source_url": "https://bdocodex.com/kr/item/5412/",
+      "status": "CONFIRMED",
+      "source_name": "호랑이 버섯",
+      "recorded_source_name": "호랑이 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005412.webp",
+      "source_sha256": "9d05752751936aece73c20cdec1dcc5d6f37a21e2ca63531ad60f39a5bb6dea9",
+      "local_sha256": "9d05752751936aece73c20cdec1dcc5d6f37a21e2ca63531ad60f39a5bb6dea9",
+      "manifest_sha256": "9d05752751936aece73c20cdec1dcc5d6f37a21e2ca63531ad60f39a5bb6dea9",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "4e4878bdc2d10dca8687da19d33380ac0d215b4e214a6170616c54256222867e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-26c33c7d8f41",
+      "name": "호쾌한 신속의 비약",
+      "game_item_id": 691,
+      "source_url": "https://bdocodex.com/kr/item/691/",
+      "status": "CONFIRMED",
+      "source_name": "호쾌한 신속의 비약",
+      "recorded_source_name": "호쾌한 신속의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000628.webp",
+      "source_sha256": "1482052cfd9c7b1deec73f46d2bdc5c715bcce611b384b732301d9e66a6b1606",
+      "local_sha256": "1482052cfd9c7b1deec73f46d2bdc5c715bcce611b384b732301d9e66a6b1606",
+      "manifest_sha256": "1482052cfd9c7b1deec73f46d2bdc5c715bcce611b384b732301d9e66a6b1606",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "7c3b0ba8311d945c9451d875b7521d516efa2fb1abc5ee1d3d7406605d043b43",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-0bd8af84dce6",
+      "name": "혹 버섯",
+      "game_item_id": 5416,
+      "source_url": "https://bdocodex.com/kr/item/5416/",
+      "status": "CONFIRMED",
+      "source_name": "혹 버섯",
+      "recorded_source_name": "혹 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005416.webp",
+      "source_sha256": "77fb863408e0bd48667687ad42e23c7dfb08f3f1775c4332d788e7704fffed9d",
+      "local_sha256": "77fb863408e0bd48667687ad42e23c7dfb08f3f1775c4332d788e7704fffed9d",
+      "manifest_sha256": "77fb863408e0bd48667687ad42e23c7dfb08f3f1775c4332d788e7704fffed9d",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a258f98294dd5f3fe5f8eefa269a5cae692bf76c31d17dc9ffd3908a09d13619",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-d961c3de416f",
+      "name": "혼을 거두는 사신의 비약",
+      "game_item_id": 713,
+      "source_url": "https://bdocodex.com/kr/item/713/",
+      "status": "CONFIRMED",
+      "source_name": "혼을 거두는 사신의 비약",
+      "recorded_source_name": "혼을 거두는 사신의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000650.webp",
+      "source_sha256": "3465820eee52dfa9c93e79d2a5b3d9891d9b883eafff69f8520522338f336203",
+      "local_sha256": "3465820eee52dfa9c93e79d2a5b3d9891d9b883eafff69f8520522338f336203",
+      "manifest_sha256": "3465820eee52dfa9c93e79d2a5b3d9891d9b883eafff69f8520522338f336203",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "a262fe55fe99231f119b46d178ad6c7e7c3c485d01ce2c3947c0ff59900ed30a",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-0b7fcf977ea5",
+      "name": "화살 버섯",
+      "game_item_id": 5408,
+      "source_url": "https://bdocodex.com/kr/item/5408/",
+      "status": "CONFIRMED",
+      "source_name": "화살 버섯",
+      "recorded_source_name": "화살 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005408.webp",
+      "source_sha256": "62b28dde578b61b38e0d39e689cde52514ba6ad7052d4ccb86097410226bde63",
+      "local_sha256": "62b28dde578b61b38e0d39e689cde52514ba6ad7052d4ccb86097410226bde63",
+      "manifest_sha256": "62b28dde578b61b38e0d39e689cde52514ba6ad7052d4ccb86097410226bde63",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c70569b01e168f1fc4c2172e4324dbe229b64d9139d9cd2a1628b75dc9485f97",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-094afc202e69",
+      "name": "화염비늘꽃",
+      "game_item_id": 5403,
+      "source_url": "https://bdocodex.com/kr/item/5403/",
+      "status": "CONFIRMED",
+      "source_name": "화염비늘꽃",
+      "recorded_source_name": "화염비늘꽃",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005403.webp",
+      "source_sha256": "a314483f0520f146f98c75505a08ae79f709c108b812cb70a906be21cc4eeb94",
+      "local_sha256": "a314483f0520f146f98c75505a08ae79f709c108b812cb70a906be21cc4eeb94",
+      "manifest_sha256": "a314483f0520f146f98c75505a08ae79f709c108b812cb70a906be21cc4eeb94",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "1bb18d724a57ffa28962159aea2213c62cc244e14bdceff431ddce638d6819e8",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-59034ba3a980",
+      "name": "화염의 가루",
+      "game_item_id": 4802,
+      "source_url": "https://bdocodex.com/kr/item/4802/",
+      "status": "CONFIRMED",
+      "source_name": "화염의 가루",
+      "recorded_source_name": "화염의 가루",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00004802.webp",
+      "source_sha256": "9c64380117e44f721d660a61e50522a748156ca887aff3d1d5b2124ff7ae0380",
+      "local_sha256": "9c64380117e44f721d660a61e50522a748156ca887aff3d1d5b2124ff7ae0380",
+      "manifest_sha256": "9c64380117e44f721d660a61e50522a748156ca887aff3d1d5b2124ff7ae0380",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "d3d153dba23a093d5b9826c75d4767b842aaa2862b58b40b9793ef20a210e540",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-d38e2a760601",
+      "name": "황제 버섯",
+      "game_item_id": 5413,
+      "source_url": "https://bdocodex.com/kr/item/5413/",
+      "status": "CONFIRMED",
+      "source_name": "황제 버섯",
+      "recorded_source_name": "황제 버섯",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00005413.webp",
+      "source_sha256": "cebd82625d2de24d2a6cf00693aea50ca0cf56ad3228d04d14cd7ec1dd27d49f",
+      "local_sha256": "cebd82625d2de24d2a6cf00693aea50ca0cf56ad3228d04d14cd7ec1dd27d49f",
+      "manifest_sha256": "cebd82625d2de24d2a6cf00693aea50ca0cf56ad3228d04d14cd7ec1dd27d49f",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "8d53474052bcd9320254f27b1490235a041336b1d94699839c4a4f131a49e12e",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-340a851bc039",
+      "name": "흐르는 바람의 비약",
+      "game_item_id": 689,
+      "source_url": "https://bdocodex.com/kr/item/689/",
+      "status": "CONFIRMED",
+      "source_name": "흐르는 바람의 비약",
+      "recorded_source_name": "흐르는 바람의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000626.webp",
+      "source_sha256": "c071b08dfcab02880dd651100d5a07382d5e8f7d6a01a993a22caa26bb5def6b",
+      "local_sha256": "c071b08dfcab02880dd651100d5a07382d5e8f7d6a01a993a22caa26bb5def6b",
+      "manifest_sha256": "c071b08dfcab02880dd651100d5a07382d5e8f7d6a01a993a22caa26bb5def6b",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "2cac721bd155943912c5ce83ddc78d3a54eddd4a488743cd5dffab686682a9cd",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    },
+    {
+      "item_id": "i-2b06c55255fa",
+      "name": "흐르는 세월의 비약",
+      "game_item_id": 750,
+      "source_url": "https://bdocodex.com/kr/item/750/",
+      "status": "CONFIRMED",
+      "source_name": "흐르는 세월의 비약",
+      "recorded_source_name": "흐르는 세월의 비약",
+      "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000752.webp",
+      "source_sha256": "b3fca6fc511b02a461776a5b4170b01b7a3217e77a02d1947fe53b399601a2d7",
+      "local_sha256": "b3fca6fc511b02a461776a5b4170b01b7a3217e77a02d1947fe53b399601a2d7",
+      "manifest_sha256": "b3fca6fc511b02a461776a5b4170b01b7a3217e77a02d1947fe53b399601a2d7",
+      "source_size": [
+        44,
+        44
+      ],
+      "local_size": [
+        44,
+        44
+      ],
+      "pixel_match": true,
+      "source_page_sha256": "c1fa0ad50ec98a647dd11310ec0f565e446a1f1fd273f7d382d429ee995bf8d4",
+      "actual_game_capture": "NOT_RUN",
+      "mismatches": [],
+      "baseline_status": "CONFIRMED",
+      "visual_review": "SOURCE_LOCAL_CONTACT_SHEET_MATCH",
+      "baseline_mismatches": []
+    }
+  ],
+  "duplicate_groups": [
+    [
+      {
+        "item_id": "i-6a4140e675fc",
+        "name": "나선의 비약",
+        "game_item_id": 782,
+        "source_url": "https://bdocodex.com/kr/item/782/",
+        "status": "CONFIRMED",
+        "source_name": "나선의 비약",
+        "recorded_source_name": "나선의 비약",
+        "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000784.webp",
+        "source_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+        "local_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+        "manifest_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+        "source_size": [
+          44,
+          44
+        ],
+        "local_size": [
+          44,
+          44
+        ],
+        "pixel_match": true,
+        "source_page_sha256": "881e4fb5030cfa67e073f4b08cfb63832633d9e648b807c7b0d6b7e80c60503a",
+        "actual_game_capture": "NOT_RUN",
+        "mismatches": []
+      },
+      {
+        "item_id": "i-8139d570ae21",
+        "name": "빛나는 나선의 비약",
+        "game_item_id": 783,
+        "source_url": "https://bdocodex.com/kr/item/783/",
+        "status": "CONFIRMED",
+        "source_name": "빛나는 나선의 비약",
+        "recorded_source_name": "빛나는 나선의 비약",
+        "source_image": "https://bdocodex.com/items/new_icon/03_etc/08_potion/00000785.webp",
+        "source_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+        "local_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+        "manifest_sha256": "144e194aeeb1162254bcf43b668bb3b2dc297ee048be914bc403754a3cb82a3e",
+        "source_size": [
+          44,
+          44
+        ],
+        "local_size": [
+          44,
+          44
+        ],
+        "pixel_match": true,
+        "source_page_sha256": "01d87bb3d055ecdeaca0d9b382473022edcd9b8809b0dabb4e9d1b48751d4252",
+        "actual_game_capture": "NOT_RUN",
+        "mismatches": []
+      }
+    ]
+  ],
+  "counts": {
+    "CONFIRMED": 170
+  },
+  "visual_scope": "공개 원본과 로컬 접촉 시트 시각 대조. 실제 게임 신규 캡처는 NOT_RUN."
+}

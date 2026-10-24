@@ -140,3 +140,11 @@ def catalog_preview():
         except AlchemyError as error:
             errors.append(str(error))
     return {"items": len(items), "recipes": len(recipes), "version": data["version"], "errors": sorted(set(errors))}
+
+
+@alchemy_api.get("/catalog/updates")
+@endpoint
+def catalog_updates():
+    with closing(store().connect()) as db:
+        db.execute("BEGIN")
+        return store().catalog_update(db)[1]

@@ -1103,3 +1103,26 @@ pre.backup-preview {
   background: #c5ab750c;
   font-size: 16px;
 }
+
+.image-unavailable {
+  outline: 1px solid #d3aa60;
+}
+.conflict-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.conflict-values pre {
+  max-height: 20rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#batch-policy-form {
+  margin-block: 1rem;
+}
+@media (max-width: 700px) {
+  .conflict-values {
+    grid-template-columns: 1fr;
+  }
+}

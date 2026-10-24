@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from .catalog import AlchemyError, graph, ingredients, integer, load_catalog, validate_catalog
 from .engine import plan_goals
+from .catalog_updates import merge_catalog
 from .yields import observed_yields
 
 SCHEMA_VERSION = 1
@@ -73,9 +74,21 @@ class AlchemyStorage:
         db.row_factory = sqlite3.Row
         return db
 
-    def catalog(self, db):
+    def catalog_update(self, db, resolutions=None):
         row = db.execute("SELECT value FROM settings WHERE key='catalog'").fetchone()
-        return json.loads(row[0]) if row else load_catalog()
+        base = db.execute("SELECT value FROM settings WHERE key='catalog_base'").fetchone()
+        return merge_catalog(json.loads(row[0]) if row else None, load_catalog(),
+                             json.loads(base[0]) if base else None, resolutions)
+
+    def catalog(self, db):
+        return self.catalog_update(db)[0]
+
+    def _catalog_backup(self, db):
+        backup = self._export(db)
+        db.execute("CREATE TABLE IF NOT EXISTS restore_backups (id TEXT PRIMARY KEY, data TEXT NOT NULL)")
+        identity = str(uuid4())
+        db.execute("INSERT INTO restore_backups VALUES (?,?)", (identity, encode(backup)))
+        return identity
 
     def _stock(self, db):
         return {r["item_id"]: r["quantity"] for r in db.execute("SELECT * FROM inventory")}
@@ -92,9 +105,9 @@ class AlchemyStorage:
             db.execute("BEGIN")
             goals = self._records(db, "goals")
             return {"schema_version": SCHEMA_VERSION, "revision": db.execute("SELECT revision FROM meta").fetchone()[0],
-                    "data_version": self.catalog(db)["version"], "goals": goals,
+                    "data_version": self.catalog(db)["version"], "catalog_update": self.catalog_update(db)[1], "goals": goals,
                     "jobs": [json.loads(r[0]) for r in db.execute("SELECT data FROM jobs WHERE json_extract(data,'$.status')='in_progress' ORDER BY rowid")],
-                    "inventory": self._stock(db), "yield_statistics": self._yield_statistics(db), "settings": {r[0]: json.loads(r[1]) for r in db.execute("SELECT key,value FROM settings WHERE key!='catalog'")}}
+                    "inventory": self._stock(db), "yield_statistics": self._yield_statistics(db), "settings": {r[0]: json.loads(r[1]) for r in db.execute("SELECT key,value FROM settings WHERE key NOT IN ('catalog','catalog_base')")}}
 
     def plans(self):
         with closing(self.connect()) as db:
@@ -213,13 +226,13 @@ class AlchemyStorage:
             goal = {"goal_id": gid, "item_id": item, "quantity": quantity, "mode": mode, "baseline": baseline if mode == "additional" else 0,
                     "priority": integer(p.get("priority", previous.get("priority", len(self._records(db, "goals")))) , "우선순위"),
                     "active": p.get("active", previous.get("active", True)),
-                    **{key: p.get(key, previous.get(key, {})) for key in ("choices", "substitutions", "expected_yields")},
+                    **{key: p.get(key, previous.get(key, {})) for key in ("choices", "substitutions", "expected_yields", "batch_policies")},
                     "assume_unknown_zero": p.get("assume_unknown_zero", previous.get("assume_unknown_zero", False))}
             if type(goal["active"]) is not bool or type(goal["assume_unknown_zero"]) is not bool:
                 raise AlchemyError("계획 설정값을 확인하세요.")
-            if any(not isinstance(goal[key], dict) for key in ("choices", "substitutions", "expected_yields")):
+            if any(not isinstance(goal[key], dict) for key in ("choices", "substitutions", "expected_yields", "batch_policies")):
                 raise AlchemyError("제작 경로 설정 형식이 잘못됐습니다.")
-            graph(catalog, item, goal["choices"], goal["substitutions"])
+            graph(catalog, item, goal["choices"], goal["substitutions"], goal["batch_policies"])
             planned = plan_goals(catalog, self._stock(db), [{**goal, "active": True}], self._yield_statistics(db))[0]
             if planned["errors"]:
                 raise AlchemyError(" / ".join(planned["errors"]), 409)
@@ -227,7 +240,7 @@ class AlchemyStorage:
             return {"goal": goal}
         if action == "start":
             recipe = recipes.get(p.get("recipe_id"))
-            if not recipe or recipe.get("verification") != "verified":
+            if not recipe or recipe.get("verification") != "verified" or recipe.get("update_conflict"):
                 raise AlchemyError("검증되지 않은 제작식은 차감에 사용할 수 없습니다.", 409)
             substitutions = p.get("substitutions", {})
             graph(catalog, recipe["output_item_id"], {**p.get("choices", {}), recipe["output_item_id"]: recipe["recipe_id"]}, substitutions)
@@ -247,9 +260,11 @@ class AlchemyStorage:
                     raise AlchemyError("제작 목표가 없습니다.", 404)
                 if not target["active"]:
                     raise AlchemyError("보류한 목표입니다. 목표를 활성화한 뒤 제작하세요.", 409)
-                target["choices"] = {**target["choices"], **p.get("choices", {}), recipe["output_item_id"]: recipe["recipe_id"]}
+                target["choices"] = {**target["choices"], **p.get("choices", {})}
+                if target.get("batch_policies", {}).get(recipe["output_item_id"], "manual") == "manual":
+                    target["choices"][recipe["output_item_id"]] = recipe["recipe_id"]
                 target["substitutions"] = {**target["substitutions"], **substitutions}
-                graph(catalog, target["item_id"], target["choices"], target["substitutions"])
+                graph(catalog, target["item_id"], target["choices"], target["substitutions"], target.get("batch_policies"))
                 self._put(db, "goals", goal_id, target)
                 plans = plan_goals(catalog, stock, self._records(db, "goals"), self._yield_statistics(db))
             reserved = {}
@@ -322,13 +337,33 @@ class AlchemyStorage:
                     raise AlchemyError("설정 문자열이 너무 깁니다.")
                 self._put(db, "settings", key, value)
             return {"settings": settings}
+        if action == "catalog_update":
+            merged, update = self.catalog_update(db, p.get("resolutions"))
+            if p.get("token") != update["token"]:
+                raise AlchemyError("카탈로그가 변경됐습니다. 갱신 내용을 다시 확인하세요.", 409)
+            if update.get("base_unknown"):
+                raise AlchemyError("기준 버전을 알 수 없어 자동 병합할 수 없습니다. 백업 후 개별 카탈로그를 검토하세요.", 409)
+            if update["conflicts"]:
+                raise AlchemyError("모든 카탈로그 충돌에서 유지할 값을 선택하세요.", 409)
+            validate_catalog(merged)
+            backup_id = self._catalog_backup(db)
+            self._put(db, "settings", "catalog", merged)
+            self._put(db, "settings", "catalog_base", load_catalog())
+            return {"data_version": merged["version"], "previous_backup_id": backup_id}
         if action == "catalog":
             data = p.get("catalog")
             validate_catalog(data)
             if not set(items).issubset({i["item_id"] for i in data["items"]}):
                 raise AlchemyError("기존 품목 ID를 제거할 수 없습니다.")
+            if any(r.get("update_conflict") for r in data["recipes"]):
+                raise AlchemyError("갱신 충돌을 먼저 선택 병합하세요.", 409)
+            for recipe in data["recipes"]:
+                if recipe != recipes.get(recipe["recipe_id"]) and recipe.get("audit"):
+                    recipe["audit"] = {"status": "UNRESOLVED", "checked_at": now()[:10], "unresolved_fields": ["user_changes"]}
+            backup_id = self._catalog_backup(db)
             self._put(db, "settings", "catalog", data)
-            return {"data_version": data["version"]}
+            self._put(db, "settings", "catalog_base", load_catalog())
+            return {"data_version": data["version"], "previous_backup_id": backup_id}
         if action == "restore":
             backup = p.get("backup")
             self.validate_backup(backup)
@@ -341,14 +376,23 @@ class AlchemyStorage:
                 db.execute(f"DELETE FROM {table}")
                 for row in backup["tables"][table]:
                     db.execute(f'INSERT INTO {table} ({",".join(columns)}) VALUES ({",".join("?" for _ in columns)})', tuple(row[c] for c in columns))
-            self._put(db, "settings", "catalog", backup["catalog"])
+            if "catalog" in backup.get("catalog_state", {}):
+                self._put(db, "settings", "catalog", backup["catalog_state"]["catalog"])
+            else:
+                self._put(db, "settings", "catalog", backup["catalog"])
+            if "catalog_base" in backup.get("catalog_state", {}):
+                self._put(db, "settings", "catalog_base", backup["catalog_state"]["catalog_base"])
+            elif "catalog" not in backup.get("catalog_state", {}) and backup.get("catalog_upstream") is not None:
+                validate_catalog(backup["catalog_upstream"])
+                self._put(db, "settings", "catalog_base", backup["catalog_upstream"])
             return {"restored": True, "previous_backup_id": backup_id, "source_revision": backup["source_revision"]}
         raise AlchemyError("지원하지 않는 연금 작업입니다.", 404)
 
     def _export(self, db):
         data = {"format": "bdo-alchemy-backup", "schema_version": SCHEMA_VERSION, "exported_at": now(),
-                "source_revision": db.execute("SELECT revision FROM meta").fetchone()[0], "catalog": self.catalog(db),
+                "source_revision": db.execute("SELECT revision FROM meta").fetchone()[0], "catalog": self.catalog(db), "catalog_upstream": None if self.catalog_update(db)[1].get("base_unknown") else load_catalog(),
                 "tables": {t: [dict(r) for r in db.execute(f"SELECT * FROM {t} ORDER BY rowid")] for t in TABLES}}
+        data["catalog_state"] = {r["key"]: json.loads(r["value"]) for r in data["tables"]["settings"] if r["key"] in {"catalog", "catalog_base"}}
         data["checksum"] = hashlib.sha256(encode(data).encode()).hexdigest()
         return data
 
@@ -400,7 +444,7 @@ class AlchemyStorage:
                             raise AlchemyError("백업 목표 기준을 확인하세요.")
                         if value.get("mode") == "additional":
                             integer(value.get("baseline"))
-                        graph(data["catalog"], value["item_id"], value.get("choices"), value.get("substitutions"))
+                        graph(data["catalog"], value["item_id"], value.get("choices"), value.get("substitutions"), value.get("batch_policies"))
                     if table == "jobs":
                         integer(value["calls"], minimum=1)
                         if value["status"] not in {"in_progress", "completed", "cancelled"}:
@@ -438,4 +482,12 @@ class AlchemyStorage:
             ends[item] = entry["after"]
         if ends != {r["item_id"]: r["quantity"] for r in tables["inventory"]}:
             raise AlchemyError("백업 재고와 원장의 최종 수량이 일치하지 않습니다.")
+        if "catalog_state" in data:
+            expected_state = {r["key"]: json.loads(r["value"]) for r in tables["settings"] if r["key"] in {"catalog", "catalog_base"}}
+            if data["catalog_state"] != expected_state:
+                raise AlchemyError("백업의 원본 카탈로그와 설정이 일치하지 않습니다.")
+            for saved in expected_state.values():
+                validate_catalog(saved)
+        if data.get("catalog_upstream") is not None:
+            validate_catalog(data["catalog_upstream"])
         return {"valid": True, "items": len(tables["inventory"]), "goals": len(tables["goals"]), "jobs": len(tables["jobs"]), "events": len(tables["events"]), "data_version": data["catalog"]["version"]}

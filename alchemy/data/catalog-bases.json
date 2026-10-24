@@ -1,0 +1,5606 @@
+{
+  "catalogs": [
+    {
+      "version": "2026-10-23.1",
+      "verified_at": "2026-10-23",
+      "items": [
+        {
+          "item_id": "i-7cf8ffc293b6",
+          "name": "맑은 액체 시약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7cf8ffc293b6.webp"
+        },
+        {
+          "item_id": "i-3d09660e6295",
+          "name": "소금",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-3d09660e6295.webp"
+        },
+        {
+          "item_id": "i-2c8897961887",
+          "name": "여명초",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-2c8897961887.webp"
+        },
+        {
+          "item_id": "i-d7a9dfe65a1a",
+          "name": "정제수",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "외부 수급 경계: 솎아내기/상점/거래소. 본 카탈로그는 정제수 이후의 연금 트리를 전개합니다.",
+          "icon": "icons/i-d7a9dfe65a1a.webp"
+        },
+        {
+          "item_id": "i-a1a5dda5464f",
+          "name": "야생 들풀",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a1a5dda5464f.webp"
+        },
+        {
+          "item_id": "i-a92327c3d546",
+          "name": "순수한 가루 시약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a92327c3d546.webp"
+        },
+        {
+          "item_id": "i-7921a3bb40fa",
+          "name": "설탕",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7921a3bb40fa.webp"
+        },
+        {
+          "item_id": "i-7b911520f08a",
+          "name": "은빛 철쭉",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7b911520f08a.webp"
+        },
+        {
+          "item_id": "i-e34b426e3b29",
+          "name": "광대의 혈액",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-e34b426e3b29.webp"
+        },
+        {
+          "item_id": "i-ba560a40d964",
+          "name": "늑대 피",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ba560a40d964.webp"
+        },
+        {
+          "item_id": "i-9f7e100087e0",
+          "name": "어둠의 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-9f7e100087e0.webp"
+        },
+        {
+          "item_id": "i-ee3683791b7e",
+          "name": "정령의 잎사귀",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ee3683791b7e.webp"
+        },
+        {
+          "item_id": "i-707b9d9f0edc",
+          "name": "죄인의 혈액",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-707b9d9f0edc.webp"
+        },
+        {
+          "item_id": "i-9610230d0f57",
+          "name": "돼지 피",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-9610230d0f57.webp"
+        },
+        {
+          "item_id": "i-59034ba3a980",
+          "name": "화염의 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-59034ba3a980.webp"
+        },
+        {
+          "item_id": "i-b3c96eb97bc0",
+          "name": "핏빛 나무 옹이",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b3c96eb97bc0.webp"
+        },
+        {
+          "item_id": "i-ced07eea782b",
+          "name": "현자의 혈액",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ced07eea782b.webp"
+        },
+        {
+          "item_id": "i-19ba15a7e481",
+          "name": "여우 피",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-19ba15a7e481.webp"
+        },
+        {
+          "item_id": "i-42bd9b6cfb4b",
+          "name": "자연의 흔적",
+          "aliases": [
+            "통합 흔적"
+          ],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-42bd9b6cfb4b.webp"
+        },
+        {
+          "item_id": "i-6dad53e02bd2",
+          "name": "수도사의 가지",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6dad53e02bd2.webp"
+        },
+        {
+          "item_id": "i-bc8a6316b387",
+          "name": "폭군의 혈액",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-bc8a6316b387.webp"
+        },
+        {
+          "item_id": "i-00f61f8d6789",
+          "name": "곰 피",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-00f61f8d6789.webp"
+        },
+        {
+          "item_id": "i-19d4f15f01d5",
+          "name": "신수의 혈액",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-19d4f15f01d5.webp"
+        },
+        {
+          "item_id": "i-55684eba98d6",
+          "name": "도마뱀 피",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-55684eba98d6.webp"
+        },
+        {
+          "item_id": "i-98cd310424ca",
+          "name": "불굴의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-98cd310424ca.webp"
+        },
+        {
+          "item_id": "i-552d692d19d6",
+          "name": "자연의 열매",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-552d692d19d6.webp"
+        },
+        {
+          "item_id": "i-f07468f5f97f",
+          "name": "평온의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-f07468f5f97f.webp"
+        },
+        {
+          "item_id": "i-e17b6bea7238",
+          "name": "대지의 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-e17b6bea7238.webp"
+        },
+        {
+          "item_id": "i-d09eae6b3e93",
+          "name": "타락의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-d09eae6b3e93.webp"
+        },
+        {
+          "item_id": "i-5a2199f11101",
+          "name": "폭풍의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5a2199f11101.webp"
+        },
+        {
+          "item_id": "i-abf45013360f",
+          "name": "세월의 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-abf45013360f.webp"
+        },
+        {
+          "item_id": "i-f3fc14af3666",
+          "name": "고목나무 껍질",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-f3fc14af3666.webp"
+        },
+        {
+          "item_id": "i-28f40ad86226",
+          "name": "재생의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-28f40ad86226.webp"
+        },
+        {
+          "item_id": "i-5bf0a37196d7",
+          "name": "균열의 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5bf0a37196d7.webp"
+        },
+        {
+          "item_id": "i-6249cdbec3ba",
+          "name": "붉은 나무혹",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6249cdbec3ba.webp"
+        },
+        {
+          "item_id": "i-27f6aa1a001b",
+          "name": "심연의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-27f6aa1a001b.webp"
+        },
+        {
+          "item_id": "i-ef864bed494e",
+          "name": "분노의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ef864bed494e.webp"
+        },
+        {
+          "item_id": "i-1d4769826724",
+          "name": "물푸레나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-1d4769826724.webp"
+        },
+        {
+          "item_id": "i-a77567213fda",
+          "name": "난쟁이 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a77567213fda.webp"
+        },
+        {
+          "item_id": "i-4a4795387bbd",
+          "name": "광란의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-4a4795387bbd.webp"
+        },
+        {
+          "item_id": "i-bce973aaa6f5",
+          "name": "유령 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-bce973aaa6f5.webp"
+        },
+        {
+          "item_id": "i-7b34c215d25b",
+          "name": "삼나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7b34c215d25b.webp"
+        },
+        {
+          "item_id": "i-6158cff3642f",
+          "name": "집중의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6158cff3642f.webp"
+        },
+        {
+          "item_id": "i-87c88b18c2a4",
+          "name": "구름 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-87c88b18c2a4.webp"
+        },
+        {
+          "item_id": "i-88bf1157dd57",
+          "name": "파괴의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-88bf1157dd57.webp"
+        },
+        {
+          "item_id": "i-1b401c94f5dd",
+          "name": "설원 삼나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-1b401c94f5dd.webp"
+        },
+        {
+          "item_id": "i-9f494e6bc8fa",
+          "name": "생명력의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-9f494e6bc8fa.webp"
+        },
+        {
+          "item_id": "i-b5fc1134e07a",
+          "name": "생명력 회복제(소형)",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b5fc1134e07a.webp"
+        },
+        {
+          "item_id": "i-b1d6a9618ce2",
+          "name": "방어의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b1d6a9618ce2.webp"
+        },
+        {
+          "item_id": "i-2668d72ec1f0",
+          "name": "기력의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-2668d72ec1f0.webp"
+        },
+        {
+          "item_id": "i-57da669e80bf",
+          "name": "자작나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-57da669e80bf.webp"
+        },
+        {
+          "item_id": "i-6a4140e675fc",
+          "name": "나선의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6a4140e675fc.webp"
+        },
+        {
+          "item_id": "i-7be932bfc91f",
+          "name": "측백나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7be932bfc91f.webp"
+        },
+        {
+          "item_id": "i-719186084d01",
+          "name": "바람의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-719186084d01.webp"
+        },
+        {
+          "item_id": "i-0ee2dbd759e1",
+          "name": "점쟁이 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-0ee2dbd759e1.webp"
+        },
+        {
+          "item_id": "i-1b99bede0f65",
+          "name": "소나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-1b99bede0f65.webp"
+        },
+        {
+          "item_id": "i-3c852d3313e5",
+          "name": "신속의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-3c852d3313e5.webp"
+        },
+        {
+          "item_id": "i-0b7fcf977ea5",
+          "name": "화살 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-0b7fcf977ea5.webp"
+        },
+        {
+          "item_id": "i-2f2faa2629ed",
+          "name": "주문의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-2f2faa2629ed.webp"
+        },
+        {
+          "item_id": "i-094afc202e69",
+          "name": "화염비늘꽃",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-094afc202e69.webp"
+        },
+        {
+          "item_id": "i-694b5d097f5a",
+          "name": "단풍나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-694b5d097f5a.webp"
+        },
+        {
+          "item_id": "i-746c3a6c2e86",
+          "name": "충격의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-746c3a6c2e86.webp"
+        },
+        {
+          "item_id": "i-42ca8d33f800",
+          "name": "호랑이 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-42ca8d33f800.webp"
+        },
+        {
+          "item_id": "i-a84ffbe2e94f",
+          "name": "관통의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a84ffbe2e94f.webp"
+        },
+        {
+          "item_id": "i-030816156612",
+          "name": "허풍선이 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-030816156612.webp"
+        },
+        {
+          "item_id": "i-a125c9abecef",
+          "name": "죽음의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a125c9abecef.webp"
+        },
+        {
+          "item_id": "i-4e788a20eb6a",
+          "name": "태고의 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-4e788a20eb6a.webp"
+        },
+        {
+          "item_id": "i-daa16c47e0c8",
+          "name": "약탈의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-daa16c47e0c8.webp"
+        },
+        {
+          "item_id": "i-0bd8af84dce6",
+          "name": "혹 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-0bd8af84dce6.webp"
+        },
+        {
+          "item_id": "i-e4874d567845",
+          "name": "사신의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-e4874d567845.webp"
+        },
+        {
+          "item_id": "i-5d1f205fa14d",
+          "name": "하늘 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5d1f205fa14d.webp"
+        },
+        {
+          "item_id": "i-e3319e120d0e",
+          "name": "암살자의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-e3319e120d0e.webp"
+        },
+        {
+          "item_id": "i-65c27f942bf8",
+          "name": "광대 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-65c27f942bf8.webp"
+        },
+        {
+          "item_id": "i-2903cb8465cb",
+          "name": "간파의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-2903cb8465cb.webp"
+        },
+        {
+          "item_id": "i-08890b815f90",
+          "name": "송로 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-08890b815f90.webp"
+        },
+        {
+          "item_id": "i-d10a8d183595",
+          "name": "학살자의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-d10a8d183595.webp"
+        },
+        {
+          "item_id": "i-6a4d4590ff78",
+          "name": "하늘의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6a4d4590ff78.webp"
+        },
+        {
+          "item_id": "i-d38e2a760601",
+          "name": "황제 버섯",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-d38e2a760601.webp"
+        },
+        {
+          "item_id": "i-b7e0c3652e42",
+          "name": "인간 사냥의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b7e0c3652e42.webp"
+        },
+        {
+          "item_id": "i-5fd41dcd8a55",
+          "name": "블랙스톤 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5fd41dcd8a55.webp"
+        },
+        {
+          "item_id": "i-09fc4def223f",
+          "name": "아인 사냥의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-09fc4def223f.webp"
+        },
+        {
+          "item_id": "i-ffa87e4aaab3",
+          "name": "전나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ffa87e4aaab3.webp"
+        },
+        {
+          "item_id": "i-9df6a528c8e7",
+          "name": "그리폰의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-9df6a528c8e7.webp"
+        },
+        {
+          "item_id": "i-7c1cfa76301b",
+          "name": "그리폰의 발톱",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7c1cfa76301b.webp"
+        },
+        {
+          "item_id": "i-97b30d97161d",
+          "name": "의지의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-97b30d97161d.webp"
+        },
+        {
+          "item_id": "i-17d98bdbb345",
+          "name": "숙련의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-17d98bdbb345.webp"
+        },
+        {
+          "item_id": "i-46b39ca1100c",
+          "name": "정제된 델로티아 시약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-46b39ca1100c.webp"
+        },
+        {
+          "item_id": "i-26e0ffefda23",
+          "name": "가시나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-26e0ffefda23.webp"
+        },
+        {
+          "item_id": "i-7043e4da2fc9",
+          "name": "천년초",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7043e4da2fc9.webp"
+        },
+        {
+          "item_id": "i-7ba9ec5cda01",
+          "name": "델로티아 가루",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7ba9ec5cda01.webp"
+        },
+        {
+          "item_id": "i-bf562842534a",
+          "name": "세월의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-bf562842534a.webp"
+        },
+        {
+          "item_id": "i-ef7a84693ed2",
+          "name": "친화의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ef7a84693ed2.webp"
+        },
+        {
+          "item_id": "i-5bfadf78b312",
+          "name": "일꾼의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5bfadf78b312.webp"
+        },
+        {
+          "item_id": "i-6fed759d8a98",
+          "name": "용기의 향수",
+          "aliases": [],
+          "category": "향수",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6fed759d8a98.webp"
+        },
+        {
+          "item_id": "i-ddf472b47ba6",
+          "name": "대왕 고래 오일",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-ddf472b47ba6.webp"
+        },
+        {
+          "item_id": "i-375d276a5af0",
+          "name": "심해의 향수",
+          "aliases": [],
+          "category": "향수",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-375d276a5af0.webp"
+        },
+        {
+          "item_id": "i-131d7233712b",
+          "name": "산호 결정",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-131d7233712b.webp"
+        },
+        {
+          "item_id": "i-2961704c5869",
+          "name": "편백나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-2961704c5869.webp"
+        },
+        {
+          "item_id": "i-e4e42596c3a2",
+          "name": "신속의 향수",
+          "aliases": [],
+          "category": "향수",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-e4e42596c3a2.webp"
+        },
+        {
+          "item_id": "i-6f1de798754e",
+          "name": "타락한 불멸의 오일",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-6f1de798754e.webp"
+        },
+        {
+          "item_id": "i-447835be05cf",
+          "name": "투로족의 심장",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-447835be05cf.webp"
+        },
+        {
+          "item_id": "i-3c073a5ca2c8",
+          "name": "타버린 정령의 잔재",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-3c073a5ca2c8.webp"
+        },
+        {
+          "item_id": "i-7822f106d7f2",
+          "name": "델로티아",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-7822f106d7f2.webp"
+        },
+        {
+          "item_id": "i-3631000b59d1",
+          "name": "에다니아의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-3631000b59d1.webp"
+        },
+        {
+          "item_id": "i-28f389720750",
+          "name": "카프라스 나무 수액",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-28f389720750.webp"
+        },
+        {
+          "item_id": "i-05d934cf6e53",
+          "name": "열망의 향수",
+          "aliases": [],
+          "category": "향수",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-05d934cf6e53.webp"
+        },
+        {
+          "item_id": "i-76ef148af6ed",
+          "name": "루살카 산호",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-76ef148af6ed.webp"
+        },
+        {
+          "item_id": "i-b7dd4d9e95b9",
+          "name": "빛나는 가루",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "연금 성공 시 확률 추가 산출 · 보장 생산 계획 제외",
+          "notes": "",
+          "icon": "icons/i-b7dd4d9e95b9.webp"
+        },
+        {
+          "item_id": "i-12fec880d79f",
+          "name": "카프라스의 정수",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-12fec880d79f.webp"
+        },
+        {
+          "item_id": "i-af70f6af56f9",
+          "name": "관철의 향수",
+          "aliases": [],
+          "category": "향수",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-af70f6af56f9.webp"
+        },
+        {
+          "item_id": "i-36acd5d12687",
+          "name": "녹음의 향수",
+          "aliases": [],
+          "category": "향수",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-36acd5d12687.webp"
+        },
+        {
+          "item_id": "i-5cd5845c0928",
+          "name": "마력이 깃든 감람석 가루",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5cd5845c0928.webp"
+        },
+        {
+          "item_id": "i-bfe6c6de63fe",
+          "name": "감람석 원석",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-bfe6c6de63fe.webp"
+        },
+        {
+          "item_id": "i-cf822ec62724",
+          "name": "격노의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-cf822ec62724.webp"
+        },
+        {
+          "item_id": "i-c49599479c40",
+          "name": "마력이 깃든 촉매제",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "그믐달 상점 구매",
+          "notes": "",
+          "icon": "icons/i-c49599479c40.webp"
+        },
+        {
+          "item_id": "i-c3093ed30e3d",
+          "name": "응축된 마력이 깃든 촉매제",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "그믐달 상점 구매",
+          "notes": "",
+          "icon": "icons/i-c3093ed30e3d.webp"
+        },
+        {
+          "item_id": "i-409bf65b9d72",
+          "name": "적응의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-409bf65b9d72.webp"
+        },
+        {
+          "item_id": "i-8013fb04c36a",
+          "name": "잠재의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-8013fb04c36a.webp"
+        },
+        {
+          "item_id": "i-3f041c1d45ca",
+          "name": "타락의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-3f041c1d45ca.webp"
+        },
+        {
+          "item_id": "i-b17e6ab3368e",
+          "name": "광폭의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b17e6ab3368e.webp"
+        },
+        {
+          "item_id": "i-b74c198ecf21",
+          "name": "조화의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b74c198ecf21.webp"
+        },
+        {
+          "item_id": "i-944c6d64079f",
+          "name": "[파티] 조화의 영약 - 인간",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-944c6d64079f.webp"
+        },
+        {
+          "item_id": "i-22d7a6398eb3",
+          "name": "이벨랍의 정수",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-22d7a6398eb3.webp"
+        },
+        {
+          "item_id": "i-5a012a842902",
+          "name": "[파티] 불멸 : 조화의 영약 - 인간",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-5a012a842902.webp"
+        },
+        {
+          "item_id": "i-026aecb72d80",
+          "name": "[파티] 조화의 영약 - 아인",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-026aecb72d80.webp"
+        },
+        {
+          "item_id": "i-33353b0f05c7",
+          "name": "[파티] 불멸 : 조화의 영약 - 아인",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-33353b0f05c7.webp"
+        },
+        {
+          "item_id": "i-8b782df30446",
+          "name": "[파티] 조화의 영약 - 카마실비아",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-8b782df30446.webp"
+        },
+        {
+          "item_id": "i-b562e1a27950",
+          "name": "[파티] 불멸 : 조화의 영약 - 카마실비아",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-b562e1a27950.webp"
+        },
+        {
+          "item_id": "i-2cf2bd2b5cb0",
+          "name": "[파티] 조화의 영약 - 에다니아",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-2cf2bd2b5cb0.webp"
+        },
+        {
+          "item_id": "i-9c9d3fddcb9b",
+          "name": "[파티] 불멸 : 조화의 영약 - 에다니아",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-9c9d3fddcb9b.webp"
+        },
+        {
+          "item_id": "i-a0ddb1ea3c04",
+          "name": "불멸 : 조화의 영약",
+          "aliases": [],
+          "category": "조화",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a0ddb1ea3c04.webp"
+        },
+        {
+          "item_id": "i-a403f7a6499b",
+          "name": "대양의 영약",
+          "aliases": [],
+          "category": "대양",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a403f7a6499b.webp"
+        },
+        {
+          "item_id": "i-af0c02a3a91a",
+          "name": "저무는 달의 눈물",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "그믐달 상점 구매",
+          "notes": "",
+          "icon": "icons/i-af0c02a3a91a.webp"
+        },
+        {
+          "item_id": "i-abd7869a7ce0",
+          "name": "넓은 대양의 영약",
+          "aliases": [],
+          "category": "대양",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-abd7869a7ce0.webp"
+        },
+        {
+          "item_id": "i-98c38273cf87",
+          "name": "일렁이는 바람의 조각",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-98c38273cf87.webp"
+        },
+        {
+          "item_id": "i-a1e608e1595d",
+          "name": "드넓은 대양의 영약",
+          "aliases": [],
+          "category": "대양",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-a1e608e1595d.webp"
+        },
+        {
+          "item_id": "i-be620f124ca8",
+          "name": "대양의 정수",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-be620f124ca8.webp"
+        },
+        {
+          "item_id": "i-e9724b3bb97c",
+          "name": "신록의 영약",
+          "aliases": [],
+          "category": "생활",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-e9724b3bb97c.webp"
+        },
+        {
+          "item_id": "i-bc7c68adf21e",
+          "name": "청람의 영약",
+          "aliases": [],
+          "category": "생활",
+          "role": "final",
+          "craftable": true,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-bc7c68adf21e.webp"
+        },
+        {
+          "item_id": "i-ac975c527877",
+          "name": "강력한 약탈의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-ac975c527877.webp"
+        },
+        {
+          "item_id": "i-26c33c7d8f41",
+          "name": "호쾌한 신속의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-26c33c7d8f41.webp"
+        },
+        {
+          "item_id": "i-6a6f95244e9a",
+          "name": "강력한 에다니아의 비약",
+          "aliases": [],
+          "category": "alchemy",
+          "role": "intermediate",
+          "craftable": true,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-6a6f95244e9a.webp"
+        },
+        {
+          "item_id": "i-0196ddf60e62",
+          "name": "끝없는 분노의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-0196ddf60e62.webp"
+        },
+        {
+          "item_id": "i-23bd32c749af",
+          "name": "끝없는 광란의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-23bd32c749af.webp"
+        },
+        {
+          "item_id": "i-0bd7902923f0",
+          "name": "상급 집중의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-0bd7902923f0.webp"
+        },
+        {
+          "item_id": "i-de75693782ae",
+          "name": "치명적인 파괴의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-de75693782ae.webp"
+        },
+        {
+          "item_id": "i-e5ebc357ad73",
+          "name": "가혹한 관통의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-e5ebc357ad73.webp"
+        },
+        {
+          "item_id": "i-a2ec3a637cb6",
+          "name": "가혹한 죽음의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-a2ec3a637cb6.webp"
+        },
+        {
+          "item_id": "i-d961c3de416f",
+          "name": "혼을 거두는 사신의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-d961c3de416f.webp"
+        },
+        {
+          "item_id": "i-d2ebc51d6676",
+          "name": "날카로운 간파의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-d2ebc51d6676.webp"
+        },
+        {
+          "item_id": "i-ff5861c00d5a",
+          "name": "치명적인 암살자의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-ff5861c00d5a.webp"
+        },
+        {
+          "item_id": "i-65bda641d5b3",
+          "name": "잔혹한 학살자의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-65bda641d5b3.webp"
+        },
+        {
+          "item_id": "i-e6647075cb75",
+          "name": "강고한 의지의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-e6647075cb75.webp"
+        },
+        {
+          "item_id": "i-e07c1f1d8047",
+          "name": "강력한 그리폰의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-e07c1f1d8047.webp"
+        },
+        {
+          "item_id": "i-311ee6d66ad3",
+          "name": "강력한 생명력의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-311ee6d66ad3.webp"
+        },
+        {
+          "item_id": "i-48e548841709",
+          "name": "강철 방어의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-48e548841709.webp"
+        },
+        {
+          "item_id": "i-28e34e66e0e4",
+          "name": "강력한 충격의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-28e34e66e0e4.webp"
+        },
+        {
+          "item_id": "i-5e41bfa36314",
+          "name": "숙련된 일꾼의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-5e41bfa36314.webp"
+        },
+        {
+          "item_id": "i-2b06c55255fa",
+          "name": "흐르는 세월의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 제작으로 계산하지 않음)",
+          "notes": "",
+          "icon": "icons/i-2b06c55255fa.webp"
+        },
+        {
+          "item_id": "i-f39230d2300b",
+          "name": "푸른 액체 시약",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-f39230d2300b.webp"
+        },
+        {
+          "item_id": "i-46647f9d918f",
+          "name": "잡초",
+          "aliases": [],
+          "category": "material",
+          "role": "raw",
+          "craftable": false,
+          "acquisition": "외부 수급 · 게임 내 획득처 확인",
+          "notes": "",
+          "icon": "icons/i-46647f9d918f.webp"
+        },
+        {
+          "item_id": "i-05e09aae4837",
+          "name": "넘치는 기력의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-05e09aae4837.webp"
+        },
+        {
+          "item_id": "i-8139d570ae21",
+          "name": "빛나는 나선의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-8139d570ae21.webp"
+        },
+        {
+          "item_id": "i-340a851bc039",
+          "name": "흐르는 바람의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-340a851bc039.webp"
+        },
+        {
+          "item_id": "i-c82933b72991",
+          "name": "기민한 주문의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-c82933b72991.webp"
+        },
+        {
+          "item_id": "i-c0cdee787670",
+          "name": "무자비한 하늘의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-c0cdee787670.webp"
+        },
+        {
+          "item_id": "i-451319078780",
+          "name": "향상된 숙련의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-451319078780.webp"
+        },
+        {
+          "item_id": "i-467e46d75a85",
+          "name": "향상된 친화의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-467e46d75a85.webp"
+        },
+        {
+          "item_id": "i-cac50916d994",
+          "name": "완전한 인간 사냥의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-cac50916d994.webp"
+        },
+        {
+          "item_id": "i-f62b39465974",
+          "name": "매서운 아인 사냥의 비약",
+          "aliases": [],
+          "category": "additional",
+          "role": "intermediate",
+          "craftable": false,
+          "acquisition": "연금 추가 산출 · 외부 수급 (보장 생산 계획 제외)",
+          "notes": "상위 명칭 확인: https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809",
+          "icon": "icons/i-f62b39465974.webp"
+        }
+      ],
+      "recipes": [
+        {
+          "recipe_id": "i-7cf8ffc293b6-direct",
+          "output_item_id": "i-7cf8ffc293b6",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-3d09660e6295",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-2c8897961887",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a1a5dda5464f",
+              "quantity": 1,
+              "alternatives": [
+                {
+                  "item_id": "i-46647f9d918f",
+                  "quantity": 1,
+                  "source_url": "https://black.inven.co.kr/dataninfo/card/?class1=30001",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": "초급 1",
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a92327c3d546-direct",
+          "output_item_id": "i-a92327c3d546",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7921a3bb40fa",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7b911520f08a",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a1a5dda5464f",
+              "quantity": 1,
+              "alternatives": [
+                {
+                  "item_id": "i-46647f9d918f",
+                  "quantity": 1,
+                  "source_url": "https://black.inven.co.kr/dataninfo/card/?class1=30001",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": "초급 1",
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-e34b426e3b29-direct",
+          "output_item_id": "i-e34b426e3b29",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-ba560a40d964",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-9f7e100087e0",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-ee3683791b7e",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-707b9d9f0edc-direct",
+          "output_item_id": "i-707b9d9f0edc",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-9610230d0f57",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-59034ba3a980",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b3c96eb97bc0",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-ced07eea782b-direct",
+          "output_item_id": "i-ced07eea782b",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-19ba15a7e481",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6dad53e02bd2",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-bc8a6316b387-direct",
+          "output_item_id": "i-bc8a6316b387",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-00f61f8d6789",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6dad53e02bd2",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-19d4f15f01d5-direct",
+          "output_item_id": "i-19d4f15f01d5",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-55684eba98d6",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-ee3683791b7e",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-98cd310424ca-direct",
+          "output_item_id": "i-98cd310424ca",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-e34b426e3b29",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-552d692d19d6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-59034ba3a980",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6dad53e02bd2",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-f07468f5f97f-direct",
+          "output_item_id": "i-f07468f5f97f",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-ced07eea782b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-552d692d19d6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-e17b6bea7238",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b3c96eb97bc0",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-d09eae6b3e93-direct",
+          "output_item_id": "i-d09eae6b3e93",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-707b9d9f0edc",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-552d692d19d6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-9f7e100087e0",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-ee3683791b7e",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-5a2199f11101-direct",
+          "output_item_id": "i-5a2199f11101",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-bc8a6316b387",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-552d692d19d6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-abf45013360f",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-f3fc14af3666",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-28f40ad86226-direct",
+          "output_item_id": "i-28f40ad86226",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-19d4f15f01d5",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-552d692d19d6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-5bf0a37196d7",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6249cdbec3ba",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-27f6aa1a001b-direct",
+          "output_item_id": "i-27f6aa1a001b",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-bc8a6316b387",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-552d692d19d6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-abf45013360f",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-b3c96eb97bc0",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-ef864bed494e-direct",
+          "output_item_id": "i-ef864bed494e",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-1d4769826724",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a77567213fda",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-00f61f8d6789",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 3
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-0196ddf60e62",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-4a4795387bbd-direct",
+          "output_item_id": "i-4a4795387bbd",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-28f40ad86226",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-bce973aaa6f5",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-7b34c215d25b",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-23bd32c749af",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-6158cff3642f-direct",
+          "output_item_id": "i-6158cff3642f",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-87c88b18c2a4",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-00f61f8d6789",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-a1a5dda5464f",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-0bd7902923f0",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-88bf1157dd57-direct",
+          "output_item_id": "i-88bf1157dd57",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-5a2199f11101",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-59034ba3a980",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-1b401c94f5dd",
+              "quantity": 7
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-de75693782ae",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://bdocodex.com/kr/item/1180/"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-9f494e6bc8fa-direct",
+          "output_item_id": "i-9f494e6bc8fa",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b5fc1134e07a",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-7b911520f08a",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-19ba15a7e481",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-311ee6d66ad3",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-b1d6a9618ce2-direct",
+          "output_item_id": "i-b1d6a9618ce2",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-1d4769826724",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-9610230d0f57",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 3
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-48e548841709",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-2668d72ec1f0-direct",
+          "output_item_id": "i-2668d72ec1f0",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-57da669e80bf",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-00f61f8d6789",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-a77567213fda",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-05e09aae4837",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-6a4140e675fc-direct",
+          "output_item_id": "i-6a4140e675fc",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7be932bfc91f",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-6dad53e02bd2",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-e34b426e3b29",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-59034ba3a980",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 3
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-8139d570ae21",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-719186084d01-direct",
+          "output_item_id": "i-719186084d01",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-ced07eea782b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-0ee2dbd759e1",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-9f7e100087e0",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-1b99bede0f65",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-340a851bc039",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-3c852d3313e5-direct",
+          "output_item_id": "i-3c852d3313e5",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-19d4f15f01d5",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-0b7fcf977ea5",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-9f7e100087e0",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-57da669e80bf",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-26c33c7d8f41",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-2f2faa2629ed-direct",
+          "output_item_id": "i-2f2faa2629ed",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-bc8a6316b387",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-094afc202e69",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-9f7e100087e0",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-694b5d097f5a",
+              "quantity": 3
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-c82933b72991",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-746c3a6c2e86-direct",
+          "output_item_id": "i-746c3a6c2e86",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-e34b426e3b29",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-42ca8d33f800",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-abf45013360f",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-7b34c215d25b",
+              "quantity": 7
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-28e34e66e0e4",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a84ffbe2e94f-direct",
+          "output_item_id": "i-a84ffbe2e94f",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-d09eae6b3e93",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-030816156612",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-1b99bede0f65",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-e5ebc357ad73",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a125c9abecef-direct",
+          "output_item_id": "i-a125c9abecef",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-f07468f5f97f",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-4e788a20eb6a",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-1d4769826724",
+              "quantity": 7
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-a2ec3a637cb6",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-daa16c47e0c8-direct",
+          "output_item_id": "i-daa16c47e0c8",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-98cd310424ca",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-0bd8af84dce6",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-57da669e80bf",
+              "quantity": 4
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-ac975c527877",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-e4874d567845-direct",
+          "output_item_id": "i-e4874d567845",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-98cd310424ca",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-5d1f205fa14d",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-6dad53e02bd2",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-d961c3de416f",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-e3319e120d0e-direct",
+          "output_item_id": "i-e3319e120d0e",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-28f40ad86226",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-65c27f942bf8",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-6249cdbec3ba",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-ff5861c00d5a",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-2903cb8465cb-direct",
+          "output_item_id": "i-2903cb8465cb",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-5a2199f11101",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-08890b815f90",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-f3fc14af3666",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-d2ebc51d6676",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-d10a8d183595-direct",
+          "output_item_id": "i-d10a8d183595",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-d09eae6b3e93",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 7
+            },
+            {
+              "item_id": "i-42ca8d33f800",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-ee3683791b7e",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-65bda641d5b3",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-6a4d4590ff78-direct",
+          "output_item_id": "i-6a4d4590ff78",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-f07468f5f97f",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-d38e2a760601",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-b3c96eb97bc0",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-c0cdee787670",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-b7e0c3652e42-direct",
+          "output_item_id": "i-b7e0c3652e42",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-e34b426e3b29",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-0ee2dbd759e1",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-5fd41dcd8a55",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-694b5d097f5a",
+              "quantity": 4
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-cac50916d994",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-09fc4def223f-direct",
+          "output_item_id": "i-09fc4def223f",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-707b9d9f0edc",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-0b7fcf977ea5",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-5fd41dcd8a55",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-ffa87e4aaab3",
+              "quantity": 4
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-f62b39465974",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-9df6a528c8e7-direct",
+          "output_item_id": "i-9df6a528c8e7",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7c1cfa76301b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7b34c215d25b",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-707b9d9f0edc",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-e07c1f1d8047",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-97b30d97161d-direct",
+          "output_item_id": "i-97b30d97161d",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-ba560a40d964",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-2c8897961887",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 3
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-e6647075cb75",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-17d98bdbb345-direct",
+          "output_item_id": "i-17d98bdbb345",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-f07468f5f97f",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-46b39ca1100c",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-26e0ffefda23",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-7043e4da2fc9",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-451319078780",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-46b39ca1100c-direct",
+          "output_item_id": "i-46b39ca1100c",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7ba9ec5cda01",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-bf562842534a-direct",
+          "output_item_id": "i-bf562842534a",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-ced07eea782b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-094afc202e69",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-abf45013360f",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-694b5d097f5a",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-2b06c55255fa",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-ef7a84693ed2-direct",
+          "output_item_id": "i-ef7a84693ed2",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-19d4f15f01d5",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-094afc202e69",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-5fd41dcd8a55",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-1d4769826724",
+              "quantity": 6
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-467e46d75a85",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지.",
+          "additional_output_source_url": "https://www.kr.playblackdesert.com/ko-KR/Adventure/History?_groupMasterNo=8809"
+        },
+        {
+          "recipe_id": "i-5bfadf78b312-direct",
+          "output_item_id": "i-5bfadf78b312",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-707b9d9f0edc",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-7b911520f08a",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-59034ba3a980",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-1d4769826724",
+              "quantity": 4
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-5e41bfa36314",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-6fed759d8a98-direct",
+          "output_item_id": "i-6fed759d8a98",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-ddf472b47ba6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-b3c96eb97bc0",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-375d276a5af0-direct",
+          "output_item_id": "i-375d276a5af0",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-27f6aa1a001b",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-131d7233712b",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-0b7fcf977ea5",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-2961704c5869",
+              "quantity": 5
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-e4e42596c3a2-direct",
+          "output_item_id": "i-e4e42596c3a2",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-ddf472b47ba6",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-abf45013360f",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-7043e4da2fc9",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-d7a9dfe65a1a",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 2
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-6f1de798754e-direct",
+          "output_item_id": "i-6f1de798754e",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-447835be05cf",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-3c073a5ca2c8",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-28f40ad86226",
+              "quantity": 20
+            },
+            {
+              "item_id": "i-d09eae6b3e93",
+              "quantity": 20
+            },
+            {
+              "item_id": "i-98cd310424ca",
+              "quantity": 20
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-7ba9ec5cda01-direct",
+          "output_item_id": "i-7ba9ec5cda01",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-7822f106d7f2",
+              "quantity": 3
+            }
+          ],
+          "method": "빻기",
+          "required_skill": "가공 초급 1",
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://apps.weingchicken.com/bd/makings/1152",
+            "https://bdocodex.com/gl/item/5605/"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-3631000b59d1-direct",
+          "output_item_id": "i-3631000b59d1",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-707b9d9f0edc",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-f3fc14af3666",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-28f389720750",
+              "quantity": 6
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": "숙련 1",
+          "yield_type": "additional",
+          "additional_output_ids": [
+            "i-6a6f95244e9a",
+            "i-b7dd4d9e95b9"
+          ],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-05d934cf6e53-direct",
+          "output_item_id": "i-05d934cf6e53",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-6249cdbec3ba",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-d09eae6b3e93",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-76ef148af6ed",
+              "quantity": 30
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": "숙련 1",
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-05d934cf6e53-conversion",
+          "output_item_id": "i-05d934cf6e53",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-6fed759d8a98",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b7dd4d9e95b9",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-12fec880d79f",
+              "quantity": 10
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-af70f6af56f9-direct",
+          "output_item_id": "i-af70f6af56f9",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-ee3683791b7e",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-28f40ad86226",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-76ef148af6ed",
+              "quantity": 30
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": "숙련 1",
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-af70f6af56f9-conversion",
+          "output_item_id": "i-af70f6af56f9",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-375d276a5af0",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b7dd4d9e95b9",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-12fec880d79f",
+              "quantity": 10
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-36acd5d12687-direct",
+          "output_item_id": "i-36acd5d12687",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-42bd9b6cfb4b",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-7043e4da2fc9",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-7cf8ffc293b6",
+              "quantity": 5
+            },
+            {
+              "item_id": "i-f07468f5f97f",
+              "quantity": 6
+            },
+            {
+              "item_id": "i-5cd5845c0928",
+              "quantity": 50
+            }
+          ],
+          "method": "주거지 연금",
+          "required_skill": "숙련 1",
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16025"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-36acd5d12687-conversion",
+          "output_item_id": "i-36acd5d12687",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-e4e42596c3a2",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b7dd4d9e95b9",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-5cd5845c0928",
+              "quantity": 35
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16025"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-5cd5845c0928-direct",
+          "output_item_id": "i-5cd5845c0928",
+          "output_quantity": 4,
+          "inputs": [
+            {
+              "item_id": "i-bfe6c6de63fe",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-a92327c3d546",
+              "quantity": 1
+            }
+          ],
+          "method": "빻기",
+          "required_skill": null,
+          "yield_type": "variable",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16025"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-cf822ec62724-10",
+          "output_item_id": "i-cf822ec62724",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c49599479c40",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-ef864bed494e",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-0196ddf60e62",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-4a4795387bbd",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-23bd32c749af",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-6158cff3642f",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-0bd7902923f0",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-88bf1157dd57",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-de75693782ae",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-cf822ec62724-100",
+          "output_item_id": "i-cf822ec62724",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-ef864bed494e",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-0196ddf60e62",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-4a4795387bbd",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-23bd32c749af",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-6158cff3642f",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-0bd7902923f0",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-88bf1157dd57",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-de75693782ae",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-409bf65b9d72-10",
+          "output_item_id": "i-409bf65b9d72",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c49599479c40",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-9f494e6bc8fa",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-311ee6d66ad3",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-b1d6a9618ce2",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-48e548841709",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-2668d72ec1f0",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-05e09aae4837",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-6a4140e675fc",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-8139d570ae21",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-409bf65b9d72-100",
+          "output_item_id": "i-409bf65b9d72",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-9f494e6bc8fa",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-311ee6d66ad3",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-b1d6a9618ce2",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-48e548841709",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-2668d72ec1f0",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-05e09aae4837",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-6a4140e675fc",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-8139d570ae21",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-8013fb04c36a-10",
+          "output_item_id": "i-8013fb04c36a",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c49599479c40",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-719186084d01",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-340a851bc039",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-3c852d3313e5",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-26c33c7d8f41",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-2f2faa2629ed",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-c82933b72991",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-746c3a6c2e86",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-28e34e66e0e4",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-8013fb04c36a-100",
+          "output_item_id": "i-8013fb04c36a",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-719186084d01",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-340a851bc039",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-3c852d3313e5",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-26c33c7d8f41",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-2f2faa2629ed",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-c82933b72991",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-746c3a6c2e86",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-28e34e66e0e4",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-3f041c1d45ca-10",
+          "output_item_id": "i-3f041c1d45ca",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c49599479c40",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-a84ffbe2e94f",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-e5ebc357ad73",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-a125c9abecef",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-a2ec3a637cb6",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-daa16c47e0c8",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-ac975c527877",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-e4874d567845",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-d961c3de416f",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-3f041c1d45ca-100",
+          "output_item_id": "i-3f041c1d45ca",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-a84ffbe2e94f",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-e5ebc357ad73",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-a125c9abecef",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-a2ec3a637cb6",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-daa16c47e0c8",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-ac975c527877",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-e4874d567845",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-d961c3de416f",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-b17e6ab3368e-10",
+          "output_item_id": "i-b17e6ab3368e",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c49599479c40",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-e3319e120d0e",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-ff5861c00d5a",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-2903cb8465cb",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-d2ebc51d6676",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-d10a8d183595",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-65bda641d5b3",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-6a4d4590ff78",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-c0cdee787670",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-b17e6ab3368e-100",
+          "output_item_id": "i-b17e6ab3368e",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-e3319e120d0e",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-ff5861c00d5a",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-2903cb8465cb",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-d2ebc51d6676",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-d10a8d183595",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-65bda641d5b3",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-6a4d4590ff78",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-c0cdee787670",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-b74c198ecf21-10",
+          "output_item_id": "i-b74c198ecf21",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-cf822ec62724",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-409bf65b9d72",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-8013fb04c36a",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-3f041c1d45ca",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-b17e6ab3368e",
+              "quantity": 10
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-944c6d64079f-10",
+          "output_item_id": "i-944c6d64079f",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-b7e0c3652e42",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-cac50916d994",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-944c6d64079f-100",
+          "output_item_id": "i-944c6d64079f",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 100
+            },
+            {
+              "item_id": "i-b7e0c3652e42",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-cac50916d994",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-22d7a6398eb3",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-5a012a842902-direct",
+          "output_item_id": "i-5a012a842902",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-944c6d64079f",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6f1de798754e",
+              "quantity": 6
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-026aecb72d80-10",
+          "output_item_id": "i-026aecb72d80",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-09fc4def223f",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-f62b39465974",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-026aecb72d80-100",
+          "output_item_id": "i-026aecb72d80",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 100
+            },
+            {
+              "item_id": "i-09fc4def223f",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-f62b39465974",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-22d7a6398eb3",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-33353b0f05c7-direct",
+          "output_item_id": "i-33353b0f05c7",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-026aecb72d80",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6f1de798754e",
+              "quantity": 6
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-8b782df30446-10",
+          "output_item_id": "i-8b782df30446",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-9df6a528c8e7",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-e07c1f1d8047",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-8b782df30446-100",
+          "output_item_id": "i-8b782df30446",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 100
+            },
+            {
+              "item_id": "i-9df6a528c8e7",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-e07c1f1d8047",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-22d7a6398eb3",
+              "quantity": 10
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-b562e1a27950-direct",
+          "output_item_id": "i-b562e1a27950",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-8b782df30446",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6f1de798754e",
+              "quantity": 6
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-2cf2bd2b5cb0-10",
+          "output_item_id": "i-2cf2bd2b5cb0",
+          "output_quantity": 10,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-3631000b59d1",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-6a6f95244e9a",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 30,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 10,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-2cf2bd2b5cb0-100",
+          "output_item_id": "i-2cf2bd2b5cb0",
+          "output_quantity": 100,
+          "inputs": [
+            {
+              "item_id": "i-c3093ed30e3d",
+              "quantity": 10
+            },
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 100
+            },
+            {
+              "item_id": "i-3631000b59d1",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-6a6f95244e9a",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-97b30d97161d",
+              "quantity": 300,
+              "alternatives": [
+                {
+                  "item_id": "i-e6647075cb75",
+                  "quantity": 100,
+                  "source_url": "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-22d7a6398eb3",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-9c9d3fddcb9b-direct",
+          "output_item_id": "i-9c9d3fddcb9b",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-2cf2bd2b5cb0",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6f1de798754e",
+              "quantity": 6
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a0ddb1ea3c04-direct",
+          "output_item_id": "i-a0ddb1ea3c04",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-b74c198ecf21",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-6f1de798754e",
+              "quantity": 6
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=12504"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a403f7a6499b-direct",
+          "output_item_id": "i-a403f7a6499b",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-17d98bdbb345",
+              "quantity": 36
+            },
+            {
+              "item_id": "i-bf562842534a",
+              "quantity": 36
+            },
+            {
+              "item_id": "i-ef7a84693ed2",
+              "quantity": 36
+            },
+            {
+              "item_id": "i-af0c02a3a91a",
+              "quantity": 10
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-abd7869a7ce0-direct",
+          "output_item_id": "i-abd7869a7ce0",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-17d98bdbb345",
+              "quantity": 72
+            },
+            {
+              "item_id": "i-bf562842534a",
+              "quantity": 72
+            },
+            {
+              "item_id": "i-ef7a84693ed2",
+              "quantity": 72
+            },
+            {
+              "item_id": "i-af0c02a3a91a",
+              "quantity": 20
+            },
+            {
+              "item_id": "i-98c38273cf87",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a1e608e1595d-ocean",
+          "output_item_id": "i-a1e608e1595d",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-a403f7a6499b",
+              "quantity": 4
+            },
+            {
+              "item_id": "i-be620f124ca8",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-a1e608e1595d-wide",
+          "output_item_id": "i-a1e608e1595d",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-abd7869a7ce0",
+              "quantity": 2
+            },
+            {
+              "item_id": "i-be620f124ca8",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16107"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-e9724b3bb97c-direct",
+          "output_item_id": "i-e9724b3bb97c",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-5bfadf78b312",
+              "quantity": 3,
+              "alternatives": [
+                {
+                  "item_id": "i-5e41bfa36314",
+                  "quantity": 1,
+                  "source_url": "https://bdocodex.com/kr/theme/7954/",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-bf562842534a",
+              "quantity": 3,
+              "alternatives": [
+                {
+                  "item_id": "i-2b06c55255fa",
+                  "quantity": 1,
+                  "source_url": "https://bdocodex.com/kr/theme/7954/",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-3c852d3313e5",
+              "quantity": 3,
+              "alternatives": [
+                {
+                  "item_id": "i-26c33c7d8f41",
+                  "quantity": 1,
+                  "source_url": "https://bdocodex.com/kr/theme/7954/",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-af0c02a3a91a",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://bdocodex.com/kr/mrecipe/1703/",
+            "https://black.inven.co.kr/dataninfo/card/?class1=30001"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-bc7c68adf21e-direct",
+          "output_item_id": "i-bc7c68adf21e",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-17d98bdbb345",
+              "quantity": 3,
+              "alternatives": [
+                {
+                  "item_id": "i-451319078780",
+                  "quantity": 1,
+                  "source_url": "https://bdocodex.com/kr/item/4496/",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-bf562842534a",
+              "quantity": 3,
+              "alternatives": [
+                {
+                  "item_id": "i-2b06c55255fa",
+                  "quantity": 1,
+                  "source_url": "https://bdocodex.com/kr/item/4496/",
+                  "mixing_allowed": false
+                }
+              ]
+            },
+            {
+              "item_id": "i-af0c02a3a91a",
+              "quantity": 1
+            },
+            {
+              "item_id": "i-5cd5845c0928",
+              "quantity": 10
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-kr/News/Detail?groupContentNo=16025"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-ac975c527877-conversion",
+          "output_item_id": "i-ac975c527877",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-daa16c47e0c8",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-f39230d2300b",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://apps.weingchicken.com/bd/makings/1145"
+          ],
+          "source_kind": "secondary",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        },
+        {
+          "recipe_id": "i-6a6f95244e9a-conversion",
+          "output_item_id": "i-6a6f95244e9a",
+          "output_quantity": 1,
+          "inputs": [
+            {
+              "item_id": "i-3631000b59d1",
+              "quantity": 3
+            },
+            {
+              "item_id": "i-f39230d2300b",
+              "quantity": 1
+            }
+          ],
+          "method": "간이연금",
+          "required_skill": null,
+          "yield_type": "fixed",
+          "additional_output_ids": [],
+          "verification": "verified",
+          "source_urls": [
+            "https://www.kr.playblackdesert.com/ko-KR/News/Detail?countryType=ko-KR&groupContentNo=14410"
+          ],
+          "source_kind": "official",
+          "verified_at": "2026-10-23",
+          "data_version": "2026-10-23.1",
+          "verification_note": "재료·최소 산출을 출처와 대조. 요구 단계가 미확인인 경우 null로 유지."
+        }
+      ],
+      "products": [
+        "i-b74c198ecf21",
+        "i-cf822ec62724",
+        "i-409bf65b9d72",
+        "i-8013fb04c36a",
+        "i-3f041c1d45ca",
+        "i-b17e6ab3368e",
+        "i-944c6d64079f",
+        "i-5a012a842902",
+        "i-026aecb72d80",
+        "i-33353b0f05c7",
+        "i-8b782df30446",
+        "i-b562e1a27950",
+        "i-2cf2bd2b5cb0",
+        "i-9c9d3fddcb9b",
+        "i-a0ddb1ea3c04",
+        "i-a403f7a6499b",
+        "i-abd7869a7ce0",
+        "i-a1e608e1595d",
+        "i-e9724b3bb97c",
+        "i-bc7c68adf21e",
+        "i-6fed759d8a98",
+        "i-375d276a5af0",
+        "i-e4e42596c3a2",
+        "i-05d934cf6e53",
+        "i-af70f6af56f9",
+        "i-36acd5d12687"
+      ],
+      "notes": [
+        "공식 패치 제작식과 보조 DB 대조 결과를 구분해 표시합니다.",
+        "가변 연금은 최소 산출 기준이며 실제 산출은 사용자 입력만 반영합니다.",
+        "상위 비약 치환은 등록된 제작식의 전체 재료만 선택하며 임의 혼합하지 않습니다.",
+        "카마실비아 100개식 이벨랍의 정수 10개는 공식 2026-08-26 정정 표의 수치입니다.",
+        "원재료 및 확률 부산물은 외부 수급 경계로 명시합니다."
+      ]
+    }
+  ]
+}

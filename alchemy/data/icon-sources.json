@@ -3586,8 +3586,8 @@
     },
     {
       "item_id": "i-ddf472b47ba6",
-      "name": "대왕 고래 오일",
-      "matched_name": "대왕 고래 오일",
+      "name": "대양의 오일",
+      "matched_name": "대양의 오일",
       "source_id": 9727,
       "source_page": "https://bdocodex.com/kr/item/9727/",
       "source_image": "https://bdocodex.com/items/new_icon/03_etc/07_productmaterial/00009727.webp",
@@ -3607,7 +3607,10 @@
         "sha256": "b789bc945e5781b81a66ae0b1dae33aad0140b0ace2882ee9b39381d91d5ad08",
         "file": "icons/i-ddf472b47ba6.png",
         "verified_at": "2026-10-23"
-      }
+      },
+      "historical_aliases": [
+        "대왕 고래 오일"
+      ]
     },
     {
       "item_id": "i-de75693782ae",

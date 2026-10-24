@@ -112,9 +112,13 @@ try {
   await page.goto(url);
   await loaded();
   assert.match(await page.locator(".intro").innerText(), /제작 방법:/);
-  const row = () => page.locator(`[data-shortage="${target}"]`);
+  const row = () => page.locator(`[data-tree="${target}"]`).first();
+  const start = () =>
+    row().locator(":scope > .branch-slot > .tree-actions > button").first();
+  assert.equal(await page.locator("#craft-shortages").count(), 0);
+  await start().waitFor();
   assert.match(await row().innerText(), /기록 없음/);
-  await row().getByRole("button", { name: "횟수 입력", exact: true }).click();
+  await start().click();
   assert.equal(await page.locator("#start-form [name=calls]").inputValue(), "");
   await page.locator("#start-form [name=calls]").fill("10");
   await page.getByRole("button", { name: "재료 차감하고 제작 시작" }).click();
@@ -128,13 +132,14 @@ try {
     .fill("25");
   await page.getByRole("button", { name: "실제 산출량으로 제작 완료" }).click();
   await saved();
+  await start().waitFor();
   assert.match(await row().innerText(), /기록 평균 2.5개/);
   assert.match(await row().innerText(), /누적 10회/);
   assert.match(await row().innerText(), /계획상 2회/);
   const p = (await read("plans")).plans[0];
   assert.equal(p.rows[0].calls, 2);
   assert.equal(p.rows.find((v) => v.item_id === ids["소금"]).need, 2);
-  await row().getByRole("button", { name: "횟수 입력", exact: true }).click();
+  await start().click();
   assert.equal(
     await page.locator("#start-form [name=calls]").inputValue(),
     "2",
@@ -163,6 +168,7 @@ try {
   await ready();
   await page.reload();
   await loaded();
+  await start().waitFor();
   assert.match(await row().innerText(), /누적 12회/);
   await page.screenshot({
     path: join(out, "learned-yield.png"),
@@ -178,7 +184,8 @@ try {
   assert.deepEqual(errors, []);
   const report = {
     ok: true,
-    visibleShortages: true,
+    stepTreeCrafting: true,
+    removedDuplicateShortagePanel: true,
     noUnrecordedAutoCalls: true,
     actualResultLearned: true,
     weightedCalls: 12,
